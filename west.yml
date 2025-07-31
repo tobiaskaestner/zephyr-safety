@@ -1,0 +1,48 @@
+# Copyright (c) 2025 TiaC Systems
+# SPDX-License-Identifier: Apache-2.0
+
+manifest:
+  self:
+    path: safety
+
+  defaults:
+    remote: zephyrproject-rtos
+    revision: main
+
+  remotes:
+    - name: zephyrproject-rtos
+      url-base: https://github.com/zephyrproject-rtos
+
+    - name: nashif
+      url-base: https://github.com/nashif
+
+    - name: tiacsys
+      url-base: https://github.com/tiacsys
+
+  projects:
+    - name: zephyr
+      remote: tiacsys
+      revision: topic-safety-tskr
+      import:
+        # By using name-allowlist we can clone only the modules that are
+        # strictly needed by the application.
+        name-allowlist:
+          - cmsis      # required by the ARM port
+          - segger     # required by nordic boards
+          - hal_nordic # required by nordic boards
+          - hal_stm32  # required by STM32 boards
+          - hal_nxp    # required by NXP boards
+
+    - name: reqmgmt
+      path: doc/reqmgmt
+
+    - name: safety-committee
+      url: git@github.com:zephyrproject-rtos/safety-committee.git
+      path: doc/safety-committee
+
+    - name: isa_zephyr
+      url: git@github.com:bernhard-tuvsud/isa_zephyr.git
+      path: doc/isa_zephyr
+
+    - name: safety-doc
+      path: references/safety-doc
