@@ -8,7 +8,7 @@ System Requirements Specifications
    :glob:
    :maxdepth: 1
 
-   system_requirements/*
+   strictdoc_export/system_requirements/*
 
 
 Software Requirements Specifications
@@ -18,4 +18,4 @@ Software Requirements Specifications
    :glob:
    :maxdepth: 1
 
-   software_requirements/*
+   strictdoc_export/software_requirements/*

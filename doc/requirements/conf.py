@@ -74,7 +74,8 @@ extensions = [
     #"zephyr.doxyrunner",
     #"zephyr.doxybridge",
     #"zephyr.doxytooltip",
-    #"mlx.traceability"
+    #"mlx.traceability",
+    "strictdoc_runner",
 ]
 
 templates_path = ['_templates']
@@ -82,7 +83,6 @@ exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
 
 external_content_contents = [
     (DOC_BASE / "doc" / "requirements", "[!_]*"),
-    (DOC_BASE / "generated", "[!_]*"),
 ]
 
 rst_epilog = f"""
@@ -190,6 +190,7 @@ html_search_scorer = str(ZEPHYR_BASE / "doc" / "_static" / "js" / "scorer.js")
 #
 suppress_warnings = ["config.cache"]
 
+strictdoc_source_dir = "/wrk/z/ws-safety/doc/reqmgmt/docs"
 
 def setup(app):
     # theme customizations
