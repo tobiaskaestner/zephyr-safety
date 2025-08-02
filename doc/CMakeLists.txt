@@ -83,7 +83,9 @@ endfunction()
 # Doxygen (standalone)
 function(add_doxygen_target name)
   set(DOXY_DOC ${name})
-  set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/doxygen-${DOXY_DOC})
+  set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/deploy/doxygen-${DOXY_DOC})
+  make_directory(${DOXY_OUT})
+  
   set(DOXYFILE_IN ${CMAKE_CURRENT_LIST_DIR}/${DOXY_DOC}.doxyfile.in)
   set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_DOC}.doxyfile)
   set(DOC_BASE ${CMAKE_CURRENT_LIST_DIR})
@@ -106,6 +108,7 @@ endfunction()
 
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
+add_doxygen_target(zephyr-safety-detailed-design)
 
 #-------------------------------------------------------------------------------
 # html
