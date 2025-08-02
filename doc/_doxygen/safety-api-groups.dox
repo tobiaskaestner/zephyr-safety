@@ -1,11 +1,6 @@
 /**
 
-@defgroup mem_domain_apis Memory Domain APIs
+@defgroup kernel_apis Zephyr Kernel APIs
 @{
 @}
-
-@defgroup datastructure_apis Data Structure APIs 
-@{
-@}
-
 */
