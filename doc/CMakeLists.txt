@@ -12,13 +12,12 @@ message(STATUS "Zephyr base: ${ZEPHYR_BASE}")
 #-------------------------------------------------------------------------------
 # Options
 
-set(SPHINXOPTS "-j auto -W --keep-going -T" CACHE STRING "Default Sphinx Options")
+set(SPHINXOPTS "-j auto -T" CACHE STRING "Default Sphinx Options")
 set(SPHINXOPTS_EXTRA "" CACHE STRING "Extra Sphinx Options (added to defaults)")
-set(LATEXMKOPTS "-halt-on-error -no-shell-escape" CACHE STRING "Default latexmk options")
+set(LATEXMKOPTS "-pdf -halt-on-error -no-shell-escape" CACHE STRING "Default latexmk options")
 set(DT_TURBO_MODE ON CACHE BOOL "Enable DT turbo mode")
 set(HW_FEATURES_TURBO_MODE ON CACHE BOOL "Enable HW features turbo mode")
 set(DOC_TAG "development" CACHE STRING "Documentation tag")
-#set(DTS_ROOTS "${ZEPHYR_BASE}" CACHE STRING "DT bindings root folders")
 
 separate_arguments(SPHINXOPTS)
 separate_arguments(SPHINXOPTS_EXTRA)
@@ -44,9 +43,9 @@ set(SPHINX_ENV
 )
 
 if(WIN32)
-set(SEP $<SEMICOLON>)
+  set(SEP $<SEMICOLON>)
 else()
-set(SEP :)
+  set(SEP :)
 endif()
 
 
@@ -66,120 +65,112 @@ endif()
 # devicetree generator.
 #
 function(add_doc_target name)
-add_custom_target(${name} ${ARGN})
-add_custom_target(${name}-nodeps ${ARGN})
+  add_custom_target(${name} ${ARGN})
+  add_custom_target(${name}-nodeps ${ARGN})
 endfunction()
 
+#
+# Create Sphinx build targets for a given documentation set.
+#
+# add_sphinx_target(<doc_name>
+#                   BUILDERS <b1> [<b2> ...]
+#                   [TAGS <t1> [<t2> ...]])
+#
+function(add_sphinx_target doc_name)
+  # Use the standard CMake module to parse keyword arguments
+  cmake_parse_arguments(
+    ARGS # prefix for output variables
+    "" # list of options (boolean flags)
+    "" # list of one-value keywords
+    "BUILDERS;TAGS" # list of multi-value keywords
+    ${ARGN}
+  )
 
-#-------------------------------------------------------------------------------
-# html
-set(DOC_SET requirements)
-set(DOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/${DOC_SET})
-set(DOCS_CFG_DIR ${CMAKE_CURRENT_LIST_DIR}/${DOC_SET})
-set(DOCS_DOCTREE_DIR ${DOC_OUT_DIR}/doctrees)
-set(DOCS_BUILD_DIR ${DOC_OUT_DIR}/build)
-set(DOCS_SRC_DIR ${DOC_OUT_DIR}/src)
-set(DOCS_HTML_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy/${DOC_SET}/html)
-set(DOCS_LINKCHECK_DIR ${DOC_OUT_DIR}/linkcheck)
-set(DOCS_LATEX_DIR ${DOC_OUT_DIR}/latex)
+  if(NOT ARGS_BUILDERS)
+    message(FATAL_ERROR "add_sphinx_target for '${doc_name}' requires a BUILDERS argument.")
+  endif()
 
+  # Per-documentation set paths
+  set(DOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/${doc_name})
+  set(DOCS_CFG_DIR ${CMAKE_CURRENT_LIST_DIR}/${doc_name})
+  set(DOCS_DOCTREE_DIR ${DOC_OUT_DIR}/doctrees)
+  set(DOCS_BUILD_DIR ${DOC_OUT_DIR}/build)
+  set(DOCS_SRC_DIR ${DOC_OUT_DIR}/src) # Generated sources
 
-#set(SPHINX_TAGS "${DOC_TAG}")
-#if(HW_FEATURES_TURBO_MODE)
-#  list(APPEND SPHINX_TAGS "hw_features_turbo")
-#endif()
+  # SPHINX TAGS: Combine global tags with function-specific tags
+  set(SPHINX_TAGS "${DOC_TAG}")
+  if(HW_FEATURES_TURBO_MODE)
+    list(APPEND SPHINX_TAGS "hw_features_turbo")
+  endif()
+  list(APPEND SPHINX_TAGS ${ARGS_TAGS})
 
-set(SPHINX_TAGS_ARGS "")
-foreach(tag ${SPHINX_TAGS})
-  list(APPEND SPHINX_TAGS_ARGS "-t" "${tag}")
-endforeach()
+  set(SPHINX_TAGS_ARGS "")
+  foreach(tag ${SPHINX_TAGS})
+    list(APPEND SPHINX_TAGS_ARGS "-t" "${tag}")
+  endforeach()
 
-add_doc_target(
-  html
-  COMMAND ${CMAKE_COMMAND} -E make_directory ${DOCS_SRC_DIR}
-  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
-  ${SPHINXBUILD}
-  -b html
-  -c ${DOCS_CFG_DIR}
-  -d ${DOCS_DOCTREE_DIR}
-  -w ${DOCS_BUILD_DIR}/html.log
-  ${SPHINX_TAGS_ARGS}
-  ${SPHINXOPTS}
-  ${SPHINXOPTS_EXTRA}
-  ${DOCS_SRC_DIR}
-  ${DOCS_HTML_DIR}
-  USES_TERMINAL
-  COMMENT "Running Sphinx HTML build..."
-)
+  # Create a target for each requested builder
+  foreach(builder ${ARGS_BUILDERS})
+    set(target_name "${doc_name}-${builder}")
+    set(builder_out_dir "${CMAKE_CURRENT_BINARY_DIR}/deploy/${doc_name}/${builder}")
+    set(extra_commands "")
+    set(sphinx_executable ${SPHINXBUILD})
+    set(extra_sphinx_args "")
 
-set_target_properties(
-  html html-nodeps
-  PROPERTIES
-  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
-)
+    if(builder STREQUAL "html")
+      set(builder_arg "html")
+    elseif(builder STREQUAL "html-live")
+      if(NOT SPHINXAUTOBUILD)
+        message(WARNING "sphinx-autobuild not found, skipping '${target_name}' target.")
+        continue()
+      endif()
+      set(sphinx_executable ${SPHINXAUTOBUILD})
+      set(builder_arg "html")
+      set(extra_sphinx_args --watch ${DOCS_CFG_DIR} --ignore ${DOCS_BUILD_DIR})
+      set(target_name "${doc_name}-html-live")
+    elseif(builder STREQUAL "linkcheck")
+      set(builder_arg "linkcheck")
+    elseif(builder STREQUAL "latex")
+      set(builder_arg "latex")
+      set(LATEXMKOPTS "-pdf")
+      set(extra_commands
+          COMMAND ${CMAKE_COMMAND} -E chdir ${builder_out_dir}
+                  latexmk ${LATEXMKOPTS} ${doc_name}.tex
+          COMMENT "Running latexmk to build PDF..."
+        )
+    else()
+      # Generic builder
+      set(builder_arg ${builder})
+    endif()
 
+    add_doc_target(
+      ${target_name}
+      COMMAND ${CMAKE_COMMAND} -E make_directory ${DOCS_SRC_DIR}
+      COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${builder_out_dir} LATEX_DOC=${doc_name}.tex
+      ${sphinx_executable}
+      -b ${builder_arg}
+      -c ${DOCS_CFG_DIR}
+      -d ${DOCS_DOCTREE_DIR}
+      -w ${DOCS_BUILD_DIR}/${builder}.log
+      ${SPHINX_TAGS_ARGS}
+      ${extra_sphinx_args}
+      ${SPHINXOPTS}
+      ${SPHINXOPTS_EXTRA}
+      ${DOCS_SRC_DIR}
+      ${builder_out_dir}
+      ${extra_commands}
+      USES_TERMINAL
+      COMMENT "Running Sphinx ${builder} build for ${doc_name}..."
+    )
 
-#-------------------------------------------------------------------------------
-# html-live
+    set_target_properties(
+      ${target_name} ${target_name}-nodeps
+      PROPERTIES
+      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${builder_out_dir};${DOCS_DOCTREE_DIR}"
+    )
 
-add_doc_target(
-  html-live
-  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
-  ${SPHINXAUTOBUILD}
-  --watch ${DOCS_CFG_DIR}
-  --ignore ${DOCS_BUILD_DIR}
-  -b html
-  -c ${DOCS_CFG_DIR}
-  -d ${DOCS_DOCTREE_DIR}
-  -w ${DOCS_BUILD_DIR}/html.log
-  ${SPHINX_TAGS_ARGS}
-  ${SPHINXOPTS}
-  ${SPHINXOPTS_EXTRA}
-  ${DOCS_SRC_DIR}
-  ${DOCS_HTML_DIR}
-  USES_TERMINAL
-  COMMENT "Running Sphinx HTML autobuild..."
-)
-
-set_target_properties(
-  html-live html-live-nodeps
-  PROPERTIES
-  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
-)
-
-
-#-------------------------------------------------------------------------------
-# linkcheck
-
-add_doc_target(
-  linkcheck
-  COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LINKCHECK_DIR}
-  ${SPHINXBUILD}
-  -b linkcheck
-  -c ${DOCS_CFG_DIR}
-  -d ${DOCS_DOCTREE_DIR}
-  -w ${DOCS_BUILD_DIR}/linkcheck.log
-  ${SPHINX_TAGS_ARGS}
-  ${SPHINXOPTS}
-  ${SPHINXOPTS_EXTRA}
-  ${DOCS_SRC_DIR}
-  ${DOCS_LINKCHECK_DIR}
-  USES_TERMINAL
-  COMMENT "Running Sphinx link check..."
-)
-
-set_target_properties(
-  linkcheck linkcheck-nodeps
-  PROPERTIES
-  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LINKCHECK_DIR};${DOCS_DOCTREE_DIR}"
-)
-
-add_custom_target(
-  pristine
-  COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake
-)
-
-
+  endforeach()
+endfunction()
 
 
 #-------------------------------------------------------------------------------
@@ -208,6 +199,24 @@ function(add_doxygen_target name)
     ADDITIONAL_CLEAN_FILES "${DOXY_OUT}"
   )
 endfunction()
+
+add_custom_target(
+  pristine
+  COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake
+)
+
+add_sphinx_target(
+  safety-committee
+  BUILDERS html latex
+  TAGS draft
+)
+
+add_sphinx_target(
+  requirements
+  BUILDERS html latex
+  TAGS draft
+)
+
 
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
