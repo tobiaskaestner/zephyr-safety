@@ -41,23 +41,14 @@ find_program(SPHINXAUTOBUILD sphinx-autobuild)
 set(SPHINX_ENV
   DOXYGEN_EXECUTABLE=${DOXYGEN_EXECUTABLE}
   DOT_EXECUTABLE=${DOXYGEN_DOT_EXECUTABLE}
-  DOCS_HTML_DIR=${CMAKE_CURRENT_BINARY_DIR}/html
 )
 
-
-set(DOCS_CFG_DIR ${CMAKE_CURRENT_LIST_DIR})
-set(DOCS_DOCTREE_DIR ${CMAKE_CURRENT_BINARY_DIR}/doctrees)
-set(DOCS_BUILD_DIR ${CMAKE_CURRENT_BINARY_DIR})
-set(DOCS_SRC_DIR ${CMAKE_CURRENT_BINARY_DIR}/src)
-set(DOCS_HTML_DIR ${CMAKE_CURRENT_BINARY_DIR}/html)
-set(DOCS_LINKCHECK_DIR ${CMAKE_CURRENT_BINARY_DIR}/linkcheck)
-set(DOCS_LATEX_DIR ${CMAKE_CURRENT_BINARY_DIR}/latex)
-
 if(WIN32)
-  set(SEP $<SEMICOLON>)
+set(SEP $<SEMICOLON>)
 else()
-  set(SEP :)
+set(SEP :)
 endif()
+
 
 #-------------------------------------------------------------------------------
 # Functions
@@ -75,48 +66,28 @@ endif()
 # devicetree generator.
 #
 function(add_doc_target name)
-  add_custom_target(${name} ${ARGN})
-  add_custom_target(${name}-nodeps ${ARGN})
+add_custom_target(${name} ${ARGN})
+add_custom_target(${name}-nodeps ${ARGN})
 endfunction()
 
-#-------------------------------------------------------------------------------
-# Doxygen (standalone)
-function(add_doxygen_target name)
-  set(DOXY_DOC ${name})
-  set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/deploy/doxygen-${DOXY_DOC})
-  make_directory(${DOXY_OUT})
-  
-  set(DOXYFILE_IN ${CMAKE_CURRENT_LIST_DIR}/${DOXY_DOC}.doxyfile.in)
-  set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_DOC}.doxyfile)
-  set(DOC_BASE ${CMAKE_CURRENT_LIST_DIR})
-  
-  configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
-
-  add_custom_target(
-    doxygen-${DOXY_DOC}
-    COMMAND
-      ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
-    COMMENT "Running Doxygen for ${DOXY_DOC}..."
-  )
-
-  set_target_properties(
-    doxygen-${DOXY_DOC}
-    PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOXY_OUT}"
-  )
-endfunction()
-
-add_doxygen_target(zephyr)
-add_doxygen_target(zephyr-safety-api)
-add_doxygen_target(zephyr-safety-detailed-design)
 
 #-------------------------------------------------------------------------------
 # html
+set(DOC_SET requirements)
+set(DOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/${DOC_SET})
+set(DOCS_CFG_DIR ${CMAKE_CURRENT_LIST_DIR}/${DOC_SET})
+set(DOCS_DOCTREE_DIR ${DOC_OUT_DIR}/doctrees)
+set(DOCS_BUILD_DIR ${DOC_OUT_DIR}/build)
+set(DOCS_SRC_DIR ${DOC_OUT_DIR}/src)
+set(DOCS_HTML_DIR ${CMAKE_CURRENT_BINARY_DIR}/deploy/${DOC_SET}/html)
+set(DOCS_LINKCHECK_DIR ${DOC_OUT_DIR}/linkcheck)
+set(DOCS_LATEX_DIR ${DOC_OUT_DIR}/latex)
 
-set(SPHINX_TAGS "${DOC_TAG}")
-if(HW_FEATURES_TURBO_MODE)
-  list(APPEND SPHINX_TAGS "hw_features_turbo")
-endif()
+
+#set(SPHINX_TAGS "${DOC_TAG}")
+#if(HW_FEATURES_TURBO_MODE)
+#  list(APPEND SPHINX_TAGS "hw_features_turbo")
+#endif()
 
 set(SPHINX_TAGS_ARGS "")
 foreach(tag ${SPHINX_TAGS})
@@ -128,15 +99,15 @@ add_doc_target(
   COMMAND ${CMAKE_COMMAND} -E make_directory ${DOCS_SRC_DIR}
   COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
   ${SPHINXBUILD}
-    -b html
-    -c ${DOCS_CFG_DIR}
-    -d ${DOCS_DOCTREE_DIR}
-    -w ${DOCS_BUILD_DIR}/html.log
-    ${SPHINX_TAGS_ARGS}
-    ${SPHINXOPTS}
-    ${SPHINXOPTS_EXTRA}
-    ${DOCS_SRC_DIR}
-    ${DOCS_HTML_DIR}
+  -b html
+  -c ${DOCS_CFG_DIR}
+  -d ${DOCS_DOCTREE_DIR}
+  -w ${DOCS_BUILD_DIR}/html.log
+  ${SPHINX_TAGS_ARGS}
+  ${SPHINXOPTS}
+  ${SPHINXOPTS_EXTRA}
+  ${DOCS_SRC_DIR}
+  ${DOCS_HTML_DIR}
   USES_TERMINAL
   COMMENT "Running Sphinx HTML build..."
 )
@@ -144,7 +115,7 @@ add_doc_target(
 set_target_properties(
   html html-nodeps
   PROPERTIES
-    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
+  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
 )
 
 
@@ -155,17 +126,17 @@ add_doc_target(
   html-live
   COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_HTML_DIR}
   ${SPHINXAUTOBUILD}
-    --watch ${DOCS_CFG_DIR}
-    --ignore ${DOCS_BUILD_DIR}
-    -b html
-    -c ${DOCS_CFG_DIR}
-    -d ${DOCS_DOCTREE_DIR}
-    -w ${DOCS_BUILD_DIR}/html.log
-    ${SPHINX_TAGS_ARGS}
-    ${SPHINXOPTS}
-    ${SPHINXOPTS_EXTRA}
-    ${DOCS_SRC_DIR}
-    ${DOCS_HTML_DIR}
+  --watch ${DOCS_CFG_DIR}
+  --ignore ${DOCS_BUILD_DIR}
+  -b html
+  -c ${DOCS_CFG_DIR}
+  -d ${DOCS_DOCTREE_DIR}
+  -w ${DOCS_BUILD_DIR}/html.log
+  ${SPHINX_TAGS_ARGS}
+  ${SPHINXOPTS}
+  ${SPHINXOPTS_EXTRA}
+  ${DOCS_SRC_DIR}
+  ${DOCS_HTML_DIR}
   USES_TERMINAL
   COMMENT "Running Sphinx HTML autobuild..."
 )
@@ -173,7 +144,7 @@ add_doc_target(
 set_target_properties(
   html-live html-live-nodeps
   PROPERTIES
-    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
+  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_HTML_DIR};${DOCS_DOCTREE_DIR}"
 )
 
 
@@ -184,15 +155,15 @@ add_doc_target(
   linkcheck
   COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${DOCS_LINKCHECK_DIR}
   ${SPHINXBUILD}
-    -b linkcheck
-    -c ${DOCS_CFG_DIR}
-    -d ${DOCS_DOCTREE_DIR}
-    -w ${DOCS_BUILD_DIR}/linkcheck.log
-    ${SPHINX_TAGS_ARGS}
-    ${SPHINXOPTS}
-    ${SPHINXOPTS_EXTRA}
-    ${DOCS_SRC_DIR}
-    ${DOCS_LINKCHECK_DIR}
+  -b linkcheck
+  -c ${DOCS_CFG_DIR}
+  -d ${DOCS_DOCTREE_DIR}
+  -w ${DOCS_BUILD_DIR}/linkcheck.log
+  ${SPHINX_TAGS_ARGS}
+  ${SPHINXOPTS}
+  ${SPHINXOPTS_EXTRA}
+  ${DOCS_SRC_DIR}
+  ${DOCS_LINKCHECK_DIR}
   USES_TERMINAL
   COMMENT "Running Sphinx link check..."
 )
@@ -200,11 +171,44 @@ add_doc_target(
 set_target_properties(
   linkcheck linkcheck-nodeps
   PROPERTIES
-    ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LINKCHECK_DIR};${DOCS_DOCTREE_DIR}"
+  ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${DOCS_LINKCHECK_DIR};${DOCS_DOCTREE_DIR}"
 )
-
 
 add_custom_target(
   pristine
   COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake
 )
+
+
+
+
+#-------------------------------------------------------------------------------
+# Doxygen (standalone)
+function(add_doxygen_target name)
+  set(DOXY_DOC ${name})
+  set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/deploy/doxygen-${DOXY_DOC})
+  make_directory(${DOXY_OUT})
+
+  set(DOXYFILE_IN ${CMAKE_CURRENT_LIST_DIR}/${DOXY_DOC}.doxyfile.in)
+  set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_DOC}.doxyfile)
+  set(DOC_BASE ${CMAKE_CURRENT_LIST_DIR})
+
+  configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
+
+  add_custom_target(
+    doxygen-${DOXY_DOC}
+    COMMAND
+    ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
+    COMMENT "Running Doxygen for ${DOXY_DOC}..."
+  )
+
+  set_target_properties(
+    doxygen-${DOXY_DOC}
+    PROPERTIES
+    ADDITIONAL_CLEAN_FILES "${DOXY_OUT}"
+  )
+endfunction()
+
+add_doxygen_target(zephyr)
+add_doxygen_target(zephyr-safety-api)
+add_doxygen_target(zephyr-safety-detailed-design)
