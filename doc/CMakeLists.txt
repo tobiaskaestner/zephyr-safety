@@ -218,6 +218,12 @@ add_sphinx_target(
   TAGS draft
 )
 
+add_sphinx_target(
+  architecture
+  BUILDERS html latex
+  TAGS draft
+)
+
 
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
