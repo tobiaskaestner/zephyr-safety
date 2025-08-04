@@ -67,6 +67,7 @@ endif()
 function(add_doc_target name)
   add_custom_target(${name} ${ARGN})
   add_custom_target(${name}-nodeps ${ARGN})
+  message(STATUS "Created doc target: ${name} and ${name}-nodeps")
 endfunction()
 
 #
@@ -186,7 +187,7 @@ function(add_doxygen_target name)
 
   configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
 
-  add_custom_target(
+  add_doc_target(
     doxygen-${DOXY_DOC}
     COMMAND
     ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
