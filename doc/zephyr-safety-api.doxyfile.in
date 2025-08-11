@@ -296,6 +296,7 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
                          "supervisor=\qualifier supervisor" \
                          "syscall=\qualifier \"system call\"" \
+                        "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -973,7 +974,7 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-api.md \
                          @DOC_BASE@/_doxygen/safety-api-groups.dox \
-                         @ZEPHYR_BASE@/include/zephyr/kernel/msgq.h \
+                         @ZEPHYR_BASE@/include/zephyr/kernel/msg_q.h \
                          
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
