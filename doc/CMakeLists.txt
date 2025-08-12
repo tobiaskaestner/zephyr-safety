@@ -233,3 +233,4 @@ add_sphinx_target(
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
 add_doxygen_target(zephyr-safety-detailed-design)
+add_doxygen_target(zephyr-safety-testspec)
