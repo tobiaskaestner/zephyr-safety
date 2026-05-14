@@ -974,11 +974,12 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-testspec.md \
                          @DOC_BASE@/_doxygen/safety-test-groups.dox \
-                         @ZEPHYR_BASE@/tests/kernel/msgq/msgq_api/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/msgq/msgq_api/src/test_msgq_attrs.c \
-                         @ZEPHYR_BASE@/tests/kernel/msgq/msgq_api/src/test_msgq_contexts.c \
-                         @ZEPHYR_BASE@/tests/kernel/msgq/msgq_api/src/test_msgq_fail.c \
-                         @ZEPHYR_BASE@/tests/kernel/msgq/msgq_api/src/test_msgq_purge.c \
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_dummy.c\
+                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c\
+                         #@ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
+                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c\
+                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c\
+                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c
                          
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
@@ -1131,7 +1132,7 @@ INPUT_FILTER           =
 # properly processed by Doxygen.
 
 FILTER_PATTERNS        = *.h=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py\
-`                        *.c=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py
+                         *.c=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -1918,7 +1919,7 @@ MATHJAX_CODEFILE       =
 # The default value is: YES.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-SEARCHENGINE           = YES
+SEARCHENGINE            NO
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
 # implemented using a web server instead of a web client using JavaScript. There
@@ -2482,7 +2483,8 @@ PREDEFINED             = __DOXYGEN__ \
                          "ZTEST(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_USER(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_USER_F(suite, fn)=/** \ingroup suite */ void fn(void)" \
-                         "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)"
+                         "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)"\
+                         "ZTEST_SUITE(suite, u1, u2, u3, u4, u5)=/** \defgroup suite suite */"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
