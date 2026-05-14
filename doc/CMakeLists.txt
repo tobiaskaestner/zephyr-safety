@@ -9,6 +9,8 @@ find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE} .. COMPONENTS doc)
 file(TO_CMAKE_PATH "${ZEPHYR_BASE}" ZEPHYR_BASE)
 message(STATUS "Zephyr base: ${ZEPHYR_BASE}")
 
+file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}" SAFETY_BASE)
+message(STATUS "Safety base: ${SAFETY_BASE}")
 #-------------------------------------------------------------------------------
 # Options
 
