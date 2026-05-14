@@ -17,5 +17,4 @@ Data Passing APIs
 .. toctree::
    :maxdepth: 1
 
-   msgq_apis
-
+   queue_apis
