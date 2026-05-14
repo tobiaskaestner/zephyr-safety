@@ -296,7 +296,7 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
                          "supervisor=\qualifier supervisor" \
                          "syscall=\qualifier \"system call\"" \
-                        "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim"
+                         "required-by{1}= \verbatim embed:rst ^^**Required by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
