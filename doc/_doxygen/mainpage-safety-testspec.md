@@ -1,15 +1,16 @@
 # Introduction
 
 The Zephyr OS is a small-footprint kernel designed for use on
-resource-constrained and embedded systems. For safety-critical systems parts of the RTOS
+resource-constrained and embedded systems. 
+
+For safety-critical systems parts of the RTOS
 are pre-certified according to IEC 61503 as a Safety element out of context.
 
-This document lists the public APIs covered by this certificate.
+This document contains the test specification for the Zephyr Kernel (Safety Scope).
 
 ## Scope
 
-The scope of this API documentation is aligned with the Safety Scope as defined in the ...
-
+The scope of the Safety Test specification is aligned with the Zephyr Safety Scope.
 
 ## Licensing
 

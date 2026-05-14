@@ -1,8 +1,8 @@
 /**
-@defgroup all_tests Zephyr Tests
+@defgroup all_tests Zephyr Kernel Tests (Safety Scope)
 @{
 
+  @defgroup kernel_queue_tests Kernel Queue Test Suites
+
 @}
-
-
 */
