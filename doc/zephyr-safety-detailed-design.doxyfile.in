@@ -977,8 +977,8 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-detailed-design.md \
                          @DOC_BASE@/_doxygen/safety-api-groups.dox \
-                         @ZEPHYR_BASE@/include/zephyr/kernel/msg_q.h \
-                         @ZEPHYR_BASE@/kernel/msg_q.c \
+                         @ZEPHYR_BASE@/include/zephyr/kernel/queue.h_ \
+                         @ZEPHYR_BASE@/kernel/queue.c \
                          
 
                          
