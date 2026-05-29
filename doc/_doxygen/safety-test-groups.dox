@@ -4,5 +4,7 @@
 
   @defgroup kernel_queue_tests Kernel Queue Test Suites
 
+  @defgroup kernel_fifo_tests Kernel FIFO Test Suites
+
 @}
 */
