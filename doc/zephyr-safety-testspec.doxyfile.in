@@ -675,7 +675,7 @@ SHOW_INCLUDE_FILES     = NO
 # which file to include in order to use the member.
 # The default value is: NO.
 
-SHOW_GROUPED_MEMB_INC  = YES
+SHOW_GROUPED_MEMB_INC  = NO
 
 # If the FORCE_LOCAL_INCLUDES tag is set to YES then Doxygen will list include
 # files with double quotes in the documentation rather than with sharp brackets.
@@ -974,9 +974,8 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-testspec.md \
                          @DOC_BASE@/_doxygen/safety-test-groups.dox \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_dummy.c\
-                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c\
-                         #@ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c\
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
                          #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c\
                          #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c\
                          #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c
@@ -1176,7 +1175,7 @@ FORTRAN_COMMENT_AFTER  = 72
 # also VERBATIM_HEADERS is set to NO.
 # The default value is: NO.
 
-SOURCE_BROWSER         = NO
+SOURCE_BROWSER         = YES
 
 # Setting the INLINE_SOURCES tag to YES will include the body of functions,
 # multi-line macros, enums or list initialized variables directly into the
@@ -2525,7 +2524,7 @@ SKIP_FUNCTION_MACROS   = NO
 # the path). If a tag file is not located in the directory in which Doxygen is
 # run, you must also specify the path to the tagfile here.
 
-TAGFILES               =
+TAGFILES               = @DOXY_OUT@/../doxygen-zephyr-safety-api/html/zephyr.tag=../../doxygen-zephyr-safety-api/html
 
 # When a file name is specified after GENERATE_TAGFILE, Doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to
