@@ -296,7 +296,10 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
                          "supervisor=\qualifier supervisor" \
                          "syscall=\qualifier \"system call\"" \
-                        "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim"
+                        "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim" \
+                        "draft=\qualifier draft^^\xrefitem test_draft \"Test Status: Draft\" \"Draft Test Cases\"" \
+                        "active=\qualifier active^^\xrefitem test_active \"Test Status: Active\" \"Active Test Cases\"" \
+                        "obsolete=\qualifier obsolete^^\xrefitem test_obsolete \"Test Status: Obsolete\" \"Obsolete Test Cases\""
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -974,11 +977,18 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-testspec.md \
                          @DOC_BASE@/_doxygen/safety-test-groups.dox \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c\
                          @ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
-                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c\
-                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c\
-                         #@ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c \
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c \
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c \
+                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/main.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_contexts.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_cancel.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_fail.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_loop.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_timeout/src/main.c \
+                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_usage/src/main.c
                          
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
