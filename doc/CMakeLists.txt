@@ -232,6 +232,17 @@ add_sphinx_target(
   TAGS draft
 )
 
+add_sphinx_target(
+  test-specification
+  BUILDERS html html-live latex
+  TAGS draft
+)
+
+add_sphinx_target(
+  test-report
+  BUILDERS html html-live latex
+  TAGS draft
+)
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
 add_doxygen_target(zephyr-safety-detailed-design)
