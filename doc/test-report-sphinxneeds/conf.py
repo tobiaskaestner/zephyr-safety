@@ -10,7 +10,9 @@ from pathlib import Path
 
 ZEPHYR_BASE = Path(os.getenv("ZEPHYR_BASE"))
 DOC_BASE = Path(__file__).resolve().parents[2]
-ZEPHYR_BUILD = Path(os.environ.get("OUTPUT_DIR")).resolve()
+# OUTPUT_DIR is the HTML output dir (bdoc/deploy/<name>/html).
+# Go 3 levels up to reach the bdoc root.
+ZEPHYR_BUILD = Path(os.environ.get("OUTPUT_DIR")).resolve().parents[2]
 BASE_URL = "http://localhost:8000/"
 
 sys.path.insert(0, str(ZEPHYR_BASE / "doc" / "_extensions"))
