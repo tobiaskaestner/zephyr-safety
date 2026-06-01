@@ -243,6 +243,20 @@ add_sphinx_target(
   BUILDERS html html-live latex
   TAGS draft
 )
+add_sphinx_target(
+  test-specification-sphinxneeds
+  BUILDERS html
+  TAGS draft
+)
+
+add_sphinx_target(
+  test-report-sphinxneeds
+  BUILDERS html
+  TAGS draft
+)
+
+add_dependencies(test-report-sphinxneeds-html test-specification-sphinxneeds-html)
+
 add_doxygen_target(zephyr)
 add_doxygen_target(zephyr-safety-api)
 add_doxygen_target(zephyr-safety-detailed-design)
