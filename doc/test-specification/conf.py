@@ -11,7 +11,7 @@ import re
 import sys
 import textwrap
 from pathlib import Path
-#import mlx.traceability
+# import mlx.traceability
 
 ZEPHYR_BASE = Path(os.getenv("ZEPHYR_BASE"))
 DOC_BASE = Path(__file__).resolve().parents[2]
@@ -23,10 +23,10 @@ BASE_URL = "http://localhost:8000/"
 sys.path.insert(0, str(ZEPHYR_BASE / "doc" / "_extensions"))
 sys.path.insert(0, str(DOC_BASE / "doc" / "_extensions"))
 
-project = 'Zephyr Test Documentation'
-copyright = '2025, Zephyr Project Contributors'
-author = 'Zephyr Project Contributors'
-release = '1.0'
+project = "Zephyr Test Documentation"
+copyright = "2025, Zephyr Project Contributors"
+author = "Zephyr Project Contributors"
+release = "1.0"
 
 
 # parse version from 'VERSION' file
@@ -58,41 +58,40 @@ release = version
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 # parse SDK version from 'SDK_VERSION' file
-#with open(ZEPHYR_BASE / "SDK_VERSION") as f:
+# with open(ZEPHYR_BASE / "SDK_VERSION") as f:
 #    sdk_version = f.read().strip()
 
-#SDK_URL_BASE="https://github.com/zephyrproject-rtos/sdk-ng/releases/download"
+# SDK_URL_BASE="https://github.com/zephyrproject-rtos/sdk-ng/releases/download"
 
 extensions = [
     "breathe",
     "sphinx_rtd_theme",
     "sphinx.ext.intersphinx",
-    #"zephyr.gh_utils",
+    # "zephyr.gh_utils",
     "sphinx_tabs.tabs",
     "zephyr.kconfig",
-    #"zephyr.domain",
+    # "zephyr.domain",
     "zephyr.application",
     "zephyr.link-roles",
     "zephyr.external_content",
-    #"zephyr.doxyrunner",
-    #"zephyr.doxybridge",
-    #"zephyr.doxytooltip",
-    #"mlx.traceability",
-    #"strictdoc_runner",
+    # "zephyr.doxyrunner",
+    # "zephyr.doxybridge",
+    # "zephyr.doxytooltip",
+    # "mlx.traceability",
+    # "strictdoc_runner",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 external_content_contents = [
-    #(DOC_BASE / "doc" / "safety-committee", "[!_]*"),
+    # (DOC_BASE / "doc" / "safety-committee", "[!_]*"),
     (DOC_BASE / "doc" / "test-specification", "[!_]*"),
-    (ZEPHYR_BASE / "tests" , "kernel/**/test-spec.rst"),
-#    (Path("/wrk/z/ws-safety/build-doc/deploy/doxygen-zephyr-safety-testspec/") , "*"),
+    (ZEPHYR_BASE / "tests", "kernel/**/test-spec.rst"),
+    #    (Path("/wrk/z/ws-safety/build-doc/deploy/doxygen-zephyr-safety-testspec/") , "*"),
 ]
 
 rst_epilog = f"""
-
 """
 
 # -- Options for HTML output -------------------------------------------------
@@ -115,19 +114,18 @@ html_split_index = True
 html_show_sourcelink = False
 html_show_sphinx = False
 html_search_scorer = str(ZEPHYR_BASE / "doc" / "_static" / "js" / "scorer.js")
-#html_static_path = [str(DOC_BASE / "doc" / "_static")]
-#html_static_path = ['_static']
+# html_static_path = [str(DOC_BASE / "doc" / "_static")]
+# html_static_path = ['_static']
 
 LATEX_DOC = os.getenv("LATEX_DOC", "safety-committee.tex")
 
 latex_documents = [("index", LATEX_DOC, "", "", "manual")]
 
 
-
 # -- Options for zephyr.doxyrunner plugin ---------------------------------
 
-#doxyrunner_doxygen = os.environ.get("DOXYGEN_EXECUTABLE", "doxygen")
-#doxyrunner_projects = {
+# doxyrunner_doxygen = os.environ.get("DOXYGEN_EXECUTABLE", "doxygen")
+# doxyrunner_projects = {
 #    "zephyr": {
 #        "doxyfile": DOC_BASE / "doc" / "zephyr.doxyfile.in",
 #        "outdir": ZEPHYR_BUILD / "doxygen",
@@ -135,17 +133,17 @@ latex_documents = [("index", LATEX_DOC, "", "", "manual")]
 #        "fmt_vars": {
 #            "ZEPHYR_BASE": str(ZEPHYR_BASE),
 #            "ZEPHYR_VERSION": version,
-#            "DOC_BASE": str(DOC_BASE) + '/doc', 
+#            "DOC_BASE": str(DOC_BASE) + '/doc',
 #        },
 #        "outdir_var": "DOXY_OUT",
 #    },
-#}
+# }
 
 # -- Options for zephyr.doxybridge plugin ---------------------------------
 
 # doxybridge_projects = {"zephyr": doxyrunner_projects["zephyr"]["outdir"]}
 
-#traceability_relationships = {
+# traceability_relationships = {
 #    'trace': 'traced_by',
 #    'depends_on': 'impacts_on',
 #    'fulfills': 'fulfilled_by',
@@ -153,11 +151,11 @@ latex_documents = [("index", LATEX_DOC, "", "", "manual")]
 #    'validates': 'validated_by',
 #    'parent': 'child',
 #    'ext_toolname': ''
-#}
+# }
 #
-#traceability_render_relationship_per_item = True
+# traceability_render_relationship_per_item = True
 #
-#traceability_relationship_to_string = {
+# traceability_relationship_to_string = {
 #    'parent': 'Parent',
 #    'child': 'Children',
 #    'trace': 'Traces',
@@ -171,40 +169,46 @@ latex_documents = [("index", LATEX_DOC, "", "", "manual")]
 #    'validates': 'Validates',
 #    'validated_by': 'Validated by',
 #    'ext_toolname': 'Reference to toolname'
-#}
+# }
 #
-#traceability_attribute_to_string = {
+# traceability_attribute_to_string = {
 #    'rtype': 'Requirement type',
 #    'value': 'Value',
 #    'asil': 'ASIL',
 #    'status': 'Status',
 #    'uid': 'UID',
 #    'component': 'Component',
-#}
+# }
 #
-#traceability_attributes = {
+# traceability_attributes = {
 #    'value': '^.*$',
 #    'asil': '^(QM|[ABCD])$',
 #    'status': '^.*$',
 #    'uid': '^.*$',
 #    'component': '^.*$',
 #    'rtype': '^(Functional|Non-Functional)$'
-#}
+# }
 #
-#traceability_collapse_links = False
+# traceability_collapse_links = False
 #
-#traceability_render_relationship_per_item = True
-#traceability_render_attributes_per_item = True
+# traceability_render_relationship_per_item = True
+# traceability_render_attributes_per_item = True
 #
 #
-breathe_projects = {"testspec": "/wrk/z/ws-safety/build-doc/deploy/doxygen-zephyr-safety-testspec/xml"}
+breathe_projects = {
+    "testspec": "/wrk/z/ws-safety/bdoc/deploy/doxygen-zephyr-safety-testspec/xml"
+}
 breathe_default_project = "testspec"
 breathe_implementation_filename_extensions = []
 suppress_warnings = ["config.cache"]
 
 intersphinx_mapping = {
-    'req': (BASE_URL + "requirements/html", ("../../deploy/requirements/html/objects.inv", None)),
+    "req": (
+        BASE_URL + "requirements/html",
+        ("../../deploy/requirements/html/objects.inv", None),
+    ),
 }
+
 
 def setup(app):
     # theme customizations
