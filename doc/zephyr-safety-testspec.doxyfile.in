@@ -299,7 +299,9 @@ ALIASES                = "kconfig{1}=\c \1" \
                         "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim" \
                         "draft=\qualifier draft^^\xrefitem test_draft \"Test Status: Draft\" \"Draft Test Cases\"" \
                         "active=\qualifier active^^\xrefitem test_active \"Test Status: Active\" \"Active Test Cases\"" \
-                        "obsolete=\qualifier obsolete^^\xrefitem test_obsolete \"Test Status: Obsolete\" \"Obsolete Test Cases\""
+                        "obsolete=\qualifier obsolete^^\xrefitem test_obsolete \"Test Status: Obsolete\" \"Obsolete Test Cases\"" \
+                        "testid{1}=\xrefitem testids \"Test ID\" \"Test IDs\" \1" \
+                        "reqref{1}=\xrefitem reqrefs \"Requirement\" \"Requirements\" \1"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
