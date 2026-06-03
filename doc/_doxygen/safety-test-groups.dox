@@ -8,3 +8,27 @@
 
 @}
 */
+
+/**
+ * @defgroup queue_procedures Queue Shared Test Procedures
+ * @ingroup kernel_queue_module
+ * @brief Reusable helper procedures shared across queue_api and queue_api_1cpu test suites.
+ */
+
+/**
+ * @defgroup fifo_api_procedures FIFO API Shared Test Procedures
+ * @ingroup kernel_fifo_api_module
+ * @brief Reusable helper procedures shared across fifo_api and fifo_api_1cpu test suites.
+ */
+
+/**
+ * @defgroup fifo_timeout_procedures FIFO Timeout Shared Test Procedures
+ * @ingroup kernel_fifo_timeout_module
+ * @brief Reusable helper procedures shared across fifo_timeout and fifo_timeout_1cpu test suites.
+ */
+
+/**
+ * @defgroup fifo_usage_procedures FIFO Usage Shared Test Procedures
+ * @ingroup kernel_fifo_usage_module
+ * @brief Reusable helper procedures for the fifo_usage test suite.
+ */
