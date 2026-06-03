@@ -2,8 +2,10 @@
 # Test Specification — sphinx-needs experiment (Route B).
 # Do NOT modify safety/doc/test-specification/ — this is a parallel experiment.
 
+import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -13,6 +15,68 @@ DOC_BASE = Path(__file__).resolve().parents[2]
 # Go 3 levels up to reach the bdoc root so we can reference sibling deploy dirs.
 ZEPHYR_BUILD = Path(os.environ.get("OUTPUT_DIR")).resolve().parents[2]
 BASE_URL = "http://localhost:8000/"
+
+_REQ_HTML = ZEPHYR_BUILD / "deploy" / "requirements" / "html"
+
+
+def _build_req_needs_stub() -> Path:
+    """Convert requirements objects.inv → sphinx-needs external needs JSON.
+
+    Filters zep-srs-* labels from the intersphinx inventory and writes a
+    minimal needs.json stub so that needs_external_needs can resolve links
+    from test cases to requirements without a shared sphinx-needs build.
+    The stub is written next to the requirements inventory and reused across
+    incremental builds (regenerated only when the inventory is newer).
+    """
+    inv_path = _REQ_HTML / "objects.inv"
+    json_path = _REQ_HTML / "objects.json"
+    out_path = _REQ_HTML / "req-needs.json"
+
+    if not inv_path.exists():
+        sys.stderr.write(f"warning: requirements inventory not found: {inv_path}\n")
+        return out_path
+
+    # Regenerate sphobjinv JSON only when the inventory has changed.
+    if not json_path.exists() or json_path.stat().st_mtime < inv_path.stat().st_mtime:
+        subprocess.run(
+            ["sphobjinv", "co", "json", str(inv_path), "--overwrite"],
+            check=True, capture_output=True,
+        )
+
+    with open(json_path) as f:
+        inv_data = json.load(f)
+
+    needs = {}
+    for k, v in inv_data.items():
+        if k in ("project", "version", "count"):
+            continue
+        if v["role"] != "label" or not re.match(r"^zep-srs-\d+-\d+$", v["name"]):
+            continue
+        name = v["name"]
+        title = v["dispname"] if v["dispname"] not in ("-", name) else name
+        # sphobjinv uses '$' as a placeholder for the entry name in the URI fragment.
+        uri = v["uri"].replace("$", name)
+        docname = uri.split(".html")[0]
+        needs[name] = {
+            "id": name,
+            "type": "requirement",
+            "title": title,
+            "content": "",
+            "status": "approved",
+            "docname": docname,
+        }
+
+    stub = {
+        "current_version": "1.0",
+        "versions": {"1.0": {"needs": needs, "needs_amount": len(needs)}},
+    }
+    with open(out_path, "w") as f:
+        json.dump(stub, f, indent=2)
+
+    return out_path
+
+
+_req_needs_path = _build_req_needs_stub()
 
 sys.path.insert(0, str(ZEPHYR_BASE / "doc" / "_extensions"))
 sys.path.insert(0, str(DOC_BASE / "doc" / "_extensions"))
@@ -58,6 +122,7 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
+html_static_path = ["_static"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # Fully self-contained: pull only from this experiment folder.
@@ -72,6 +137,15 @@ external_content_contents = [
 needs_types = [
     dict(directive="test_case",      title="Test Case",      prefix="TCASE_", color="#E2EFDA", style="node"),
     dict(directive="test_procedure", title="Test Procedure", prefix="TPROC_", color="#D6E4F7", style="node"),
+    dict(directive="requirement",    title="Requirement",    prefix="REQ_",   color="#FDEBD0", style="node"),
+]
+
+needs_external_needs = [
+    {
+        "json_path": str(_req_needs_path),
+        "base_url": BASE_URL + "requirements/html",
+        "version": "1.0",
+    }
 ]
 
 # kernel_queue_status / kernel_queue_minimallibc_status are defined here (empty)

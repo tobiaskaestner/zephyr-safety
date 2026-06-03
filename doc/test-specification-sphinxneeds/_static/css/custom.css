@@ -1,0 +1,15 @@
+/* Remove RTD theme's max-width cap so the content area uses the full viewport. */
+.wy-nav-content {
+    max-width: none;
+}
+
+/* The RTD theme's theme.js wraps every table.docutils in a div.wy-table-responsive
+ * with overflow:auto, turning the entire DataTables widget (controls + table) into
+ * a single horizontal scroll container.  That puts the buttons, table, and search
+ * field side-by-side in one wide scrollable row.
+ *
+ * For needs tables only, reset overflow so DataTables' own float-based layout can
+ * position the controls above the table as intended. */
+div.wy-table-responsive:has(table.NEEDS_DATATABLES) {
+    overflow: visible;
+}

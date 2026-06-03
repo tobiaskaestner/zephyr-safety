@@ -6,3 +6,4 @@ Zephyr Test Specification (sphinx-needs)
 
    kernel/queue/test-spec
    kernel/fifo/test-spec
+   traceability
