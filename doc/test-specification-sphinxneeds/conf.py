@@ -70,17 +70,17 @@ external_content_contents = [
 # -- sphinx-needs -------------------------------------------------------------
 
 needs_types = [
-    dict(directive="test_case", title="Test Case", prefix="TCASE_", color="#E2EFDA", style="node"),
+    dict(directive="test_case",      title="Test Case",      prefix="TCASE_", color="#E2EFDA", style="node"),
+    dict(directive="test_procedure", title="Test Procedure", prefix="TPROC_", color="#D6E4F7", style="node"),
 ]
 
 # kernel_queue_status / kernel_queue_minimallibc_status are defined here (empty)
 # so they appear in needs.json for the report build to import and extend.
 _str_field = {"schema": {"type": "string"}, "nullable": True}
 needs_fields = {
+    "test_function":                   {**_str_field, "description": "C function name of the test case"},
     "test_id":                         {**_str_field, "description": "Stable test identifier (e.g. TSPEC-QUEUE-API-001)"},
     "suite":                           {**_str_field, "description": "Doxygen test suite group name"},
-    "source_file":                     {**_str_field, "description": "Source file and line number"},
-    "doxygen_url":                     {**_str_field, "description": "URL to Doxygen HTML member page"},
     "kernel_queue_status":             {**_str_field, "description": "Test result for kernel.queue scenario"},
     "kernel_queue_minimallibc_status": {**_str_field, "description": "Test result for kernel.queue.minimallibc scenario"},
 }
@@ -89,6 +89,28 @@ needs_fields = {
 needs_id_regex = r"^[A-Za-z][A-Za-z0-9_-]+"
 
 needs_build_json = True
+
+# Custom layout: same as 'clean' but without the self-referencing <<meta_id()>> badge.
+needs_layouts = {
+    "safety": {
+        "grid": "simple",
+        "layout": {
+            "head": [
+                '<<meta("type_name")>>: **<<meta("title")>>** '
+                '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
+                'visible="icon:arrow-right-circle", initial=False)>>'
+            ],
+            "meta": [
+                '<<meta("test_id",       prefix="\\*\\*test id:\\*\\* ")>>',
+                '<<meta("test_function", prefix="\\*\\*test function:\\*\\* ")>>',
+                '<<meta("suite",         prefix="\\*\\*suite:\\*\\* ")>>',
+                '<<meta("status",        prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
+                "<<meta_links_all()>>",
+            ],
+        },
+    }
+}
+needs_default_layout = "safety"
 
 # -- HTML output --------------------------------------------------------------
 
@@ -121,6 +143,16 @@ breathe_projects = {
 }
 breathe_default_project = "testspec"
 breathe_implementation_filename_extensions = []
+
+_HTML_OUT = Path(os.environ.get("OUTPUT_DIR")).resolve()
+
+def _rel_url(abs_path):
+    """Relative URL from the Sphinx HTML output root to abs_path (no deploy/ in result)."""
+    return os.path.relpath(abs_path, _HTML_OUT).replace(os.sep, "/")
+
+testspec_doxygen_url = _rel_url(ZEPHYR_BUILD / "deploy" / "doxygen-zephyr-safety-testspec" / "html")
+api_doxygen_url      = _rel_url(ZEPHYR_BUILD / "deploy" / "doxygen-zephyr-safety-api" / "html")
+requirements_url     = _rel_url(ZEPHYR_BUILD / "deploy" / "requirements" / "html")
 
 # -- Intersphinx --------------------------------------------------------------
 

@@ -1,4 +1,9 @@
-Queue Tests
-###########
+Kernel Queue Tests
+==================
 
-.. testmodule:: tests/kernel/queue
+This section covers tests related to the 
+the Kernel Queue API. 
+
+.. toctree:: 
+
+   queue/test-spec
