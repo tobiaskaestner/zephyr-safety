@@ -1,0 +1,7 @@
+/* One link per line in links_back needtable cells */
+td.needs_links_back a {
+    display: block;
+}
+td.needs_links_back em {
+    display: none;
+}

@@ -10,3 +10,4 @@ Zephyr Test Report (sphinx-needs)
 .. toctree::
 
    kernel/queue/test-report
+   coverage

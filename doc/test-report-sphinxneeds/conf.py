@@ -57,6 +57,7 @@ extensions = [
 ]
 
 templates_path = ["_templates"]
+html_static_path = ["_static"]
 exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 external_content_contents = [
@@ -65,25 +66,64 @@ external_content_contents = [
 
 # -- sphinx-needs -------------------------------------------------------------
 
-# Path to needs.json produced by the spec build — used by the testreport directive.
-testspec_needs_json = str(
+_testspec_needs_json = str(
     ZEPHYR_BUILD / "deploy" / "test-specification-sphinxneeds" / "html" / "needs.json"
 )
 
-# Must mirror the spec's needs_fields so imported needs are extendable.
 _str_field = {"schema": {"type": "string"}, "nullable": True}
 needs_fields = {
-    "test_id":                         {**_str_field, "description": "Stable test identifier (e.g. TSPEC-QUEUE-API-001)"},
-    "suite":                           {**_str_field, "description": "Doxygen test suite group name"},
-    "source_file":                     {**_str_field, "description": "Source file and line number"},
-    "doxygen_url":                     {**_str_field, "description": "URL to Doxygen HTML member page"},
-    "kernel_queue_status":             {**_str_field, "description": "Test result for kernel.queue scenario"},
-    "kernel_queue_minimallibc_status": {**_str_field, "description": "Test result for kernel.queue.minimallibc scenario"},
+    # test_result fields
+    "platform":       {**_str_field, "description": "Target board (e.g. qemu_cortex_m3/ti_lm3s6965)"},
+    "scenario":       {**_str_field, "description": "Twister scenario name (e.g. kernel.queue)"},
+    "twister_id":     {**_str_field, "description": "Full test identifier from JUnit XML @name"},
+    "execution_time": {**_str_field, "description": "Test execution time in seconds"},
+    "reason":         {**_str_field, "description": "Failure or skip reason"},
+    # spec test_case fields — declared so external needs from needs_external_needs load cleanly
+    "test_function":  {**_str_field, "description": "C function name of the test case"},
+    "test_module":    {**_str_field, "description": "Path to the test module (e.g. tests/kernel/queue)"},
+    "suite":          {**_str_field, "description": "Doxygen test suite group name"},
 }
 
 needs_id_regex = r"^[A-Za-z][A-Za-z0-9_-]+"
 
-# No needs_types — the report defines no needs of its own.
+needs_types = [
+    dict(directive="test_result",   title="Test Result",     prefix="TRESULT_", color="#FCE4D6", style="node"),
+    dict(directive="test_case",     title="Test Case",       prefix="TCASE_",   color="#E2EFDA", style="node"),
+    dict(directive="test_procedure", title="Test Procedure", prefix="TPROC_",   color="#D6E4F7", style="node"),
+    dict(directive="requirement",   title="Requirement",     prefix="REQ_",     color="#FDEBD0", style="node"),
+]
+
+needs_external_needs = [
+    {
+        "json_path": _testspec_needs_json,
+        "base_url": BASE_URL + "test-specification-sphinxneeds/html",
+        "version": "4.4.99",
+    }
+]
+
+needs_layouts = {
+    "test_result": {
+        "grid": "simple",
+        "layout": {
+            "head": [
+                '<<meta("type_name")>>: **<<meta("title")>>** '
+                '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
+                'visible="icon:arrow-right-circle", initial=False)>>'
+            ],
+            "meta": [
+                '<<meta("test_module",    prefix="\\*\\*test module:\\*\\* ")>>',
+                '<<meta("platform",       prefix="\\*\\*platform:\\*\\* ")>>',
+                '<<meta("scenario",       prefix="\\*\\*scenario:\\*\\* ")>>',
+                '<<meta("twister_id",     prefix="\\*\\*twister id:\\*\\* ")>>',
+                '<<meta("execution_time", prefix="\\*\\*time:\\*\\* ", show_empty=True)>>',
+                '<<meta("status",         prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
+                '<<meta("reason",         prefix="\\*\\*reason:\\*\\* ")>>',
+                "<<meta_links_all()>>",
+            ],
+        },
+    }
+}
+needs_default_layout = "test_result"
 
 # -- HTML output --------------------------------------------------------------
 

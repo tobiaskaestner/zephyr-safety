@@ -1,5 +1,5 @@
 Queue Test Report
 #################
 
-.. testreport:: /wrk/z/ws-safety/twister-out/twister.json
-   :module: tests/kernel/queue
+.. testreport:: /wrk/z/ws-safety/twister-out/twister_report.xml
+   :module: kernel.queue

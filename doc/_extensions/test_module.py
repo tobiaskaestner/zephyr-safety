@@ -1,7 +1,9 @@
 """Sphinx extension: testmodule and testreport directives (Route B — sphinx-needs)."""
 
 import glob
+import json
 import os
+import re
 import xml.etree.ElementTree as ET
 from pathlib import Path
 
@@ -193,8 +195,11 @@ def _parse_memberdef(memberdef, compound_id, testspec_html_dir, api_html_dir):
             xdesc = (xrefsect.findtext(".//xrefdescription/para") or "").strip()
             if "testids" in xid:
                 test_id = xdesc
-            elif "reqrefs" in xid and xdesc:
-                req_ids.append(xdesc)
+            elif "reqrefs" in xid:
+                for _p in xrefsect.findall(".//xrefdescription/para"):
+                    _rid = (_p.text or "").strip()
+                    if _rid:
+                        req_ids.append(_rid)
             elif "test_active" in xid:
                 status = "active"
             elif "test_obsolete" in xid:
@@ -226,7 +231,7 @@ def _parse_memberdef(memberdef, compound_id, testspec_html_dir, api_html_dir):
     }
 
 
-def _build_need_rst(info, suite_name):
+def _build_need_rst(info, suite_name, module_path=""):
     """Build the RST block for a single test_case need."""
     name = info["name"]
     brief = info["brief"]
@@ -238,25 +243,27 @@ def _build_need_rst(info, suite_name):
     see_rst = info["see_rst"]
     body_sections = info["body_sections"]
 
-    need_id = f"testspec-{suite_name}-{name}"
     # Title: function name with leading "test_" stripped and underscores → spaces
     stem = name[5:] if name.startswith("test_") else name
     title = stem.replace("_", " ")
 
-    if not test_id:
+    if test_id:
+        need_id = test_id
+    else:
+        need_id = f"testspec-{suite_name}-{name}"
         logger.warning(
             f"testmodule: {suite_name}/{name} has no @testid annotation"
         )
 
     lines = [f".. test_case:: {title}"]
     lines.append(f"   :id: {need_id}")
-    if test_id:
-        lines.append(f"   :test_id: {test_id}")
     lines.append(f"   :test_function: {name}")
+    if module_path:
+        lines.append(f"   :test_module: {module_path}")
     lines.append(f"   :suite: {suite_name}")
     lines.append(f"   :status: {status}")
     if req_ids:
-        lines.append(f"   :links: {' '.join(req_ids)}")
+        lines.append(f"   :links: {'; '.join(req_ids)}")
     lines.append("")
 
     # Body: Arrange/Act/Assert first, Source and See also at the bottom
@@ -553,7 +560,7 @@ class TestModuleDirective(Directive):
                 info = _parse_memberdef(memberdef, compound_id, testspec_html_dir, api_html_dir)
                 if not info["name"]:
                     continue
-                need_rst = _build_need_rst(info, suite_name)
+                need_rst = _build_need_rst(info, suite_name, module_path)
                 all_rst_lines.extend(need_rst.splitlines())
                 all_rst_lines.append("")
 
@@ -588,26 +595,213 @@ class TestModuleDirective(Directive):
 
 
 # ---------------------------------------------------------------------------
-# TestReportDirective (stub — implemented in Step 5)
+# testreport helpers
+# ---------------------------------------------------------------------------
+
+def _slugify(s):
+    """Replace non-alphanumeric runs with '-' and strip leading/trailing dashes."""
+    return re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-')
+
+
+def _load_spec_lookup(json_path):
+    """Read spec needs.json; return {test_function: {id, test_module, suite}}."""
+    with open(json_path) as f:
+        data = json.load(f)
+    versions = data.get("versions", {})
+    if not versions:
+        raise RuntimeError(f"testreport: no versions key in {json_path}")
+    current = data.get("current_version") or next(iter(versions))
+    needs = versions.get(current, {}).get("needs", {})
+    lookup = {}
+    for need_id, need in needs.items():
+        if need.get("type") != "test_case":
+            continue
+        fn = need.get("test_function", "")
+        if fn:
+            lookup[fn] = {
+                "id": need_id,
+                "test_module": need.get("test_module", ""),
+                "suite": need.get("suite", ""),
+            }
+    return lookup
+
+
+def _parse_twister_results(xml_path, module_filter=None):
+    """Parse twister_report.xml into a list of result dicts."""
+    root = ET.parse(xml_path).getroot()
+    results = []
+    for ts in root.findall("testsuite"):
+        platform = ts.get("name", "")
+        for tc in ts.findall("testcase"):
+            classname = tc.get("classname", "")
+            if module_filter:
+                if not (classname == module_filter or classname.startswith(module_filter + ".")):
+                    continue
+            name = tc.get("name", "")
+            scenario = classname
+            # strip scenario prefix to get "suite.function"
+            suffix = name[len(scenario) + 1:] if name.startswith(scenario + ".") else name
+            parts = suffix.rsplit(".", 1)
+            suite = parts[0] if len(parts) == 2 else ""
+            function = parts[-1]
+            failure = tc.find("failure")
+            error = tc.find("error")
+            skipped = tc.find("skipped")
+            if failure is not None:
+                status, reason = "failed", failure.get("message", "") or _elem_text(failure)
+            elif error is not None:
+                status, reason = "error", error.get("message", "") or _elem_text(error)
+            elif skipped is not None:
+                status, reason = "skipped", skipped.get("message", "") or _elem_text(skipped)
+            else:
+                status, reason = "passed", ""
+            results.append({
+                "platform": platform, "scenario": scenario, "suite": suite,
+                "function": function, "twister_id": name, "time": tc.get("time", ""),
+                "status": status, "reason": reason,
+            })
+    return results
+
+
+def _build_result_rst(r, spec_id, test_module):
+    """Build RST block for one test_result need."""
+    need_id = f"TR-{_slugify(r['platform'])}-{_slugify(r['scenario'])}-{spec_id}"
+    fn = r["function"]
+    title = (fn[5:] if fn.startswith("test_") else fn).replace("_", " ")
+    lines = [
+        f".. test_result:: {title}",
+        f"   :id: {need_id}",
+        f"   :status: {r['status']}",
+    ]
+    if test_module:
+        lines.append(f"   :test_module: {test_module}")
+    lines += [
+        f"   :platform: {r['platform']}",
+        f"   :scenario: {r['scenario']}",
+        f"   :twister_id: {r['twister_id']}",
+        f"   :execution_time: {r['time']}",
+        f"   :links: {spec_id}",
+    ]
+    if r["reason"]:
+        lines.append(f"   :reason: {r['reason']}")
+    lines.append("")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
+# TestReportDirective
 # ---------------------------------------------------------------------------
 
 class TestReportDirective(Directive):
-    required_arguments = 1
+    """
+    Emit sphinx-needs test_result nodes from a twister_report.xml.
+
+    Usage::
+
+        .. testreport:: /path/to/twister-out/twister_report.xml
+           :module: kernel.queue
+    """
+
+    required_arguments = 1  # absolute path to twister_report.xml
     optional_arguments = 0
     has_content = False
     option_spec = {
-        "module": directives.unchanged_required,
+        "module": directives.unchanged,  # classname prefix filter, e.g. "kernel.queue"
     }
 
     def run(self):
-        twister_path = self.arguments[0]
-        module_path = self.options.get("module", "")
-        msg = (
-            f"[testreport stub] twister: {twister_path}, module: {module_path}"
-            " — Step 5 not yet implemented"
-        )
-        logger.info(msg)
-        return [nodes.paragraph(text=msg)]
+        xml_path = self.arguments[0].strip()
+        module_filter = self.options.get("module", "").strip() or None
+        env = self.state.document.settings.env
+        app = env.app
+
+        ext_needs = getattr(app.config, "needs_external_needs", [])
+        spec_json = ext_needs[0].get("json_path", "") if ext_needs else ""
+        if not spec_json or not Path(spec_json).exists():
+            msg = f"[testreport: spec needs.json not found: {spec_json!r}]"
+            logger.warning(f"testreport: {msg}")
+            return [nodes.paragraph(text=msg)]
+
+        try:
+            spec_lookup = _load_spec_lookup(spec_json)
+        except Exception as exc:
+            logger.warning(str(exc))
+            return [nodes.paragraph(text=str(exc))]
+
+        if not Path(xml_path).exists():
+            msg = f"[testreport: twister XML not found: {xml_path}]"
+            logger.warning(f"testreport: {msg}")
+            return [nodes.paragraph(text=msg)]
+
+        try:
+            results = _parse_twister_results(xml_path, module_filter)
+        except Exception as exc:
+            logger.warning(str(exc))
+            return [nodes.paragraph(text=str(exc))]
+
+        if not results:
+            return [nodes.paragraph(text="[testreport: no matching results]")]
+
+        # Organize: suite → function (stable insertion order) → result list
+        suite_order = []
+        func_order = {}  # suite → [functions in order]
+        grouped = {}     # (suite, function) → [results]
+        seen = set()
+
+        for r in results:
+            s, fn = r["suite"], r["function"]
+            if s not in func_order:
+                suite_order.append(s)
+                func_order[s] = []
+            if (s, fn) not in seen:
+                func_order[s].append(fn)
+                seen.add((s, fn))
+            grouped.setdefault((s, fn), []).append(r)
+
+        for key in grouped:
+            grouped[key].sort(key=lambda r: (r["platform"], r["scenario"]))
+
+        all_rst = []
+
+        for suite in suite_order:
+            heading = suite.replace("_", " ").title()
+            all_rst += [heading, "-" * len(heading), ""]
+
+            for fn in func_order[suite]:
+                # Twister XML omits the leading test_ prefix; try both forms
+                info = spec_lookup.get(fn) or spec_lookup.get("test_" + fn)
+                if info is None:
+                    logger.warning(f"testreport: '{fn}' not in spec needs.json — skipped")
+                    continue
+                for r in grouped[(suite, fn)]:
+                    all_rst += _build_result_rst(r, info["id"], info["test_module"]).splitlines()
+                    all_rst.append("")
+
+        # Summary needtable filtered by test_module
+        modules = sorted({
+            (spec_lookup.get(fn) or spec_lookup.get("test_" + fn) or {}).get("test_module", "")
+            for _, fn in grouped
+        } - {""})
+        if len(modules) == 1:
+            tbl_filter = f'type == "test_result" and test_module == "{modules[0]}"'
+        else:
+            tbl_filter = 'type == "test_result"'
+
+        summary_heading = "Result summary"
+        all_rst += [
+            "----", "",
+            summary_heading, "-" * len(summary_heading), "",
+            ".. needtable::",
+            f'   :filter: {tbl_filter}',
+            "   :columns: id, title, test_module, platform, scenario, status, execution_time, links",
+            "   :style: table",
+            "",
+        ]
+
+        vl = ViewList(all_rst, source="<testreport>")
+        container = nodes.container()
+        self.state.nested_parse(vl, self.content_offset, container, match_titles=True)
+        return container.children
 
 
 # ---------------------------------------------------------------------------

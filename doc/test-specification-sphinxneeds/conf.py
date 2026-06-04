@@ -148,15 +148,11 @@ needs_external_needs = [
     }
 ]
 
-# kernel_queue_status / kernel_queue_minimallibc_status are defined here (empty)
-# so they appear in needs.json for the report build to import and extend.
 _str_field = {"schema": {"type": "string"}, "nullable": True}
 needs_fields = {
-    "test_function":                   {**_str_field, "description": "C function name of the test case"},
-    "test_id":                         {**_str_field, "description": "Stable test identifier (e.g. TSPEC-QUEUE-API-001)"},
-    "suite":                           {**_str_field, "description": "Doxygen test suite group name"},
-    "kernel_queue_status":             {**_str_field, "description": "Test result for kernel.queue scenario"},
-    "kernel_queue_minimallibc_status": {**_str_field, "description": "Test result for kernel.queue.minimallibc scenario"},
+    "test_function": {**_str_field, "description": "C function name of the test case"},
+    "test_module":   {**_str_field, "description": "Path to the test module (e.g. tests/kernel/queue)"},
+    "suite":         {**_str_field, "description": "Doxygen test suite group name"},
 }
 
 # IDs are lowercase with hyphens/underscores: testspec-queue_api-<name>
@@ -175,8 +171,8 @@ needs_layouts = {
                 'visible="icon:arrow-right-circle", initial=False)>>'
             ],
             "meta": [
-                '<<meta("test_id",       prefix="\\*\\*test id:\\*\\* ")>>',
                 '<<meta("test_function", prefix="\\*\\*test function:\\*\\* ")>>',
+                '<<meta("test_module",   prefix="\\*\\*test module:\\*\\* ")>>',
                 '<<meta("suite",         prefix="\\*\\*suite:\\*\\* ")>>',
                 '<<meta("status",        prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
                 "<<meta_links_all()>>",
