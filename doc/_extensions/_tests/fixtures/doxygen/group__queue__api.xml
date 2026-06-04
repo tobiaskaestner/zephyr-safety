@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<doxygen>
+  <compounddef id="group__queue__api" kind="group">
+    <compoundname>queue_api</compoundname>
+    <title>Queue API Tests</title>
+    <memberdef kind="function" id="group__queue__api_1a001">
+      <name>test_queue_put</name>
+      <briefdescription>
+        <para>Test queue put operation.</para>
+      </briefdescription>
+      <detaileddescription>
+        <para>
+          <xrefsect id="testids_1testids">
+            <xreftitle>Test ID</xreftitle>
+            <xrefdescription><para>TSPEC-QUEUE-API-001</para></xrefdescription>
+          </xrefsect>
+          <xrefsect id="reqrefs_1reqrefs">
+            <xreftitle>Requirement Refs</xreftitle>
+            <xrefdescription><para>zep-srs-20-1</para></xrefdescription>
+          </xrefsect>
+          <xrefsect id="test_active_1test_active">
+            <xreftitle>Status</xreftitle>
+            <xrefdescription><para></para></xrefdescription>
+          </xrefsect>
+        </para>
+      </detaileddescription>
+      <inbodydescription></inbodydescription>
+      <location file="test_queue.c" line="42" bodyfile="test_queue.c" bodystart="42"/>
+    </memberdef>
+    <memberdef kind="function" id="group__queue__api_1a002">
+      <name>test_queue_get</name>
+      <briefdescription>
+        <para>Test queue get operation.</para>
+      </briefdescription>
+      <detaileddescription>
+        <para>
+          <xrefsect id="testids_1testids">
+            <xreftitle>Test ID</xreftitle>
+            <xrefdescription><para>TSPEC-QUEUE-API-002</para></xrefdescription>
+          </xrefsect>
+        </para>
+      </detaileddescription>
+      <inbodydescription></inbodydescription>
+      <location file="test_queue.c" line="55" bodyfile="test_queue.c" bodystart="55"/>
+    </memberdef>
+  </compounddef>
+</doxygen>

@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<doxygen>
+  <compounddef id="group__queue__procedures" kind="group">
+    <compoundname>queue_procedures</compoundname>
+    <title>Queue Test Procedures</title>
+    <memberdef kind="function" id="group__queue__procedures_1b001">
+      <name>setup_queue</name>
+      <briefdescription>
+        <para>Initialize queue for testing.</para>
+      </briefdescription>
+      <detaileddescription>
+        <para>Sets up the queue object before each test case.</para>
+        <para>
+          <parameterlist kind="param">
+            <parameteritem>
+              <parameternamelist><parametername>queue</parametername></parameternamelist>
+              <parameterdescription><para>pointer to the queue structure</para></parameterdescription>
+            </parameteritem>
+          </parameterlist>
+        </para>
+      </detaileddescription>
+      <inbodydescription></inbodydescription>
+      <location file="test_helpers.c" line="10" bodyfile="test_helpers.c" bodystart="10"/>
+    </memberdef>
+    <memberdef kind="function" id="group__queue__procedures_1b002">
+      <name>teardown_queue</name>
+      <briefdescription>
+        <para>Clean up queue after testing.</para>
+      </briefdescription>
+      <detaileddescription></detaileddescription>
+      <inbodydescription></inbodydescription>
+      <location file="test_helpers.c" line="20" bodyfile="test_helpers.c" bodystart="20"/>
+    </memberdef>
+  </compounddef>
+</doxygen>

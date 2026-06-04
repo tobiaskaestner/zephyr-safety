@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuites>
+  <testsuite name="qemu_cortex_m3/ti_lm3s6965" tests="4" failures="1" errors="0" skipped="0">
+    <testcase classname="kernel.queue" name="kernel.queue.kernel.queue.test_queue_put" time="0.123">
+    </testcase>
+    <testcase classname="kernel.queue" name="kernel.queue.kernel.queue.test_queue_get" time="0.456">
+    </testcase>
+    <testcase classname="kernel.queue.minimallibc" name="kernel.queue.minimallibc.kernel.queue.test_queue_put" time="0.124">
+    </testcase>
+    <testcase classname="kernel.queue.minimallibc" name="kernel.queue.minimallibc.kernel.queue.test_queue_get" time="0.457">
+      <failure message="expected 1 got 0">assertion failure at line 72</failure>
+    </testcase>
+  </testsuite>
+</testsuites>

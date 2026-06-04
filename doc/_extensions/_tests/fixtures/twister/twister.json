@@ -1,0 +1,30 @@
+{
+  "environment": {
+    "run_date": "2026-06-01T10:00:00+00:00",
+    "zephyr_version": "3.7.0",
+    "toolchain": "zephyr-sdk-0.17.0",
+    "os": "linux"
+  },
+  "testsuites": [
+    {
+      "name": "kernel.queue",
+      "platform": "qemu_cortex_m3/ti_lm3s6965",
+      "path": "tests/kernel/queue",
+      "toolchain": "zephyr_gnu",
+      "testcases": [
+        {"name": "kernel.queue.kernel.queue.test_queue_put", "status": "passed"},
+        {"name": "kernel.queue.kernel.queue.test_queue_get", "status": "passed"}
+      ]
+    },
+    {
+      "name": "kernel.queue.minimallibc",
+      "platform": "qemu_cortex_m3/ti_lm3s6965",
+      "path": "tests/kernel/queue",
+      "toolchain": "zephyr_gnu",
+      "testcases": [
+        {"name": "kernel.queue.minimallibc.kernel.queue.test_queue_put", "status": "passed"},
+        {"name": "kernel.queue.minimallibc.kernel.queue.test_queue_get", "status": "failed"}
+      ]
+    }
+  ]
+}

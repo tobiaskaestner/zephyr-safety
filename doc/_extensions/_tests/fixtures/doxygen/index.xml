@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<doxygenindex version="1.9.8" xml:lang="en-US">
+  <compound refid="group__queue__api" kind="group">
+    <name>queue_api</name>
+  </compound>
+  <compound refid="group__queue__procedures" kind="group">
+    <name>queue_procedures</name>
+  </compound>
+</doxygenindex>

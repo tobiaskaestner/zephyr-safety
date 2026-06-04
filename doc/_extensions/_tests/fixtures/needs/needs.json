@@ -1,0 +1,25 @@
+{
+  "current_version": "1.0",
+  "versions": {
+    "1.0": {
+      "needs": {
+        "TSPEC-QUEUE-API-001": {
+          "type": "test_case",
+          "test_function": "test_queue_put",
+          "suite": "kernel.queue",
+          "section_name": "Queue API Tests",
+          "test_module": "tests/kernel/queue",
+          "verifies": ["zep-srs-20-1"]
+        },
+        "TSPEC-QUEUE-API-002": {
+          "type": "test_case",
+          "test_function": "test_queue_get",
+          "suite": "kernel.queue",
+          "section_name": "Queue API Tests",
+          "test_module": "tests/kernel/queue",
+          "verifies": []
+        }
+      }
+    }
+  }
+}
