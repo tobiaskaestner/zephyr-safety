@@ -140,6 +140,14 @@ needs_types = [
     dict(directive="requirement",    title="Requirement",    prefix="REQ_",   color="#FDEBD0", style="node"),
 ]
 
+needs_links = {
+    "verifies": {
+        "description": "Test case verifies a requirement",
+        "incoming": "verified by",
+        "outgoing": "verifies",
+    },
+}
+
 needs_external_needs = [
     {
         "json_path": str(_req_needs_path),
@@ -200,6 +208,13 @@ html_domain_indices = False
 html_split_index = True
 html_show_sourcelink = False
 html_show_sphinx = False
+
+html_context = {
+    "reference_links": {
+        "Test Report": BASE_URL + "test-report-sphinxneeds/html",
+        "Requirements": BASE_URL + "requirements/html",
+    }
+}
 
 LATEX_DOC = os.getenv("LATEX_DOC", "test-specification-sphinxneeds.tex")
 latex_documents = [("index", LATEX_DOC, "", "", "manual")]

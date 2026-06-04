@@ -263,7 +263,7 @@ def _build_need_rst(info, suite_name, module_path=""):
     lines.append(f"   :suite: {suite_name}")
     lines.append(f"   :status: {status}")
     if req_ids:
-        lines.append(f"   :links: {'; '.join(req_ids)}")
+        lines.append(f"   :verifies: {'; '.join(req_ids)}")
     lines.append("")
 
     # Body: Arrange/Act/Assert first, Source and See also at the bottom
@@ -603,8 +603,34 @@ def _slugify(s):
     return re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-')
 
 
+def _find_handler_log(twister_out_dir, platform, toolchain, test_path, scenario_name):
+    """Return the Path to handler.log for a (platform, scenario) run, or None.
+
+    Constructs the nominal path from the twister output directory layout:
+        {twister_out_dir}/{platform_slug}/{toolchain_slug}/{test_path}/{scenario}/handler.log
+
+    Falls back to a directory scan when the scenario directory was named after an
+    older scenario name (stale incremental build cache).
+    """
+    platform_slug = platform.replace("/", "_")
+    toolchain_slug = toolchain.replace("/", "_")
+    base = Path(twister_out_dir) / platform_slug / toolchain_slug / test_path
+    exact = base / scenario_name / "handler.log"
+    if exact.exists():
+        return exact
+    # Stale-cache fallback: scan for handler.log files under test_path
+    candidates = sorted(base.glob("*/handler.log")) if base.exists() else []
+    if len(candidates) == 1:
+        return candidates[0]
+    # Multiple candidates: prefer the directory whose name is a prefix of the scenario
+    for c in candidates:
+        if scenario_name.startswith(c.parent.name):
+            return c
+    return None
+
+
 def _load_spec_lookup(json_path):
-    """Read spec needs.json; return {test_function: {id, test_module, suite}}."""
+    """Read spec needs.json; return {test_function: {id, test_module, suite, req_ids}}."""
     with open(json_path) as f:
         data = json.load(f)
     versions = data.get("versions", {})
@@ -622,6 +648,8 @@ def _load_spec_lookup(json_path):
                 "id": need_id,
                 "test_module": need.get("test_module", ""),
                 "suite": need.get("suite", ""),
+                "suite_title": need.get("section_name", ""),
+                "req_ids": need.get("verifies", []),
             }
     return lookup
 
@@ -663,7 +691,7 @@ def _parse_twister_results(xml_path, module_filter=None):
     return results
 
 
-def _build_result_rst(r, spec_id, test_module):
+def _build_result_rst(r, spec_id, test_module, req_ids=None):
     """Build RST block for one test_result need."""
     need_id = f"TR-{_slugify(r['platform'])}-{_slugify(r['scenario'])}-{spec_id}"
     fn = r["function"]
@@ -680,8 +708,10 @@ def _build_result_rst(r, spec_id, test_module):
         f"   :scenario: {r['scenario']}",
         f"   :twister_id: {r['twister_id']}",
         f"   :execution_time: {r['time']}",
-        f"   :links: {spec_id}",
+        f"   :result_of: {spec_id}",
     ]
+    if req_ids:
+        lines.append(f"   :covers: {'; '.join(req_ids)}")
     if r["reason"]:
         lines.append(f"   :reason: {r['reason']}")
     lines.append("")
@@ -714,6 +744,12 @@ class TestReportDirective(Directive):
         module_filter = self.options.get("module", "").strip() or None
         env = self.state.document.settings.env
         app = env.app
+
+        if not Path(xml_path).is_absolute():
+            base = getattr(app.config, "twister_output_dir", "") or str(
+                Path(env.doc2path(env.docname)).parent
+            )
+            xml_path = str(Path(base) / xml_path)
 
         ext_needs = getattr(app.config, "needs_external_needs", [])
         spec_json = ext_needs[0].get("json_path", "") if ext_needs else ""
@@ -764,7 +800,17 @@ class TestReportDirective(Directive):
         all_rst = []
 
         for suite in suite_order:
-            heading = suite.replace("_", " ").title()
+            # Use the human-readable Doxygen group title from the spec (section_name),
+            # falling back to a title-cased derivation when the suite has no known functions.
+            suite_title = next(
+                (
+                    (spec_lookup.get(fn) or spec_lookup.get("test_" + fn) or {}).get("suite_title")
+                    for fn in func_order[suite]
+                    if (spec_lookup.get(fn) or spec_lookup.get("test_" + fn) or {}).get("suite_title")
+                ),
+                None,
+            )
+            heading = suite_title or suite.replace("_", " ").title()
             all_rst += [heading, "-" * len(heading), ""]
 
             for fn in func_order[suite]:
@@ -774,7 +820,9 @@ class TestReportDirective(Directive):
                     logger.warning(f"testreport: '{fn}' not in spec needs.json — skipped")
                     continue
                 for r in grouped[(suite, fn)]:
-                    all_rst += _build_result_rst(r, info["id"], info["test_module"]).splitlines()
+                    all_rst += _build_result_rst(
+                        r, info["id"], info["test_module"], info.get("req_ids")
+                    ).splitlines()
                     all_rst.append("")
 
         # Summary needtable filtered by test_module
@@ -793,14 +841,197 @@ class TestReportDirective(Directive):
             summary_heading, "-" * len(summary_heading), "",
             ".. needtable::",
             f'   :filter: {tbl_filter}',
-            "   :columns: id, title, test_module, platform, scenario, status, execution_time, links",
+            "   :columns: id, title, test_module, platform, scenario, status, execution_time, result_of",
             "   :style: table",
             "",
         ]
 
+        # Execution logs — one subsection per (scenario, platform), sorted
+        twister_out_dir = getattr(app.config, "twister_output_dir", "")
+        twister_json = Path(twister_out_dir) / "twister.json" if twister_out_dir else None
+        if twister_json and twister_json.exists():
+            try:
+                with open(twister_json) as f:
+                    tw = json.load(f)
+                # Collect matching (scenario, platform, path, toolchain) entries
+                log_entries = []
+                for ts in tw.get("testsuites", []):
+                    sname = ts["name"]
+                    if module_filter and not (
+                        sname == module_filter or sname.startswith(module_filter + ".")
+                    ):
+                        continue
+                    log_entries.append((
+                        sname,
+                        ts["platform"],
+                        ts.get("path", ""),
+                        ts.get("toolchain", ""),
+                    ))
+                log_entries.sort()
+
+                if log_entries:
+                    all_rst += ["----", "", "Execution Logs", "-" * len("Execution Logs"), ""]
+                    for scenario, platform, test_path, toolchain in log_entries:
+                        sub = f"{scenario} — {platform}"
+                        all_rst += [sub, "~" * len(sub), ""]
+                        log_file = _find_handler_log(
+                            twister_out_dir, platform, toolchain, test_path, scenario
+                        )
+                        if log_file:
+                            all_rst += [".. code-block:: none", ""]
+                            for line in log_file.read_text(errors="replace").splitlines():
+                                all_rst.append("   " + line)
+                            all_rst.append("")
+                        else:
+                            all_rst += [
+                                f"*handler.log not found for* ``{scenario}`` *on* ``{platform}``",
+                                "",
+                            ]
+            except Exception as exc:
+                logger.warning(f"testreport: could not load execution logs: {exc}")
+
         vl = ViewList(all_rst, source="<testreport>")
         container = nodes.container()
         self.state.nested_parse(vl, self.content_offset, container, match_titles=True)
+        return container.children
+
+
+# ---------------------------------------------------------------------------
+# twisterinfo directive
+# ---------------------------------------------------------------------------
+
+class TwisterInfoDirective(Directive):
+    """Emit a run-metadata block and per-platform summary table from twister.json.
+
+    Usage::
+
+        .. twisterinfo:: /path/to/twister-out/twister.json
+    """
+
+    required_arguments = 1
+    optional_arguments = 0
+    has_content = False
+    option_spec = {}
+
+    def run(self):
+        json_path = self.arguments[0].strip()
+        env = self.state.document.settings.env
+        app = env.app
+
+        if not Path(json_path).is_absolute():
+            base = getattr(app.config, "twister_output_dir", "") or str(
+                Path(env.doc2path(env.docname)).parent
+            )
+            json_path = str(Path(base) / json_path)
+
+        if not Path(json_path).exists():
+            msg = f"[twisterinfo: twister.json not found: {json_path!r}]"
+            logger.warning(f"twisterinfo: {msg}")
+            return [nodes.paragraph(text=msg)]
+
+        try:
+            with open(json_path) as f:
+                data = json.load(f)
+        except Exception as exc:
+            logger.warning(f"twisterinfo: cannot read {json_path}: {exc}")
+            return [nodes.paragraph(text=str(exc))]
+
+        env = data.get("environment", {})
+        suites = data.get("testsuites", [])
+
+        # --- Normalise run date ---
+        run_date_raw = env.get("run_date", "")
+        try:
+            from datetime import datetime, timezone
+            dt = datetime.fromisoformat(run_date_raw)
+            run_date = dt.astimezone(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        except Exception:
+            run_date = run_date_raw
+
+        zephyr_version = env.get("zephyr_version", "—")
+        toolchain = env.get("toolchain", "—")
+        host_os = env.get("os", "—")
+
+        # Scenarios: unique scenario names from testsuites (deduplicated, sorted)
+        scenarios = sorted({s["name"] for s in suites})
+
+        # Platforms: unique platforms (sorted)
+        platforms = sorted({s["platform"] for s in suites})
+
+        # --- Per-platform counts ---
+        from collections import defaultdict, Counter
+        by_platform = defaultdict(list)
+        for s in suites:
+            by_platform[s["platform"]].extend(s.get("testcases", []))
+        platform_stats = []
+        total_passed = total_failed = total_skipped = total_error = 0
+        for plat in platforms:
+            tcs = by_platform[plat]
+            counts = Counter(tc.get("status", "") for tc in tcs)
+            p, f, s, e = (counts.get("passed", 0), counts.get("failed", 0),
+                          counts.get("skipped", 0), counts.get("error", 0))
+            total_passed += p
+            total_failed += f
+            total_skipped += s
+            total_error += e
+            platform_stats.append((plat, p, f, s, e, len(tcs)))
+
+        # --- Build RST ---
+        lines = []
+
+        # Metadata field list (list-table for consistent rendering)
+        lines += [
+            ".. list-table:: Test Run Metadata",
+            "   :header-rows: 0",
+            "   :widths: 25 75",
+            "",
+            f"   * - Run date",
+            f"     - {run_date}",
+            f"   * - Zephyr version",
+            f"     - ``{zephyr_version}``",
+            f"   * - Toolchain",
+            f"     - {toolchain}",
+            f"   * - Host OS",
+            f"     - {host_os}",
+            f"   * - Test scenarios",
+            f"     - {', '.join(f'``{s}``' for s in scenarios)}",
+            f"   * - Platforms",
+            f"     - {', '.join(f'``{p}``' for p in platforms)}",
+            f"   * - Total test cases",
+            f"     - {total_passed + total_failed + total_skipped + total_error}"
+            f" (passed: {total_passed}"
+            + (f", failed: {total_failed}" if total_failed else "")
+            + (f", skipped: {total_skipped}" if total_skipped else "")
+            + (f", error: {total_error}" if total_error else "")
+            + ")",
+            "",
+        ]
+
+        # Per-platform summary table
+        lines += [
+            ".. list-table:: Results per Platform",
+            "   :header-rows: 1",
+            "   :widths: 50 15 15 10 10",
+            "",
+            "   * - Platform",
+            "     - Passed",
+            "     - Failed",
+            "     - Skipped",
+            "     - Total",
+        ]
+        for plat, p, f, s, e, total in platform_stats:
+            lines += [
+                f"   * - ``{plat}``",
+                f"     - {p}",
+                f"     - {f + e}",
+                f"     - {s}",
+                f"     - {total}",
+            ]
+        lines.append("")
+
+        vl = ViewList(lines, source="<twisterinfo>")
+        container = nodes.container()
+        self.state.nested_parse(vl, self.content_offset, container)
         return container.children
 
 
@@ -812,6 +1043,8 @@ def setup(app):
     app.add_config_value("testspec_doxygen_url", "", "env")
     app.add_config_value("api_doxygen_url", "", "env")
     app.add_config_value("requirements_url", "", "env")
+    app.add_config_value("twister_output_dir", "", "env")
     app.add_directive("testmodule", TestModuleDirective)
     app.add_directive("testreport", TestReportDirective)
+    app.add_directive("twisterinfo", TwisterInfoDirective)
     return {"version": "0.2", "parallel_read_safe": True}

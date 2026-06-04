@@ -13,3 +13,13 @@
 div.wy-table-responsive:has(table.NEEDS_DATATABLES) {
     overflow: visible;
 }
+
+/* One link per line in needtable link cells */
+td.needs_verifies a,
+td.needs_verifies_back a {
+    display: block;
+}
+td.needs_verifies em,
+td.needs_verifies_back em {
+    display: none;
+}
