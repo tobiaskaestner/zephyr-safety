@@ -1,7 +1,13 @@
-/* One link per line in links_back needtable cells */
-td.needs_links_back a {
+/* Remove RTD theme's max-width cap so the content area uses the full viewport. */
+.wy-nav-content {
+    max-width: none;
+}
+/* One link per line in back-link needtable cells */
+td.needs_result_of_back a,
+td.needs_verifies_back a {
     display: block;
 }
-td.needs_links_back em {
+td.needs_result_of_back em,
+td.needs_verifies_back em {
     display: none;
 }

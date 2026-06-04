@@ -7,7 +7,11 @@ Zephyr Test Report (sphinx-needs)
    the Test Specification build and overlays twister execution results.
    Build the ``test-specification-sphinxneeds-html`` target first.
 
-.. toctree::
+.. twisterinfo:: twister.json
 
-   kernel/queue/test-report
-   coverage
+.. toctree::
+   :maxdepth: 2
+
+   reports
+   test-coverage
+   reqs-coverage

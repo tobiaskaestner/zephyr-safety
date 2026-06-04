@@ -3,8 +3,10 @@
 # Build AFTER test-specification-sphinxneeds-html (needs needs.json from that output).
 # Do NOT modify safety/doc/test-report/ — this is a parallel experiment.
 
+import json
 import os
 import re
+import subprocess
 import sys
 from pathlib import Path
 
@@ -14,6 +16,67 @@ DOC_BASE = Path(__file__).resolve().parents[2]
 # Go 3 levels up to reach the bdoc root.
 ZEPHYR_BUILD = Path(os.environ.get("OUTPUT_DIR")).resolve().parents[2]
 BASE_URL = "http://localhost:8000/"
+
+_REQ_HTML = ZEPHYR_BUILD / "deploy" / "requirements" / "html"
+
+
+def _build_req_needs_stub() -> Path:
+    """Convert requirements objects.inv → sphinx-needs external needs JSON.
+
+    Identical to the function in test-specification-sphinxneeds/conf.py.
+    Filters zep-srs-* labels from the intersphinx inventory and writes a
+    minimal needs.json stub so that needs_external_needs can resolve
+    outgoing verifies links from imported spec test_case needs.
+    The stub is reused across incremental builds (regenerated only when
+    the inventory is newer).
+    """
+    inv_path = _REQ_HTML / "objects.inv"
+    json_path = _REQ_HTML / "objects.json"
+    out_path = _REQ_HTML / "req-needs.json"
+
+    if not inv_path.exists():
+        sys.stderr.write(f"warning: requirements inventory not found: {inv_path}\n")
+        return out_path
+
+    if not json_path.exists() or json_path.stat().st_mtime < inv_path.stat().st_mtime:
+        subprocess.run(
+            ["sphobjinv", "co", "json", str(inv_path), "--overwrite"],
+            check=True, capture_output=True,
+        )
+
+    with open(json_path) as f:
+        inv_data = json.load(f)
+
+    needs = {}
+    for k, v in inv_data.items():
+        if k in ("project", "version", "count"):
+            continue
+        if v["role"] != "label" or not re.match(r"^zep-srs-\d+-\d+$", v["name"]):
+            continue
+        name = v["name"]
+        title = v["dispname"] if v["dispname"] not in ("-", name) else name
+        uri = v["uri"].replace("$", name)
+        docname = uri.split(".html")[0]
+        needs[name] = {
+            "id": name,
+            "type": "requirement",
+            "title": title,
+            "content": "",
+            "status": "approved",
+            "docname": docname,
+        }
+
+    stub = {
+        "current_version": "1.0",
+        "versions": {"1.0": {"needs": needs, "needs_amount": len(needs)}},
+    }
+    with open(out_path, "w") as f:
+        json.dump(stub, f, indent=2)
+
+    return out_path
+
+
+_req_needs_path = _build_req_needs_stub()
 
 sys.path.insert(0, str(ZEPHYR_BASE / "doc" / "_extensions"))
 sys.path.insert(0, str(DOC_BASE / "doc" / "_extensions"))
@@ -93,12 +156,35 @@ needs_types = [
     dict(directive="requirement",   title="Requirement",     prefix="REQ_",     color="#FDEBD0", style="node"),
 ]
 
+needs_links = {
+    "verifies": {
+        "description": "Test case verifies a requirement",
+        "incoming": "verified by",
+        "outgoing": "verifies",
+    },
+    "result_of": {
+        "description": "Test result is an outcome of a test case",
+        "incoming": "has results",
+        "outgoing": "result of",
+    },
+    "covers": {
+        "description": "Test result covers a requirement (derived from verifying test case)",
+        "incoming": "covered by",
+        "outgoing": "covers",
+    },
+}
+
 needs_external_needs = [
     {
         "json_path": _testspec_needs_json,
         "base_url": BASE_URL + "test-specification-sphinxneeds/html",
         "version": "4.4.99",
-    }
+    },
+    {
+        "json_path": str(_req_needs_path),
+        "base_url": BASE_URL + "requirements/html",
+        "version": "1.0",
+    },
 ]
 
 needs_layouts = {
@@ -144,10 +230,20 @@ html_split_index = True
 html_show_sourcelink = False
 html_show_sphinx = False
 
+html_context = {
+    "reference_links": {
+        "Test Specification": BASE_URL + "test-specification-sphinxneeds/html",
+        "Requirements": BASE_URL + "requirements/html",
+    }
+}
+
 LATEX_DOC = os.getenv("LATEX_DOC", "test-report-sphinxneeds.tex")
 latex_documents = [("index", LATEX_DOC, "", "", "manual")]
 
 suppress_warnings = ["config.cache"]
+
+# twister-out lives one level above the bdoc build root
+twister_output_dir = str(ZEPHYR_BUILD.parent / "twister-out")
 
 # -- Intersphinx --------------------------------------------------------------
 
