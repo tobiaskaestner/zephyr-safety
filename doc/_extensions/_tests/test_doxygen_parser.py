@@ -175,6 +175,27 @@ def test_parse_memberdef_no_testid():
     assert info["test_id"] == ""
 
 
+def test_parse_memberdef_extracts_detail_paras():
+    xml = ET.fromstring(
+        "<memberdef kind='function' id='group__queue__api_1a001'>"
+        "<name>test_queue_put</name>"
+        "<briefdescription><para>Brief line.</para></briefdescription>"
+        "<detaileddescription>"
+        "<para>First detail paragraph.</para>"
+        "<para>Second detail paragraph.</para>"
+        "<para><xrefsect id='testids_1testids'><xreftitle>Test ID</xreftitle>"
+        "<xrefdescription><para>TSPEC-QUEUE-API-001</para></xrefdescription>"
+        "</xrefsect></para>"
+        "</detaileddescription>"
+        "<inbodydescription/>"
+        "<location file='f.c' line='1' bodyfile='f.c' bodystart='1'/>"
+        "</memberdef>"
+    )
+    info = dp.parse_memberdef(xml, "group__queue__api", "/testspec/html", "/api/html")
+    assert info["detail_paras"] == ["First detail paragraph.", "Second detail paragraph."]
+    assert info["test_id"] == "TSPEC-QUEUE-API-001"
+
+
 def test_parse_memberdef_arrange_sections():
     inbody = (
         "<para>"

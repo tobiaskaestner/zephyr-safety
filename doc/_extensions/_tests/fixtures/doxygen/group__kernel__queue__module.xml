@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<doxygen>
+  <compounddef id="group__kernel__queue__module" kind="group">
+    <compoundname>kernel_queue_module</compoundname>
+    <title>Queue Test Module</title>
+    <innergroup refid="group__queue__api">queue_api</innergroup>
+    <innergroup refid="group__queue__procedures">queue_procedures</innergroup>
+  </compounddef>
+</doxygen>

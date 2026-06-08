@@ -87,7 +87,7 @@ def load_spec_lookup(json_path):
                 "id": need_id,
                 "test_module": need.get("test_module", ""),
                 "suite": need.get("suite", ""),
-                "suite_title": need.get("section_name", ""),
+                "suite_title": need.get("suite_title", ""),
                 "req_ids": need.get("verifies", []),
             }
     return lookup

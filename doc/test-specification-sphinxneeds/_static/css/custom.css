@@ -14,6 +14,23 @@ div.wy-table-responsive:has(table.NEEDS_DATATABLES) {
     overflow: visible;
 }
 
+/* Brief summary: rendered heading-like (bold) with extra space below to
+ * separate it visually from the detailed description paragraphs.
+ * The RTD theme rule `html.writer-html5 .rst-content table.docutils td>p`
+ * has specificity (0,3,4) and hard-resets margin-bottom to 0 on every <p>
+ * inside a need table cell.  This selector reaches (0,5,3) to beat it. */
+.rst-content table.docutils td.need.content p.need-brief {
+    font-weight: 600;
+    font-size: 1rem;
+    margin-bottom: 1.4em;
+}
+
+/* Extra top margin before Arrange/Act/Assert section headings so they stand
+ * apart from the preceding description prose. */
+td.need.content p.rubric {
+    margin-top: 1.2em;
+}
+
 /* One link per line in needtable link cells */
 td.needs_verifies a,
 td.needs_verifies_back a {

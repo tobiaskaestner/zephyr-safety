@@ -161,6 +161,7 @@ needs_fields = {
     "test_function": {**_str_field, "description": "C function name of the test case"},
     "test_module":   {**_str_field, "description": "Path to the test module (e.g. tests/kernel/queue)"},
     "suite":         {**_str_field, "description": "Doxygen test suite group name"},
+    "suite_title":   {**_str_field, "description": "Human-readable Doxygen group title for the suite"},
 }
 
 # IDs are lowercase with hyphens/underscores: testspec-queue_api-<name>
@@ -238,6 +239,7 @@ def _rel_url(abs_path):
 testspec_doxygen_url = _rel_url(ZEPHYR_BUILD / "deploy" / "doxygen-zephyr-safety-testspec" / "html")
 api_doxygen_url      = _rel_url(ZEPHYR_BUILD / "deploy" / "doxygen-zephyr-safety-api" / "html")
 requirements_url     = _rel_url(ZEPHYR_BUILD / "deploy" / "requirements" / "html")
+
 
 # -- Intersphinx --------------------------------------------------------------
 

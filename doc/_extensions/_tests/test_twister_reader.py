@@ -82,7 +82,7 @@ def test_load_spec_lookup_req_ids():
     assert lookup["test_queue_put"]["req_ids"] == ["zep-srs-20-1"]
 
 
-def test_load_spec_lookup_suite_title_from_section_name():
+def test_load_spec_lookup_suite_title():
     lookup = tw.load_spec_lookup(NEEDS_JSON)
     assert lookup["test_queue_put"]["suite_title"] == "Queue API Tests"
 

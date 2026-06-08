@@ -145,6 +145,7 @@ needs_fields = {
     "test_function":  {**_str_field, "description": "C function name of the test case"},
     "test_module":    {**_str_field, "description": "Path to the test module (e.g. tests/kernel/queue)"},
     "suite":          {**_str_field, "description": "Doxygen test suite group name"},
+    "suite_title":    {**_str_field, "description": "Human-readable Doxygen group title for the suite"},
 }
 
 needs_id_regex = r"^[A-Za-z][A-Za-z0-9_-]+"

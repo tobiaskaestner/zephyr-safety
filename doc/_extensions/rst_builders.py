@@ -21,15 +21,16 @@ def slugify(s):
     return re.sub(r'[^a-zA-Z0-9]+', '-', s).strip('-')
 
 
-def build_need_rst(info, suite_name, module_path=""):
+def build_need_rst(info, suite_name, module_path="", suite_title=""):
     """Build the RST block for a single test_case need."""
     name = info["name"]
-    brief = info["brief"]
     test_id = info["test_id"]
     req_ids = info["req_ids"]
     status = info["status"]
     source_file = info["source_file"]
     doxygen_url = info["doxygen_url"]
+    brief = info["brief"]
+    detail_paras = info.get("detail_paras", [])
     see_rst = info["see_rst"]
     body_sections = info["body_sections"]
 
@@ -48,14 +49,26 @@ def build_need_rst(info, suite_name, module_path=""):
     if module_path:
         lines.append(f"   :test_module: {module_path}")
     lines.append(f"   :suite: {suite_name}")
+    if suite_title:
+        lines.append(f"   :suite_title: {suite_title}")
     lines.append(f"   :status: {status}")
     if req_ids:
         lines.append(f"   :verifies: {'; '.join(req_ids)}")
     lines.append("")
 
+    if brief:
+        lines.append("   .. rst-class:: need-brief")
+        lines.append("")
+        lines.append(f"   {brief}")
+        lines.append("")
+
+    for para in detail_paras:
+        lines.append(f"   {para}")
+        lines.append("")
+
     for section_lines in body_sections:
         for sline in section_lines:
-            lines.append(f"   {sline}")
+            lines.append(f"   {sline}" if sline else "")
         lines.append("")
 
     if source_file and doxygen_url:
@@ -114,7 +127,7 @@ def build_procedure_need_rst(memberdef, proc_compound_id, proc_group_name, tests
     lines = []
     lines.append(f".. test_procedure:: {title}")
     lines.append(f"   :id: {need_id}")
-    lines.append(f"   :status: active")
+    lines.append("   :status: active")
     lines.append("")
 
     for text in detail_lines:

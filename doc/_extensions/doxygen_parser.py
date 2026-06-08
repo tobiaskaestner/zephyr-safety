@@ -24,6 +24,7 @@ class MemberInfo(TypedDict):
     source_file: str
     doxygen_url: str
     brief: str
+    detail_paras: list[str]
     see_rst: str
     body_sections: list[list[str]]
 
@@ -212,6 +213,7 @@ def parse_memberdef(
     test_id = ""
     req_ids: list[str] = []
     status = "draft"
+    detail_paras: list[str] = []
     see_rst = ""
     if dd is not None:
         for xrefsect in dd.findall("para/xrefsect"):
@@ -228,6 +230,10 @@ def parse_memberdef(
                 status = "active"
             elif "test_obsolete" in xid:
                 status = "obsolete"
+        for para in dd.findall("para"):
+            text = para_text(para).strip()
+            if text:
+                detail_paras.append(text)
         see_sect = dd.find("para/simplesect[@kind='see']")
         if see_sect is not None:
             see_rst = see_to_rst(see_sect, api_html_dir)
@@ -248,6 +254,7 @@ def parse_memberdef(
         source_file=source_file,
         doxygen_url=doxygen_url,
         brief=brief,
+        detail_paras=detail_paras,
         see_rst=see_rst,
         body_sections=body_sections,
     )

@@ -9,6 +9,7 @@ def _base_info(**kwargs):
     defaults = {
         "name": "test_queue_put",
         "brief": "Test queue put operation.",
+        "detail_paras": [],
         "test_id": "TSPEC-QUEUE-API-001",
         "req_ids": ["zep-srs-20-1"],
         "status": "active",
@@ -71,6 +72,27 @@ def test_build_need_rst_verifies_field():
 def test_build_need_rst_no_verifies_when_empty():
     rst = rb.build_need_rst(_base_info(req_ids=[]), "kernel.queue")
     assert ":verifies:" not in rst
+
+
+def test_build_need_rst_brief_in_body():
+    rst = rb.build_need_rst(_base_info(brief="Puts an item onto the queue."), "kernel.queue")
+    assert "Puts an item onto the queue." in rst
+    assert ".. rst-class:: need-brief" in rst
+
+
+def test_build_need_rst_detail_paras_in_body():
+    rst = rb.build_need_rst(
+        _base_info(detail_paras=["First detail.", "Second detail."]), "kernel.queue"
+    )
+    assert "First detail." in rst
+    assert "Second detail." in rst
+
+
+def test_build_need_rst_no_brief_when_empty():
+    rst = rb.build_need_rst(_base_info(brief=""), "kernel.queue")
+    lines = rst.splitlines()
+    body_lines = [l for l in lines if l.strip() and not l.startswith("..") and not l.startswith("   :")]
+    assert not any(l.strip() == "" for l in body_lines[:1])
 
 
 # ---------------------------------------------------------------------------
