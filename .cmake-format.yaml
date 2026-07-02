@@ -1,0 +1,20 @@
+# cmake-format / cmake-lint configuration
+#
+# Tuned to the conventions this repo's CMake files follow (mirroring upstream
+# Zephyr's doc/CMakeLists.txt): UPPERCASE local variables and wider lines.
+format:
+  line_width: 120
+  tab_size: 2
+
+lint:
+  # Allow UPPERCASE (and mixed-case) local variables, matching the Zephyr
+  # doc build style used throughout these files. Default is lowercase-only.
+  local_var_pattern: '[A-Za-z_][A-Za-z0-9_]*'
+  disabled_codes:
+    # E1120: false positive on the valid single-argument form
+    #        `separate_arguments(<var>)`; cmake-lint only knows the newer
+    #        `separate_arguments(<var> <mode> <args>)` signature.
+    - 'E1120'
+    # C0113: "Missing COMMENT" on internal add_custom_target wrappers where a
+    #        user-facing comment adds no value.
+    - 'C0113'
