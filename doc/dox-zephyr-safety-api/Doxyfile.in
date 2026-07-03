@@ -972,7 +972,7 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-api.md \
+INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
                          @DOC_BASE@/_doxygen/safety-api-groups.dox \
                          @ZEPHYR_BASE@/include/zephyr/kernel/queue.h_ \
                          
@@ -1149,7 +1149,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the Doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = @DOC_BASE@/_doxygen/mainpage-safety-api.md
+USE_MDFILE_AS_MAINPAGE = @DOXY_SRC_DIR@/mainpage.md
 
 # The Fortran standard specifies that for fixed formatted Fortran code all
 # characters from position 72 are to be considered as comment. A common

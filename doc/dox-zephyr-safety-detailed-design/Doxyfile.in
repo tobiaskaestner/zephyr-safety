@@ -42,7 +42,7 @@ DOXYFILE_ENCODING      = UTF-8
 # title of most generated pages and in a few other places.
 # The default value is: My Project.
 
-PROJECT_NAME           = "Zephyr Kernel Test Specification (Safety Scope)"
+PROJECT_NAME           = "Zephyr Detailed Design Specification (Safety Scope)"
 
 # The PROJECT_NUMBER tag can be used to enter a project or revision number. This
 # could be handy for archiving the generated documentation or if some version
@@ -280,28 +280,26 @@ TAB_SIZE               = 8
 # @} or use a double escape (\\{ and \\})
 
 ALIASES                = "kconfig{1}=\c \1" \
-                         "req{1}=\ref ZEPH_\1 \"ZEPH-\1\"" \
+                         "req{1}=\ref ZEP-SRS-\1 \"ZEP-SRS-\1\"" \
                          "satisfy{1}=\xrefitem satisfy \"Satisfies requirement\" \"Requirement Implementation\" \1" \
                          "verify{1}=\xrefitem verify \"Verifies requirement\" \"Requirement Verification\" \1" \
                          "kconfig_dep{1}=\attention Available only when the following Kconfig option is enabled: \kconfig{\1}." \
                          "kconfig_dep{2}=\attention Available only when the following Kconfig options are enabled: \kconfig{\1}, \kconfig{\2}." \
                          "kconfig_dep{3}=\attention Available only when the following Kconfig options are enabled: \kconfig{\1}, \kconfig{\2}, \kconfig{\3}." \
                          "funcprops=\par \"Function properties (list may not be complete)\"" \
-                         "reschedule=\qualifier reschedule Can trigger scheduling event\n" \
+                         "reschedule=\qualifier reschedule" \
                          "sleep=\qualifier sleep" \
                          "no_wait=\qualifier no-wait" \
-                         "isr_ok=\qualifier isr-ok Can be called from ISRs\n" \
+                         "isr_ok=\qualifier isr-ok" \
                          "pre_kernel_ok=\qualifier pre-kernel-ok" \
                          "async=\qualifier async" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
-                         "supervisor=\qualifier supervisor" \
-                         "syscall=\qualifier \"system call\"" \
-                        "required-by{1}= \verbatim embed:rst ^^**required-by:** :external+req:ref:`ZEP-SRS-\1 <zep-srs-\1>` \endverbatim" \
-                        "draft=\qualifier draft^^\xrefitem test_draft \"Test Status: Draft\" \"Draft Test Cases\"" \
-                        "active=\qualifier active^^\xrefitem test_active \"Test Status: Active\" \"Active Test Cases\"" \
-                        "obsolete=\qualifier obsolete^^\xrefitem test_obsolete \"Test Status: Obsolete\" \"Obsolete Test Cases\"" \
-                        "testid{1}=\xrefitem testids \"Test ID\" \"Test IDs\" \1" \
-                        "reqref{1}=\xrefitem reqrefs \"Requirement\" \"Requirements\" \1"
+                         "supervisor=\qualifier supervisor"
+                         "implements{1}=\
+                         \verbatim embed:rst:leading-asterisk
+                         implemented-by :ref:`ZEP-SRS-\1 <req:zep-srs-\1>`
+                         \endverbatim
+                         "
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -554,13 +552,13 @@ EXTRACT_PRIV_VIRTUAL   = NO
 # scope will be included in the documentation.
 # The default value is: NO.
 
-EXTRACT_PACKAGE        = YES
+EXTRACT_PACKAGE        = NO
 
 # If the EXTRACT_STATIC tag is set to YES, all static members of a file will be
 # included in the documentation.
 # The default value is: NO.
 
-EXTRACT_STATIC         = YES
+EXTRACT_STATIC         = NO
 
 # If the EXTRACT_LOCAL_CLASSES tag is set to YES, classes (and structs) defined
 # locally in source files will be included in the documentation. If set to NO,
@@ -568,7 +566,7 @@ EXTRACT_STATIC         = YES
 # for Java sources.
 # The default value is: YES.
 
-EXTRACT_LOCAL_CLASSES  = YES
+EXTRACT_LOCAL_CLASSES  = NO
 
 # This flag is only useful for Objective-C code. If set to YES, local methods,
 # which are defined in the implementation section but not in the interface are
@@ -576,7 +574,7 @@ EXTRACT_LOCAL_CLASSES  = YES
 # included.
 # The default value is: NO.
 
-EXTRACT_LOCAL_METHODS  = YES
+EXTRACT_LOCAL_METHODS  = NO
 
 # If this flag is set to YES, the members of anonymous namespaces will be
 # extracted and appear in the documentation as a namespace called
@@ -600,7 +598,7 @@ RESOLVE_UNNAMED_PARAMS = YES
 # section is generated. This option has no effect if EXTRACT_ALL is enabled.
 # The default value is: NO.
 
-HIDE_UNDOC_MEMBERS     = NO
+HIDE_UNDOC_MEMBERS     = YES
 
 # If the HIDE_UNDOC_CLASSES tag is set to YES, Doxygen will hide all
 # undocumented classes that are normally visible in the class hierarchy. If set
@@ -609,7 +607,7 @@ HIDE_UNDOC_MEMBERS     = NO
 # if EXTRACT_ALL is enabled.
 # The default value is: NO.
 
-HIDE_UNDOC_CLASSES     = NO
+HIDE_UNDOC_CLASSES     = YES
 
 # If the HIDE_FRIEND_COMPOUNDS tag is set to YES, Doxygen will hide all friend
 # declarations. If set to NO, these declarations will be included in the
@@ -667,20 +665,20 @@ HIDE_COMPOUND_REFERENCE= NO
 # will show which file needs to be included to use the class.
 # The default value is: YES.
 
-SHOW_HEADERFILE        = NO
+SHOW_HEADERFILE        = YES
 
 # If the SHOW_INCLUDE_FILES tag is set to YES then Doxygen will put a list of
 # the files that are included by a file in the documentation of that file.
 # The default value is: YES.
 
-SHOW_INCLUDE_FILES     = NO
+SHOW_INCLUDE_FILES     = YES
 
 # If the SHOW_GROUPED_MEMB_INC tag is set to YES then Doxygen will add for each
 # grouped member an include statement to the documentation, telling the reader
 # which file to include in order to use the member.
 # The default value is: NO.
 
-SHOW_GROUPED_MEMB_INC  = NO
+SHOW_GROUPED_MEMB_INC  = YES
 
 # If the FORCE_LOCAL_INCLUDES tag is set to YES then Doxygen will list include
 # files with double quotes in the documentation rather than with sharp brackets.
@@ -777,7 +775,7 @@ GENERATE_DEPRECATEDLIST= YES
 # sections, marked by \if <section_label> ... \endif and \cond <section_label>
 # ... \endcond blocks.
 
-ENABLED_SECTIONS       = API
+ENABLED_SECTIONS       = design
 
 # The MAX_INITIALIZER_LINES tag determines the maximum number of lines that the
 # initial value of a variable or macro / define can have for it to appear in the
@@ -870,7 +868,7 @@ EXTERNAL_TOOL_PATH     =
 # messages are off.
 # The default value is: NO.
 
-QUIET                  = YES
+QUIET                  = NO
 
 # The WARNINGS tag can be used to turn on/off the warning messages that are
 # generated to standard error (stderr) by Doxygen. If WARNINGS is set to YES
@@ -977,20 +975,12 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
-INPUT                  = @DOC_BASE@/_doxygen/mainpage-safety-testspec.md \
-                         @DOC_BASE@/_doxygen/safety-test-groups.dox \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_contexts.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_cancel.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_fail.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_loop.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_timeout/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_usage/src/main.c
+INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
+                         @DOC_BASE@/_doxygen/safety-api-groups.dox \
+                         @ZEPHYR_BASE@/include/zephyr/kernel/queue.h_ \
+                         @ZEPHYR_BASE@/kernel/queue.c \
+                         
+
                          
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
@@ -1074,10 +1064,7 @@ EXCLUDE_PATTERNS       =
 # wildcard * is used, a substring. Examples: ANamespace, AClass,
 # ANamespace::AClass, ANamespace::*Test
 
-EXCLUDE_SYMBOLS        = _* \
-                         *.__unnamed__ \
-                         z_* \
-                         Z_*
+EXCLUDE_SYMBOLS        = CONFIG_*
 
 # The EXAMPLE_PATH tag can be used to specify one or more files or directories
 # that contain example code fragments that are included (see the \include
@@ -1142,8 +1129,8 @@ INPUT_FILTER           =
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by Doxygen.
 
-FILTER_PATTERNS        = *.h=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py\
-                         *.c=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py
+FILTER_PATTERNS        = *.h=@DOC_BASE@/scripts/doxygen_filter_ifdef_config.py \                        
+                         *.c=@DOC_BASE@/scripts/doxygen_filter_remove_impl.py
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -1165,7 +1152,7 @@ FILTER_SOURCE_PATTERNS =
 # (index.html). This can be useful if you have a project on for instance GitHub
 # and want to reuse the introduction page also for the Doxygen output.
 
-USE_MDFILE_AS_MAINPAGE = @DOC_BASE@/_doxygen/mainpage-safety-testspec.md
+USE_MDFILE_AS_MAINPAGE = @DOXY_SRC_DIR@/mainpage.md
 
 # The Fortran standard specifies that for fixed formatted Fortran code all
 # characters from position 72 are to be considered as comment. A common
@@ -1207,13 +1194,13 @@ STRIP_CODE_COMMENTS    = NO
 # entity all documented functions referencing it will be listed.
 # The default value is: NO.
 
-REFERENCED_BY_RELATION = NO
+REFERENCED_BY_RELATION = YES
 
 # If the REFERENCES_RELATION tag is set to YES then for each documented function
 # all documented entities called/used by that function will be listed.
 # The default value is: NO.
 
-REFERENCES_RELATION    = NO
+REFERENCES_RELATION    = YES
 
 # If the REFERENCES_LINK_SOURCE tag is set to YES and SOURCE_BROWSER tag is set
 # to YES then the hyperlinks from functions in REFERENCES_RELATION and
@@ -1933,7 +1920,7 @@ MATHJAX_CODEFILE       =
 # The default value is: YES.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-SEARCHENGINE            NO
+SEARCHENGINE           = YES
 
 # When the SERVER_BASED_SEARCH tag is enabled the search engine will be
 # implemented using a web server instead of a web client using JavaScript. There
@@ -2453,7 +2440,7 @@ EXPAND_ONLY_PREDEF     = NO
 # The default value is: YES.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-SEARCH_INCLUDES        = NO
+SEARCH_INCLUDES        = YES
 
 # The INCLUDE_PATH tag can be used to specify one or more directories that
 # contain include files that are not input files but should be processed by the
@@ -2461,7 +2448,7 @@ SEARCH_INCLUDES        = NO
 # RECURSIVE has no effect here.
 # This tag requires that the tag SEARCH_INCLUDES is set to YES.
 
-INCLUDE_PATH           =
+INCLUDE_PATH           = @ZEPHYR_BASE@/include
 
 # You can use the INCLUDE_FILE_PATTERNS tag to specify one or more wildcard
 # patterns (like *.h and *.hpp) to filter out the header-files in the
@@ -2480,8 +2467,10 @@ INCLUDE_FILE_PATTERNS  =
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
 PREDEFINED             = __DOXYGEN__ \                         
-                          SYS_PORT_TRACING_TRACKING_FIELD(x)= \
-                         "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} */" \
+                         NET_MGMT_DEFINE_REQUEST_HANDLER(x)= \
+                         DEVICE_DEFINE()= \
+                         BUILD_ASSERT()= \
+                         XEN_GUEST_HANDLE_64(x)= \
                          _LINKER \
                          __deprecated= \
                          __sparse_cache= \
@@ -2490,15 +2479,14 @@ PREDEFINED             = __DOXYGEN__ \
                          __attribute_nonnull(...)= \
                          "__printf_like(x, y)=" \
                          __attribute__(x)= \
-                         "__syscall= /** \syscall */" \
+                         __syscall= \
                          __syscall_always_inline= \
                          __must_check= \
                          "ATOMIC_DEFINE(x, y)=atomic_t x[ATOMIC_BITMAP_SIZE(y)]" \
-                         "ZTEST(suite, fn)=/** \ingroup suite */ void fn(void)" \
-                         "ZTEST_USER(suite, fn)=/** \ingroup suite */ void fn(void)" \
-                         "ZTEST_USER_F(suite, fn)=/** \ingroup suite */ void fn(void)" \
-                         "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)"\
-                         "ZTEST_SUITE(suite, u1, u2, u3, u4, u5)=/** \defgroup suite suite */"
+                         "ZTEST(suite, fn)=void fn(void)" \
+                         "ZTEST_USER(suite, fn)=void fn(void)" \
+                         "ZTEST_USER_F(suite, fn)=void fn(void)" \
+                         "ZTEST_F(suite, fn)=void fn(void)"
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The
@@ -2536,7 +2524,7 @@ SKIP_FUNCTION_MACROS   = NO
 # the path). If a tag file is not located in the directory in which Doxygen is
 # run, you must also specify the path to the tagfile here.
 
-TAGFILES               = @DOXY_OUT@/../doxygen-zephyr-safety-api/html/zephyr.tag=../../doxygen-zephyr-safety-api/html
+TAGFILES               =
 
 # When a file name is specified after GENERATE_TAGFILE, Doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to
@@ -2556,7 +2544,7 @@ ALLEXTERNALS           = NO
 # listed.
 # The default value is: YES.
 
-EXTERNAL_GROUPS        = NO
+EXTERNAL_GROUPS        = YES
 
 # If the EXTERNAL_PAGES tag is set to YES, all external pages will be listed in
 # the related pages index. If set to NO, only the current project's pages will
@@ -2582,7 +2570,7 @@ HIDE_UNDOC_RELATIONS   = YES
 # set to NO
 # The default value is: NO.
 
-HAVE_DOT               = NO
+HAVE_DOT               = YES
 
 # The DOT_NUM_THREADS specifies the number of dot invocations Doxygen is allowed
 # to run in parallel. When set to 0 Doxygen will base this on the number of
@@ -2754,7 +2742,7 @@ INCLUDED_BY_GRAPH      = YES
 # The default value is: NO.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-CALL_GRAPH             = NO
+CALL_GRAPH             = YES
 
 # If the CALLER_GRAPH tag is set to YES then Doxygen will generate a caller
 # dependency graph for every global function or class method.
@@ -2766,7 +2754,7 @@ CALL_GRAPH             = NO
 # The default value is: NO.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-CALLER_GRAPH           = NO
+CALLER_GRAPH           = YES
 
 # If the GRAPHICAL_HIERARCHY tag is set to YES then Doxygen will graphical
 # hierarchy of all classes instead of a textual one.
@@ -2807,7 +2795,7 @@ DIR_GRAPH_MAX_DEPTH    = 1
 # The default value is: png.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-DOT_IMAGE_FORMAT       = png
+DOT_IMAGE_FORMAT       = svg
 
 # If DOT_IMAGE_FORMAT is set to svg, then this option can be set to YES to
 # enable generation of interactive SVG images that allow zooming and panning.
@@ -2819,7 +2807,7 @@ DOT_IMAGE_FORMAT       = png
 # The default value is: NO.
 # This tag requires that the tag HAVE_DOT is set to YES.
 
-INTERACTIVE_SVG        = NO
+INTERACTIVE_SVG        = YES
 
 # The DOT_PATH tag can be used to specify the path where the dot tool can be
 # found. If left blank, it is assumed the dot tool can be found in the path.

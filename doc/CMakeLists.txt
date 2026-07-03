@@ -183,7 +183,11 @@ function(add_doxygen_target name)
   set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/deploy/doxygen-${DOXY_DOC})
   make_directory(${DOXY_OUT})
 
-  set(DOXYFILE_IN ${CMAKE_CURRENT_LIST_DIR}/${DOXY_DOC}.doxyfile.in)
+  # Per-document source folder (mirrors the sphinx layout): holds Doxyfile.in
+  # plus this doc's own mainpage.md / groups.dox, referenced as @DOXY_SRC_DIR@.
+  # Shared assets (footer, cross-doc-nav, shared groups) stay under @DOC_BASE@.
+  set(DOXY_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/dox-${DOXY_DOC})
+  set(DOXYFILE_IN ${DOXY_SRC_DIR}/Doxyfile.in)
   set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_DOC}.doxyfile)
   set(DOC_BASE ${CMAKE_CURRENT_LIST_DIR})
 
