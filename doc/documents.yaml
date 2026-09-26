@@ -126,11 +126,17 @@ documents:
 
   # A doxygen document's id is taken verbatim as its target name, source folder
   # and deploy path — the `dox-` prefix is ours, not the engine's.
+  # The full upstream Zephyr API, kept as a stand-alone reference. It is not a
+  # link peer (crossref: false): it documents a superset of the safety-scoped
+  # Doxygen projects' symbols, and importing each other's tag files made each
+  # side defer the shared symbols to the other, so neither generated their
+  # pages. The safety documents link within the safety scope only.
   dox-zephyr:
     title: "Kernel API (Doxygen)"
     kind: doxygen
     group: reference
     prefix: dox_zephyr
+    crossref: false
 
   dox-zephyr-safety-api:
     title: "Safety API (Doxygen)"

@@ -23,7 +23,6 @@ Intersphinx — other Sphinx documents
 Doxylink — Doxygen documents
 ----------------------------
 
-* Kernel API (Doxygen): :dox_zephyr:`kernel_apis`
 * Safety API (Doxygen): :dox_api:`kernel_apis`
 * Detailed Design (Doxygen): :dox_design:`kernel_apis`
 * Test Specification (Doxygen): :dox_testspec:`kernel_queue_tests`
