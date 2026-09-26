@@ -74,8 +74,8 @@ A document's registry id is its target stem and deploy path:
 |---|---|---|
 | `requirements` | Sphinx + StrictDoc | Requirements from `.sdoc` files |
 | `architecture` | Sphinx | Arc42-style architecture document |
-| `test-specification` | Sphinx + sphinx-needs | Test spec (sources in `doc/test-specification-sphinxneeds/`) |
-| `test-report` | Sphinx + sphinx-needs | Test report (sources in `doc/test-report-sphinxneeds/`) |
+| `test-specification` | Sphinx + sphinx-needs | Test spec |
+| `test-report` | Sphinx + sphinx-needs | Test report |
 | `api-documentation` | Sphinx + Breathe | API doc consuming Doxygen XML |
 | `dox-zephyr` | Doxygen | Full kernel API docs |
 | `dox-zephyr-safety-api` | Doxygen | Safety-scope public API |
@@ -97,7 +97,7 @@ cmake --build ../bdoc-zdocs --target doc-check
 
 ### Doxygen Configuration
 
-Templates: `doc/dox/dox-*/Doxyfile.in`. zdocs expands them and then **appends** the keys it
+Templates: `doc/dox/*/Doxyfile.in`. zdocs expands them and then **appends** the keys it
 owns (output paths, XML, tag files, `TAGFILES`, theme, header/footer, logo), so those must
 not be set in the templates — they would be silently overridden.
 
@@ -179,9 +179,9 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `documents.yaml` — the document registry (read by zdocs)
 - `needs_config.toml` — shared sphinx-needs types, links and fields
 - `_doxygen/safety-api-groups.dox` — API group stubs
-- `dox/dox-*/Doxyfile.in`, `dox/dox-*/mainpage.md` — Doxygen templates and introductions
+- `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
-- `test-specification-sphinxneeds/` — test spec Sphinx root (registry id `test-specification`)
+- `test-specification/`, `test-report/` — the sphinx-needs test spec and report
 - `_extensions/strictdoc_runner.py` — auto-runs `strictdoc export` on Sphinx build-init
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)

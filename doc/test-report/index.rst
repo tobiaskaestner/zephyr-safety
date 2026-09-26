@@ -5,7 +5,7 @@ Zephyr Test Report (sphinx-needs)
 
    This document is generated after test execution. It imports test cases from
    the Test Specification build and overlays twister execution results.
-   Build the ``test-specification-sphinxneeds-html`` target first.
+   Build the ``test-specification-html`` target first.
 
 .. twisterinfo:: twister.json
 

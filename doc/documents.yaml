@@ -87,17 +87,13 @@ documents:
   # -- Verification -----------------------------------------------------------
 
   # The sphinx-needs test spec and report are the documents that matter going
-  # forward. They keep the clean ids; `doc_dir` maps them onto the folders that
-  # still carry the experiment-era `-sphinxneeds` suffix, so no directory move
-  # is needed to adopt the names. Rename the folders later if desired — the id,
-  # target names and deploy path do not depend on it.
+  # forward; the hand-crafted pair they replaced lives on under sandbox/.
 
   test-specification:
     title: "Test Specification"
     kind: sphinx
     group: verification
     prefix: testspec
-    doc_dir: test-specification-sphinxneeds
     builders: [html]
     needs:
       source: json
@@ -110,13 +106,12 @@ documents:
     kind: sphinx
     group: verification
     prefix: testreport
-    doc_dir: test-report-sphinxneeds
     builders: [html]
     needs:
       source: json
     testmodule:
       # Replaces the hand-written
-      #   add_dependencies(test-report-sphinxneeds-html test-specification-sphinxneeds-html)
+      #   add_dependencies(test-report-html test-specification-html)
       # in the old CMakeLists, and fixes Phase 0 defect B2: the report used to
       # correlate against needs_external_needs[0], which was `requirements`.
       spec: test-specification
@@ -143,7 +138,7 @@ documents:
     kind: doxygen
     group: reference
     prefix: dox_zephyr
-    doc_dir: dox/dox-zephyr
+    doc_dir: dox/zephyr
     crossref: false
 
   dox-zephyr-safety-api:
@@ -151,21 +146,21 @@ documents:
     kind: doxygen
     group: reference
     prefix: dox_api
-    doc_dir: dox/dox-zephyr-safety-api
+    doc_dir: dox/zephyr-safety-api
 
   dox-zephyr-safety-detailed-design:
     title: "Detailed Design (Doxygen)"
     kind: doxygen
     group: reference
     prefix: dox_design
-    doc_dir: dox/dox-zephyr-safety-detailed-design
+    doc_dir: dox/zephyr-safety-detailed-design
 
   dox-zephyr-safety-testspec:
     title: "Test Specification (Doxygen)"
     kind: doxygen
     group: reference
     prefix: dox_testspec
-    doc_dir: dox/dox-zephyr-safety-testspec
+    doc_dir: dox/zephyr-safety-testspec
 
   # -- Governance -------------------------------------------------------------
 
