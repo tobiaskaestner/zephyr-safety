@@ -52,4 +52,13 @@ manifest:
     - name: safety-doc
       path: references/safety-doc
 
+    # The documentation engine. Consumed as a Zephyr module: the module system
+    # sets ZEPHYR_ZDOCS_MODULE_DIR, which doc/CMakeLists.txt adds to
+    # CMAKE_MODULE_PATH before include(zdocs). No path is ever written into the
+    # engine by hand.
+    - name: zdocs
+      remote: tiacsys
+      revision: main
+      path: tools/zdocs
+
   group-filter: [-safety-committee]
