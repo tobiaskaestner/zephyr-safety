@@ -279,14 +279,13 @@ TAB_SIZE               = 8
 # with the commands \{ and \} for these it is advised to use the version @{ and
 # @} or use a double escape (\\{ and \\})
 
-ALIASES                = "kconfig{1}=\c \1" \
-                         "req{1}=\ref ZEPH_\1 \"ZEPH-\1\"" \
-                         "satisfy{1}=\xrefitem satisfy \"Satisfies requirement\" \"Requirement Implementation\" \1" \
-                         "verify{1}=\xrefitem verify \"Verifies requirement\" \"Requirement Verification\" \1" \
+ALIASES                = "kconfig{1}=\htmlonly<code class='doxyxref' data-stype='kconfig:option' data-starget='\1'>\1</code>\endhtmlonly" \
+                         "kconfig_regex{1}=\htmlonly<code class='doxyxref' data-stype='kconfig:option-regex' data-starget='\1'>\1</code>\endhtmlonly" \
+                         "dtcompatible{1}=\htmlonly<code class='doxyxref' data-stype='std:dtcompatible' data-starget='\1'>\1</code>\endhtmlonly" \
+                         "rstref{1}=\htmlonly<span class='doxyxref' data-stype='std:ref' data-starget='\1'>\1</span>\endhtmlonly" \
                          "kconfig_dep{1}=\attention Available only when the following Kconfig option is enabled: \kconfig{\1}." \
                          "kconfig_dep{2}=\attention Available only when the following Kconfig options are enabled: \kconfig{\1}, \kconfig{\2}." \
                          "kconfig_dep{3}=\attention Available only when the following Kconfig options are enabled: \kconfig{\1}, \kconfig{\2}, \kconfig{\3}." \
-                         "funcprops=\par \"Function properties (list may not be complete)\"" \
                          "reschedule=\qualifier reschedule" \
                          "sleep=\qualifier sleep" \
                          "no_wait=\qualifier no-wait" \
@@ -295,6 +294,27 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "async=\qualifier async" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
                          "supervisor=\qualifier supervisor"
+
+# Aliases to help structure the API documentation for "driver ops"
+ALIASES               += "def_driverbackendgroup{2}=\defgroup \2_backend \1 Driver Backend API ^^\
+                                                    \brief This group contains the API type definitions, callback signatures, and other helpers required to implement a \1 driver. ^^\
+                                                    \ingroup \2"
+ALIASES               += "in_driverbackendgroup{1}=\ingroup \1_backend"
+ALIASES               += "driver_ops{1}=\brief \htmlonly <span class=\"mlabel\">Driver Operations</span> \endhtmlonly \1 driver operations \
+                                        \details This is the driver API structure any \1 driver needs to define. \
+                                                 It contains function pointers to the operations the driver implements, \
+                                                 as well as any other driver-specific constant data. ^^\
+                                                 ^^ \
+                                                 Members marked with \driver_ops_mandatory MUST be set by the driver, \
+                                                 whereas those marked with \driver_ops_optional are optional. \
+                                        \see DEVICE_DT_INST_DEFINE() \
+                                        \see DEVICE_DT_DEFINE() \
+                                        \see DEVICE_API()"
+ALIASES               += "driver_ops_mandatory=\htmlonly<span class=\"op-badge op-req\" title=\"This operation MUST be implemented by the driver.\">REQ</span>\endhtmlonly"
+ALIASES               += "driver_ops_optional=\htmlonly<span class=\"op-badge op-opt\" title=\"This operation MAY optionally be implemented by the driver.\">OPT</span>\endhtmlonly"
+
+# Kept from the earlier copy of this file: still used by Zephyr sources.
+ALIASES               += "funcprops=\par \"Function properties (list may not be complete)\""
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -980,7 +1000,6 @@ INPUT                  = @ZEPHYR_BASE@/doc/_doxygen/mainpage.md \
                          @ZEPHYR_BASE@/subsys/testsuite/include/ \
                          @ZEPHYR_BASE@/subsys/testsuite/ztest/include/ \
                          @ZEPHYR_BASE@/subsys/secure_storage/include/ \
-                         @ZEPHYR_BASE@/subsys/fs/zms/zms_priv.h \
 
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
