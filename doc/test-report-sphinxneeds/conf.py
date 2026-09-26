@@ -10,6 +10,8 @@ from zdocs_conf import configure
 configure(
     globals(),
     doc_dir=Path(__file__).resolve().parent,
+    # This document's own custom.css / custom.js (loaded in setup() below).
+    static_path=[Path(__file__).resolve().parent / "_static"],
     project="Zephyr Test Report",
     author="Zephyr Project Contributors",
     copyright_holder="Zephyr Project Contributors",
