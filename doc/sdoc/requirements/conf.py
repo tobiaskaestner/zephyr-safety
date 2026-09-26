@@ -8,7 +8,8 @@ sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 from zdocs_conf import configure
 
 # See the note in safety-committee/conf.py: downstream extensions are APPENDED.
-sys.path.append(str(Path(__file__).resolve().parents[1] / "_extensions"))
+# doc/ is where the registry lives, however deep this document sits.
+sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
 
 configure(
     globals(),

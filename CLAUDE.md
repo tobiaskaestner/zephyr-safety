@@ -182,7 +182,10 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
 - `test-specification/`, `test-report/` — the sphinx-needs test spec and report
+- `sdoc/requirements/`, `sdoc/safety-committee/` — the StrictDoc-generated documents
+- `sandbox/` — superseded experiments, kept for reference
 - `_extensions/strictdoc_runner.py` — auto-runs `strictdoc export` on Sphinx build-init
+- `_scripts/` — Doxygen input filters (`FILTER_PATTERNS`)
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)
 - `queues.sdoc` — `ZEP-SRS-20-*`

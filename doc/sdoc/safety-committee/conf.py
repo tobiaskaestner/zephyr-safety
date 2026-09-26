@@ -11,7 +11,8 @@ from zdocs_conf import configure
 # not ship it, so its directory has to be added AFTER zdocs_conf has put its own
 # _extensions first — never before, or a stale local copy of an engine module
 # would shadow the engine's.
-sys.path.append(str(Path(__file__).resolve().parents[1] / "_extensions"))
+# doc/ is where the registry lives, however deep this document sits.
+sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
 
 configure(
     globals(),

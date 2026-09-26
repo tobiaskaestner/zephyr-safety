@@ -29,4 +29,5 @@ engine's copy:
 
 .. code-block:: python
 
-    sys.path.append(str(Path(__file__).resolve().parents[1] / "_extensions"))
+    # doc/ is where the registry lives, however deep the document sits.
+    sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
