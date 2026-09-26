@@ -27,6 +27,12 @@ doxygen_xml: true
 # page is the canonical one.
 xref_smoketest: "html/test-report/xref-test.html"
 
+# doc-check findings let through on purpose. Exact text, never a pattern; each
+# one names its deferred issue (claude/traceability-reconciliation/issues/).
+doc_check_accepted:
+  - finding: "html/dox-zephyr/structbt__conn__oob__info.html: dead link -> structbt__conn__oob__info_1_1_0d130100253371055064164065265224242172250032310014_1_1_0d137243212029c6f55ad3b31a092abf1483a434744.html"
+    reason: "issue 002: Doxygen links nested anonymous struct pages it never generates (full upstream API, outside the safety scope)"
+
 groups:
   - id: specification
     title: "Specification"
