@@ -82,7 +82,7 @@ A document's registry id is its target stem and deploy path:
 | `dox-zephyr-safety-detailed-design` | Doxygen | Internal design |
 | `dox-zephyr-safety-testspec` | Doxygen | Test suite docs, parsed by `testmodule::` |
 | `safety-committee` | Sphinx | Governance |
-| `sandbox-*` | Sphinx | Superseded experiments (incl. the hand-crafted test spec/report in `doc/test-specification/`, `doc/test-report/`) |
+| `sandbox-*` | Sphinx | Superseded experiments (sources under `doc/sandbox/`, incl. the hand-crafted test spec/report) |
 
 The build is two-stage. `doc-index` builds every document's stage-1 index (objects.inv,
 tag files, needs.json); every `<id>-html` depends on **all** of them, so build
@@ -97,7 +97,7 @@ cmake --build ../bdoc-zdocs --target doc-check
 
 ### Doxygen Configuration
 
-Templates: `doc/dox-*/Doxyfile.in`. zdocs expands them and then **appends** the keys it
+Templates: `doc/dox/dox-*/Doxyfile.in`. zdocs expands them and then **appends** the keys it
 owns (output paths, XML, tag files, `TAGFILES`, theme, header/footer, logo), so those must
 not be set in the templates — they would be silently overridden.
 
@@ -179,7 +179,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `documents.yaml` — the document registry (read by zdocs)
 - `needs_config.toml` — shared sphinx-needs types, links and fields
 - `_doxygen/safety-api-groups.dox` — API group stubs
-- `dox-*/Doxyfile.in`, `dox-*/mainpage.md` — Doxygen templates and introductions
+- `dox/dox-*/Doxyfile.in`, `dox/dox-*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
 - `test-specification-sphinxneeds/` — test spec Sphinx root (registry id `test-specification`)
 - `_extensions/strictdoc_runner.py` — auto-runs `strictdoc export` on Sphinx build-init
