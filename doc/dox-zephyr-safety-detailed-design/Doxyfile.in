@@ -61,7 +61,7 @@ PROJECT_BRIEF          = "A Scalable Open Source RTOS"
 # pixels and the maximum width should not exceed 200 pixels. Doxygen will copy
 # the logo to the output directory.
 
-PROJECT_LOGO           = @ZEPHYR_BASE@/doc/_doxygen/logo.svg
+# PROJECT_LOGO: owned by zdocs, appended to the generated Doxyfile.
 
 # With the PROJECT_ICON tag one can specify an icon that is included in the tabs
 # when the HTML document is shown. Doxygen will copy the logo to the output
@@ -1325,7 +1325,7 @@ GENERATE_HTML          = YES
 # The default directory is: html.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_OUTPUT            = html
+# HTML_OUTPUT: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_FILE_EXTENSION tag can be used to specify the file extension for each
 # generated HTML page (for example: .htm, .php, .asp).
@@ -1352,7 +1352,7 @@ HTML_FILE_EXTENSION    = .html
 # of the possible markers and block names see the documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_HEADER            = @ZEPHYR_BASE@/doc/_doxygen/header.html
+# HTML_HEADER: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_FOOTER tag can be used to specify a user-defined HTML footer for each
 # generated HTML page. If the tag is left blank Doxygen will generate a standard
@@ -1362,7 +1362,7 @@ HTML_HEADER            = @ZEPHYR_BASE@/doc/_doxygen/header.html
 # that Doxygen normally uses.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_FOOTER            = @DOC_BASE@/_doxygen/safety-footer.html
+# HTML_FOOTER: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_STYLESHEET tag can be used to specify a user-defined cascading style
 # sheet that is used by each HTML page. It can be used to fine-tune the look of
@@ -1374,7 +1374,7 @@ HTML_FOOTER            = @DOC_BASE@/_doxygen/safety-footer.html
 # obsolete.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_STYLESHEET        =
+# HTML_STYLESHEET: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_EXTRA_STYLESHEET tag can be used to specify additional user-defined
 # cascading style sheets that are included after the standard style sheets
@@ -1392,11 +1392,7 @@ HTML_STYLESHEET        =
 # documentation.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_STYLESHEET  = @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome.css \
-                         @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-sidebar-only.css \
-                         @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-sidebar-only-darkmode-toggle.css \
-                         @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-zephyr.css \
-                         @DOC_BASE@/_doxygen/cross-doc-nav.css
+# HTML_EXTRA_STYLESHEET: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_EXTRA_FILES tag can be used to specify one or more extra images or
 # other source files which should be copied to the HTML output directory. Note
@@ -1406,10 +1402,7 @@ HTML_EXTRA_STYLESHEET  = @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome.css \
 # files will be copied as-is; there are no commands or markers available.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_EXTRA_FILES       = @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-darkmode-toggle.js \
-                         @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-zephyr.js \
-                         @DOC_BASE@/_doxygen/cross-doc-nav-links.js \
-                         @DOC_BASE@/_doxygen/cross-doc-nav.js
+# HTML_EXTRA_FILES: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_COLORSTYLE tag can be used to specify if the generated HTML output
 # should be rendered with a dark or light theme.
@@ -1422,7 +1415,7 @@ HTML_EXTRA_FILES       = @ZEPHYR_BASE@/doc/_doxygen/doxygen-awesome-darkmode-tog
 # The default value is: AUTO_LIGHT.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-HTML_COLORSTYLE        = LIGHT
+# HTML_COLORSTYLE: owned by zdocs, appended to the generated Doxyfile.
 
 # The HTML_COLORSTYLE_HUE tag controls the color of the HTML output. Doxygen
 # will adjust the colors in the style sheet and background images according to
@@ -1750,7 +1743,7 @@ DISABLE_INDEX          = NO
 # The default value is: NO.
 # This tag requires that the tag GENERATE_HTML is set to YES.
 
-GENERATE_TREEVIEW      = YES
+# GENERATE_TREEVIEW: owned by zdocs, appended to the generated Doxyfile.
 
 # When both GENERATE_TREEVIEW and DISABLE_INDEX are set to YES, then the
 # FULL_SIDEBAR option determines if the side bar is limited to only the treeview
@@ -2288,7 +2281,7 @@ MAN_LINKS              = NO
 # captures the structure of the code including all documentation.
 # The default value is: NO.
 
-GENERATE_XML           = YES
+# GENERATE_XML: owned by zdocs, appended to the generated Doxyfile.
 
 # The XML_OUTPUT tag is used to specify where the XML pages will be put. If a
 # relative path is entered the value of OUTPUT_DIRECTORY will be put in front of
@@ -2296,7 +2289,7 @@ GENERATE_XML           = YES
 # The default directory is: xml.
 # This tag requires that the tag GENERATE_XML is set to YES.
 
-XML_OUTPUT             = xml
+# XML_OUTPUT: owned by zdocs, appended to the generated Doxyfile.
 
 # If the XML_PROGRAMLISTING tag is set to YES, Doxygen will dump the program
 # listings (including syntax highlighting and cross-referencing information) to
@@ -2524,13 +2517,13 @@ SKIP_FUNCTION_MACROS   = NO
 # the path). If a tag file is not located in the directory in which Doxygen is
 # run, you must also specify the path to the tagfile here.
 
-TAGFILES               =
+# TAGFILES: owned by zdocs, appended to the generated Doxyfile.
 
 # When a file name is specified after GENERATE_TAGFILE, Doxygen will create a
 # tag file that is based on the input files it reads. See section "Linking to
 # external documentation" for more information about the usage of tag files.
 
-GENERATE_TAGFILE       = @DOXY_OUT@/html/zephyr.tag
+# GENERATE_TAGFILE: owned by zdocs, appended to the generated Doxyfile.
 
 # If the ALLEXTERNALS tag is set to YES, all external classes and namespaces
 # will be listed in the class and namespace index. If set to NO, only the

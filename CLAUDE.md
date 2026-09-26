@@ -16,7 +16,9 @@ documents (API spec, detailed design, test specification) that can satisfy a saf
 │   └── generated/       ← generated intermediate artefacts
 ├── zephyr/              ← Zephyr kernel source (branch: topic-safety-tskr from tiacsys fork)
 ├── doc/reqmgmt/         ← StrictDoc requirements (separate git project)
-└── bdoc/                ← CMake build output (documentation artefacts)
+├── tools/zdocs/         ← the documentation engine (west project, Zephyr module)
+├── bdoc-zdocs/          ← CMake build output on zdocs
+└── bdoc/                ← pre-migration reference build — do not rebuild
 ```
 
 ## Two Distinct Kernel Objects — Do Not Conflate
@@ -53,47 +55,61 @@ Requirement UIDs are referenced in test source files using the Sphinx role:
 
 ## Documentation Build System
 
-Build directory: `../bdoc` (CMake build; source: `doc/CMakeLists.txt`).
+The docset is a consumer of the **zdocs** engine (`../tools/zdocs`, declared in `west.yml`
+and discovered as a Zephyr module). `doc/CMakeLists.txt` sets the `ZDOCS_*` consumer
+contract and calls `add_docs_from_registry()`; every document is declared once in
+`doc/documents.yaml`, which drives build targets, intersphinx, Doxygen `TAGFILES`, nav
+groups and needs imports. Shared sphinx-needs vocabulary lives in `doc/needs_config.toml`.
+Each `doc/<document>/conf.py` is a thin shim around `zdocs_conf.configure()`.
 
-### CMake Build Targets
+Build directory: `../bdoc-zdocs`. (`../bdoc` is the pre-migration reference build on the
+old in-tree engine — do not rebuild it.)
 
-| Target | Tool | Output |
+### Build Targets
+
+A document's registry id is its target stem and deploy path:
+`<id>-<builder>` → `deploy/<builder>/<id>/`; Doxygen XML goes to `deploy/xml/<id>/`.
+
+| Document id | Kind | Content |
 |---|---|---|
-| `doxygen-zephyr` | Doxygen | Full kernel API docs (HTML + XML) |
-| `doxygen-zephyr-safety-api` | Doxygen | Safety-scope public API (HTML + XML) |
-| `doxygen-zephyr-safety-detailed-design` | Doxygen | Internal design (HTML + XML) |
-| `doxygen-zephyr-safety-testspec` | Doxygen | Test suite docs (HTML + XML) |
-| `api-documentation-html` | Sphinx + Breathe | API doc consuming doxygen XML |
-| `requirements-html` | Sphinx + StrictDoc | Requirements from `.sdoc` files |
-| `architecture-html` | Sphinx | Arc42-style architecture document |
-| `test-specification-html` | Sphinx | Test spec (planned) |
+| `requirements` | Sphinx + StrictDoc | Requirements from `.sdoc` files |
+| `architecture` | Sphinx | Arc42-style architecture document |
+| `test-specification` | Sphinx + sphinx-needs | Test spec (sources in `doc/test-specification-sphinxneeds/`) |
+| `test-report` | Sphinx + sphinx-needs | Test report (sources in `doc/test-report-sphinxneeds/`) |
+| `api-documentation` | Sphinx + Breathe | API doc consuming Doxygen XML |
+| `dox-zephyr` | Doxygen | Full kernel API docs |
+| `dox-zephyr-safety-api` | Doxygen | Safety-scope public API |
+| `dox-zephyr-safety-detailed-design` | Doxygen | Internal design |
+| `dox-zephyr-safety-testspec` | Doxygen | Test suite docs, parsed by `testmodule::` |
+| `safety-committee` | Sphinx | Governance |
+| `sandbox-*` | Sphinx | Superseded experiments (incl. the hand-crafted test spec/report in `doc/test-specification/`, `doc/test-report/`) |
 
-Each Sphinx target also has `-latex` (PDF via latexmk) and `-html-live` (autobuild watch)
-variants. Every target has a `-nodeps` variant that skips CMake dependency re-checks.
+The build is two-stage. `doc-index` builds every document's stage-1 index (objects.inv,
+tag files, needs.json); every `<id>-html` depends on **all** of them, so build
+`doc-index` first. `doc-check` validates the deploy tree and the xref smoke page.
 
-Build commands (from `../bdoc`):
 ```sh
-cmake --build . --target doxygen-zephyr-safety-api
-cmake --build . --target api-documentation-html
+cmake -S doc -B ../bdoc-zdocs
+cmake --build ../bdoc-zdocs --target doc-index
+cmake --build ../bdoc-zdocs --target test-specification-html test-report-html
+cmake --build ../bdoc-zdocs --target doc-check
 ```
 
 ### Doxygen Configuration
 
-Doxyfile templates: `doc/*.doxyfile.in` — CMake substitutes `@ZEPHYR_BASE@` and `@DOC_BASE@`
-and writes rendered doxyfiles to `../bdoc/`.
+Templates: `doc/dox-*/Doxyfile.in`. zdocs expands them and then **appends** the keys it
+owns (output paths, XML, tag files, `TAGFILES`, theme, header/footer, logo), so those must
+not be set in the templates — they would be silently overridden.
 
-| Doxyfile | Current `INPUT` sources | Status |
-|---|---|---|
-| `zephyr-safety-api.doxyfile.in` | `safety-api-groups.dox`, `queue.h_` | OK |
-| `zephyr-safety-detailed-design.doxyfile.in` | `safety-api-groups.dox`, `msg_q.h`, `msg_q.c` | **WIP** — should point to queue files |
-| `zephyr-safety-testspec.doxyfile.in` | `safety-test-groups.dox`, dummy source files | **WIP** — dummy files are temporary scaffolding for experimenting with doxygen settings/constructs; real test files are commented out |
+| Doxyfile | `INPUT` sources |
+|---|---|
+| `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_` |
+| `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c` |
+| `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, queue + fifo test sources |
+| `dox-zephyr` | the full upstream kernel API set |
 
-All four doxyfiles have `GENERATE_XML = YES` to feed Breathe.
-
-`doc/_doxygen/` contains:
-- `safety-api-groups.dox` / `safety-test-groups.dox` — group hierarchy stubs (kept here, not
-  inline in source, so the upstream source tree stays clean and rebasing is easier)
-- `mainpage-safety-*.md` — document introduction text for each doxygen output
+`doc/_doxygen/safety-api-groups.dox` holds the API group hierarchy stubs (kept here, not
+inline in source, so the upstream source tree stays clean and rebasing is easier).
 
 ### Breathe Integration (Sphinx ↔ Doxygen)
 
@@ -102,7 +118,7 @@ Sphinx documents pull rendered content from doxygen XML via Breathe directives:
 .. doxygengroup:: queue_apis
    :members:
 ```
-Example: `doc/api-documentation/queue_apis.rst` → `doxygen-zephyr-safety-api` XML.
+Example: `doc/api-documentation/queue_apis.rst` → `dox-zephyr-safety-api` XML.
 
 ## Traceability Chain (Goal)
 
@@ -113,11 +129,11 @@ StrictDoc (.sdoc)             requirements-html (Sphinx)
         ↕  :external+req:ref: roles in source file docstrings
 
 Doxygen @defgroup/@ingroup    api-documentation-html        (public API)
-  queue.h_                    doxygen-zephyr-safety-detailed-design (internal design)
+  queue.h_                    dox-zephyr-safety-detailed-design (internal design)
   queue.c
 
 Doxygen @defgroup/@ingroup    test-specification-html       (test spec)
-  tests/kernel/queue/src/*.c  doxygen-zephyr-safety-testspec
+  tests/kernel/queue/src/*.c  dox-zephyr-safety-testspec
 ```
 
 ### Doxygen Group Hierarchy
@@ -160,11 +176,12 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `test-spec.rst` — RST stub using `doxygengroup::` directives
 
 ### Documentation config (in `doc/`)
-- `_doxygen/safety-api-groups.dox` / `safety-test-groups.dox` — group stubs
-- `_doxygen/mainpage-safety-*.md` — document introductions
-- `*.doxyfile.in` — doxygen templates
+- `documents.yaml` — the document registry (read by zdocs)
+- `needs_config.toml` — shared sphinx-needs types, links and fields
+- `_doxygen/safety-api-groups.dox` — API group stubs
+- `dox-*/Doxyfile.in`, `dox-*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
-- `test-specification/index.rst` — test spec Sphinx root (kernel subdir not yet created)
+- `test-specification-sphinxneeds/` — test spec Sphinx root (registry id `test-specification`)
 - `_extensions/strictdoc_runner.py` — auto-runs `strictdoc export` on Sphinx build-init
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)
