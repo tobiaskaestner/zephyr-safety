@@ -20,3 +20,8 @@ file](https://github.com/zephyrproject-rtos/zephyr/blob/main/LICENSE).
 There are some imported or reused components of the Zephyr project that
 use other licensing, as described in [Licensing of Zephyr Project
 components](https://docs.zephyrproject.org/latest/LICENSING.html#zephyr-licensing).
+
+<!-- AUTO-GENERATED cross-reference smoke test — safe to delete. -->
+## Cross-reference test
+
+- `@ref k_thread_create`

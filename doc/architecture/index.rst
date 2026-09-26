@@ -38,3 +38,9 @@ This document describes the software architecture for the Zephyr RTOS in the con
 
 
 .. todolist::
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

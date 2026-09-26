@@ -19,3 +19,9 @@ Software Requirements Specifications
    :maxdepth: 1
 
    strictdoc_export/software_requirements/*
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

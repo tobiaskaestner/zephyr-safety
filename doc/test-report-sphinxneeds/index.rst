@@ -15,3 +15,9 @@ Zephyr Test Report (sphinx-needs)
    reports
    test-coverage
    reqs-coverage
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

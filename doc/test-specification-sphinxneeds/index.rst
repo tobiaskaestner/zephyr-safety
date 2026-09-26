@@ -6,3 +6,9 @@ Zephyr Test Specification (sphinx-needs)
 
    specs
    traceability
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

@@ -29,3 +29,8 @@ Evidence
 
    strictdoc_export/Evidence/*
 
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

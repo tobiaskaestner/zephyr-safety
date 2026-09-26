@@ -18,3 +18,9 @@ Data Passing APIs
    :maxdepth: 1
 
    queue_apis
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test

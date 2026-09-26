@@ -10,3 +10,9 @@ Zephyr Test Report (Safety Scope)
 .. toctree::
 
    kernel/queue/test-report
+
+.. toctree::
+   :caption: Cross-reference test
+   :maxdepth: 1
+
+   xref-test
