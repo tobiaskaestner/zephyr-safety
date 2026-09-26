@@ -1,267 +1,85 @@
+# Copyright (c) 2025 TiaC Systems
+#
 # SPDX-License-Identifier: Apache-2.0
+#
+# The Zephyr safety docset — a consumer of the zdocs documentation engine.
+#
+# Every document is declared once in documents.yaml; add_docs_from_registry()
+# turns that into build targets. There is deliberately no per-document factory
+# call here (zdocs ADR-0004): the kind, builders and source folder the factories
+# need already live in the registry, and two sources of that truth is the defect
+# this migration removed.
 
 cmake_minimum_required(VERSION 3.20.0)
-project(Zephyr-Kernel-Doc LANGUAGES)
+project(Zephyr-Safety-Doc LANGUAGES)
 
-set(MIN_WEST_VERSION 1.0.0)
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE} .. COMPONENTS doc)
 
+if(NOT DEFINED ZEPHYR_ZDOCS_MODULE_DIR)
+  message(
+    FATAL_ERROR
+    "zdocs module not found. It is declared in safety/west.yml at tools/zdocs — "
+    "run `west update`, or point at a local checkout with:\n"
+    "  -DEXTRA_ZEPHYR_MODULES=<path to zdocs>\n"
+    "NOTE: EXTRA_ZEPHYR_MODULES, not EXTRA_MODULES — the latter is silently "
+    "ignored by the Zephyr module system."
+  )
+endif()
+message(STATUS "zdocs module: ${ZEPHYR_ZDOCS_MODULE_DIR}")
+
 file(TO_CMAKE_PATH "${ZEPHYR_BASE}" ZEPHYR_BASE)
+get_filename_component(SAFETY_BASE ${CMAKE_CURRENT_LIST_DIR}/.. ABSOLUTE)
 message(STATUS "Zephyr base: ${ZEPHYR_BASE}")
-
-file(TO_CMAKE_PATH "${CMAKE_CURRENT_LIST_DIR}" SAFETY_BASE)
 message(STATUS "Safety base: ${SAFETY_BASE}")
-#-------------------------------------------------------------------------------
-# Options
 
-set(SPHINXOPTS "-j auto -T" CACHE STRING "Default Sphinx Options")
-set(SPHINXOPTS_EXTRA "" CACHE STRING "Extra Sphinx Options (added to defaults)")
-set(LATEXMKOPTS "-pdf -halt-on-error -no-shell-escape" CACHE STRING "Default latexmk options")
-set(DT_TURBO_MODE ON CACHE BOOL "Enable DT turbo mode")
-set(HW_FEATURES_TURBO_MODE ON CACHE BOOL "Enable HW features turbo mode")
-set(DOC_TAG "development" CACHE STRING "Documentation tag")
-
-separate_arguments(SPHINXOPTS)
-separate_arguments(SPHINXOPTS_EXTRA)
-separate_arguments(LATEXMKOPTS)
-
-#-------------------------------------------------------------------------------
-# Dependencies
-
-find_package(Doxygen REQUIRED dot)
-
-find_program(SPHINXBUILD sphinx-build)
-if(NOT SPHINXBUILD)
-  message(FATAL_ERROR "The 'sphinx-build' command was not found")
-endif()
-find_program(SPHINXAUTOBUILD sphinx-autobuild)
-
-#-------------------------------------------------------------------------------
-# Environment & Paths
-
-set(SPHINX_ENV
-  DOXYGEN_EXECUTABLE=${DOXYGEN_EXECUTABLE}
-  DOT_EXECUTABLE=${DOXYGEN_DOT_EXECUTABLE}
+execute_process(
+  COMMAND west topdir
+  OUTPUT_VARIABLE WEST_TOPDIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE west_result
+  ERROR_QUIET
 )
-
-if(WIN32)
-  set(SEP $<SEMICOLON>)
-else()
-  set(SEP :)
+if(NOT west_result EQUAL 0)
+  message(FATAL_ERROR "not inside a west workspace (`west topdir` failed)")
 endif()
 
+#-------------------------------------------------------------------------------
+# The ZDOCS_* consumer contract. Everything project-specific the engine needs,
+# set before include(zdocs).
+# See tools/zdocs/doc/manual/reference/consumer-contract.rst
+
+# The consuming repository: its git tags date the documents, and its paths are
+# stripped from Doxygen output so artifacts do not carry this host's layout.
+set(ZDOCS_PROJECT_BASE ${SAFETY_BASE})
+
+# Most documented sources live in the zephyr project, not under SAFETY_BASE —
+# so the workspace root has to be stripped too.
+set(ZDOCS_WEST_TOPDIR ${WEST_TOPDIR})
+
+# So a rendered `#include <zephyr/kernel.h>` matches what the compiler sees.
+# Not derived from any layout convention: the engine deliberately does not guess.
+set(ZDOCS_DOXYGEN_INC_ROOTS ${ZEPHYR_BASE}/include)
+
+# Need types, links and custom fields for the sphinx-needs documents. Project-
+# scoped rather than per-document: every document imports every other's needs,
+# so they all have to agree on what a need type means.
+set(ZDOCS_NEEDS_CONFIG ${CMAKE_CURRENT_LIST_DIR}/needs_config.toml)
+
+set(ZDOCS_PROJECT_LOGO ${ZEPHYR_BASE}/doc/_static/images/logo.svg)
+
+list(APPEND CMAKE_MODULE_PATH ${ZEPHYR_ZDOCS_MODULE_DIR}/cmake)
+include(zdocs)
+message(STATUS "zdocs version: ${ZDOCS_VERSION}")
 
 #-------------------------------------------------------------------------------
-# Functions
+# Documents
 
-# Create a custom doc target.
-#
-# This function has the same signature as `add_custom_target()`
-#
-# The function will create two targets for the doc build system.
-# - Target 1 named: `<name>`
-# - Target 2 named: `<name>-nodeps`
-#
-# Both targets will produce same result, but target 2 must have no dependencies.
-# This is useful to, e.g. re-run the Sphinx build without dependencies such as
-# devicetree generator.
-#
-function(add_doc_target name)
-  add_custom_target(${name} ${ARGN})
-  add_custom_target(${name}-nodeps ${ARGN})
-  message(STATUS "Created doc target: ${name} and ${name}-nodeps")
-endfunction()
+set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
 
-#
-# Create Sphinx build targets for a given documentation set.
-#
-# add_sphinx_target(<doc_name>
-#                   BUILDERS <b1> [<b2> ...]
-#                   [TAGS <t1> [<t2> ...]])
-#
-function(add_sphinx_target doc_name)
-  # Use the standard CMake module to parse keyword arguments
-  cmake_parse_arguments(
-    ARGS # prefix for output variables
-    "" # list of options (boolean flags)
-    "" # list of one-value keywords
-    "BUILDERS;TAGS" # list of multi-value keywords
-    ${ARGN}
-  )
-
-  if(NOT ARGS_BUILDERS)
-    message(FATAL_ERROR "add_sphinx_target for '${doc_name}' requires a BUILDERS argument.")
-  endif()
-
-  # Per-documentation set paths
-  set(DOC_OUT_DIR ${CMAKE_CURRENT_BINARY_DIR}/${doc_name})
-  set(DOCS_CFG_DIR ${CMAKE_CURRENT_LIST_DIR}/${doc_name})
-  set(DOCS_DOCTREE_DIR ${DOC_OUT_DIR}/doctrees)
-  set(DOCS_BUILD_DIR ${DOC_OUT_DIR}/build)
-  set(DOCS_SRC_DIR ${DOC_OUT_DIR}/src) # Generated sources
-
-  # SPHINX TAGS: Combine global tags with function-specific tags
-  set(SPHINX_TAGS "${DOC_TAG}")
-  if(HW_FEATURES_TURBO_MODE)
-    list(APPEND SPHINX_TAGS "hw_features_turbo")
-  endif()
-  list(APPEND SPHINX_TAGS ${ARGS_TAGS})
-
-  set(SPHINX_TAGS_ARGS "")
-  foreach(tag ${SPHINX_TAGS})
-    list(APPEND SPHINX_TAGS_ARGS "-t" "${tag}")
-  endforeach()
-
-  # Create a target for each requested builder
-  foreach(builder ${ARGS_BUILDERS})
-    set(target_name "${doc_name}-${builder}")
-    set(builder_out_dir "${CMAKE_CURRENT_BINARY_DIR}/deploy/${doc_name}/${builder}")
-    set(extra_commands "")
-    set(sphinx_executable ${SPHINXBUILD})
-    set(extra_sphinx_args "")
-
-    if(builder STREQUAL "html")
-      set(builder_arg "html")
-    elseif(builder STREQUAL "html-live")
-      if(NOT SPHINXAUTOBUILD)
-        message(WARNING "sphinx-autobuild not found, skipping '${target_name}' target.")
-        continue()
-      endif()
-      set(sphinx_executable ${SPHINXAUTOBUILD})
-      set(builder_arg "html")
-      set(extra_sphinx_args --watch ${DOCS_CFG_DIR} --ignore ${DOCS_BUILD_DIR})
-      set(target_name "${doc_name}-html-live")
-    elseif(builder STREQUAL "linkcheck")
-      set(builder_arg "linkcheck")
-    elseif(builder STREQUAL "latex")
-      set(builder_arg "latex")
-      set(LATEXMKOPTS "-pdf")
-      set(extra_commands
-          COMMAND ${CMAKE_COMMAND} -E chdir ${builder_out_dir}
-                  latexmk ${LATEXMKOPTS} ${doc_name}.tex
-          COMMENT "Running latexmk to build PDF..."
-        )
-    else()
-      # Generic builder
-      set(builder_arg ${builder})
-    endif()
-
-    add_doc_target(
-      ${target_name}
-      COMMAND ${CMAKE_COMMAND} -E make_directory ${DOCS_SRC_DIR}
-      COMMAND ${CMAKE_COMMAND} -E env ${SPHINX_ENV} OUTPUT_DIR=${builder_out_dir} LATEX_DOC=${doc_name}.tex
-      ${sphinx_executable}
-      -b ${builder_arg}
-      -c ${DOCS_CFG_DIR}
-      -d ${DOCS_DOCTREE_DIR}
-      -w ${DOCS_BUILD_DIR}/${builder}.log
-      ${SPHINX_TAGS_ARGS}
-      ${extra_sphinx_args}
-      ${SPHINXOPTS}
-      ${SPHINXOPTS_EXTRA}
-      ${DOCS_SRC_DIR}
-      ${builder_out_dir}
-      ${extra_commands}
-      USES_TERMINAL
-      COMMENT "Running Sphinx ${builder} build for ${doc_name}..."
-    )
-
-    set_target_properties(
-      ${target_name} ${target_name}-nodeps
-      PROPERTIES
-      ADDITIONAL_CLEAN_FILES "${DOCS_SRC_DIR};${builder_out_dir};${DOCS_DOCTREE_DIR}"
-    )
-
-  endforeach()
-endfunction()
-
-
-#-------------------------------------------------------------------------------
-# Doxygen (standalone)
-function(add_doxygen_target name)
-  set(DOXY_DOC ${name})
-  set(DOXY_OUT ${CMAKE_CURRENT_BINARY_DIR}/deploy/doxygen-${DOXY_DOC})
-  make_directory(${DOXY_OUT})
-
-  # Per-document source folder (mirrors the sphinx layout): holds Doxyfile.in
-  # plus this doc's own mainpage.md / groups.dox, referenced as @DOXY_SRC_DIR@.
-  # Shared assets (footer, cross-doc-nav, shared groups) stay under @DOC_BASE@.
-  set(DOXY_SRC_DIR ${CMAKE_CURRENT_LIST_DIR}/dox-${DOXY_DOC})
-  set(DOXYFILE_IN ${DOXY_SRC_DIR}/Doxyfile.in)
-  set(DOXYFILE_OUT ${CMAKE_CURRENT_BINARY_DIR}/${DOXY_DOC}.doxyfile)
-  set(DOC_BASE ${CMAKE_CURRENT_LIST_DIR})
-
-  configure_file(${DOXYFILE_IN} ${DOXYFILE_OUT} @ONLY)
-
-  add_doc_target(
-    doxygen-${DOXY_DOC}
-    COMMAND
-    ${DOXYGEN_EXECUTABLE} ${DOXYFILE_OUT}
-    COMMENT "Running Doxygen for ${DOXY_DOC}..."
-  )
-
-  set_target_properties(
-    doxygen-${DOXY_DOC}
-    PROPERTIES
-    ADDITIONAL_CLEAN_FILES "${DOXY_OUT}"
-  )
-endfunction()
+add_docs_from_registry(REGISTRY ${DOC_REGISTRY})
+add_doc_check(REGISTRY ${DOC_REGISTRY})
 
 add_custom_target(
   pristine
   COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake
 )
-
-add_sphinx_target(
-  safety-committee
-  BUILDERS html latex
-  TAGS draft
-)
-
-add_sphinx_target(
-  requirements
-  BUILDERS html latex
-  TAGS draft
-)
-
-add_sphinx_target(
-  architecture
-  BUILDERS html latex
-  TAGS draft
-)
-
-add_sphinx_target(
-  api-documentation
-  BUILDERS html html-live latex
-  TAGS draft
-)
-
-add_sphinx_target(
-  test-specification
-  BUILDERS html html-live latex
-  TAGS draft
-)
-
-add_sphinx_target(
-  test-report
-  BUILDERS html html-live latex
-  TAGS draft
-)
-add_sphinx_target(
-  test-specification-sphinxneeds
-  BUILDERS html
-  TAGS draft
-)
-
-add_sphinx_target(
-  test-report-sphinxneeds
-  BUILDERS html
-  TAGS draft
-)
-
-add_dependencies(test-report-sphinxneeds-html test-specification-sphinxneeds-html)
-
-add_doxygen_target(zephyr)
-add_doxygen_target(zephyr-safety-api)
-add_doxygen_target(zephyr-safety-detailed-design)
-add_doxygen_target(zephyr-safety-testspec)

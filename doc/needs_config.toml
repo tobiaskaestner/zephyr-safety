@@ -1,0 +1,134 @@
+# sphinx-needs vocabulary for the Zephyr safety docset.
+#
+# Loaded by every document via ZDOCS_NEEDS_CONFIG (see doc/CMakeLists.txt), which
+# zdocs_conf turns into sphinx-needs' own `needs_from_toml`. Keys under [needs]
+# map to the `needs_<key>` config values.
+#
+# PROJECT-scoped, not per-document, and deliberately so: every document in the
+# set is handed an import of every other's needs, so they all have to agree on
+# what a need type and a link name mean. Presentation does not have to agree —
+# `needs_layouts` / `needs_default_layout` stay in each document's conf.py,
+# which is why they are absent here.
+#
+# The custom fields below are the ones the zdocs `testmodule` / `testreport`
+# directives attach to the needs they emit. Every one must be declared or
+# sphinx-needs rejects the need with "Unknown option" per occurrence.
+
+[needs]
+
+# Requirement UIDs, TSPEC-* test ids and TR-* result ids.
+id_regex = "^[A-Za-z][A-Za-z0-9_-]+"
+
+# Machine-readable export, consumed by peer documents through
+# needs_external_needs and by the traceability tooling.
+build_json = true
+
+# -- Types --------------------------------------------------------------------
+
+[[needs.types]]
+directive = "test_case"
+title = "Test Case"
+prefix = "TCASE_"
+color = "#E2EFDA"
+style = "node"
+
+[[needs.types]]
+directive = "test_procedure"
+title = "Test Procedure"
+prefix = "TPROC_"
+color = "#D6E4F7"
+style = "node"
+
+[[needs.types]]
+directive = "test_result"
+title = "Test Result"
+prefix = "TRESULT_"
+color = "#FCE4D6"
+style = "node"
+
+[[needs.types]]
+directive = "requirement"
+title = "Requirement"
+prefix = "REQ_"
+color = "#FDEBD0"
+style = "node"
+
+# -- Links --------------------------------------------------------------------
+#
+# These are the engine's three link ROLES under their default names. zdocs maps
+# role -> name through testmodule_need_links, so renaming one here means
+# renaming it there too (tools/zdocs ADR-0009).
+
+[needs.links.verifies]
+description = "Test case verifies a requirement"
+incoming = "verified by"
+outgoing = "verifies"
+
+[needs.links.result_of]
+description = "Test result is an outcome of a test case"
+incoming = "has results"
+outgoing = "result of"
+
+[needs.links.covers]
+description = "Test result covers a requirement (derived from its verifying test case)"
+incoming = "covered by"
+outgoing = "covers"
+
+# -- Custom fields ------------------------------------------------------------
+#
+# Field names stay literal on purpose: a need type and a link are methodology
+# vocabulary, the fields hanging off them are the engine's own data model.
+
+[needs.fields.test_function]
+description = "C function name of the test case"
+nullable = true
+[needs.fields.test_function.schema]
+type = "string"
+
+[needs.fields.test_module]
+description = "Path to the test module (e.g. tests/kernel/queue)"
+nullable = true
+[needs.fields.test_module.schema]
+type = "string"
+
+[needs.fields.suite]
+description = "Doxygen test suite group name"
+nullable = true
+[needs.fields.suite.schema]
+type = "string"
+
+[needs.fields.suite_title]
+description = "Human-readable Doxygen group title for the suite"
+nullable = true
+[needs.fields.suite_title.schema]
+type = "string"
+
+[needs.fields.platform]
+description = "Target board (e.g. qemu_cortex_m3/ti_lm3s6965)"
+nullable = true
+[needs.fields.platform.schema]
+type = "string"
+
+[needs.fields.scenario]
+description = "Twister scenario name (e.g. kernel.queue)"
+nullable = true
+[needs.fields.scenario.schema]
+type = "string"
+
+[needs.fields.twister_id]
+description = "Full test identifier from the JUnit XML @name attribute"
+nullable = true
+[needs.fields.twister_id.schema]
+type = "string"
+
+[needs.fields.execution_time]
+description = "Test execution time in seconds"
+nullable = true
+[needs.fields.execution_time.schema]
+type = "string"
+
+[needs.fields.reason]
+description = "Failure or skip reason"
+nullable = true
+[needs.fields.reason.schema]
+type = "string"

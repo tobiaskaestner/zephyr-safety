@@ -1,1 +1,1 @@
-breathe>4
+sphinxcontrib-doxylink
