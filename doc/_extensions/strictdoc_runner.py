@@ -137,6 +137,20 @@ def run_strictdoc_export(app):
         # to the final output directory.
         shutil.copytree(strictdoc_rst_output_path, abs_output_dir)
 
+        # The RST export does not carry the documents' images. StrictDoc keeps
+        # them in _assets/ folders beside the .sdoc files and the generated RST
+        # references them relative to that location, so mirror each folder to
+        # the same relative place in the output.
+        for dirpath, dirnames, _ in os.walk(abs_source_dir):
+            if "_assets" in dirnames:
+                rel_dir = os.path.relpath(dirpath, abs_source_dir)
+                shutil.copytree(
+                    os.path.join(dirpath, "_assets"),
+                    os.path.join(abs_output_dir, rel_dir, "_assets"),
+                    dirs_exist_ok=True,
+                )
+                dirnames.remove("_assets")
+
         logger.info(f"Successfully moved generated files to {abs_output_dir}")
 
     except Exception as e:
