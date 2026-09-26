@@ -103,10 +103,10 @@ not be set in the templates — they would be silently overridden.
 
 | Doxyfile | `INPUT` sources |
 |---|---|
-| `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_` |
+| `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `kernel.h` |
 | `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c` |
 | `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, queue + fifo test sources |
-| `dox-zephyr` | the full upstream kernel API set |
+| `dox-zephyr` | the full upstream Zephyr API — `crossref: false`, a stand-alone reference that no safety document links into |
 
 `doc/_doxygen/safety-api-groups.dox` holds the API group hierarchy stubs (kept here, not
 inline in source, so the upstream source tree stays clean and rebasing is easier).
