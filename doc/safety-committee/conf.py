@@ -28,7 +28,9 @@ configure(
     ],
 )
 
-# The committee's StrictDoc sources live in their own west project.
+# The committee's StrictDoc sources live in their own west project. Their
+# project config declares the @plan_grammar alias every document imports.
 strictdoc_source_dir = str(
     Path(os.environ["ZDOCS_WEST_TOPDIR"]) / "doc" / "safety-committee" / "FSM_and_Concept"
 )
+strictdoc_config = str(Path(strictdoc_source_dir) / "strictdoc_config.py")

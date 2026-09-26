@@ -17,8 +17,12 @@ Configuration options
 - ``strictdoc_source_dir``: The directory containing the StrictDoc source files. If this
     is not set, the extension will not run.
 
-- ``strictdoc_output_dir``: The directory where the generated RST files will be placed. 
+- ``strictdoc_output_dir``: The directory where the generated RST files will be placed.
     Defaults to `strictdoc_export`.
+
+- ``strictdoc_config``: Path to a StrictDoc project config file, passed as
+    ``--config``. Optional; needed when the sources rely on project settings
+    such as grammar aliases.
 
 """
 import os
@@ -75,8 +79,12 @@ def run_strictdoc_export(app):
             "export",
             "--formats", "rst",
             "--output-dir", temp_export_dir,
-            abs_source_dir
         ]
+        # StrictDoc otherwise looks for its project config in the current
+        # directory, which during a Sphinx build is the build tree.
+        if config.strictdoc_config:
+            command += ["--config", config.strictdoc_config]
+        command.append(abs_source_dir)
 
         logger.info(f"Running command: {' '.join(command)}")
 
@@ -145,7 +153,8 @@ def setup(app):
     """
     app.add_config_value('strictdoc_source_dir', None, 'env', [str])
     app.add_config_value('strictdoc_output_dir', 'strictdoc_export', 'env', [str])
-    
+    app.add_config_value('strictdoc_config', None, 'env', [str])
+
     # We need to run after zephyr's copy_content extension
     app.connect('builder-inited', run_strictdoc_export, priority=600)
 
