@@ -49,7 +49,7 @@ needs_layouts = {
         "grid": "simple",
         "layout": {
             "head": [
-                '<<meta("type_name")>>: **<<meta("title")>>** '
+                '<<meta("type_name")>> <<meta_id()>>: **<<meta("title")>>** '
                 '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
                 'visible="icon:arrow-right-circle", initial=False)>>'
             ],
