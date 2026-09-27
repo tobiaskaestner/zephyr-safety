@@ -46,12 +46,12 @@ Relevant chapters for the queue scope:
 `ZEP-SRS-15-*` (`data_passing.sdoc`) is an older/separate data-passing chapter, not the primary
 queue requirements.
 
-Requirement UIDs are referenced in test source files using the Sphinx role:
-```rst
-:external+req:ref:`zep-srs-20-6`
-```
-(lowercase, matching the StrictDoc cross-reference format). Example already present in
-`tests/kernel/queue/src/test_queue_contexts.c`.
+Requirement UIDs are uppercase, exactly as authored in StrictDoc (`ZEP-SRS-20-6`), everywhere:
+need ids, Doxygen links and cross-references. Sources link to them with Doxygen's native
+commands, **one UID per command** — `@verifies ZEP-SRS-20-6` on a test case,
+`@satisfies ZEP-SRS-20-6` on an API. A second UID on the same line silently becomes link
+text (deferred issue 003). In RST, reference a requirement as a need: `:need:`ZEP-SRS-20-6``.
+A UID no requirement defines fails the build (zdocs' stage-2 Doxygen warning gate).
 
 ## Documentation Build System
 
@@ -72,7 +72,7 @@ A document's registry id is its target stem and deploy path:
 
 | Document id | Kind | Content |
 |---|---|---|
-| `requirements` | Sphinx + StrictDoc | Requirements from `.sdoc` files |
+| `requirements` | Sphinx + sphinx-needs | One `req` need per StrictDoc requirement, generated (see below) |
 | `architecture` | Sphinx | Arc42-style architecture document |
 | `test-specification` | Sphinx + sphinx-needs | Test spec |
 | `test-report` | Sphinx + sphinx-needs | Test report |
@@ -81,6 +81,7 @@ A document's registry id is its target stem and deploy path:
 | `dox-zephyr-safety-api` | Doxygen | Safety-scope public API |
 | `dox-zephyr-safety-detailed-design` | Doxygen | Internal design |
 | `dox-zephyr-safety-testspec` | Doxygen | Test suite docs, parsed by `testmodule::` |
+| `dox-requirements` | Doxygen | Generated `\requirement` blocks; hidden (`internal` group). Its tag file makes `\verifies`/`\satisfies` resolve |
 | `safety-committee` | Sphinx | Governance |
 | `sandbox-*` | Sphinx | Superseded experiments (sources under `doc/sandbox/`, incl. the hand-crafted test spec/report) |
 
@@ -106,7 +107,17 @@ not be set in the templates — they would be silently overridden.
 | `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `kernel.h` |
 | `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c` |
 | `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, queue + fifo test sources |
-| `dox-zephyr` | the full upstream Zephyr API — `crossref: false`, a stand-alone reference that no safety document links into |
+| `dox-zephyr` | the full upstream Zephyr API plus the generated `requirements.dox` — `crossref: false`, a stand-alone reference that no safety document links into |
+| `dox-requirements` | the generated `requirements.dox` only |
+
+### Requirements generation
+
+The `requirements-gen` target in `doc/CMakeLists.txt` runs `strictdoc export --formats json`
+over `../doc/reqmgmt`, then Zephyr's own `doc/_scripts/gen_requirements.py` — **unchanged,
+from the zephyr tree** — which writes `requirements-gen/rst/generated/*.rst` (`.. req::`
+needs, copied into the `requirements` document by its `conf.py`) and
+`requirements-gen/dox/requirements.dox` (`\requirement` blocks). The need vocabulary is the
+generator's: type `req`, link `trace`, fields `rtype`/`component` (`needs_config.toml`).
 
 `doc/_doxygen/safety-api-groups.dox` holds the API group hierarchy stubs (kept here, not
 inline in source, so the upstream source tree stays clean and rebasing is easier).
@@ -120,13 +131,13 @@ Sphinx documents pull rendered content from doxygen XML via Breathe directives:
 ```
 Example: `doc/api-documentation/queue_apis.rst` → `dox-zephyr-safety-api` XML.
 
-## Traceability Chain (Goal)
+## Traceability Chain
 
 ```
-StrictDoc (.sdoc)             requirements-html (Sphinx)
-  ZEP-SRS-20-* / 23-* / 24-*
+StrictDoc (.sdoc)  ─ requirements-gen ─►  requirements-html (req needs)
+  ZEP-SRS-20-* / 23-* / 24-*              dox-requirements   (\requirement, tag file)
 
-        ↕  :external+req:ref: roles in source file docstrings
+        ↕  @verifies / @satisfies (native Doxygen), one UID per command
 
 Doxygen @defgroup/@ingroup    api-documentation-html        (public API)
   queue.h_                    dox-zephyr-safety-detailed-design (internal design)
@@ -144,16 +155,20 @@ kernel_apis
   └── queue_apis
 ```
 
-**Test groups** (defined in `doc/_doxygen/safety-test-groups.dox` and `tests/.../main.c`):
+**Test groups** (defined in `doc/dox/zephyr-safety-testspec/groups.dox` and `tests/.../main.c`):
 ```
 all_tests
   └── kernel_queue_tests
-        ├── queue_api          (@defgroup in main.c → ZTEST_SUITE)
-        └── queue_api_1cpu     (@defgroup in main.c → ZTEST_SUITE)
+        └── kernel_queue_module     (the group `testmodule::` is pointed at)
+              ├── queue_api          (@defgroup in main.c → ZTEST_SUITE)
+              ├── queue_api_1cpu
+              └── queue_procedures
 ```
 
-Individual `ZTEST` functions need `@ingroup queue_api` or `@ingroup queue_api_1cpu` to appear
-in the test specification doxygen output.
+The testspec's macro expansion makes each `ZTEST(suite, fn)` land in its suite group; each
+suite group needs a manual `@ingroup <module>` or `testmodule::` never walks it. Upstream's own
+`tests_kernel_{queue,fifo,lifo}` groups also appear (they say `@ingroup all_tests`); they are
+upstream's, carry no test cases, and are left alone to keep the diff against upstream small.
 
 ## `queue.h_` — Why the Unusual Name
 
@@ -182,9 +197,10 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
 - `test-specification/`, `test-report/` — the sphinx-needs test spec and report
-- `sdoc/requirements/`, `sdoc/safety-committee/` — the StrictDoc-generated documents
+- `sdoc/requirements/` — requirements document (generated `req` needs; see Requirements generation)
+- `sdoc/safety-committee/` — governance, rendered by `strictdoc_runner`
 - `sandbox/` — superseded experiments, kept for reference
-- `_extensions/strictdoc_runner.py` — auto-runs `strictdoc export` on Sphinx build-init
+- `_extensions/strictdoc_runner.py` — runs `strictdoc export` on Sphinx build-init (safety-committee only)
 - `_scripts/` — Doxygen input filters (`FILTER_PATTERNS`)
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)
@@ -192,12 +208,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `lifos.sdoc` — `ZEP-SRS-23-*`
 - `fifos.sdoc` — `ZEP-SRS-24-*`
 
-## Open Work Items (as of 2026-05-29)
+## Open Work Items
 
-1. **Testspec doxyfile** — replace dummy scaffolding files with real test sources; add `@ingroup`
-   annotations to each `ZTEST` function so they appear in the testspec doxygen output.
-2. **Detailed-design doxyfile** — redirect `INPUT` from `msg_q.*` to `queue.c` / `queue.h_`.
-3. **Test-specification Sphinx doc** — create `doc/test-specification/kernel/test-spec.rst`
-   (or wire up the existing `tests/kernel/queue/test-spec.rst` via include/symlink).
-4. **Requirement traceability** — propagate `:external+req:ref:` annotations to all relevant
-   `ZTEST` functions, following the pattern already in `test_queue_contexts.c`.
+Tracked in `../claude/traceability-reconciliation/next-session.md` (phase plan, decisions,
+work items) and `../claude/traceability-reconciliation/issues/` (deferred issues).
