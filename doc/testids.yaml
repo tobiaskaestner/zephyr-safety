@@ -1,0 +1,4 @@
+# Last test-id number issued per area code (assign_testids.py).
+# Append-only: a number here is never issued again, even if its test is gone.
+FIFO: 5
+QUEUE: 8

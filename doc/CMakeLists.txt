@@ -109,6 +109,50 @@ add_custom_command(
 add_custom_target(requirements-gen DEPENDS ${REQ_GEN_DOX_DIR}/requirements.dox)
 
 #-------------------------------------------------------------------------------
+# Test scope: the per-module test scaffolding, generated from test-scope.yaml.
+#
+# _scripts/testspec_scope.py reads the scope and the test sources and derives
+#   TESTSPEC_INPUT        each module's src/ directory, the testspec Doxygen INPUT
+#                         (configure time: it is part of the Doxyfile)
+#   testspec-gen/dox      the area / module / suite groups `testmodule::` walks
+#   testspec-gen/spec     the test-specification page tree   } copied in by
+#   testspec-gen/report   the test-report page tree          } their conf.py
+# Test ids are not generated here: _scripts/assign_testids.py writes them into
+# the sources, once, and is run by hand (see its docstring).
+
+set(TESTSPEC_SCOPE ${CMAKE_CURRENT_LIST_DIR}/test-scope.yaml)
+set(TESTSPEC_SCOPE_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/_scripts/testspec_scope.py)
+set(TESTSPEC_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/testspec-gen)
+# Read by dox/zephyr-safety-testspec/Doxyfile.in.
+set(TESTSPEC_GEN_DOX ${TESTSPEC_GEN_DIR}/dox/groups.dox)
+list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_TESTSPEC_GEN_DIR=${TESTSPEC_GEN_DIR})
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${TESTSPEC_SCOPE} ${TESTSPEC_SCOPE_SCRIPT})
+
+execute_process(
+  COMMAND ${PYTHON_EXECUTABLE} ${TESTSPEC_SCOPE_SCRIPT}
+    --scope ${TESTSPEC_SCOPE} --zephyr-base ${ZEPHYR_BASE} input
+  OUTPUT_VARIABLE TESTSPEC_INPUT
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  RESULT_VARIABLE testspec_input_result
+)
+if(NOT testspec_input_result EQUAL 0)
+  message(FATAL_ERROR "testspec_scope.py input failed for ${TESTSPEC_SCOPE}")
+endif()
+
+# Always runs — it is cheap, and a new ZTEST_SUITE in a source file must reach
+# the groups without a reconfigure. Unchanged files are not rewritten, so
+# Doxygen and Sphinx see no change when there is none.
+add_custom_target(
+  testspec-gen
+  COMMAND ${PYTHON_EXECUTABLE} ${TESTSPEC_SCOPE_SCRIPT}
+    --scope ${TESTSPEC_SCOPE} --zephyr-base ${ZEPHYR_BASE} generate
+    --dox-out ${TESTSPEC_GEN_DOX}
+    --spec-out ${TESTSPEC_GEN_DIR}/spec
+    --report-out ${TESTSPEC_GEN_DIR}/report
+  COMMENT "Generating test scope scaffolding (test-scope.yaml)..."
+)
+
+#-------------------------------------------------------------------------------
 # Documents
 
 set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
@@ -123,6 +167,9 @@ add_doc_check(REGISTRY ${DOC_REGISTRY})
 add_dependencies(requirements-index requirements-gen)
 add_dependencies(dox-requirements-tag requirements-gen)
 add_dependencies(dox-zephyr-tag requirements-gen)
+add_dependencies(dox-zephyr-safety-testspec-tag testspec-gen)
+add_dependencies(test-specification-index testspec-gen)
+add_dependencies(test-report-index testspec-gen)
 
 add_custom_target(
   pristine

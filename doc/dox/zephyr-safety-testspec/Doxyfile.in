@@ -972,21 +972,13 @@ WARN_LOGFILE           =
 # spaces. See also FILE_PATTERNS and EXTENSION_MAPPING
 # Note: If this tag is empty the current directory is searched.
 
+# Generated from doc/test-scope.yaml (see doc/CMakeLists.txt): the groups
+# `testmodule::` walks, then each test module's src/ directory.
 INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
                          @DOXY_SRC_DIR@/groups.dox \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_contexts.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_loop.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_fail.c \
-                         @ZEPHYR_BASE@/tests/kernel/queue/src/test_queue_user.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_contexts.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_cancel.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_fail.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_api/src/test_fifo_loop.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_timeout/src/main.c \
-                         @ZEPHYR_BASE@/tests/kernel/fifo/fifo_usage/src/main.c
-                         
+                         @TESTSPEC_GEN_DOX@ \
+                         @TESTSPEC_INPUT@
+
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
 # libiconv (or the iconv built into libc) for the transcoding. See the libiconv
@@ -2486,7 +2478,7 @@ PREDEFINED             = __DOXYGEN__ \
                          "ZTEST_USER(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_USER_F(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)"\
-                         "ZTEST_SUITE(suite, u1, u2, u3, u4, u5)=/** \defgroup suite suite */"
+                         "ZTEST_SUITE(suite, u1, u2, u3, u4, u5)="
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this
 # tag can be used to specify a list of macro names that should be expanded. The

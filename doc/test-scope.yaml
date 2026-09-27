@@ -1,0 +1,33 @@
+# Test scope of the safety docset: which Zephyr test areas the test
+# specification and the test report cover.
+#
+# Read by _scripts/testspec_scope.py, which derives from it — and from the test
+# sources themselves — everything that used to be written by hand per module:
+#
+#   * the testspec Doxygen INPUT (each module's src/ directory)
+#   * the area / module / suite groups `testmodule::` walks, as a generated .dox;
+#     a group the sources already define by hand is left to them
+#   * the test-specification and test-report page tree
+#
+# and by _scripts/assign_testids.py, which gives every documented ZTEST in scope
+# a `@testid{TSPEC-<code>-<NNN>}`.
+#
+# Per area:
+#   path         test area, relative to ZEPHYR_BASE
+#   code         the <AREA> of generated test ids; unique, and never changed once
+#                ids have been issued under it
+#   title        heading of the area's pages
+#   description  (optional) prose under that heading
+#   modules      (optional) test modules, relative to ZEPHYR_BASE. Default: every
+#                directory under `path` holding a tests.yaml.
+
+areas:
+  - path: tests/kernel/queue
+    code: QUEUE
+    title: Kernel Queue Tests
+    description: This section covers tests related to the Kernel Queue API.
+
+  - path: tests/kernel/fifo
+    code: FIFO
+    title: Kernel FIFO Tests
+    description: This section covers tests related to the Kernel FIFO API.

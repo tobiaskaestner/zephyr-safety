@@ -1,12 +1,8 @@
 /**
 @defgroup all_tests Zephyr Kernel Tests (Safety Scope)
-@{
 
-  @defgroup kernel_queue_tests Kernel Queue Test Suites
-
-  @defgroup kernel_fifo_tests Kernel FIFO Test Suites
-
-@}
+The area groups below this one, and every module and suite group the test
+sources do not define themselves, are generated from doc/test-scope.yaml.
 */
 
 /**

@@ -106,7 +106,7 @@ not be set in the templates — they would be silently overridden.
 |---|---|
 | `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `kernel.h` |
 | `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c` |
-| `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, queue + fifo test sources |
+| `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, the generated groups `.dox`, each in-scope module's `src/` (from `doc/test-scope.yaml`) |
 | `dox-zephyr` | the full upstream Zephyr API plus the generated `requirements.dox` — `crossref: false`, a stand-alone reference that no safety document links into |
 | `dox-requirements` | the generated `requirements.dox` only |
 
@@ -155,18 +155,24 @@ kernel_apis
   └── queue_apis
 ```
 
-**Test groups** (defined in `doc/dox/zephyr-safety-testspec/groups.dox` and `tests/.../main.c`):
+**Test groups** (root and procedure groups in `doc/dox/zephyr-safety-testspec/groups.dox`; area, module and suite groups generated from `doc/test-scope.yaml`):
 ```
 all_tests
   └── kernel_queue_tests
         └── kernel_queue_module     (the group `testmodule::` is pointed at)
-              ├── queue_api          (@defgroup in main.c → ZTEST_SUITE)
+              ├── queue_api          (one per ZTEST_SUITE, generated)
               ├── queue_api_1cpu
               └── queue_procedures
 ```
 
-The testspec's macro expansion makes each `ZTEST(suite, fn)` land in its suite group; each
-suite group needs a manual `@ingroup <module>` or `testmodule::` never walks it. Upstream's own
+The testspec's macro expansion makes each `ZTEST(suite, fn)` land in its suite group
+(`ZTEST_SUITE` itself expands to nothing). `doc/_scripts/testspec_scope.py` generates the
+area, module and suite groups on every build; a group the sources define by hand wins, but
+none of ours do any more — the zephyr branch carries no group blocks. Test ids are added to
+the sources by `doc/_scripts/assign_testids.py` (by hand; ledger `doc/testids.yaml`).
+Adding a test area means an entry in `doc/test-scope.yaml`, then running that script.
+
+Upstream's own
 `tests_kernel_{queue,fifo,lifo}` groups also appear (they say `@ingroup all_tests`); they are
 upstream's, carry no test cases, and are left alone to keep the diff against upstream small.
 
@@ -188,7 +194,6 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `src/test_queue_fail.c` — error/failure tests
 - `src/test_queue_loop.c` — stress/loop tests
 - `src/test_queue_user.c` — userspace API tests
-- `test-spec.rst` — RST stub using `doxygengroup::` directives
 
 ### Documentation config (in `doc/`)
 - `documents.yaml` — the document registry (read by zdocs)

@@ -32,6 +32,12 @@ configure(
 # would resolve against the wrong tree.
 testmodule_root = os.environ["ZEPHYR_BASE"]
 
+# The per-area and per-module pages are generated from doc/test-scope.yaml by
+# the `testspec-gen` target (see doc/CMakeLists.txt) and copied in here.
+external_content_contents.append(
+    (Path(os.environ["SAFETY_TESTSPEC_GEN_DIR"]) / "spec", "*")
+)
+
 # twister output: honour ZDOCS_TWISTER_OUT when the build sets it, else fall
 # back to the workspace's own run. Absent input is a normal state — the
 # directives soft-fail to a "not found" node.
