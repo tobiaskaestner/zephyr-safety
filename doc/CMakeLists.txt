@@ -72,12 +72,57 @@ include(zdocs)
 message(STATUS "zdocs version: ${ZDOCS_VERSION}")
 
 #-------------------------------------------------------------------------------
+# Requirements, generated from the StrictDoc sources (doc/reqmgmt).
+#
+# StrictDoc exports JSON; Zephyr's own doc/_scripts/gen_requirements.py — run
+# unchanged, from the zephyr tree — turns that into two things:
+#   rst/generated/*.rst   `.. req::` needs, copied into the `requirements`
+#                         document's sources by its conf.py
+#   dox/requirements.dox  `\requirement` blocks, the INPUT of `dox-requirements`,
+#                         whose tag file lets every other Doxygen document
+#                         resolve `\verifies` / `\satisfies`
+# Both consumers depend on this target (see below), so they never read a stale or
+# missing export.
+
+set(REQMGMT_DIR ${WEST_TOPDIR}/doc/reqmgmt)
+set(REQ_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/requirements-gen)
+set(REQ_GEN_SCRIPT ${ZEPHYR_BASE}/doc/_scripts/gen_requirements.py)
+# Read by the `requirements` conf.py and by dox/requirements/Doxyfile.in.
+set(REQ_GEN_RST_DIR ${REQ_GEN_DIR}/rst)
+set(REQ_GEN_DOX_DIR ${REQ_GEN_DIR}/dox)
+list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_REQ_GEN_RST_DIR=${REQ_GEN_RST_DIR})
+
+find_program(STRICTDOC strictdoc REQUIRED)
+file(GLOB_RECURSE REQ_SOURCES CONFIGURE_DEPENDS ${REQMGMT_DIR}/*.sdoc ${REQMGMT_DIR}/*.sgra)
+
+add_custom_command(
+  OUTPUT ${REQ_GEN_DOX_DIR}/requirements.dox
+  COMMAND ${CMAKE_COMMAND} -E rm -rf ${REQ_GEN_DIR}/strictdoc
+  COMMAND ${STRICTDOC} export ${REQMGMT_DIR} --formats json --output-dir ${REQ_GEN_DIR}/strictdoc
+  COMMAND ${PYTHON_EXECUTABLE} ${REQ_GEN_SCRIPT}
+    --json ${REQ_GEN_DIR}/strictdoc/json/index.json
+    --rst-out ${REQ_GEN_RST_DIR}/generated
+    --dox-out ${REQ_GEN_DOX_DIR}
+  DEPENDS ${REQ_SOURCES} ${REQMGMT_DIR}/strictdoc_config.py ${REQ_GEN_SCRIPT}
+  COMMENT "Generating requirements from StrictDoc (doc/reqmgmt)..."
+)
+add_custom_target(requirements-gen DEPENDS ${REQ_GEN_DOX_DIR}/requirements.dox)
+
+#-------------------------------------------------------------------------------
 # Documents
 
 set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
 
 add_docs_from_registry(REGISTRY ${DOC_REGISTRY})
 add_doc_check(REGISTRY ${DOC_REGISTRY})
+
+# Stage 1 of each consumer is the first thing to read the generated files.
+# dox-zephyr is a stand-alone reference (crossref: false) that imports no tag
+# file, so it reads requirements.dox itself — as Zephyr's own doxyfile does —
+# to resolve the `\satisfies` in the full API.
+add_dependencies(requirements-index requirements-gen)
+add_dependencies(dox-requirements-tag requirements-gen)
+add_dependencies(dox-zephyr-tag requirements-gen)
 
 add_custom_target(
   pristine

@@ -1,0 +1,25 @@
+# Requirements (Doxygen) — machinery, not a deliverable.
+#
+# Reads the `\requirement` blocks generated from the StrictDoc sources (see the
+# requirements section of doc/CMakeLists.txt) and publishes them in a tag file.
+# zdocs wires that tag file into every other Doxygen document, which is what lets
+# `\verifies` and `\satisfies` there resolve — and what makes Doxygen warn,
+# "Reference to unknown requirement", on a UID that does not exist.
+#
+# Everything not set here is Doxygen's default. Output paths, XML, tag files and
+# the theme are owned by zdocs and appended after this file.
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "Zephyr Requirements (Doxygen)"
+OUTPUT_DIRECTORY       = @DOXY_OUT@
+
+INPUT                  = @REQ_GEN_DOX_DIR@
+FILE_PATTERNS          = *.dox
+RECURSIVE              = NO
+
+GENERATE_REQUIREMENTS  = YES
+REQ_TRACEABILITY_INFO  = YES
+
+GENERATE_LATEX         = NO
+QUIET                  = YES
+WARN_AS_ERROR          = NO

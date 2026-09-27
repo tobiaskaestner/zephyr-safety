@@ -7,10 +7,6 @@ sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
 from zdocs_conf import configure
 
-# See the note in safety-committee/conf.py: downstream extensions are APPENDED.
-# doc/ is where the registry lives, however deep this document sits.
-sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
-
 configure(
     globals(),
     doc_dir=Path(__file__).resolve().parent,
@@ -22,11 +18,14 @@ configure(
         "zephyr.kconfig",
         "zephyr.application",
         "zephyr.link-roles",
-        "strictdoc_runner",
     ],
 )
 
-# The StrictDoc requirements are a separate west project (reqmgmt), not part of
-# this repository — hence the workspace-relative path rather than a repo-relative
-# one. Phase 3 (S3) replaces this with a generator emitting `.. req::` needs.
-strictdoc_source_dir = str(Path(os.environ["ZDOCS_WEST_TOPDIR"]) / "doc" / "reqmgmt" / "docs")
+# The requirement pages are generated from the StrictDoc sources (doc/reqmgmt)
+# by the `requirements-gen` target — see doc/CMakeLists.txt — and copied in here
+# as generated/*.rst. Only the per-component pages: the generator's own
+# index.rst links to traceability views that belong to Zephyr's doc build, not
+# to this one; this document's index.rst takes its place.
+external_content_contents.append(
+    (Path(os.environ["SAFETY_REQ_GEN_RST_DIR"]), "generated/zephyr_*.rst")
+)

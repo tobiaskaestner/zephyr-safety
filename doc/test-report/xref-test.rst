@@ -30,5 +30,5 @@ Doxylink — Doxygen documents
 External needs — sphinx-needs imports
 -------------------------------------
 
-* Requirements: :need:`zep-srs-20-6`
+* Requirements: :need:`ZEP-SRS-20-6`
 * Test Specification: :need:`TSPEC-FIFO-1CPU-001`
