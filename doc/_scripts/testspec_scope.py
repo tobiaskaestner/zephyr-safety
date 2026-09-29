@@ -38,6 +38,8 @@ import yaml
 
 DEFGROUP = re.compile(r"[@\\]defgroup\s+(\w+)[ \t]*([^\n]*)")
 ZTEST_SUITE = re.compile(r"^\s*ZTEST_SUITE\s*\(\s*(\w+)", re.M)
+# The suite of every test: ZTEST, ZTEST_USER and their _F / _P forms.
+ZTEST_OF = re.compile(r"^[ \t]*ZTEST(?:_USER)?(?:_F|_P)?\s*\(\s*(\w+)\s*,", re.M)
 ROOT_GROUP = "all_tests"
 
 
@@ -176,7 +178,13 @@ def load_scope(scope_file, zephyr_base):
             text = "\n".join(p.read_text(errors="replace") for p in _sources(mdir))
             hand = {gid: title.strip() for gid, title in DEFGROUP.findall(text)}
             group = module_group(rel)
-            suites = list(dict.fromkeys(ZTEST_SUITE.findall(text)))
+            # A suite the module declares but holds no test of gets no group
+            # here: a suite name another module also declares
+            # (tests/arch/common/interrupt declares gen_isr_table_multilevel,
+            # whose tests are in gen_isr_table) would otherwise be one group
+            # in both modules, and its tests render on both pages.
+            tested = set(ZTEST_OF.findall(text))
+            suites = [s for s in dict.fromkeys(ZTEST_SUITE.findall(text)) if s in tested]
             _check_hand_suites(rel, text, group, [s for s in suites if s in hand])
             area.modules.append(
                 Module(
