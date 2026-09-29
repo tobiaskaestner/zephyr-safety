@@ -127,6 +127,15 @@ documents:
     group: reference
     prefix: api
     builders: [html, html-live, latex]
+    # One `impl` need per API symbol carrying a Doxygen \satisfies (the
+    # `symbolneeds` directive, satisfied-requirements.rst), read from the Safety
+    # API's XML. `source: json` publishes them, so every peer imports them and
+    # a requirement lists its implementing symbols ("satisfied by") next to its
+    # verifying test cases.
+    needs:
+      source: json
+    symbol_needs:
+      doxygen_source: dox-zephyr-safety-api
 
   # A doxygen document's id is taken verbatim as its target name and deploy
   # path — the `dox-` prefix is ours, not the engine's. The sources live under

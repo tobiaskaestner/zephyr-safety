@@ -32,3 +32,4 @@ External needs — sphinx-needs imports
 
 * Requirements: :need:`ZEP-SRS-20-6`
 * Test Specification: :need:`TSPEC-FIFO-1CPU-001`
+* API Documentation: :need:`IMPL-k_queue_get`

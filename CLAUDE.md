@@ -76,7 +76,7 @@ A document's registry id is its target stem and deploy path:
 | `architecture` | Sphinx | Arc42-style architecture document |
 | `test-specification` | Sphinx + sphinx-needs | Test spec |
 | `test-report` | Sphinx + sphinx-needs | Test report |
-| `api-documentation` | Sphinx + Breathe | API doc consuming Doxygen XML |
+| `api-documentation` | Sphinx + Breathe + sphinx-needs | API doc consuming Doxygen XML; one `impl` need per `@satisfies` symbol (`symbolneeds::`) |
 | `dox-zephyr` | Doxygen | Full kernel API docs |
 | `dox-zephyr-safety-api` | Doxygen | Safety-scope public API |
 | `dox-zephyr-safety-detailed-design` | Doxygen | Internal design |
@@ -141,13 +141,39 @@ StrictDoc (.sdoc)  ─ requirements-gen ─►  requirements-html (req needs)
 
         ↕  @verifies / @satisfies (native Doxygen), one UID per command
 
-Doxygen @defgroup/@ingroup    api-documentation-html        (public API)
-  queue.h_                    dox-zephyr-safety-detailed-design (internal design)
-  queue.c
+Doxygen @defgroup/@ingroup    api-documentation-html        (public API; impl needs)
+  kernel.h (@satisfies)       dox-zephyr-safety-api
+  queue.h_, queue.c           dox-zephyr-safety-detailed-design (internal design)
 
-Doxygen @defgroup/@ingroup    test-specification-html       (test spec)
-  tests/kernel/queue/src/*.c  dox-zephyr-safety-testspec
+Doxygen @defgroup/@ingroup    test-specification-html       (test spec; test_case needs)
+  tests/kernel/*/src/*.c      dox-zephyr-safety-testspec
+  (@verifies)                 test-report-html              (test_result needs)
 ```
+
+All four sphinx-needs documents publish `needs.json` and import each other's, so every
+link renders on both ends. A requirement's page (default layout) lists **verified by**
+(`TSPEC-*` test cases), **satisfied by** (`IMPL-<symbol>` needs) and **covered by**
+(`TR-*` results).
+
+- **satisfies**: `api-documentation/satisfied-requirements.rst` runs zdocs'
+  `.. symbolneeds::` (registry `symbol_needs: {doxygen_source: dox-zephyr-safety-api}`),
+  one `impl` need `IMPL-<symbol>` per API symbol with a `@satisfies`, sectioned by API
+  group, linked `satisfies` to the requirement.
+- **verifies**: `testmodule::` on the generated per-module spec pages, one `test_case` need
+  per ZTEST (id `TSPEC-*` from `@testid`).
+- **results**: the generated per-module report pages run
+  `.. testreport:: twister_report.xml` with `:path: <module dir>` — results are selected
+  by the test directory twister records in `twister.json`, not by scenario prefix (a
+  prefix put e.g. timer_api's `kernel.timer` results on timer_error_case's page too).
+  A parameterized test's values (`fn[inst/N]`) fold into its one aggregate result.
+- **depends_on**: `_scripts/doxygen_filter_kconfig.py` turns a test's (or symbol's)
+  enclosing Kconfig `#if` into `@kconfig_depends`; zdocs sets the string field
+  `depends_on` (conditions joined with `"; "`) and a "Depends on" line in the need body.
+  The test spec's layout shows it.
+
+Each Doxygen project's `REQ_TRACEABILITY_INFO` shows only its own gap list on its
+requirements page: the API `UNSATISFIED_ONLY`, the testspec `UNVERIFIED_ONLY`, the detailed
+design `NO` (it carries neither command).
 
 ### Doxygen Group Hierarchy
 
@@ -208,6 +234,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `_doxygen/safety-api-groups.dox` — API group stubs
 - `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
 - `api-documentation/queue_apis.rst` — Breathe pull for API doc
+- `api-documentation/satisfied-requirements.rst` — `impl` needs (`symbolneeds::`)
 - `test-specification/`, `test-report/` — the sphinx-needs test spec and report
 - `sdoc/requirements/` — requirements document (generated `req` needs; see Requirements generation)
 - `sdoc/safety-committee/` — governance, rendered by `strictdoc_runner`

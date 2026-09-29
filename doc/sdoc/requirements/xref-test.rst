@@ -32,3 +32,4 @@ External needs — sphinx-needs imports
 
 * Test Specification: :need:`TSPEC-FIFO-1CPU-001`
 * Test Report: :need:`TR-qemu-cortex-m0-nrf51822-kernel-fifo-fifo-api-TSPEC-FIFO-1CPU-001`
+* API Documentation: :need:`IMPL-k_queue_get`
