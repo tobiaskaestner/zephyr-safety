@@ -32,6 +32,11 @@ configure(
 # would resolve against the wrong tree.
 testmodule_root = os.environ["ZEPHYR_BASE"]
 
+# A suite name that more than one module in scope has tests of (workqueue_api)
+# gets one Doxygen group per module, `<module group>__<suite>`
+# (_scripts/testspec_scope.py); the test cases' suite is the part after "__".
+testmodule_suite_qualifier = "__"
+
 # The per-area and per-module pages are generated from doc/test-scope.yaml by
 # the `testspec-gen` target (see doc/CMakeLists.txt) and copied in here.
 external_content_contents.append(

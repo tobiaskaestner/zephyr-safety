@@ -115,6 +115,9 @@ add_custom_target(requirements-gen DEPENDS ${REQ_GEN_DOX_DIR}/requirements.dox)
 #   TESTSPEC_INPUT        each module's src/ directory, the testspec Doxygen INPUT
 #                         (configure time: it is part of the Doxyfile)
 #   testspec-gen/dox      the area / module / suite groups `testmodule::` walks
+#   testspec-gen/suites.json  the per-module groups of a suite name that more
+#                         than one module uses; read by the testspec Doxygen
+#                         input filter, which points those ZTESTs at them
 #   testspec-gen/spec     the test-specification page tree   } copied in by
 #   testspec-gen/report   the test-report page tree          } their conf.py
 # Test ids are not generated here: _scripts/assign_testids.py writes them into
@@ -125,6 +128,7 @@ set(TESTSPEC_SCOPE_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/_scripts/testspec_scope.py)
 set(TESTSPEC_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/testspec-gen)
 # Read by dox/zephyr-safety-testspec/Doxyfile.in.
 set(TESTSPEC_GEN_DOX ${TESTSPEC_GEN_DIR}/dox/groups.dox)
+set(TESTSPEC_GEN_SUITES ${TESTSPEC_GEN_DIR}/suites.json)
 list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_TESTSPEC_GEN_DIR=${TESTSPEC_GEN_DIR})
 set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS ${TESTSPEC_SCOPE} ${TESTSPEC_SCOPE_SCRIPT})
 
@@ -149,6 +153,7 @@ add_custom_target(
     --dox-out ${TESTSPEC_GEN_DOX}
     --spec-out ${TESTSPEC_GEN_DIR}/spec
     --report-out ${TESTSPEC_GEN_DIR}/report
+    --suites-out ${TESTSPEC_GEN_SUITES}
   COMMENT "Generating test scope scaffolding (test-scope.yaml)..."
 )
 

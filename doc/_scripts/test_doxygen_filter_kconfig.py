@@ -318,3 +318,122 @@ def test_command_line(tmp_path):
         [sys.executable, SCRIPT, "--rename-impl", f], check=True, capture_output=True, text=True
     ).stdout
     assert out == "#if 1\nint k_foo;\n#endif\n"
+
+
+def test_doc_comment_before_the_conditional_is_attached():
+    # log_core_additional's test_log_thread, smp's test_smp_ipi: the doc
+    # comment stands before the #ifdef that guards the test; Doxygen still
+    # attaches it, and the test depends on the condition.
+    lines = run(src("""
+        /**
+         * @brief Real test.
+         */
+
+        #ifdef CONFIG_LOG_PROCESS_THREAD
+        ZTEST(suite, test_x)
+        {
+        	do_it();
+        }
+        #else
+        ZTEST(suite, test_x)
+        {
+        	ztest_test_skip();
+        }
+        #endif
+        """))
+    assert lines[2] == " * @kconfig_depends{CONFIG_LOG_PROCESS_THREAD} */"
+    assert lines[4] == "#if 1"
+
+
+def test_plain_comment_between_doc_and_ztest():
+    # mutex_error_case: `/* TESTPOINT: ... */` between the doc comment and
+    # the ZTEST; Doxygen skips a plain comment.
+    text = src("""
+        /**
+         * @brief Documented.
+         */
+        /* TESTPOINT: plain */
+        ZTEST_USER(suite, test_x)
+        {
+        }
+        """)
+    from doxygen_filter_kconfig import documented_ztests, lex
+
+    lines = text.splitlines(keepends=True)
+    comments, _ = lex(lines)
+    found, _ = documented_ztests(lines, comments)
+    assert list(found) == [4]
+
+
+def test_define_takes_the_doc_comment():
+    # mem_domain.c's test_mem_domain_migration: a #define between the doc
+    # comment and the ZTEST is what Doxygen documents instead.
+    text = src("""
+        /**
+         * @brief Documents PRIO, as Doxygen sees it.
+         */
+        #if CONFIG_MP_MAX_NUM_CPUS > 1
+        #define PRIO 0
+        #endif
+
+        ZTEST(suite, test_x)
+        {
+        }
+        """)
+    from doxygen_filter_kconfig import documented_ztests, lex
+
+    lines = text.splitlines(keepends=True)
+    assert documented_ztests(lines, lex(lines)[0])[0] == {}
+
+
+def test_ztest_user_or_not_is_a_ztest():
+    # sys_mutex's local alias.
+    lines = run(src("""
+        #ifdef CONFIG_USERSPACE
+        /** @brief Documented. */
+        ZTEST_USER_OR_NOT(suite, test_x)
+        {
+        }
+        #endif
+        """))
+    assert lines[1] == "/** @brief Documented. @kconfig_depends{CONFIG_USERSPACE} */"
+
+
+def test_shared_suite_gets_the_module_group():
+    text = src("""
+        /** @brief A. */
+        ZTEST(workqueue_api, test_a)
+        {
+        }
+
+        ZTEST_USER(other, test_b)
+        {
+        }
+
+        ZTEST_SUITE(workqueue_api, NULL, NULL, NULL, NULL, NULL);
+        """)
+    out = filter_text(text, is_header=False, suite_groups={"workqueue_api": "m__workqueue_api"})
+    lines = out.splitlines()
+    assert len(lines) == len(text.splitlines())
+    assert lines[1] == "ZTEST(m__workqueue_api, test_a)"
+    assert lines[5] == "ZTEST_USER(other, test_b)"
+    assert lines[9] == "ZTEST_SUITE(workqueue_api, NULL, NULL, NULL, NULL, NULL);"
+
+
+def test_command_line_suites(tmp_path):
+    mod = tmp_path / "tests/kernel/workq/user_work"
+    (mod / "src").mkdir(parents=True)
+    f = mod / "src/main.c"
+    f.write_text("ZTEST_USER(workqueue_api, test_a)\n{\n}\n")
+    other = tmp_path / "tests/kernel/other.c"
+    other.write_text("ZTEST(workqueue_api, test_a)\n")
+    suites = tmp_path / "suites.json"
+    suites.write_text('{"%s": {"workqueue_api": "u__workqueue_api"}}' % mod)
+
+    def filt(path):
+        return subprocess.run(
+            [sys.executable, SCRIPT, "--suites", suites, path], check=True, capture_output=True, text=True
+        ).stdout
+
+    assert filt(f).splitlines()[0] == "ZTEST_USER(u__workqueue_api, test_a)"
+    assert filt(other) == "ZTEST(workqueue_api, test_a)\n"

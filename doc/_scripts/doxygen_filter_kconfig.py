@@ -40,11 +40,21 @@ negation of every earlier branch for ``#else``.
 The output has exactly as many lines as the input, so Doxygen's line numbers
 still point into the real file.
 
-Usage: doxygen_filter_kconfig.py [--rename-impl] <file>
+Usage: doxygen_filter_kconfig.py [--rename-impl] [--suites <json>] <file>
 
 ``--rename-impl`` also applies doxygen_filter_remove_impl.py (``z_impl_k_*`` ->
 ``k_*``), for a pattern that needs both filters.
+
+``--suites`` names the JSON testspec_scope.py writes for a suite that more than
+one test module in scope uses: {module directory: {suite: group}}. In a file
+under such a module, each ZTEST of the suite gets the module's own group as
+its suite argument (``ZTEST(workqueue_api, fn)`` ->
+``ZTEST(kernel_workq_user_work_module__workqueue_api, fn)``), so the testspec
+Doxyfile's ZTEST expansion puts it in that group: one group per module, not
+one shared by both.
 """
+
+import json
 
 import argparse
 import re
@@ -53,7 +63,12 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 DIRECTIVE = re.compile(r"^[ \t]*#[ \t]*(ifdef|ifndef|if|elif|else|endif)\b(.*)$", re.S)
-ZTEST = re.compile(r"^[ \t]*ZTEST(?:_USER)?(?:_F|_P)?\s*\(\s*(\w+)\s*,\s*(\w+)")
+# The macros that define a test: ZTEST, ZTEST_USER, their _F (fixture) and _P
+# (parameterized) forms, and sys_mutex's local ZTEST_USER_OR_NOT (ZTEST_USER
+# with CONFIG_USERSPACE, ZTEST without). Not ZTEST_EXPECT_FAIL / _SKIP, which
+# only mark one, nor ZTEST_SUITE.
+ZTEST_MACRO = r"ZTEST(?:_USER(?:_OR_NOT)?)?(?:_F|_P)?"
+ZTEST = re.compile(rf"^[ \t]*{ZTEST_MACRO}\s*\(\s*(\w+)\s*,\s*(\w+)")
 # A doc comment that structures the documentation rather than documenting the
 # entity after it.
 STRUCTURAL = re.compile(
@@ -355,19 +370,46 @@ def is_skip_stub(text_from_ztest):
     return False
 
 
-def documented_ztests(lines, comments):
-    """{ztest line: doc comment} for the ZTESTs right after their own doc
-    comment, and the set of those that are only a ztest_test_skip() stub."""
-    doc_end = {c.end[0]: c for c in comments if c.doc and not c.member}
+def attached_doc(lines, comments, in_comment, n):
+    """The doc comment Doxygen attaches to the declaration on line n, or None.
+
+    Doxygen skips what the preprocessor or the scanner drops between a doc
+    comment and the declaration it documents: blank lines, conditional
+    directives (``#if``, ``#ifdef``, ``#else``, ...; a ``#define`` is a
+    declaration of its own and takes the comment) and plain comments."""
+    ends = {c.end[0]: c for c in comments}
+    p = n - 1
+    while p >= 0:
+        line = lines[p]
+        if not line.strip():
+            p -= 1
+            continue
+        if not in_comment[p] and DIRECTIVE.match(line):
+            p -= 1
+            continue
+        c = ends.get(p)
+        if c is None or line[c.end[1] + 2:].strip():
+            return None
+        if c.doc:
+            return None if c.member else c
+        if lines[c.start[0]][:c.start[1]].strip():
+            return None  # code before a plain comment
+        p = c.start[0] - 1
+    return None
+
+
+def documented_ztests(lines, comments, in_comment=None):
+    """{ztest line: doc comment} for the ZTESTs with a doc comment of their
+    own (attached_doc()), and the set of those that are only a
+    ztest_test_skip() stub."""
+    if in_comment is None:
+        in_comment = lex(lines)[1]
     found, stubs = {}, set()
     for n, line in enumerate(lines):
         if not ZTEST.match(line):
             continue
-        p = n - 1
-        while p >= 0 and not lines[p].strip():
-            p -= 1
-        c = doc_end.get(p)
-        if c is None or lines[p][c.end[1] + 2:].strip():
+        c = attached_doc(lines, comments, in_comment, n)
+        if c is None:
             continue
         found[n] = c
         if is_skip_stub("".join(lines[n:n + 200])):
@@ -399,13 +441,31 @@ def _rewrite_directive(lines, out, first, last, new, keep_open_comment):
         out[last] = tail + nl(lines[last])
 
 
-def filter_text(text, is_header):
+def qualify_suites(out, suite_groups):
+    """Point every ZTEST of a suite in suite_groups at the suite's group."""
+    for n, line in enumerate(out):
+        m = ZTEST.match(line)
+        if m and m.group(1) in suite_groups:
+            out[n] = line[:m.start(1)] + suite_groups[m.group(1)] + line[m.end(1):]
+
+
+def suite_groups_for(path, suites_file):
+    """The {suite: group} of the module the file is in, from --suites."""
+    table = json.loads(Path(suites_file).read_text())
+    path = Path(path).resolve()
+    for d in (path, *path.parents):
+        if str(d) in table:
+            return table[str(d)]
+    return {}
+
+
+def filter_text(text, is_header, suite_groups=None):
     # Lines as Doxygen counts them: split at "\n" only, not at every
     # separator str.splitlines() knows (form feed, ...).
     lines = re.findall(r"[^\n]*\n|[^\n]+$", text)
     comments, in_comment = lex(lines)
     conds = parse(lines, in_comment)
-    ztests, stubs = documented_ztests(lines, comments)
+    ztests, stubs = documented_ztests(lines, comments, in_comment)
 
     # Twin rule: open up a conditional whose not-taken branch holds a
     # documented, non-stub ZTEST.
@@ -433,18 +493,20 @@ def filter_text(text, is_header):
         if c.open_up and c.endif:
             _rewrite_directive(lines, out, c.endif[0], c.endif[1], "", open_tail)
 
-    # Annotations.
+    # Annotations: (comment, the line whose enclosing conditions apply). For a
+    # ZTEST that is its own line: its doc comment may sit outside the
+    # conditional (`/** ... */ #ifdef CONFIG_X ZTEST(...)`).
     if is_header:
         targets = [
-            c for c in comments
+            (c, c.end[0]) for c in comments
             if c.doc and (c.member or not STRUCTURAL.search(_comment_text(lines, c)))
         ]
     else:
-        targets = [c for n, c in ztests.items() if n not in stubs]
+        targets = [(c, n) for n, c in ztests.items() if n not in stubs]
     inserts = {}
-    for cm in targets:
+    for cm, at in targets:
         conds_here = []
-        for c, b in _enclosing(conds, cm.end[0]):
+        for c, b in _enclosing(conds, at):
             if (b.taken is not False or c.open_up) and b.cond:
                 conds_here.append(b.cond)
         if conds_here:
@@ -461,6 +523,8 @@ def filter_text(text, is_header):
             # A closing line of its own: keep the comment's leading "*".
             new = before + "* " + cmds + " "
         out[n] = new + line[col:]
+    if suite_groups:
+        qualify_suites(out, suite_groups)
     return "".join(out)
 
 
@@ -474,10 +538,12 @@ def _comment_text(lines, c):
 def main():
     ap = argparse.ArgumentParser(allow_abbrev=False)
     ap.add_argument("--rename-impl", action="store_true")
+    ap.add_argument("--suites", type=Path, help="qualified suite groups (testspec_scope.py)")
     ap.add_argument("file", type=Path)
     args = ap.parse_args()
     text = args.file.read_text(encoding="utf-8", errors="surrogateescape")
-    text = filter_text(text, is_header=args.file.suffix != ".c")
+    groups = suite_groups_for(args.file, args.suites) if args.suites else None
+    text = filter_text(text, is_header=args.file.suffix != ".c", suite_groups=groups)
     if args.rename_impl:
         sys.path.insert(0, str(Path(__file__).resolve().parent))
         from doxygen_filter_remove_impl import rename_impl

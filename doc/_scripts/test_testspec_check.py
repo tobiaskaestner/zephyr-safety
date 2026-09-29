@@ -152,3 +152,68 @@ def test_missing_undocumented(tree, tmp_path, capsys):
     rc, out = check(tree, tmp_path, [c for c in CASES if c[1] != "test_undocumented"], capsys)
     assert rc == 1
     assert "error: MISSING  tests/kernel/foo/src/main.c:15  foo.test_undocumented  id=-" in out
+
+
+def test_misattached(tree, tmp_path, capsys):
+    """test_plain's id names a case of another function: Doxygen gave its doc
+    comment to a macro call before it, and test_plain itself is not in the spec."""
+    cases = [("TSPEC-FOO-001", "K_APP_DMEM")] + CASES[1:]
+    rc, out = check(tree, tmp_path, cases, capsys)
+    assert rc == 1
+    assert (
+        "error: MISATTACHED  tests/kernel/foo/src/main.c:10  foo.test_plain  id=TSPEC-FOO-001"
+        "  (the spec's case is named 'K_APP_DMEM')"
+    ) in out
+
+
+def test_strays(tree, tmp_path, capsys):
+    """Spec cases no ZTEST accounts for: a helper Doxygen put into a suite
+    group, and a test on the page of a module it is not in."""
+    scope, zephyr = tree
+    f = needs(tmp_path, CASES + [("testspec-foo-foo_setup", "foo_setup")])
+    data = json.loads(f.read_text())
+    cases = data["versions"][""]["needs"]
+    for n in cases.values():
+        n["test_module"] = "tests/kernel/foo"
+    cases["TSPEC-FOO-002"]["test_module"] = "tests/kernel/bar"
+    f.write_text(json.dumps(data))
+    rc = testspec_check.main(["--scope", str(scope), "--zephyr-base", str(zephyr), "--needs", str(f)])
+    out = capsys.readouterr().out
+    assert rc == 0  # warnings only
+    assert "2 spec cases not a ZTEST of their module" in out
+    assert "warning: NOT A TEST  testspec-foo-foo_setup  foo.foo_setup  test_module=tests/kernel/foo" in out
+    assert (
+        "warning: WRONG MODULE (the ZTEST is in tests/kernel/foo/src/main.c)  TSPEC-FOO-002"
+        "  foo.test_user  test_module=tests/kernel/bar"
+    ) in out
+
+
+def test_cross_module_pair_in_the_sources(tree, tmp_path, capsys):
+    """A second module with a test of the same (suite, function): a result
+    of either is ambiguous, whatever groups the tests are in."""
+    scope, zephyr = tree
+    bar = zephyr / "tests/kernel/foo/bar"
+    (bar / "src").mkdir(parents=True)
+    (bar / "tests.yaml").write_text("tests:\n  kernel.foo.bar:\n    tags: kernel\n")
+    (bar / "src/main.c").write_text("/**\n * @brief Same pair.\n */\nZTEST(foo, test_plain)\n{\n}\n")
+    rc, out = check(tree, tmp_path, CASES, capsys)
+    assert rc == 1
+    assert "1 CROSS-MODULE (suite, function) pairs" in out
+    assert "error: CROSS-MODULE  foo.test_plain  in tests/kernel/foo, tests/kernel/foo/bar" in out
+
+
+def test_cross_module_pair_in_the_spec(tree, tmp_path, capsys):
+    """Two test cases of one pair on two module pages: one suite group
+    shared by both modules."""
+    scope, zephyr = tree
+    f = needs(tmp_path, CASES + [("testspec-foo-test_plain", "test_plain")])
+    data = json.loads(f.read_text())
+    cases = data["versions"][""]["needs"]
+    for n in cases.values():
+        n["test_module"] = "tests/kernel/foo"
+    cases["testspec-foo-test_plain"]["test_module"] = "tests/kernel/bar"
+    f.write_text(json.dumps(data))
+    rc = testspec_check.main(["--scope", str(scope), "--zephyr-base", str(zephyr), "--needs", str(f)])
+    out = capsys.readouterr().out
+    assert rc == 1
+    assert "error: CROSS-MODULE  foo.test_plain  in tests/kernel/bar, tests/kernel/foo" in out

@@ -26,9 +26,20 @@ the scope file and the Zephyr test sources:
 The testspec Doxyfile's ``ZTEST_SUITE`` expansion defines no group, so every
 suite group has exactly one definition — here or in the sources — and the
 result does not depend on the order Doxygen reads its INPUT in.
+
+A suite name that two modules in scope both have tests of (``workqueue_api``
+in tests/kernel/workq/user_work and work_queue) would be one group in both
+modules, and each module page would render the other's tests too. Such a
+suite gets one group per module instead, ``<module group>__<suite>``
+(``QUALIFIER``; zdocs' ``testmodule_suite_qualifier`` in the test
+specification's conf.py strips it again, so the test cases keep the real suite
+name). ``generate --suites-out`` writes these groups as JSON for
+doxygen_filter_kconfig.py, which points the module's ZTESTs at them.
 """
 
 import argparse
+import collections
+import json
 import re
 import sys
 from dataclasses import dataclass, field
@@ -36,11 +47,18 @@ from pathlib import Path
 
 import yaml
 
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from doxygen_filter_kconfig import ZTEST_MACRO  # noqa: E402
+
 DEFGROUP = re.compile(r"[@\\]defgroup\s+(\w+)[ \t]*([^\n]*)")
 ZTEST_SUITE = re.compile(r"^\s*ZTEST_SUITE\s*\(\s*(\w+)", re.M)
-# The suite of every test: ZTEST, ZTEST_USER and their _F / _P forms.
-ZTEST_OF = re.compile(r"^[ \t]*ZTEST(?:_USER)?(?:_F|_P)?\s*\(\s*(\w+)\s*,", re.M)
+# The suite of every test (see doxygen_filter_kconfig.ZTEST_MACRO).
+ZTEST_OF = re.compile(rf"^[ \t]*{ZTEST_MACRO}\s*\(\s*(\w+)\s*,", re.M)
 ROOT_GROUP = "all_tests"
+# Between the module group and the suite in the group of a suite name that more
+# than one module in scope uses. Must match testmodule_suite_qualifier in
+# test-specification/conf.py.
+QUALIFIER = "__"
 
 
 @dataclass
@@ -51,10 +69,15 @@ class Module:
     scenario_prefix: str
     suites: list = field(default_factory=list)
     hand_groups: dict = field(default_factory=dict)
+    # suite -> its group here, for a suite another module in scope uses too
+    qualified: dict = field(default_factory=dict)
 
     @property
     def generate_group(self):
         return self.group not in self.hand_groups
+
+    def suite_group(self, suite):
+        return self.qualified.get(suite, suite)
 
 
 @dataclass
@@ -198,7 +221,42 @@ def load_scope(scope_file, zephyr_base):
             )
         area.hand_group = _check_hand_area(zephyr_base, area)
         areas.append(area)
+    qualify_shared_suites(areas)
     return areas
+
+
+def qualify_shared_suites(areas):
+    """Give a suite that more than one module has tests of a group per module,
+    ``<module group>__<suite>``.
+
+    A module's suites are the ones it has tests of (see load_scope), so a
+    suite a module only declares (gen_isr_table_multilevel) is not shared."""
+    users = collections.defaultdict(list)
+    for m in (m for a in areas for m in a.modules):
+        for suite in m.suites:
+            users[suite].append(m)
+    for suite, mods in users.items():
+        if len(mods) < 2:
+            continue
+        for m in mods:
+            if suite in m.hand_groups:
+                raise SystemExit(
+                    f"test-scope: {m.path}: suite group {suite!r} is defined in the "
+                    f"sources, but {', '.join(o.path for o in mods if o is not m)} "
+                    f"has tests of suite {suite!r} too; drop the @defgroup"
+                )
+            m.qualified[suite] = f"{m.group}{QUALIFIER}{suite}"
+
+
+def qualified_suites(areas, zephyr_base):
+    """{module directory: {suite: group}} of the modules with a shared suite,
+    for doxygen_filter_kconfig.py --suites."""
+    return {
+        str((zephyr_base / m.path).resolve()): dict(sorted(m.qualified.items()))
+        for a in areas
+        for m in a.modules
+        if m.qualified
+    }
 
 
 def doxygen_input(areas, zephyr_base):
@@ -232,7 +290,7 @@ def render_dox(areas):
                 group(m.group, m.title, area.group, f"Test module at {m.path}.")
             for suite in m.suites:
                 if suite not in m.hand_groups:
-                    group(suite, f"{suite} ZTest suite", m.group)
+                    group(m.suite_group(suite), f"{suite} ZTest suite", m.group)
     return "\n".join(out)
 
 
@@ -309,6 +367,7 @@ def main():
     gen.add_argument("--dox-out", required=True, type=Path)
     gen.add_argument("--spec-out", required=True, type=Path)
     gen.add_argument("--report-out", required=True, type=Path)
+    gen.add_argument("--suites-out", type=Path, help="qualified suite groups, as JSON")
     args = ap.parse_args()
 
     areas = load_scope(args.scope, args.zephyr_base)
@@ -320,6 +379,9 @@ def main():
         if not m.scenario_prefix:
             print(f"testspec_scope: {m.path}: no twister scenarios found", file=sys.stderr)
     _write(args.dox_out, render_dox(areas), set())
+    if args.suites_out:
+        suites = qualified_suites(areas, args.zephyr_base)
+        _write(args.suites_out, json.dumps(suites, indent=2, sort_keys=True) + "\n", set())
     write_pages(areas, args.spec_out, "spec")
     write_pages(areas, args.report_out, "report")
     return 0
