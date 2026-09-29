@@ -437,3 +437,303 @@ def test_command_line_suites(tmp_path):
 
     assert filt(f).splitlines()[0] == "ZTEST_USER(u__workqueue_api, test_a)"
     assert filt(other) == "ZTEST(workqueue_api, test_a)\n"
+
+
+# --------------------------------------------------------------------------
+# In-body skips
+
+
+def test_in_body_is_enabled_skip():
+    # log_api/src/main.c:296
+    lines = run(src("""
+        /**
+         * @brief Runtime filtering.
+         */
+        ZTEST(test_log_api, test_log_backend_runtime_filtering)
+        {
+        	if (!IS_ENABLED(CONFIG_LOG_RUNTIME_FILTERING)) {
+        		ztest_test_skip();
+        	}
+        	check();
+        }
+        """))
+    assert lines[2] == " * @kconfig_depends{CONFIG_LOG_RUNTIME_FILTERING} */"
+
+
+def test_in_body_skips_accumulate_after_enclosing():
+    lines = run(src("""
+        #ifdef CONFIG_A
+        /** @brief Test. */
+        ZTEST(s, t)
+        {
+        	if (IS_ENABLED(CONFIG_LOG_MODE_IMMEDIATE)) {
+        		ztest_test_skip();
+        	}
+
+        	if (!IS_ENABLED(CONFIG_LOG_MODE_OVERFLOW)) {
+        		ztest_test_skip();
+        	}
+        	if (!IS_ENABLED(CONFIG_A)) {
+        		ztest_test_skip();
+        	}
+        }
+        #endif
+        """))
+    assert lines[1] == (
+        "/** @brief Test. @kconfig_depends{CONFIG_A} @kconfig_depends{!CONFIG_LOG_MODE_IMMEDIATE}"
+        " @kconfig_depends{CONFIG_LOG_MODE_OVERFLOW} */"
+    )
+
+
+@pytest.mark.parametrize(
+    "cond, depends",
+    [
+        ("IS_ENABLED(CONFIG_X86) || IS_ENABLED(CONFIG_SPARC)", ["!CONFIG_X86", "!CONFIG_SPARC"]),
+        ("IS_ENABLED(CONFIG_A) && !IS_ENABLED(CONFIG_B)", ["!CONFIG_A || CONFIG_B"]),
+        ("!(IS_ENABLED(CONFIG_A))", ["CONFIG_A"]),
+        ("!(IS_ENABLED(CONFIG_A) && (IS_ENABLED(CONFIG_B) || IS_ENABLED(CONFIG_C)))",
+         ["CONFIG_A", "CONFIG_B || CONFIG_C"]),
+        # A pure-Kconfig disjunct of the skip condition is still a dependency.
+        ("arch_num_cpus() > 1 || !IS_ENABLED(CONFIG_IRQ_OFFLOAD_NESTED)", ["CONFIG_IRQ_OFFLOAD_NESTED"]),
+        ("!IS_ENABLED(CONFIG_SMP) || (CONFIG_MP_MAX_NUM_CPUS == 1)", ["CONFIG_SMP"]),
+        # Run-time conditions: nothing.
+        ("IS_ENABLED(CONFIG_USERSPACE) && !tls_domain_ready", []),
+        ("!k_is_user_context()", []),
+        ("CONFIG_MP_MAX_NUM_CPUS > 1", []),
+        ("IS_ENABLED(CONFIG_A) == 1", []),
+    ],
+)
+def test_in_body_compound_conditions(cond, depends):
+    lines = run(src(f"""
+        /** @brief T. */
+        ZTEST(s, t)
+        {{
+        	if ({cond}) {{
+        		ztest_test_skip();
+        		return;
+        	}}
+        }}
+        """))
+    cmds = "".join(f" @kconfig_depends{{{d}}}" for d in depends)
+    assert lines[0] == f"/** @brief T.{cmds} */"
+
+
+def test_in_body_preprocessor_skips():
+    # mutex_api/src/priority_inheritance_enhanced.c:268 (with a Kconfig
+    # condition), timer_error_case (#ifndef with no #else), bitfield.c (#ifdef).
+    lines = run(src("""
+        /** @brief A. */
+        ZTEST(s, a)
+        {
+        #if defined(CONFIG_A) && defined(CONFIG_B)
+        	run();
+        #else
+        	ztest_test_skip();
+        #endif
+        }
+        /** @brief B. */
+        ZTEST(s, b)
+        {
+        #ifndef CONFIG_USERSPACE
+        	ztest_test_skip();
+        #endif
+        	run();
+        }
+        /** @brief C. */
+        ZTEST(s, c)
+        {
+        #ifdef CONFIG_ARM
+        	ztest_test_skip();
+        #else
+        	run();
+        #endif
+        }
+        /** @brief D. */
+        ZTEST(s, d)
+        {
+        #if defined(CONFIG_A)
+        	a();
+        #elif defined(CONFIG_B)
+        	b();
+        #else
+        	ztest_test_skip();
+        #endif
+        }
+        """))
+    assert lines[0] == "/** @brief A. @kconfig_depends{CONFIG_A} @kconfig_depends{CONFIG_B} */"
+    assert lines[3] == "#if 1"
+    assert lines[9] == "/** @brief B. @kconfig_depends{CONFIG_USERSPACE} */"
+    assert lines[12] == "#if 0"
+    assert lines[17] == "/** @brief C. @kconfig_depends{!CONFIG_ARM} */"
+    assert lines[26] == "/** @brief D. @kconfig_depends{CONFIG_A || CONFIG_B} */"
+
+
+def test_in_body_non_kconfig_directive_is_not_a_dependency():
+    lines = run(src("""
+        /** @brief A. */
+        ZTEST(s, a)
+        {
+        #if Z_MUTEX_PI_ENABLED
+        	run();
+        #else
+        	ztest_test_skip();
+        #endif
+        }
+        /** @brief B. */
+        ZTEST(s, b)
+        {
+        #if defined(CONFIG_MUTEX_DEADLOCK_DETECT) && Z_MUTEX_PI_ENABLED
+        	run();
+        #else
+        	ztest_test_skip();
+        #endif
+        }
+        """))
+    assert lines[0] == "/** @brief A. */"
+    assert lines[3] == "#if Z_MUTEX_PI_ENABLED"
+    # The Kconfig half of a && is still necessary.
+    assert lines[9] == "/** @brief B. @kconfig_depends{CONFIG_MUTEX_DEADLOCK_DETECT} */"
+
+
+def test_in_body_nested_skip_simplified_by_the_else_skip():
+    # schedule_api/src/test_slice_scheduling.c: test_slice_perthread.
+    lines = run(src("""
+        /** @brief T. */
+        ZTEST(s, t)
+        {
+        #ifdef CONFIG_TIMESLICING
+        	if (!IS_ENABLED(CONFIG_TIMESLICE_PER_THREAD)) {
+        		ztest_test_skip();
+        		return;
+        	}
+        	run();
+        #else
+        	ztest_test_skip();
+        #endif
+        }
+        """))
+    assert lines[0] == (
+        "/** @brief T. @kconfig_depends{CONFIG_TIMESLICE_PER_THREAD} @kconfig_depends{CONFIG_TIMESLICING} */"
+    )
+
+
+def test_in_body_else_branches():
+    # log_core_additional/src/log_test.c: test_log_sync.
+    lines = run(src("""
+        /** @brief A. */
+        ZTEST(s, a)
+        {
+        	if (IS_ENABLED(CONFIG_LOG_MODE_IMMEDIATE)) {
+        		run();
+        	} else {
+        		ztest_test_skip();
+        	}
+        }
+        /** @brief B. */
+        ZTEST(s, b)
+        {
+        	if (IS_ENABLED(CONFIG_A)) {
+        		a();
+        	} else if (!IS_ENABLED(CONFIG_B)) {
+        		ztest_test_skip();
+        	}
+        }
+        /** @brief C. */
+        ZTEST(s, c)
+        {
+        	if (IS_ENABLED(CONFIG_A))
+        		ztest_test_skip();
+        	else
+        		run();
+        }
+        """))
+    assert lines[0] == "/** @brief A. @kconfig_depends{CONFIG_LOG_MODE_IMMEDIATE} */"
+    assert lines[9] == "/** @brief B. @kconfig_depends{CONFIG_A || CONFIG_B} */"
+    assert lines[18] == "/** @brief C. @kconfig_depends{!CONFIG_A} */"
+
+
+def test_in_body_skips_left_alone():
+    # Under a loop or a switch, unconditional, after a run-time check, in a
+    # string or a comment, or in a helper: no dependency.
+    text = src("""
+        static void helper(void)
+        {
+        	if (!IS_ENABLED(CONFIG_H)) {
+        		ztest_test_skip();
+        	}
+        }
+        /** @brief T. */
+        ZTEST(s, t)
+        {
+        	for (int i = 0; i < 2; i++) {
+        		if (!IS_ENABLED(CONFIG_A)) {
+        			ztest_test_skip();
+        		}
+        	}
+        	switch (k) {
+        	case 1:
+        		if (!IS_ENABLED(CONFIG_B)) {
+        			ztest_test_skip();
+        		}
+        		break;
+        	}
+        	if (stack == NULL) {
+        		ztest_test_skip();
+        	}
+        	/* if (!IS_ENABLED(CONFIG_C)) { ztest_test_skip(); } */
+        	printk("if (!IS_ENABLED(CONFIG_D)) { ztest_test_skip(); }");
+        	helper();
+        	ztest_test_skip();
+        }
+        """)
+    assert run(text) == text.splitlines()
+
+
+def test_in_body_skip_stub_rule_unchanged():
+    # A whole-body stub is still no test case and gets nothing; its
+    # feature-on twin gets the enclosing condition only.
+    lines = run(src("""
+        #ifdef CONFIG_USERSPACE
+        /** @brief Real. */
+        ZTEST(s, t)
+        {
+        	run();
+        }
+        #else
+        /** @brief Stub. */
+        ZTEST(s, t)
+        {
+        	ztest_test_skip();
+        }
+        #endif
+        """))
+    assert lines[1] == "/** @brief Real. @kconfig_depends{CONFIG_USERSPACE} */"
+    assert lines[7] == "/** @brief Stub. */"
+
+
+def test_list_skips(tmp_path):
+    f = tmp_path / "t.c"
+    f.write_text(src("""
+        /** @brief T. */
+        ZTEST(s, t)
+        {
+        	if (!IS_ENABLED(CONFIG_A)) {
+        		ztest_test_skip();
+        	}
+        	if (arch_num_cpus() > 1) {
+        		ztest_test_skip();
+        	}
+        }
+        ZTEST(s, u)
+        {
+        	ztest_test_skip();
+        }
+        """))
+    out = subprocess.run(
+        [sys.executable, SCRIPT, "--list-skips", f], check=True, capture_output=True, text=True
+    ).stdout.splitlines()
+    assert out == [
+        f"{f}:5\ts.t\tkconfig\tCONFIG_A\t",
+        f"{f}:8\ts.t\truntime\t\t!(arch_num_cpus() > 1)",
+        f"{f}:13\ts.u\tstub\t\tskip stub (the whole body)",
+    ]

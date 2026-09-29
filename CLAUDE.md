@@ -174,7 +174,10 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   prefix put e.g. timer_api's `kernel.timer` results on timer_error_case's page too).
   A parameterized test's values (`fn[inst/N]`) fold into its one aggregate result.
 - **depends_on**: `_scripts/doxygen_filter_kconfig.py` turns a test's (or symbol's)
-  enclosing Kconfig `#if` into `@kconfig_depends`; zdocs sets the string field
+  enclosing Kconfig `#if` into `@kconfig_depends`, and for a test also the Kconfig
+  conditions its body calls `ztest_test_skip()` under (`if (!IS_ENABLED(CONFIG_X))`, a skip
+  in an in-body `#else`), negated; run-time skip conditions are not guessed at
+  (`--list-skips` lists every skip call and its outcome). zdocs sets the string field
   `depends_on` (conditions joined with `"; "`) and a "Depends on" line in the need body.
   The test spec's layout shows it.
 
