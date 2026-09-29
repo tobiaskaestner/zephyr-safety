@@ -25,3 +25,10 @@ configure(
 )
 
 todo_include_todos = True
+
+# The design elements are generated from the `.. design::` blocks in Zephyr's
+# doc/kernel by the `design-gen` target — see doc/CMakeLists.txt — and copied
+# in here as generated/design_elements.rst.
+external_content_contents.append(
+    (Path(os.environ["SAFETY_DESIGN_GEN_RST_DIR"]), "generated/*.rst")
+)

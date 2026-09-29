@@ -73,7 +73,7 @@ A document's registry id is its target stem and deploy path:
 | Document id | Kind | Content |
 |---|---|---|
 | `requirements` | Sphinx + sphinx-needs | One `req` need per StrictDoc requirement, generated (see below) |
-| `architecture` | Sphinx | Arc42-style architecture document |
+| `architecture` | Sphinx + sphinx-needs | Arc42-style architecture document; one `design` need per `.. design::` block in zephyr `doc/kernel` (generated) |
 | `test-specification` | Sphinx + sphinx-needs | Test spec |
 | `test-report` | Sphinx + sphinx-needs | Test report |
 | `api-documentation` | Sphinx + Breathe + sphinx-needs | API doc consuming Doxygen XML; one `impl` need per `@satisfies` symbol (`symbolneeds::`) |
@@ -159,6 +159,13 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   `.. symbolneeds::` (registry `symbol_needs: {doxygen_source: dox-zephyr-safety-api}`),
   one `impl` need `IMPL-<symbol>` per API symbol with a `@satisfies`, sectioned by API
   group, linked `satisfies` to the requirement.
+- **fulfills**: the `design-gen` target (`_scripts/design_gen.py`) scans zephyr's
+  `doc/kernel` for `.. design:: DESIGN-<NAME> <Caption>` blocks (`:fulfills:` UIDs) and
+  writes one `design` need per block into the architecture document
+  (`generated/design_elements.rst`), with the block's source file, line and a link to it
+  at the zephyr HEAD. It fails on a UID the StrictDoc export lacks; `design-check`
+  (POST_BUILD of `all-docs`) checks one need per block and prints the gap numbers
+  (`architecture/design_coverage.rst` renders them).
 - **verifies**: `testmodule::` on the generated per-module spec pages, one `test_case` need
   per ZTEST (id `TSPEC-*` from `@testid`).
 - **results**: the generated per-module report pages run

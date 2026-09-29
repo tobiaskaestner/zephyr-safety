@@ -158,6 +158,34 @@ add_custom_target(
 )
 
 #-------------------------------------------------------------------------------
+# Design layer, generated from the `.. design::` blocks in Zephyr's own docs.
+#
+# _scripts/design_gen.py scans ${ZEPHYR_BASE}/doc/kernel and writes one `design`
+# need per block (link `fulfills` to the requirements it names) into
+#   design-gen/rst/generated/design_elements.rst   copied into the
+#                         `architecture` document by its conf.py
+#   design-gen/manifest.json   the expected ids, read by design-check
+# It fails on a `fulfills` target the StrictDoc export does not define, so it
+# runs after requirements-gen. Always runs, like testspec-gen: the page links to
+# the zephyr HEAD, which can move without any .rst changing; unchanged output is
+# not rewritten.
+
+set(DESIGN_GEN_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/_scripts/design_gen.py)
+set(DESIGN_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/design-gen)
+list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_DESIGN_GEN_RST_DIR=${DESIGN_GEN_DIR}/rst)
+
+add_custom_target(
+  design-gen
+  COMMAND ${PYTHON_EXECUTABLE} ${DESIGN_GEN_SCRIPT} generate
+    --zephyr-base ${ZEPHYR_BASE}
+    --requirements-json ${REQ_GEN_DIR}/strictdoc/json/index.json
+    --rst-out ${DESIGN_GEN_DIR}/rst
+    --manifest ${DESIGN_GEN_DIR}/manifest.json
+  COMMENT "Generating design needs (zephyr doc/kernel)..."
+)
+add_dependencies(design-gen requirements-gen)
+
+#-------------------------------------------------------------------------------
 # Documents
 
 set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
@@ -175,6 +203,7 @@ add_dependencies(dox-zephyr-tag requirements-gen)
 add_dependencies(dox-zephyr-safety-testspec-tag testspec-gen)
 add_dependencies(test-specification-index testspec-gen)
 add_dependencies(test-report-index testspec-gen)
+add_dependencies(architecture-index design-gen)
 
 # Every ZTEST in scope must be in the built test specification. A test behind a
 # conditional that the documentation build evaluates false, or in a group nothing
@@ -200,6 +229,28 @@ add_custom_command(
   POST_BUILD
   COMMAND ${testspec_check_cmd}
   COMMENT "Checking that every ZTEST in scope is in the test specification..."
+  USES_TERMINAL
+)
+
+# Every design block yields exactly one `design` need, none dangles; also prints
+# the gap-view numbers (requirements x design x verification).
+set(
+  design_check_cmd
+  ${PYTHON_EXECUTABLE} ${DESIGN_GEN_SCRIPT} check
+    --manifest ${DESIGN_GEN_DIR}/manifest.json
+    --deploy ${CMAKE_CURRENT_BINARY_DIR}/deploy/html
+)
+add_custom_target(
+  design-check
+  COMMAND ${design_check_cmd}
+  COMMENT "Checking the design needs against the design blocks..."
+  USES_TERMINAL
+)
+add_custom_command(
+  TARGET all-docs
+  POST_BUILD
+  COMMAND ${design_check_cmd}
+  COMMENT "Checking the design needs against the design blocks..."
   USES_TERMINAL
 )
 
