@@ -171,6 +171,33 @@ add_dependencies(dox-zephyr-safety-testspec-tag testspec-gen)
 add_dependencies(test-specification-index testspec-gen)
 add_dependencies(test-report-index testspec-gen)
 
+# Every ZTEST in scope must be in the built test specification. A test behind a
+# conditional that the documentation build evaluates false, or in a group nothing
+# walks, drops out without a warning; _scripts/testspec_check.py compares the
+# ZTEST sites in the sources with the test cases in its needs.json. Like
+# doc-check: a standalone `testspec-check` target that re-checks the existing
+# deploy tree, and a POST_BUILD step of `all-docs` — after
+# test-specification-html — so a full build fails on a missing test.
+set(
+  testspec_check_cmd
+  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/_scripts/testspec_check.py
+    --scope ${TESTSPEC_SCOPE} --zephyr-base ${ZEPHYR_BASE}
+    --needs ${CMAKE_CURRENT_BINARY_DIR}/deploy/html/test-specification/needs.json
+)
+add_custom_target(
+  testspec-check
+  COMMAND ${testspec_check_cmd}
+  COMMENT "Checking that every ZTEST in scope is in the test specification..."
+  USES_TERMINAL
+)
+add_custom_command(
+  TARGET all-docs
+  POST_BUILD
+  COMMAND ${testspec_check_cmd}
+  COMMENT "Checking that every ZTEST in scope is in the test specification..."
+  USES_TERMINAL
+)
+
 add_custom_target(
   pristine
   COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake

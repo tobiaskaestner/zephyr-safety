@@ -87,13 +87,15 @@ A document's registry id is its target stem and deploy path:
 
 The build is two-stage. `doc-index` builds every document's stage-1 index (objects.inv,
 tag files, needs.json); every `<id>-html` depends on **all** of them, so build
-`doc-index` first. `doc-check` validates the deploy tree and the xref smoke page.
+`doc-index` first. `doc-check` validates the deploy tree and the xref smoke page;
+`testspec-check` checks that every ZTEST in `doc/test-scope.yaml` is in the built test
+specification. `all-docs` runs both after its build.
 
 ```sh
 cmake -S doc -B ../bdoc-zdocs
 cmake --build ../bdoc-zdocs --target doc-index
 cmake --build ../bdoc-zdocs --target test-specification-html test-report-html
-cmake --build ../bdoc-zdocs --target doc-check
+cmake --build ../bdoc-zdocs --target doc-check testspec-check
 ```
 
 ### Doxygen Configuration
