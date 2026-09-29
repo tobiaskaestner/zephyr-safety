@@ -25,7 +25,7 @@ Doxylink — Doxygen documents
 
 * Safety API (Doxygen): :dox_api:`kernel_apis`
 * Detailed Design (Doxygen): :dox_design:`kernel_apis`
-* Test Specification (Doxygen): :dox_testspec:`kernel_queue_tests`
+* Test Specification (Doxygen): :dox_testspec:`tests_kernel_queue`
 
 External needs — sphinx-needs imports
 -------------------------------------

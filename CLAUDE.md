@@ -158,7 +158,7 @@ kernel_apis
 **Test groups** (root and procedure groups in `doc/dox/zephyr-safety-testspec/groups.dox`; area, module and suite groups generated from `doc/test-scope.yaml`):
 ```
 all_tests
-  └── kernel_queue_tests
+  └── tests_kernel_queue            (area: upstream Zephyr's own group, "Queue tests")
         └── kernel_queue_module     (the group `testmodule::` is pointed at)
               ├── queue_api          (one per ZTEST_SUITE, generated)
               ├── queue_api_1cpu
@@ -167,14 +167,19 @@ all_tests
 
 The testspec's macro expansion makes each `ZTEST(suite, fn)` land in its suite group
 (`ZTEST_SUITE` itself expands to nothing). `doc/_scripts/testspec_scope.py` generates the
-area, module and suite groups on every build; a group the sources define by hand wins, but
-none of ours do any more — the zephyr branch carries no group blocks. Test ids are added to
-the sources by `doc/_scripts/assign_testids.py` (by hand; ledger `doc/testids.yaml`).
-Adding a test area means an entry in `doc/test-scope.yaml`, then running that script.
-
-Upstream's own
-`tests_kernel_{queue,fifo,lifo}` groups also appear (they say `@ingroup all_tests`); they are
-upstream's, carry no test cases, and are left alone to keep the diff against upstream small.
+area, module and suite groups on every build; a group the sources define by hand wins.
+The area group **is upstream's** per-area test group: its id defaults to Zephyr's
+`tests_<path>` naming (`tests/kernel/fifo` → `tests_kernel_fifo`), and areas still on the
+older `kernel_<area>_tests` name (today semaphore, stack) set `group:` in
+`doc/test-scope.yaml` — drop that key once upstream renames the group. Upstream defines every
+in-scope area group itself (`@ingroup all_tests`), so its title shows in the Doxygen nav; the
+generator only adds modules and suites below it, and fails if a source-defined area group is
+not in `all_tests` or a source-defined suite group is not in its module. Members of an area
+group are upstream's helpers inside its `@{ … @}` spans, never test cases (each `ZTEST` lands
+in its suite group). The zephyr branch carries no group blocks of ours.
+Test ids are added to the sources by `doc/_scripts/assign_testids.py` (by hand; ledger
+`doc/testids.yaml`). Adding a test area means an entry in `doc/test-scope.yaml`, then running
+that script.
 
 ## `queue.h_` — Why the Unusual Name
 

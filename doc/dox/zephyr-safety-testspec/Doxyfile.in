@@ -2459,7 +2459,20 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-PREDEFINED             = __DOXYGEN__ \                         
+# Test specification: Doxygen evaluates #if conditions against this list, and a
+# test behind a condition that evaluates false drops out of the specification
+# silently. The CONFIG_ options below select the feature-enabled branch of the
+# conditions that guard ZTESTs in scope (userspace, asserts, hardware stack
+# protection, FPU sharing, ARM, printk).
+
+PREDEFINED             = __DOXYGEN__ \
+                         CONFIG_USERSPACE \
+                         CONFIG_ASSERT \
+                         CONFIG_HW_STACK_PROTECTION \
+                         CONFIG_FPU \
+                         CONFIG_FPU_SHARING \
+                         CONFIG_ARM \
+                         CONFIG_PRINTK \
                           SYS_PORT_TRACING_TRACKING_FIELD(x)= \
                          "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} */" \
                          _LINKER \
@@ -2477,7 +2490,11 @@ PREDEFINED             = __DOXYGEN__ \
                          "ZTEST(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_USER(suite, fn)=/** \ingroup suite */ void fn(void)" \
                          "ZTEST_USER_F(suite, fn)=/** \ingroup suite */ void fn(void)" \
-                         "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)"\
+                         "ZTEST_F(suite, fn)=/** \ingroup suite */ void fn(void)" \
+                         "ZTEST_P(suite, fn)=/** \ingroup suite */ void fn(void)" \
+                         "ZTEST_USER_P(suite, fn)=/** \ingroup suite */ void fn(void)" \
+                         "ZTEST_DEFINE_PARAM_VALUES_ARRAY(...)=" \
+                         "ZTEST_INSTANTIATE_TEST_SUITE_P(...)=" \
                          "ZTEST_SUITE(suite, u1, u2, u3, u4, u5)="
 
 # If the MACRO_EXPANSION and EXPAND_ONLY_PREDEF tags are set to YES then this

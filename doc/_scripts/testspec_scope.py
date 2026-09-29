@@ -15,9 +15,11 @@ the scope file and the Zephyr test sources:
 
 ``generate``
     * A ``.dox`` defining the groups the ``testmodule`` directive walks:
-      area -> module -> suite. A group the module's sources already define with
+      area -> module -> suite. A group the sources already define with
       ``@defgroup`` is left to them — a hand-written group carries prose that a
-      generated one cannot, so it takes precedence.
+      generated one cannot, so it takes precedence. The area group is Zephyr's
+      own per-area test group (``tests_<path>``, see ``area_group``), so the
+      area level is normally upstream's.
     * The test-specification and test-report page trees: one page per area, one
       per module, and the top-level ``specs.rst`` / ``reports.rst`` toctrees.
 
@@ -61,6 +63,7 @@ class Area:
     description: str
     group: str
     modules: list = field(default_factory=list)
+    hand_group: bool = False
 
 
 def _slug_parts(rel):
@@ -78,7 +81,12 @@ def _slug_parts(rel):
 
 
 def area_group(rel):
-    return "_".join(_slug_parts(rel)) + "_tests"
+    """Zephyr's test group for an area: tests/kernel/fifo -> tests_kernel_fifo.
+
+    Upstream's documentation guidelines put test documentation in groups
+    prefixed ``tests_`` under ``all_tests``. Areas still on the older
+    ``kernel_<area>_tests`` naming set ``group:`` in the scope file."""
+    return "_".join(["tests"] + _slug_parts(rel))
 
 
 def module_group(rel):
@@ -109,6 +117,41 @@ def _scenario_prefix(module_dir):
     return ".".join(common)
 
 
+def _check_hand_suites(rel, text, module, suites):
+    """A suite group the sources define by hand must sit in its module group.
+
+    Otherwise `testmodule::` never walks it and every test in the suite drops
+    out of the test specification without a warning.
+    """
+    for suite in suites:
+        m = re.search(rf"[@\\]defgroup\s+{re.escape(suite)}\b", text)
+        block = text[m.end():text.find("*/", m.end())]
+        if not re.search(rf"[@\\]ingroup\s+(?:\w+\s+)*{re.escape(module)}\b", block):
+            raise SystemExit(
+                f"test-scope: {rel}: suite group {suite!r} is defined in the sources "
+                f"but not @ingroup {module}; drop the @defgroup or add the @ingroup"
+            )
+
+
+def _check_hand_area(zephyr_base, area):
+    """Whether the sources define the area group; if they do, it must sit in
+    ROOT_GROUP, or the whole area drops out of the Doxygen nav."""
+    for m in area.modules:
+        for f in _sources(zephyr_base / m.path):
+            text = f.read_text(errors="replace")
+            d = re.search(rf"[@\\]defgroup\s+{re.escape(area.group)}\b", text)
+            if not d:
+                continue
+            block = text[d.end():text.find("*/", d.end())]
+            if not re.search(rf"[@\\]ingroup\s+(?:\w+\s+)*{ROOT_GROUP}\b", block):
+                raise SystemExit(
+                    f"test-scope: {f.relative_to(zephyr_base)}: area group {area.group!r} "
+                    f"is defined in the sources but not @ingroup {ROOT_GROUP}"
+                )
+            return True
+    return False
+
+
 def load_scope(scope_file, zephyr_base):
     data = yaml.safe_load(Path(scope_file).read_text()) or {}
     areas, codes = [], set()
@@ -122,7 +165,7 @@ def load_scope(scope_file, zephyr_base):
             code=code,
             title=entry["title"],
             description=entry.get("description", ""),
-            group=area_group(entry["path"]),
+            group=entry.get("group") or area_group(entry["path"]),
         )
         rels = entry.get("modules") or sorted(
             str(p.parent.relative_to(zephyr_base))
@@ -133,16 +176,19 @@ def load_scope(scope_file, zephyr_base):
             text = "\n".join(p.read_text(errors="replace") for p in _sources(mdir))
             hand = {gid: title.strip() for gid, title in DEFGROUP.findall(text)}
             group = module_group(rel)
+            suites = list(dict.fromkeys(ZTEST_SUITE.findall(text)))
+            _check_hand_suites(rel, text, group, [s for s in suites if s in hand])
             area.modules.append(
                 Module(
                     path=rel,
                     group=group,
                     title=hand.get(group) or f"{Path(rel).name} test module",
                     scenario_prefix=_scenario_prefix(mdir),
-                    suites=list(dict.fromkeys(ZTEST_SUITE.findall(text))),
+                    suites=suites,
                     hand_groups=hand,
                 )
             )
+        area.hand_group = _check_hand_area(zephyr_base, area)
         areas.append(area)
     return areas
 
@@ -171,7 +217,8 @@ def render_dox(areas):
         out.append("")
 
     for area in areas:
-        group(area.group, area.title, ROOT_GROUP)
+        if not area.hand_group:
+            group(area.group, area.title, ROOT_GROUP)
         for m in area.modules:
             if m.generate_group:
                 group(m.group, m.title, area.group, f"Test module at {m.path}.")

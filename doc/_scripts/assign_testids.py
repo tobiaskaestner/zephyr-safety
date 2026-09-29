@@ -30,7 +30,9 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 from testspec_scope import _sources, load_scope  # noqa: E402
 
-ZTEST = re.compile(r"^[ \t]*ZTEST(?:_USER|_F|_USER_F|_EXPECT_FAIL)?\s*\(\s*(\w+)\s*,\s*(\w+)", re.M)
+# The macros that define a test: ZTEST, ZTEST_USER, their _F (fixture) and _P
+# (parameterized) forms. Not ZTEST_EXPECT_FAIL / _SKIP, which only mark one.
+ZTEST = re.compile(r"^[ \t]*ZTEST(?:_USER)?(?:_F|_P)?\s*\(\s*(\w+)\s*,\s*(\w+)", re.M)
 TAIL = re.compile(r"^\s*\*\s*[@\\](see|verifies|satisfies|draft|active|obsolete)\b")
 STATUS = re.compile(r"[@\\](draft|active|obsolete)\b")
 
@@ -71,7 +73,11 @@ def plan(areas, ledger, zephyr_base):
 
 def insert_id(text, pos, test_id):
     start, end = doc_block(text, pos)
-    lines = text[start:end].split("\n")
+    block = text[start:end]
+    if "\n" not in block:
+        # A one-line `/** @brief ... */` has no line to insert before: open it up.
+        block = "/**\n * " + block[3:-2].strip() + "\n */"
+    lines = block.split("\n")
     at = next((i for i, line in enumerate(lines) if TAIL.match(line)), len(lines) - 1)
     new = [" * @testid{" + test_id + "}"]
     if not STATUS.search(text[start:end]):

@@ -20,6 +20,12 @@
 #   description  (optional) prose under that heading
 #   modules      (optional) test modules, relative to ZEPHYR_BASE. Default: every
 #                directory under `path` holding a tests.yaml.
+#   group        (optional) the area's Doxygen group. Default: Zephyr's
+#                `tests_<path>` naming (tests/kernel/fifo -> tests_kernel_fifo).
+#                Set it only for an area whose sources still use the older
+#                `kernel_<area>_tests` name; drop it once upstream renames the group.
+#                When the sources define the group, its title there wins in the
+#                Doxygen nav; the pages here keep `title`.
 
 areas:
   - path: tests/kernel/queue
@@ -31,3 +37,168 @@ areas:
     code: FIFO
     title: Kernel FIFO Tests
     description: This section covers tests related to the Kernel FIFO API.
+
+  - path: tests/kernel/lifo
+    code: LIFO
+    title: Kernel LIFO Tests
+    description: This section covers tests related to the Kernel LIFO API.
+
+  - path: tests/kernel/semaphore
+    code: SEM
+    group: kernel_semaphore_tests
+    title: Kernel Semaphore Tests
+    description: This section covers tests related to the Kernel Semaphore API.
+
+  - path: tests/kernel/stack
+    code: STACK
+    group: kernel_stack_tests
+    title: Kernel Stack Tests
+    description: This section covers tests related to the Kernel Stack API.
+
+  - path: tests/kernel/msgq
+    code: MSGQ
+    title: Kernel Message Queue Tests
+    description: This section covers tests related to the Kernel Message Queue API.
+
+  - path: tests/kernel/mbox
+    code: MBOX
+    title: Kernel Mailbox Tests
+    description: This section covers tests related to the Kernel Mailbox API.
+
+  - path: tests/kernel/pipe
+    code: PIPE
+    title: Kernel Pipe Tests
+    description: This section covers tests related to the Kernel Pipe API.
+
+  - path: tests/kernel/cleanup
+    code: CLEANUP
+    title: Kernel Cleanup Tests
+
+  - path: tests/kernel/common
+    code: COMMON
+    group: kernel_common_tests
+    title: Kernel Common Tests
+
+  - path: tests/kernel/condvar
+    code: CONDVAR
+    group: kernel_condvar_tests
+    title: Kernel Condition Variable Tests
+
+  - path: tests/kernel/context
+    code: CONTEXT
+    title: Kernel Context Tests
+
+  - path: tests/kernel/device
+    code: DEVICE
+    group: kernel_device_tests
+    title: Kernel Device Tests
+
+  - path: tests/kernel/early_sleep
+    code: EARLYSLEEP
+    title: Kernel Early Sleep Tests
+
+  - path: tests/kernel/events
+    code: EVENTS
+    group: kernel_event_tests
+    title: Kernel Events Tests
+
+  - path: tests/kernel/fatal
+    code: FATAL
+    title: Kernel Fatal Error Tests
+
+  - path: tests/kernel/fpu_sharing
+    code: FPU
+    group: kernel_fpsharing_tests
+    title: Kernel FPU Sharing Tests
+
+  - path: tests/kernel/mem_heap
+    code: HEAP
+    group: k_heap_api_tests
+    title: Kernel Memory Heap Tests
+
+  - path: tests/kernel/mem_slab
+    code: SLAB
+    group: kernel_memory_slab_tests
+    title: Kernel Memory Slab Tests
+
+  - path: tests/kernel/multiprocessing
+    code: MP
+    title: Kernel Multiprocessing Tests
+
+  - path: tests/kernel/mutex
+    code: MUTEX
+    group: kernel_mutex_tests
+    title: Kernel Mutex Tests
+
+  - path: tests/kernel/obj_core
+    code: OBJCORE
+    group: kernel_obj_core_tests
+    title: Kernel Object Core Tests
+
+  - path: tests/kernel/obj_tracking
+    code: OBJTRACK
+    title: Kernel Object Tracking Tests
+
+  - path: tests/kernel/pending
+    code: PENDING
+    group: kernel_pending_tests
+    title: Kernel Pending Tests
+
+  - path: tests/kernel/poll
+    code: POLL
+    group: kernel_poll_tests
+    title: Kernel Polling Tests
+
+  - path: tests/kernel/profiling
+    code: PROFILING
+    group: kernel_profiling_tests
+    title: Kernel Profiling Tests
+
+  - path: tests/kernel/sched
+    code: SCHED
+    title: Kernel Scheduler Tests
+
+  - path: tests/kernel/sleep
+    code: SLEEP
+    title: Kernel Sleep Tests
+
+  - path: tests/kernel/sleep_convert
+    code: SLEEPCONV
+    title: Kernel Sleep Conversion Tests
+
+  - path: tests/kernel/spinlock
+    code: SPINLOCK
+    group: kernel_spinlock_tests
+    title: Kernel Spinlock Tests
+
+  - path: tests/kernel/sys_timer
+    code: SYSTIMER
+    title: Kernel System Timer Tests
+
+  - path: tests/kernel/threads
+    code: THREADS
+    group: kernel_thread_tests
+    title: Kernel Thread Tests
+
+  - path: tests/kernel/tickless
+    code: TICKLESS
+    group: kernel_tickless_tests
+    title: Kernel Tickless Tests
+
+  - path: tests/kernel/timeout
+    code: TIMEOUT
+    title: Kernel Timeout Tests
+
+  - path: tests/kernel/timer
+    code: TIMER
+    group: kernel_timer_tests
+    title: Kernel Timer Tests
+
+  - path: tests/kernel/usage
+    code: USAGE
+    title: Kernel Usage Tests
+
+  - path: tests/kernel/workq
+    code: WORKQ
+    group: kernel_workqueue_tests
+    title: Kernel Work Queue Tests

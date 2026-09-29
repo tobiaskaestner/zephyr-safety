@@ -23,5 +23,5 @@ components](https://docs.zephyrproject.org/latest/LICENSING.html#zephyr-licensin
 <!-- AUTO-GENERATED cross-reference smoke test — safe to delete. -->
 ## Cross-reference test
 
-- `@ref kernel_queue_tests`
+- `@ref tests_kernel_queue`
 - `@ref k_thread_create`
