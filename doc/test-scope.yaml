@@ -202,3 +202,52 @@ areas:
     code: WORKQ
     group: kernel_workqueue_tests
     title: Kernel Work Queue Tests
+
+  - path: tests/kernel/mem_protect
+    code: MEMPROT
+    title: Kernel Memory Protection Tests
+
+  - path: tests/arch/common
+    code: ARCHCOMMON
+    title: Architecture Common Tests
+
+  - path: tests/arch/x86
+    code: ARCHX86
+    title: x86 Architecture Tests
+
+  - path: tests/lib/multi_heap
+    code: MULTIHEAP
+    group: kernel_heap_tests
+    title: Multi-Heap Library Tests
+
+  - path: tests/lib/devicetree/devices
+    code: DTDEVICES
+    title: Devicetree Device Tests
+
+  - path: tests/subsys/logging
+    code: LOGGING
+    title: Logging Subsystem Tests
+    # Not in scope: dictionary (a pytest harness, no ZTEST) and log_syst
+    # (needs the MIPI SyS-T module, which the workspace does not carry).
+    modules:
+      - tests/subsys/logging/log_api
+      - tests/subsys/logging/log_backend_fs
+      - tests/subsys/logging/log_backend_init
+      - tests/subsys/logging/log_backend_uart
+      - tests/subsys/logging/log_benchmark
+      - tests/subsys/logging/log_blocking
+      - tests/subsys/logging/log_cache
+      - tests/subsys/logging/log_core_additional
+      - tests/subsys/logging/log_custom_header
+      - tests/subsys/logging/log_disabled
+      - tests/subsys/logging/log_frontend_stmesp_demux
+      - tests/subsys/logging/log_immediate
+      - tests/subsys/logging/log_link_order
+      - tests/subsys/logging/log_links
+      - tests/subsys/logging/log_msg
+      - tests/subsys/logging/log_output
+      - tests/subsys/logging/log_output_net
+      - tests/subsys/logging/log_ratelimited
+      - tests/subsys/logging/log_stress
+      - tests/subsys/logging/log_switch_format
+      - tests/subsys/logging/log_timestamp

@@ -205,8 +205,25 @@ generator only adds modules and suites below it, and fails if a source-defined a
 not in `all_tests` or a source-defined suite group is not in its module. Members of an area
 group are upstream's helpers inside its `@{ … @}` spans, never test cases (each `ZTEST` lands
 in its suite group). The zephyr branch carries no group blocks of ours.
+
+A module's suites are the ones it has tests of (a suite it only declares gets no group
+there). A suite name that more than one module in scope has tests of (today `workqueue_api`,
+in `workq/user_work` and `workq/work_queue`) gets one group per module,
+`<module group>__<suite>`: `testspec_scope.py generate` writes these to
+`testspec-gen/suites.json`, and the testspec input filter (`doxygen_filter_kconfig.py
+--suites`) rewrites those ZTESTs' suite argument to the qualified group, line for line. The
+test specification's `testmodule_suite_qualifier = "__"` (conf.py) gives the test cases the
+real suite name back. `testspec_check.py` fails on a (suite, function) pair that two modules
+have (CROSS-MODULE): a result of it would be ambiguous.
+
+A module is out of scope when its area lists `modules:` without it: today
+`tests/subsys/logging/dictionary` (a pytest harness, no ZTEST) and
+`tests/subsys/logging/log_syst` (needs the MIPI SyS-T module, which the workspace does not
+carry; its tests keep their ids). Run twister over the scope's modules, not its area paths.
 Test ids are added to the sources by `doc/_scripts/assign_testids.py` (by hand; ledger
-`doc/testids.yaml`). Adding a test area means an entry in `doc/test-scope.yaml`, then running
+`doc/testids.yaml`). It gives an id to the doc comment Doxygen attaches to a ZTEST, across
+blank lines, conditional directives and plain comments, not across a `#define`
+(`doxygen_filter_kconfig.attached_doc()`). Adding a test area means an entry in `doc/test-scope.yaml`, then running
 that script.
 
 ## `queue.h_` — Why the Unusual Name

@@ -1,10 +1,13 @@
 # Last test-id number issued per area code (assign_testids.py).
 # Append-only: a number here is never issued again, even if its test is gone.
+ARCHCOMMON: 32
+ARCHX86: 7
 CLEANUP: 0
 COMMON: 76
 CONDVAR: 23
 CONTEXT: 12
 DEVICE: 26
+DTDEVICES: 6
 EARLYSLEEP: 0
 EVENTS: 11
 FATAL: 17
@@ -12,10 +15,13 @@ FIFO: 5
 FPU: 5
 HEAP: 15
 LIFO: 12
+LOGGING: 99
 MBOX: 22
-MP: 41
+MEMPROT: 172
+MP: 42
 MSGQ: 28
-MUTEX: 32
+MULTIHEAP: 9
+MUTEX: 36
 OBJCORE: 36
 OBJTRACK: 0
 PENDING: 1
