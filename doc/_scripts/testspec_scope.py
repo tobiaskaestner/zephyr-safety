@@ -275,8 +275,12 @@ def write_pages(areas, out_dir, kind):
                 ]
             else:
                 body = _heading(f"{m.title} — Report", "#") + [
+                    # By test directory, not scenario prefix: scenario names do
+                    # not follow directories (tests/kernel/timer/timer_api runs
+                    # as kernel.timer, a prefix of timer_error_case's), so a
+                    # prefix match put one module's results on another's page.
                     ".. testreport:: twister_report.xml",
-                    f"   :module: {m.scenario_prefix}",
+                    f"   :path: {m.path}",
                 ]
             _write(out_dir / adir / mdir / f"{page}.rst", "\n".join(body) + "\n", written)
         _write(out_dir / adir / f"{page}.rst", "\n".join(lines) + "\n", written)
