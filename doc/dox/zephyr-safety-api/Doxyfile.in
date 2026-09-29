@@ -765,6 +765,14 @@ GENERATE_BUGLIST       = NO
 
 GENERATE_DEPRECATEDLIST= YES
 
+# REQ_TRACEABILITY_INFO (Doxygen 1.16): which traceability lists the
+# requirements page shows (YES, NO, UNSATISFIED_ONLY, UNVERIFIED_ONLY).
+# This project is the \satisfies side of the chain (API symbols implement
+# requirements); its requirements page lists only the requirements no symbol
+# satisfies. The \verifies side is the test specification's.
+
+REQ_TRACEABILITY_INFO  = UNSATISFIED_ONLY
+
 # The ENABLED_SECTIONS tag can be used to enable conditional documentation
 # sections, marked by \if <section_label> ... \endif and \cond <section_label>
 # ... \endcond blocks.
