@@ -23,6 +23,10 @@ id_regex = "^[A-Za-z][A-Za-z0-9_-]+"
 # needs_external_needs and by the traceability tooling.
 build_json = true
 
+# No `created` time stamps in needs.json: a clean rebuild of the same sources
+# gives a byte-identical file, so the evidence graph can hash it.
+reproducible_json = true
+
 # -- Types --------------------------------------------------------------------
 
 [[needs.types]]
