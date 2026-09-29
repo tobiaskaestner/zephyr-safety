@@ -58,6 +58,7 @@ needs_layouts = {
                 '<<meta("test_function", prefix="\\*\\*test function:\\*\\* ")>>',
                 '<<meta("test_module",   prefix="\\*\\*test module:\\*\\* ")>>',
                 '<<meta("suite",         prefix="\\*\\*suite:\\*\\* ")>>',
+                '<<meta("depends_on",    prefix="\\*\\*depends on:\\*\\* ")>>',
                 '<<meta("status",        prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
                 "<<meta_links_all()>>",
             ],

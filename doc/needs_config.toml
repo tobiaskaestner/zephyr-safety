@@ -153,3 +153,12 @@ description = "Failure or skip reason"
 nullable = true
 [needs.fields.reason.schema]
 type = "string"
+
+# Optional engine field: set on test_case and impl needs from their Doxygen
+# @kconfig_depends (doc/_scripts/doxygen_filter_kconfig.py), the conditions
+# joined with "; ". A string, not an array: a condition may contain ",", "|".
+[needs.fields.depends_on]
+description = "Kconfig conditions the need depends on"
+nullable = true
+[needs.fields.depends_on.schema]
+type = "string"
