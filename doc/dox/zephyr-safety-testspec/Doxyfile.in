@@ -296,7 +296,8 @@ ALIASES                = "kconfig{1}=\c \1" \
                         "draft=\qualifier draft^^\xrefitem test_draft \"Test Status: Draft\" \"Draft Test Cases\"" \
                         "active=\qualifier active^^\xrefitem test_active \"Test Status: Active\" \"Active Test Cases\"" \
                         "obsolete=\qualifier obsolete^^\xrefitem test_obsolete \"Test Status: Obsolete\" \"Obsolete Test Cases\"" \
-                        "testid{1}=\xrefitem testids \"Test ID\" \"Test IDs\" \1"
+                        "testid{1}=\xrefitem testids \"Test ID\" \"Test IDs\" \1" \
+                        "kconfig_depends{1}=\xrefitem kconfig_depends \"Depends on\" \"Kconfig dependencies\" \1"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -1129,8 +1130,8 @@ INPUT_FILTER           =
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by Doxygen.
 
-FILTER_PATTERNS        = *.h=@DOC_BASE@/_scripts/doxygen_filter_ifdef_config.py\
-                         *.c=@DOC_BASE@/_scripts/doxygen_filter_ifdef_config.py
+FILTER_PATTERNS        = *.h=@DOC_BASE@/_scripts/doxygen_filter_kconfig.py \
+                         *.c=@DOC_BASE@/_scripts/doxygen_filter_kconfig.py
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for
@@ -2459,22 +2460,9 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
-# Test specification: Doxygen evaluates #if conditions against this list, and a
-# test behind a condition that evaluates false drops out of the specification
-# silently. The CONFIG_ options below select the feature-enabled branch of the
-# conditions that guard ZTESTs in scope (userspace, asserts, hardware stack
-# protection, FPU sharing, ARM, printk).
-
 PREDEFINED             = __DOXYGEN__ \
-                         CONFIG_USERSPACE \
-                         CONFIG_ASSERT \
-                         CONFIG_HW_STACK_PROTECTION \
-                         CONFIG_FPU \
-                         CONFIG_FPU_SHARING \
-                         CONFIG_ARM \
-                         CONFIG_PRINTK \
                           SYS_PORT_TRACING_TRACKING_FIELD(x)= \
-                         "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} */" \
+                         "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} @kconfig_depends{CONFIG_POLL} */" \
                          _LINKER \
                          __deprecated= \
                          __sparse_cache= \

@@ -291,7 +291,8 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "pre_kernel_ok=\qualifier pre-kernel-ok" \
                          "async=\qualifier async" \
                          "atomic_api=As for all atomic APIs, includes a full/sequentially-consistent memory barrier (where applicable)." \
-                         "supervisor=\qualifier supervisor"
+                         "supervisor=\qualifier supervisor" \
+                         "kconfig_depends{1}=\xrefitem kconfig_depends \"Depends on\" \"Kconfig dependencies\" \1"
 
 # Set the OPTIMIZE_OUTPUT_FOR_C tag to YES if your project consists of C sources
 # only. Doxygen will then generate output that is more tailored for C. For
@@ -1121,8 +1122,8 @@ INPUT_FILTER           =
 # need to set EXTENSION_MAPPING for the extension otherwise the files are not
 # properly processed by Doxygen.
 
-FILTER_PATTERNS        = *.h=@DOC_BASE@/_scripts/doxygen_filter_ifdef_config.py \                        
-                         *.c=@DOC_BASE@/_scripts/doxygen_filter_remove_impl.py
+FILTER_PATTERNS        = *.h=@DOC_BASE@/_scripts/doxygen_filter_kconfig.py \
+                         "*.c=@DOC_BASE@/_scripts/doxygen_filter_kconfig.py --rename-impl"
 
 # If the FILTER_SOURCE_FILES tag is set to YES, the input filter (if set using
 # INPUT_FILTER) will also be used to filter the input files that are used for

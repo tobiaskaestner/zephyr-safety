@@ -17,6 +17,23 @@ import sys
 import re
 import os
 
+def _rename(content):
+    # The pattern to find: "z_impl_" followed by a name starting with "k_"
+    # The parentheses capture the part of the name we want to keep.
+    pattern = r'z_impl_(k_\w+)'
+
+    # The replacement: r'\1' refers to the first captured group (the public name)
+    replacement = r'\1'
+
+    # Perform the substitution
+    return re.subn(pattern, replacement, content)
+
+
+def rename_impl(content):
+    """The content with every z_impl_k_* renamed to k_*."""
+    return _rename(content)[0]
+
+
 def process_file(file_path):
     """
     Processes a single source file, renames functions, and prints to stdout.
@@ -33,15 +50,7 @@ def process_file(file_path):
         sys.stderr.write(f"[ERROR] Could not open file {file_path}: {e}\n")
         return
 
-    # The pattern to find: "z_impl_" followed by a name starting with "k_"
-    # The parentheses capture the part of the name we want to keep.
-    pattern = r'z_impl_(k_\w+)'
-    
-    # The replacement: r'\1' refers to the first captured group (the public name)
-    replacement = r'\1'
-
-    # Perform the substitution
-    modified_content, num_replacements = re.subn(pattern, replacement, content)
+    modified_content, num_replacements = _rename(content)
 
     if num_replacements > 0:
         sys.stderr.write(f"[LOG] Performed {num_replacements} replacements in the file.\n")
