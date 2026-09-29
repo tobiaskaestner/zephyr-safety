@@ -11,6 +11,11 @@ number, once issued, is never issued again — the ledger (``testids.yaml``)
 records the last number per area, so deleting the test that held the highest
 number does not free it.
 
+A ZTEST whose body is only ``ztest_test_skip();`` — the feature-off stub of a
+test that lives elsewhere — gets no id either, even with a doc comment: the
+test specification leaves stubs out (doxygen_filter_kconfig.py), so an id on
+one would name nothing.
+
 The id goes into the test's own doc comment, with ``@draft`` unless the comment
 already carries a status, just before its first ``@see`` / ``@verifies`` /
 ``@satisfies`` / status line, or at its end. A ZTEST with no doc comment gets no
@@ -21,6 +26,8 @@ Without ``--write`` nothing is changed and the assignments are printed.
 """
 
 import argparse
+import bisect
+import functools
 import re
 import sys
 from pathlib import Path
@@ -28,28 +35,45 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import doxygen_filter_kconfig as kconfig  # noqa: E402
+from doxygen_filter_kconfig import ZTEST_MACRO, is_skip_stub  # noqa: E402
 from testspec_scope import _sources, load_scope  # noqa: E402
 
-# The macros that define a test: ZTEST, ZTEST_USER, their _F (fixture) and _P
-# (parameterized) forms. Not ZTEST_EXPECT_FAIL / _SKIP, which only mark one.
-ZTEST = re.compile(r"^[ \t]*ZTEST(?:_USER)?(?:_F|_P)?\s*\(\s*(\w+)\s*,\s*(\w+)", re.M)
+# The macros that define a test (see doxygen_filter_kconfig.ZTEST_MACRO).
+ZTEST = re.compile(rf"^[ \t]*{ZTEST_MACRO}\s*\(\s*(\w+)\s*,\s*(\w+)", re.M)
 TAIL = re.compile(r"^\s*\*\s*[@\\](see|verifies|satisfies|draft|active|obsolete)\b")
 STATUS = re.compile(r"[@\\](draft|active|obsolete)\b")
+STUB = "stub"
+
+
+@functools.lru_cache(maxsize=4)
+def _lexed(text):
+    lines = re.findall(r"[^\n]*\n|[^\n]+$", text)
+    comments, in_comment = kconfig.lex(lines)
+    starts = [0]
+    for line in lines:
+        starts.append(starts[-1] + len(line))
+    return lines, comments, in_comment, starts
 
 
 def doc_block(text, pos):
-    """(start, end) of the /** ... */ comment ending right before pos, or None."""
-    head = text[:pos].rstrip()
-    if not head.endswith("*/"):
+    """(start, end) of the doc comment Doxygen attaches to the declaration on
+    the line at pos, or None.
+
+    The comment Doxygen attaches, as the documentation build sees it
+    (doxygen_filter_kconfig.attached_doc()): a conditional directive or a
+    plain comment may stand between the doc comment and the ZTEST."""
+    lines, comments, in_comment, starts = _lexed(text)
+    n = bisect.bisect_right(starts, pos) - 1
+    c = kconfig.attached_doc(lines, comments, in_comment, n)
+    if c is None:
         return None
-    start = head.rfind("/**")
-    if start < 0 or "*/" in head[start:-2]:
-        return None
-    return start, len(head)
+    return starts[c.start[0]] + c.start[1], starts[c.end[0]] + c.end[1] + 2
 
 
 def plan(areas, ledger, zephyr_base):
-    """Yield (file, suite, fn, id_or_None) in file order; ids not yet assigned."""
+    """Yield (file, suite, fn, id) in file order for the ids not yet assigned;
+    id is None for an undocumented ZTEST, STUB for a stub."""
     for area in areas:
         issued = re.compile(rf"TSPEC-{re.escape(area.code)}-(\d+)\b")
         files = [f for m in area.modules for f in _sources(zephyr_base / m.path) if f.suffix == ".c"]
@@ -61,14 +85,25 @@ def plan(areas, ledger, zephyr_base):
             text = texts[f]
             for m in ZTEST.finditer(text):
                 block = doc_block(text, m.start())
+                if block is not None and "@testid" in text[block[0]:block[1]]:
+                    continue
+                if is_skip_stub(text[m.start():]):
+                    yield f, m.group(1), m.group(2), STUB
+                    continue
                 if block is None:
                     yield f, m.group(1), m.group(2), None
-                    continue
-                if "@testid" in text[block[0]:block[1]]:
                     continue
                 last += 1
                 yield f, m.group(1), m.group(2), f"TSPEC-{area.code}-{last:03d}"
         ledger[area.code] = last
+
+
+def _unassigned(text, m, suite, fn):
+    """Whether ZTEST match m is (suite, fn) and a documented site with no id."""
+    if (m.group(1), m.group(2)) != (suite, fn) or is_skip_stub(text[m.start():]):
+        return False
+    block = doc_block(text, m.start())
+    return block is not None and "@testid" not in text[block[0]:block[1]]
 
 
 def insert_id(text, pos, test_id):
@@ -101,18 +136,26 @@ def main():
     assignments = list(plan(areas, ledger, args.zephyr_base))
 
     undocumented = [(f, s, fn) for f, s, fn, tid in assignments if tid is None]
-    todo = [(f, s, fn, tid) for f, s, fn, tid in assignments if tid]
+    stubs = [(f, s, fn) for f, s, fn, tid in assignments if tid == STUB]
+    todo = [(f, s, fn, tid) for f, s, fn, tid in assignments if tid and tid != STUB]
     for f, s, fn, tid in todo:
         print(f"{tid}  {s}.{fn}  ({f.relative_to(args.zephyr_base)})")
     for f, s, fn in undocumented:
         print(f"no doc comment, no id: {s}.{fn}  ({f.relative_to(args.zephyr_base)})", file=sys.stderr)
-    print(f"{len(todo)} to assign, {len(undocumented)} undocumented", file=sys.stderr)
+    for f, s, fn in stubs:
+        print(f"skip stub, no id: {s}.{fn}  ({f.relative_to(args.zephyr_base)})", file=sys.stderr)
+    print(
+        f"{len(todo)} to assign, {len(undocumented)} undocumented, {len(stubs)} skip stubs",
+        file=sys.stderr,
+    )
 
     if args.write and todo:
-        # Last first, so earlier offsets in the same file stay valid.
-        for f, s, fn, tid in reversed(todo):
+        # In file order, each into the first site of its (suite, function)
+        # still without an id: the feature-on and feature-off twins of a
+        # test can share one file, and each gets its own id.
+        for f, s, fn, tid in todo:
             text = f.read_text()
-            pos = next(m.start() for m in ZTEST.finditer(text) if (m.group(1), m.group(2)) == (s, fn))
+            pos = next(m.start() for m in ZTEST.finditer(text) if _unassigned(text, m, s, fn))
             f.write_text(insert_id(text, pos, tid))
         header = (
             "# Last test-id number issued per area code (assign_testids.py).\n"
