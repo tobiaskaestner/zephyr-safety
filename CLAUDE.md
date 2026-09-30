@@ -187,6 +187,17 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   (`--list-skips` lists every skip call and its outcome). zdocs sets the string field
   `depends_on` (conditions joined with `"; "`) and a "Depends on" line in the need body.
   The test spec's layout shows it.
+- **depends_met / skip_class** (test report): zdocs evaluates a result's case `depends_on`
+  against the `.config` twister kept for that build
+  (`<out>/<board>/zephyr_gnu/<test path>/<scenario>/zephyr/.config`) into `depends_met`
+  (`yes` / `no` / `n/a`; `n/a` for no condition, no `.config`, or a condition outside
+  `CONFIG_X` / `defined()` / `!` / `&&` / `||`, which also warns once per case and
+  condition). Each skipped result gets `skip_class`: `config` (ztest skip, `depends_met`
+  `no`), `platform` (RAM overflow, filtered by platform), `build-only`, `unexplained`.
+  Both are string fields in `needs_config.toml`; the result layout shows them.
+  `test-report/skips.rst` has the counts per class and board (`skipclasscounts::`,
+  `_extensions/skip_classes.py`), the unexplained skips by module and the results that ran
+  although their `depends_on` was false.
 
 Each Doxygen project's `REQ_TRACEABILITY_INFO` shows only its own gap list on its
 requirements page: the API `UNSATISFIED_ONLY`, the testspec `UNVERIFIED_ONLY`, the detailed
@@ -276,6 +287,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `sdoc/safety-committee/` — governance, rendered by `strictdoc_runner`
 - `sandbox/` — superseded experiments, kept for reference
 - `_extensions/strictdoc_runner.py` — runs `strictdoc export` on Sphinx build-init (safety-committee only)
+- `_extensions/skip_classes.py` — `skipclasscounts::`, the test report's skips by class and board
 - `_scripts/` — Doxygen input filters (`FILTER_PATTERNS`)
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)

@@ -201,6 +201,24 @@ nullable = true
 [needs.fields.depends_on.schema]
 type = "string"
 
+# Optional engine fields on test_result needs (zdocs roles depends_met and
+# skip_class, names via testreport_need_fields). depends_met: yes / no / n/a,
+# whether the build that produced the result met its test case's depends_on,
+# read from that build's .config. skip_class, on skipped results only:
+# config (ztest skip, depends_met no) / platform (RAM overflow, filtered by
+# platform) / build-only / unexplained.
+[needs.fields.depends_met]
+description = "Whether the result's build met its test case's depends_on (yes / no / n/a)"
+nullable = true
+[needs.fields.depends_met.schema]
+type = "string"
+
+[needs.fields.skip_class]
+description = "Why a skipped result was skipped (config / platform / build-only / unexplained)"
+nullable = true
+[needs.fields.skip_class.schema]
+type = "string"
+
 # source_file, source_line, source_url: where a design need's block is authored
 # (zephyr-relative path, 1-based line, the file at the documented zephyr commit).
 [needs.fields.source_file]

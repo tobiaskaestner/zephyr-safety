@@ -7,6 +7,10 @@ sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
 from zdocs_conf import configure
 
+# skip_classes is a downstream extension (see _extensions/README.rst): appended
+# after zdocs_conf, never before, so it cannot shadow an engine module.
+sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
+
 configure(
     globals(),
     doc_dir=Path(__file__).resolve().parent,
@@ -20,6 +24,7 @@ configure(
         "zephyr.kconfig",
         "zephyr.application",
         "zephyr.link-roles",
+        "skip_classes",
     ],
 )
 
@@ -61,6 +66,8 @@ needs_layouts = {
                 '<<meta("execution_time", prefix="\\*\\*time:\\*\\* ", show_empty=True)>>',
                 '<<meta("status",         prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
                 '<<meta("reason",         prefix="\\*\\*reason:\\*\\* ")>>',
+                '<<meta("depends_met",    prefix="\\*\\*depends met:\\*\\* ")>>',
+                '<<meta("skip_class",     prefix="\\*\\*skip class:\\*\\* ")>>',
                 "<<meta_links_all()>>",
             ],
         },

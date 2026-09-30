@@ -18,6 +18,11 @@ Modules
     RST from the StrictDoc sources. Used by ``requirements`` and
     ``safety-committee``.
 
+``skip_classes.py``
+    The ``skipclasscounts`` directive: the test report's skipped results by
+    zdocs ``skip_class`` and board (one ``:need_count:`` per cell, the boards
+    from the run's ``twister.json``). Used by ``test-report`` (``skips.rst``).
+
 
 Adding this directory to ``sys.path``
 -------------------------------------
