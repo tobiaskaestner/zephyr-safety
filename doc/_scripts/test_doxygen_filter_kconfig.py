@@ -399,7 +399,7 @@ def test_ztest_user_or_not_is_a_ztest():
     assert lines[1] == "/** @brief Documented. @kconfig_depends{CONFIG_USERSPACE} */"
 
 
-def test_shared_suite_gets_the_module_group():
+def test_suite_gets_the_module_group():
     text = src("""
         /** @brief A. */
         ZTEST(workqueue_api, test_a)

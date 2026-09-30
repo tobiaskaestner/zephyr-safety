@@ -45,8 +45,11 @@ def test_suite_without_tests_gets_no_group(tmp_path):
         "tests/arch/common/interrupt": ["interrupt_feature"],
     }
     dox = testspec_scope.render_dox([area])
-    assert dox.count("@defgroup multilevel ") == 1
-    assert "@defgroup multilevel multilevel ZTest suite\n * @ingroup arch_common_gen_isr_table_module" in dox
+    assert dox.count("__multilevel ") == 1
+    assert (
+        "@defgroup arch_common_gen_isr_table_module__multilevel multilevel ZTest suite\n"
+        " * @ingroup arch_common_gen_isr_table_module" in dox
+    )
 
 
 def _workq(tmp_path, user_work_extra=""):
@@ -69,8 +72,8 @@ def _workq(tmp_path, user_work_extra=""):
 
 def test_shared_suite_gets_a_group_per_module(tmp_path):
     """workqueue_api has tests in two modules: one qualified group in each,
-    `<module group>__<suite>`, titled after the real suite; a suite of one
-    module keeps its plain name."""
+    `<module group>__<suite>`, with the real suite in the title. A suite of
+    one module gets a qualified group too."""
     scope, zephyr = _workq(tmp_path)
     areas = testspec_scope.load_scope(scope, zephyr)
     dox = testspec_scope.render_dox(areas)
@@ -79,18 +82,78 @@ def test_shared_suite_gets_a_group_per_module(tmp_path):
         assert (
             f"@defgroup {m}__workqueue_api workqueue_api ZTest suite\n * @ingroup {m}\n" in dox
         )
-    assert "@defgroup work work ZTest suite\n * @ingroup kernel_workq_work_queue_module\n" in dox
+    assert (
+        "@defgroup kernel_workq_work_queue_module__work work ZTest suite\n"
+        " * @ingroup kernel_workq_work_queue_module\n" in dox
+    )
     assert testspec_scope.qualified_suites(areas, zephyr) == {
         str((zephyr / "tests/kernel/workq/user_work").resolve()):
             {"workqueue_api": "kernel_workq_user_work_module__workqueue_api"},
-        str((zephyr / "tests/kernel/workq/work_queue").resolve()):
-            {"workqueue_api": "kernel_workq_work_queue_module__workqueue_api"},
+        str((zephyr / "tests/kernel/workq/work_queue").resolve()): {
+            "work": "kernel_workq_work_queue_module__work",
+            "workqueue_api": "kernel_workq_work_queue_module__workqueue_api",
+        },
     }
 
 
+def test_suite_named_like_a_function_gets_a_qualified_group(tmp_path):
+    """The suite irq_offload has the name of a C function: its group id is
+    qualified, so Doxygen resolves `@see irq_offload()` not to the group."""
+    zephyr = tmp_path / "zephyr"
+    _module(
+        zephyr, "tests/kernel/common",
+        "/**\n * @see irq_offload()\n */\nZTEST(irq_offload, test_irq_offload)\n{\n}\n\n"
+        "ZTEST_SUITE(irq_offload, NULL, NULL, NULL, NULL, NULL);\n",
+    )
+    scope = tmp_path / "test-scope.yaml"
+    scope.write_text("areas:\n  - path: tests/kernel/common\n    code: COMMON\n    title: Common\n")
+    areas = testspec_scope.load_scope(scope, zephyr)
+    dox = testspec_scope.render_dox(areas)
+    assert "@defgroup irq_offload " not in dox
+    assert (
+        "@defgroup kernel_common_module__irq_offload irq_offload ZTest suite\n"
+        " * @ingroup kernel_common_module\n" in dox
+    )
+
+
+def test_hand_defined_suite_group_keeps_its_name(tmp_path):
+    """A suite group that the sources define keeps its id and is not in the
+    --suites table, so the filter does not change its ZTESTs."""
+    zephyr = tmp_path / "zephyr"
+    _module(
+        zephyr, "tests/kernel/common",
+        "/**\n * @defgroup irq_offload IRQ offload tests\n * @ingroup kernel_common_module\n */\n"
+        "ZTEST(irq_offload, test_irq_offload)\n{\n}\n\n"
+        "ZTEST(printk, test_printk)\n{\n}\n\n"
+        "ZTEST_SUITE(irq_offload, NULL, NULL, NULL, NULL, NULL);\n"
+        "ZTEST_SUITE(printk, NULL, NULL, NULL, NULL, NULL);\n",
+    )
+    scope = tmp_path / "test-scope.yaml"
+    scope.write_text("areas:\n  - path: tests/kernel/common\n    code: COMMON\n    title: Common\n")
+    areas = testspec_scope.load_scope(scope, zephyr)
+    dox = testspec_scope.render_dox(areas)
+    assert "irq_offload ZTest suite" not in dox
+    assert areas[0].modules[0].suite_group("irq_offload") == "irq_offload"
+    assert testspec_scope.qualified_suites(areas, zephyr) == {
+        str((zephyr / "tests/kernel/common").resolve()): {"printk": "kernel_common_module__printk"},
+    }
+
+
+def test_suite_name_with_the_qualifier_fails(tmp_path):
+    """zdocs takes the suite from the part after the last `__`, so a suite
+    name that contains `__` would lose its start."""
+    zephyr = tmp_path / "zephyr"
+    _module(zephyr, "tests/kernel/common",
+            "ZTEST(my__suite, test_a)\n{\n}\n\nZTEST_SUITE(my__suite, NULL, NULL, NULL, NULL, NULL);\n")
+    scope = tmp_path / "test-scope.yaml"
+    scope.write_text("areas:\n  - path: tests/kernel/common\n    code: COMMON\n    title: Common\n")
+    with pytest.raises(SystemExit, match="my__suite"):
+        testspec_scope.load_scope(scope, zephyr)
+
+
 def test_declared_only_suite_is_not_shared(tmp_path):
-    """A suite a second module only declares (interrupt's
-    gen_isr_table_multilevel) is that module's no suite: not qualified."""
+    """A suite that a second module only declares (gen_isr_table_multilevel
+    in interrupt) is no suite of that module: it gets no group there."""
     zephyr = tmp_path / "zephyr"
     _module(zephyr, "tests/arch/common/gen_isr_table",
             "ZTEST(multilevel, test_masks)\n{\n}\n\nZTEST_SUITE(multilevel, NULL, NULL, NULL, NULL, NULL);\n")
@@ -100,7 +163,12 @@ def test_declared_only_suite_is_not_shared(tmp_path):
     scope = tmp_path / "test-scope.yaml"
     scope.write_text("areas:\n  - path: tests/arch/common\n    code: ARCH\n    title: Arch\n")
     areas = testspec_scope.load_scope(scope, zephyr)
-    assert testspec_scope.qualified_suites(areas, zephyr) == {}
+    assert testspec_scope.qualified_suites(areas, zephyr) == {
+        str((zephyr / "tests/arch/common/gen_isr_table").resolve()):
+            {"multilevel": "arch_common_gen_isr_table_module__multilevel"},
+        str((zephyr / "tests/arch/common/interrupt").resolve()):
+            {"irq": "arch_common_interrupt_module__irq"},
+    }
 
 
 def test_shared_suite_defined_by_hand_fails(tmp_path):
@@ -122,7 +190,8 @@ def test_generate_writes_suites_json(tmp_path, monkeypatch):
     ])
     assert testspec_scope.main() == 0
     table = json.loads((out / "suites.json").read_text())
-    assert sorted(v["workqueue_api"] for v in table.values()) == [
+    assert sorted(g for v in table.values() for g in v.values()) == [
         "kernel_workq_user_work_module__workqueue_api",
+        "kernel_workq_work_queue_module__work",
         "kernel_workq_work_queue_module__workqueue_api",
     ]

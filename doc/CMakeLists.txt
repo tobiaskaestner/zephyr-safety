@@ -115,9 +115,9 @@ add_custom_target(requirements-gen DEPENDS ${REQ_GEN_DOX_DIR}/requirements.dox)
 #   TESTSPEC_INPUT        each module's src/ directory, the testspec Doxygen INPUT
 #                         (configure time: it is part of the Doxyfile)
 #   testspec-gen/dox      the area / module / suite groups `testmodule::` walks
-#   testspec-gen/suites.json  the per-module groups of a suite name that more
-#                         than one module uses; read by the testspec Doxygen
-#                         input filter, which points those ZTESTs at them
+#   testspec-gen/suites.json  the generated suite groups of each module
+#                         (<module group>__<suite>); read by the testspec
+#                         Doxygen input filter, which points the ZTESTs at them
 #   testspec-gen/spec     the test-specification page tree   } copied in by
 #   testspec-gen/report   the test-report page tree          } their conf.py
 # Test ids are not generated here: _scripts/assign_testids.py writes them into

@@ -37,8 +37,9 @@ shared by two modules).
 CROSS-MODULE, an error: a (suite, function) pair that ZTESTs of two modules
 in scope have, or test cases on the pages of two modules. A test report correlates a result
 with its test case by that pair, so a result of either is ambiguous.
-testspec_scope.py gives a suite two modules use one group per module, which
-keeps the test cases apart, but not two tests of the same name in it.
+testspec_scope.py gives each module its own suite groups, which keeps the
+test cases of a suite that two modules use apart, but not two tests of the
+same name in it.
 
 Which twin the documentation build sees is decided by
 doxygen_filter_kconfig.py, whose evaluation this script reuses.

@@ -218,8 +218,8 @@ kernel_apis
 all_tests
   └── tests_kernel_queue            (area: upstream Zephyr's own group, "Queue tests")
         └── kernel_queue_module     (the group `testmodule::` is pointed at)
-              ├── queue_api          (one per ZTEST_SUITE, generated)
-              ├── queue_api_1cpu
+              ├── kernel_queue_module__queue_api       (one per ZTEST_SUITE, generated)
+              ├── kernel_queue_module__queue_api_1cpu
               └── queue_procedures
 ```
 
@@ -237,14 +237,24 @@ group are upstream's helpers inside its `@{ … @}` spans, never test cases (eac
 in its suite group). The zephyr branch carries no group blocks of ours.
 
 A module's suites are the ones it has tests of (a suite it only declares gets no group
-there). A suite name that more than one module in scope has tests of (today `workqueue_api`,
-in `workq/user_work` and `workq/work_queue`) gets one group per module,
-`<module group>__<suite>`: `testspec_scope.py generate` writes these to
-`testspec-gen/suites.json`, and the testspec input filter (`doxygen_filter_kconfig.py
---suites`) rewrites those ZTESTs' suite argument to the qualified group, line for line. The
-test specification's `testmodule_suite_qualifier = "__"` (conf.py) gives the test cases the
-real suite name back. `testspec_check.py` fails on a (suite, function) pair that two modules
-have (CROSS-MODULE): a result of it would be ambiguous.
+there). Every generated suite group has the id `<module group>__<suite>`, not the bare suite
+name. There are two causes:
+
+- A suite can have the name of a C function (`irq_offload`, `printk`). With a bare id,
+  Doxygen resolves `@see irq_offload()` to the group, and zdocs shows a dead link.
+- Two modules can have tests of the same suite (today `workqueue_api`, in
+  `workq/user_work` and `workq/work_queue`). With a bare id, this suite is one group in
+  both modules.
+
+`testspec_scope.py generate` writes these groups to `testspec-gen/suites.json`. The testspec
+input filter (`doxygen_filter_kconfig.py --suites`) changes the suite argument of each ZTEST
+to the qualified group, line for line. The `testmodule_suite_qualifier = "__"` of the test
+specification (conf.py) gives the test cases the real suite name again. A suite group that
+the sources define by hand keeps its name (today there is none), and the generator fails if
+such a group is for a suite that two modules have tests of. The fallback id of a test case
+without `@testid` contains the group name: `testspec-<module group>__<suite>-<function>`.
+`testspec_check.py` fails on a (suite, function) pair that two modules have (CROSS-MODULE):
+a result of it would be ambiguous.
 
 A module is out of scope when its area lists `modules:` without it: today
 `tests/subsys/logging/dictionary` (a pytest harness, no ZTEST) and

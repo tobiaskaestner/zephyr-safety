@@ -52,13 +52,14 @@ Usage: doxygen_filter_kconfig.py [--rename-impl] [--suites <json>] [--list-skips
 ``--rename-impl`` also applies doxygen_filter_remove_impl.py (``z_impl_k_*`` ->
 ``k_*``), for a pattern that needs both filters.
 
-``--suites`` names the JSON testspec_scope.py writes for a suite that more than
-one test module in scope uses: {module directory: {suite: group}}. In a file
-under such a module, each ZTEST of the suite gets the module's own group as
-its suite argument (``ZTEST(workqueue_api, fn)`` ->
-``ZTEST(kernel_workq_user_work_module__workqueue_api, fn)``), so the testspec
-Doxyfile's ZTEST expansion puts it in that group: one group per module, not
-one shared by both.
+``--suites`` names the JSON that testspec_scope.py writes for the suite groups
+it generates: {module directory: {suite: group}}. In a file under such a
+module, each ZTEST of such a suite gets the group of the module as its suite
+argument (``ZTEST(workqueue_api, fn)`` ->
+``ZTEST(kernel_workq_user_work_module__workqueue_api, fn)``). The ZTEST
+expansion of the testspec Doxyfile then puts the test in that group. A suite
+group that the sources define by hand is not in the JSON, so its ZTESTs keep
+the suite name.
 """
 
 import argparse

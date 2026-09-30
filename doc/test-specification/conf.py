@@ -32,9 +32,10 @@ configure(
 # would resolve against the wrong tree.
 testmodule_root = os.environ["ZEPHYR_BASE"]
 
-# A suite name that more than one module in scope has tests of (workqueue_api)
-# gets one Doxygen group per module, `<module group>__<suite>`
-# (_scripts/testspec_scope.py); the test cases' suite is the part after "__".
+# A generated suite group has the Doxygen id `<module group>__<suite>`
+# (_scripts/testspec_scope.py). Thus it cannot have the name of a C function,
+# and a suite that two modules have tests of (workqueue_api) gets one group in
+# each module. The suite of a test case is the part after the last "__".
 testmodule_suite_qualifier = "__"
 
 # The per-area and per-module pages are generated from doc/test-scope.yaml by

@@ -27,14 +27,22 @@ The testspec Doxyfile's ``ZTEST_SUITE`` expansion defines no group, so every
 suite group has exactly one definition — here or in the sources — and the
 result does not depend on the order Doxygen reads its INPUT in.
 
-A suite name that two modules in scope both have tests of (``workqueue_api``
-in tests/kernel/workq/user_work and work_queue) would be one group in both
-modules, and each module page would render the other's tests too. Such a
-suite gets one group per module instead, ``<module group>__<suite>``
-(``QUALIFIER``; zdocs' ``testmodule_suite_qualifier`` in the test
-specification's conf.py strips it again, so the test cases keep the real suite
-name). ``generate --suites-out`` writes these groups as JSON for
-doxygen_filter_kconfig.py, which points the module's ZTESTs at them.
+A generated suite group has the id ``<module group>__<suite>``
+(``QUALIFIER``), not the bare suite name. There are two causes:
+
+* A suite can have the name of a C function (``irq_offload``, ``printk``).
+  With a bare id, Doxygen resolves ``@see irq_offload()`` to the group, not to
+  the function.
+* Two modules in scope can have tests of the same suite (``workqueue_api`` in
+  tests/kernel/workq/user_work and work_queue). With a bare id, this suite is
+  one group in both modules, and each module page shows the tests of the other
+  module too.
+
+zdocs' ``testmodule_suite_qualifier`` in the conf.py of the test
+specification removes the qualifier again, so the test cases keep the real
+suite name. ``generate --suites-out`` writes these groups as JSON for
+doxygen_filter_kconfig.py, which points the ZTESTs of each module at them. A
+suite group that the sources define by hand keeps its name.
 """
 
 import argparse
@@ -55,9 +63,8 @@ ZTEST_SUITE = re.compile(r"^\s*ZTEST_SUITE\s*\(\s*(\w+)", re.M)
 # The suite of every test (see doxygen_filter_kconfig.ZTEST_MACRO).
 ZTEST_OF = re.compile(rf"^[ \t]*{ZTEST_MACRO}\s*\(\s*(\w+)\s*,", re.M)
 ROOT_GROUP = "all_tests"
-# Between the module group and the suite in the group of a suite name that more
-# than one module in scope uses. Must match testmodule_suite_qualifier in
-# test-specification/conf.py.
+# Between the module group and the suite in the id of a generated suite group.
+# Must match testmodule_suite_qualifier in test-specification/conf.py.
 QUALIFIER = "__"
 
 
@@ -69,7 +76,7 @@ class Module:
     scenario_prefix: str
     suites: list = field(default_factory=list)
     hand_groups: dict = field(default_factory=dict)
-    # suite -> its group here, for a suite another module in scope uses too
+    # suite -> its group here, for every suite whose group is generated
     qualified: dict = field(default_factory=dict)
 
     @property
@@ -221,36 +228,46 @@ def load_scope(scope_file, zephyr_base):
             )
         area.hand_group = _check_hand_area(zephyr_base, area)
         areas.append(area)
-    qualify_shared_suites(areas)
+    qualify_suites(areas)
     return areas
 
 
-def qualify_shared_suites(areas):
-    """Give a suite that more than one module has tests of a group per module,
+def qualify_suites(areas):
+    """Give every suite whose group is generated the group id
     ``<module group>__<suite>``.
 
-    A module's suites are the ones it has tests of (see load_scope), so a
-    suite a module only declares (gen_isr_table_multilevel) is not shared."""
+    Thus a suite group cannot have the name of a C symbol, and a suite that
+    two modules have tests of gets one group in each module. A suite group that
+    the sources define by hand keeps its name. Such a group is not permitted for
+    a suite that more than one module has tests of, because it would be one
+    group in all of these modules. A module's suites are the ones it has tests
+    of (see load_scope), so a suite that a module only declares
+    (gen_isr_table_multilevel) is not shared."""
     users = collections.defaultdict(list)
     for m in (m for a in areas for m in a.modules):
         for suite in m.suites:
             users[suite].append(m)
     for suite, mods in users.items():
-        if len(mods) < 2:
-            continue
         for m in mods:
-            if suite in m.hand_groups:
+            if QUALIFIER in suite:
                 raise SystemExit(
-                    f"test-scope: {m.path}: suite group {suite!r} is defined in the "
-                    f"sources, but {', '.join(o.path for o in mods if o is not m)} "
-                    f"has tests of suite {suite!r} too; drop the @defgroup"
+                    f"test-scope: {m.path}: suite name {suite!r} contains {QUALIFIER!r}, "
+                    f"which testmodule_suite_qualifier cannot remove correctly"
                 )
+            if suite in m.hand_groups:
+                if len(mods) > 1:
+                    raise SystemExit(
+                        f"test-scope: {m.path}: suite group {suite!r} is defined in the "
+                        f"sources, but {', '.join(o.path for o in mods if o is not m)} "
+                        f"has tests of suite {suite!r} too; drop the @defgroup"
+                    )
+                continue
             m.qualified[suite] = f"{m.group}{QUALIFIER}{suite}"
 
 
 def qualified_suites(areas, zephyr_base):
-    """{module directory: {suite: group}} of the modules with a shared suite,
-    for doxygen_filter_kconfig.py --suites."""
+    """{module directory: {suite: group}} of the generated suite groups, for
+    doxygen_filter_kconfig.py --suites."""
     return {
         str((zephyr_base / m.path).resolve()): dict(sorted(m.qualified.items()))
         for a in areas
