@@ -1,0 +1,17 @@
+/*
+ * File documentation for the Safety API's public headers that carry no
+ * @file block of their own. Doxygen generates no page for an undocumented
+ * file, so a symbol of it outside every group would be in the XML (and get an
+ * impl need) but have no HTML page to link to. Kept here, not in the source,
+ * so the zephyr tree stays unchanged.
+ */
+
+/**
+ * @file zephyr/kernel/smp.h
+ * @brief Starting and resuming secondary CPUs (SMP).
+ */
+
+/**
+ * @file zephyr/syscall.h
+ * @brief System call dispatch types and the user context check.
+ */

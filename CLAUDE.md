@@ -73,7 +73,7 @@ A document's registry id is its target stem and deploy path:
 | Document id | Kind | Content |
 |---|---|---|
 | `requirements` | Sphinx + sphinx-needs | One `req` need per StrictDoc requirement, generated (see below) |
-| `architecture` | Sphinx + sphinx-needs | Arc42-style architecture document; one `design` need per `.. design::` block in zephyr `doc/kernel` (generated) |
+| `architecture` | Sphinx + sphinx-needs | Arc42-style architecture document; one `design` need per `.. design::` block in zephyr `doc/kernel` (generated), and one `impl` need per kernel-internal `@satisfies` symbol (`symbolneeds::`, from the detailed design) |
 | `test-specification` | Sphinx + sphinx-needs | Test spec |
 | `test-report` | Sphinx + sphinx-needs | Test report |
 | `api-documentation` | Sphinx + Breathe + sphinx-needs | API doc consuming Doxygen XML; one `impl` need per `@satisfies` symbol (`symbolneeds::`) |
@@ -106,8 +106,8 @@ not be set in the templates — they would be silently overridden.
 
 | Doxyfile | `INPUT` sources |
 |---|---|
-| `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `kernel.h` |
-| `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c` |
+| `dox-zephyr-safety-api` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `kernel.h` and every other public header with a `@satisfies` (irq, fatal, mem_domain, sleep, spinlock, syscall, …) |
+| `dox-zephyr-safety-detailed-design` | `mainpage.md`, `_doxygen/safety-api-groups.dox`, `queue.h_`, `kernel/queue.c`, every `kernel/` file with a `@satisfies`, and `fatal.h` / `syscall.h` for their internal (`z_*`, `_*`) symbols |
 | `dox-zephyr-safety-testspec` | `mainpage.md`, `groups.dox`, the generated groups `.dox`, each in-scope module's `src/` (from `doc/test-scope.yaml`) |
 | `dox-zephyr` | the full upstream Zephyr API plus the generated `requirements.dox` — `crossref: false`, a stand-alone reference that no safety document links into |
 | `dox-requirements` | the generated `requirements.dox` only |
@@ -166,6 +166,13 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   at the zephyr HEAD. It fails on a UID the StrictDoc export lacks; `design-check`
   (POST_BUILD of `all-docs`) checks one need per block and prints the gap numbers
   (`architecture/design_coverage.rst` renders them).
+  The kernel internals get the same from the detailed design: the architecture document's
+  `detailed-design-symbols.rst` (registry `symbol_needs: {doxygen_source:
+  dox-zephyr-safety-detailed-design}`). The `_* z_* Z_*` exclusion is the API's only; a
+  symbol the API documents is deferred to it by the detailed design (tag file), so each
+  symbol is one need. `_scripts/satisfies_check.py` (`satisfies-check`, POST_BUILD of
+  `all-docs`) fails on a `@satisfies` that lands on no impl need or on two; findings let
+  through on purpose are in `doc/satisfies-accepted.yaml`.
 - **verifies**: `testmodule::` on the generated per-module spec pages, one `test_case` need
   per ZTEST (id `TSPEC-*` from `@testid`).
 - **results**: the generated per-module report pages run
@@ -183,7 +190,9 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
 
 Each Doxygen project's `REQ_TRACEABILITY_INFO` shows only its own gap list on its
 requirements page: the API `UNSATISFIED_ONLY`, the testspec `UNVERIFIED_ONLY`, the detailed
-design `NO` (it carries neither command).
+design `NO`. A Doxygen gap list sees one project only: the API's "unsatisfied" list still
+names the requirements only kernel internals satisfy. The requirement pages (sphinx-needs)
+see both.
 
 ### Doxygen Group Hierarchy
 

@@ -1,0 +1,24 @@
+# satisfies-check findings let through on purpose (_scripts/satisfies_check.py).
+# One entry per @satisfies: `site` is "<path in the zephyr tree> <UID>", exact
+# text; `reason` says why it cannot land on an impl need today and what would
+# fix it. An entry that matches no finding any more is reported: drop it.
+# Found by Phase 4 order 005 (claude/traceability-reconciliation/phase4-005-report.md).
+accepted:
+  - site: "include/zephyr/fatal.h ZEP-SRS-16-1"
+    reason: &z_fatal "on z_fatal_error, a z_* symbol of a public header: the Safety API excludes z_*, and the header cannot also be in the Detailed Design (the two import each other's tag files; the shared file loses its page). Fix upstream: move the @satisfies to z_fatal_error's definition in kernel/fatal.c"
+  - site: "include/zephyr/fatal.h ZEP-SRS-16-7"
+    reason: *z_fatal
+  - site: "include/zephyr/fatal.h ZEP-SRS-16-8"
+    reason: *z_fatal
+  - site: "include/zephyr/fatal.h ZEP-SRS-8-11"
+    reason: *z_fatal
+  - site: "include/zephyr/syscall.h ZEP-SRS-8-10"
+    reason: "on the typedef _k_syscall_handler_t, a _* symbol of a public header the Safety API excludes (see z_fatal_error). Fix upstream: move the @satisfies to the kernel's system call dispatch in a kernel/ source"
+  - site: "include/zephyr/sw_isr_table.h ZEP-SRS-7-15"
+    reason: &isr_table "on struct _isr_table_entry: a _* symbol the Safety API excludes, and a struct, while symbolneeds makes needs of members only (a zdocs change). Fix upstream: move the @satisfies to a member or function"
+  - site: "include/zephyr/sw_isr_table.h ZEP-SRS-7-16"
+    reason: *isr_table
+  - site: "include/zephyr/sys/time_units.h ZEP-SRS-28-7"
+    reason: "in the @file/@defgroup block of timeutil_unit_apis: Doxygen gives it to the group, not a symbol. The requirement (conversion between time units) is the whole group's. Fix upstream: put it on the conversion functions it means, one @satisfies each; or a zdocs change for group-level needs"
+  - site: "kernel/userspace/userspace.c ZEP-SRS-8-16"
+    reason: "on k_thread_perms_set's definition; the function is declared in the public internal/syscall_handler.h, so the Safety API documents it and the Detailed Design defers the definition to it (tag file). Fix upstream: move the @satisfies to the declaration in syscall_handler.h"

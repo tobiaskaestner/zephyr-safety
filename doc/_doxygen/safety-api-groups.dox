@@ -3,4 +3,38 @@
 @defgroup kernel_apis Zephyr Kernel APIs
 @{
 @}
+
+@defgroup internal_api Internal and System API
+@brief Internal and System API
+@{
+@}
+
+@defgroup timeutil_apis Time Utility APIs
+@{
+@}
+
+@defgroup timing_api Timing Measurement APIs
+@{
+@}
+
+@defgroup arch-irq Architecture-specific IRQ APIs
+@ingroup arch-interface
+@{
+@}
+
+@defgroup arch-mmu Architecture-specific memory-mapping APIs
+@ingroup arch-interface
+@{
+@}
+
+@defgroup arch-pm Architecture-specific power management APIs
+@ingroup arch-interface
+@{
+@}
+
+@defgroup arch-threads Architecture-specific thread APIs
+@ingroup arch-interface
+@{
+@}
+
 */

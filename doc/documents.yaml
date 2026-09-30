@@ -90,6 +90,11 @@ documents:
     # so a requirement lists its design elements ("fulfilled by").
     needs:
       source: json
+    # One `impl` need per kernel-internal symbol carrying a Doxygen \satisfies
+    # (detailed-design-symbols.rst), read from the Detailed Design's XML: the
+    # implementation below the Safety API, beside the design it realises.
+    symbol_needs:
+      doxygen_source: dox-zephyr-safety-detailed-design
     builders: [html, latex]
 
   # -- Verification -----------------------------------------------------------

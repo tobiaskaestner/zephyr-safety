@@ -254,6 +254,50 @@ add_custom_command(
   USES_TERMINAL
 )
 
+# Every @satisfies in the documented sources must land on exactly one impl need.
+# One on a symbol a Doxyfile excludes, a static a project does not extract or a
+# comment Doxygen attaches to nothing drops out of the implementation layer
+# without a warning; _scripts/satisfies_check.py compares the @satisfies sites in
+# the INPUT of the two Doxygen projects the impl needs come from with their XML
+# and the impl needs in the needs.json of the two documents that make them.
+# Findings let through on purpose are in satisfies-accepted.yaml, each with its
+# reason. A standalone `satisfies-check` target and a POST_BUILD step of
+# `all-docs`, like testspec-check.
+set(SATISFIES_DOXYGEN dox-zephyr-safety-api dox-zephyr-safety-detailed-design)
+set(SATISFIES_NEEDS api-documentation architecture)
+set(satisfies_check_cmd
+  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/_scripts/satisfies_check.py
+    --zephyr-base ${ZEPHYR_BASE}
+    --accepted ${CMAKE_CURRENT_LIST_DIR}/satisfies-accepted.yaml
+)
+foreach(dox ${SATISFIES_DOXYGEN})
+  list(APPEND satisfies_check_cmd --doxygen
+    ${CMAKE_CURRENT_BINARY_DIR}/${dox}.doxyfile
+    ${CMAKE_CURRENT_BINARY_DIR}/deploy/xml/${dox}
+  )
+endforeach()
+foreach(doc ${SATISFIES_NEEDS})
+  list(APPEND satisfies_check_cmd
+    --needs ${CMAKE_CURRENT_BINARY_DIR}/deploy/html/${doc}/needs.json
+  )
+endforeach()
+foreach(dir include kernel arch lib subsys)
+  list(APPEND satisfies_check_cmd --unscanned ${ZEPHYR_BASE}/${dir})
+endforeach()
+add_custom_target(
+  satisfies-check
+  COMMAND ${satisfies_check_cmd}
+  COMMENT "Checking that every @satisfies lands on one impl need..."
+  USES_TERMINAL
+)
+add_custom_command(
+  TARGET all-docs
+  POST_BUILD
+  COMMAND ${satisfies_check_cmd}
+  COMMENT "Checking that every @satisfies lands on one impl need..."
+  USES_TERMINAL
+)
+
 add_custom_target(
   pristine
   COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake

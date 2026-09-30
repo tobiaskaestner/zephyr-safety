@@ -551,7 +551,7 @@ EXTRACT_PACKAGE        = NO
 # included in the documentation.
 # The default value is: NO.
 
-EXTRACT_STATIC         = NO
+EXTRACT_STATIC         = YES
 
 # If the EXTRACT_LOCAL_CLASSES tag is set to YES, classes (and structs) defined
 # locally in source files will be included in the documentation. If set to NO,
@@ -977,8 +977,25 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
                          @DOC_BASE@/_doxygen/safety-api-groups.dox \
+                         @DOXY_SRC_DIR@/files.dox \
                          @ZEPHYR_BASE@/include/zephyr/kernel/queue.h_ \
                          @ZEPHYR_BASE@/kernel/queue.c \
+                         @ZEPHYR_BASE@/kernel/compiler_stack_protect.c \
+                         @ZEPHYR_BASE@/kernel/idle.c \
+                         @ZEPHYR_BASE@/kernel/init.c \
+                         @ZEPHYR_BASE@/kernel/sched.c \
+                         @ZEPHYR_BASE@/kernel/system_work_q.c \
+                         @ZEPHYR_BASE@/kernel/thread.c \
+                         @ZEPHYR_BASE@/kernel/timer.c \
+                         @ZEPHYR_BASE@/kernel/work.c \
+                         @ZEPHYR_BASE@/kernel/smp/cpu_mask.c \
+                         @ZEPHYR_BASE@/kernel/smp/ipi.c \
+                         @ZEPHYR_BASE@/kernel/smp/smp.c \
+                         @ZEPHYR_BASE@/kernel/userspace/userspace.c \
+                         @ZEPHYR_BASE@/kernel/include/ksched.h \
+                         @ZEPHYR_BASE@/kernel/include/kthread.h \
+                         @ZEPHYR_BASE@/kernel/include/metairq.h \
+                         @ZEPHYR_BASE@/kernel/include/priority_q.h \
                          
 
                          
@@ -2464,6 +2481,12 @@ PREDEFINED             = __DOXYGEN__ \
                          DEVICE_DEFINE()= \
                          BUILD_ASSERT()= \
                          XEN_GUEST_HANDLE_64(x)= \
+                         "LOG_MODULE_DECLARE(...)=" \
+                         "LOG_MODULE_REGISTER(...)=" \
+                         "EXPORT_SYMBOL(x)=" \
+                         __boot_func= \
+                         __pinned_func= \
+                         CONFIG_STACK_POINTER_RANDOM=1 \
                          _LINKER \
                          __deprecated= \
                          __sparse_cache= \

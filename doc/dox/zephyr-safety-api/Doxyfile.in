@@ -979,7 +979,22 @@ WARN_LOGFILE           =
 
 INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
                          @DOC_BASE@/_doxygen/safety-api-groups.dox \
+                         @DOXY_SRC_DIR@/files.dox \
                          @ZEPHYR_BASE@/include/zephyr/kernel.h \
+                         @ZEPHYR_BASE@/include/zephyr/irq.h \
+                         @ZEPHYR_BASE@/include/zephyr/irq_multilevel.h \
+                         @ZEPHYR_BASE@/include/zephyr/sw_isr_table.h \
+                         @ZEPHYR_BASE@/include/zephyr/fatal.h \
+                         @ZEPHYR_BASE@/include/zephyr/spinlock.h \
+                         @ZEPHYR_BASE@/include/zephyr/sleep.h \
+                         @ZEPHYR_BASE@/include/zephyr/syscall.h \
+                         @ZEPHYR_BASE@/include/zephyr/sys/kobject.h \
+                         @ZEPHYR_BASE@/include/zephyr/sys/time_units.h \
+                         @ZEPHYR_BASE@/include/zephyr/app_memory/mem_domain.h \
+                         @ZEPHYR_BASE@/include/zephyr/kernel/thread_stack.h \
+                         @ZEPHYR_BASE@/include/zephyr/kernel/smp.h \
+                         @ZEPHYR_BASE@/include/zephyr/internal/syscall_handler.h \
+                         @ZEPHYR_BASE@/include/zephyr/arch/arch_interface.h \
                          
 # This tag can be used to specify the character encoding of the source files
 # that Doxygen parses. Internally Doxygen uses the UTF-8 encoding. Doxygen uses
@@ -2465,6 +2480,7 @@ INCLUDE_FILE_PATTERNS  =
 
 PREDEFINED             = __DOXYGEN__ \                         
                           SYS_PORT_TRACING_TRACKING_FIELD(x)= \
+                         "BUILD_ASSERT(...)=" \
                          "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} @kconfig_depends{CONFIG_POLL} */" \
                          _LINKER \
                          __deprecated= \

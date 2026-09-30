@@ -1,0 +1,57 @@
+/*
+ * File documentation for the kernel sources of the Detailed Design that carry
+ * no @file block of their own. Doxygen generates no page for an undocumented
+ * file, so its functions outside every group would be in the XML (and get an
+ * impl need) but have no HTML page to link to. Kept here, not in the source,
+ * so the zephyr tree stays unchanged.
+ */
+
+/**
+ * @file kernel/idle.c
+ * @brief The idle thread.
+ */
+
+/**
+ * @file kernel/include/ksched.h
+ * @brief Kernel-internal scheduler interface.
+ */
+
+/**
+ * @file kernel/include/kthread.h
+ * @brief Kernel-internal thread interface.
+ */
+
+/**
+ * @file kernel/include/priority_q.h
+ * @brief Run queue and wait queue priority queues.
+ */
+
+/**
+ * @file kernel/sched.c
+ * @brief The scheduler.
+ */
+
+/**
+ * @file kernel/smp/cpu_mask.c
+ * @brief Thread CPU affinity masks.
+ */
+
+/**
+ * @file kernel/smp/ipi.c
+ * @brief Inter-processor interrupts for scheduling.
+ */
+
+/**
+ * @file kernel/smp/smp.c
+ * @brief SMP initialisation and CPU start.
+ */
+
+/**
+ * @file kernel/timer.c
+ * @brief Kernel timers.
+ */
+
+/**
+ * @file kernel/userspace/userspace.c
+ * @brief Kernel object permissions and system call handlers.
+ */
