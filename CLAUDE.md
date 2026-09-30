@@ -92,7 +92,8 @@ tag files, needs.json); every `<id>-html` depends on **all** of them, so build
 specification. `all-docs` runs both after its build.
 
 ```sh
-cmake -S doc -B ../bdoc-zdocs
+cmake -S doc -B ../bdoc-zdocs \
+  -DZDOCS_TWISTER_OUT=$PWD/../twister-out-b4b -DZDOCS_COVERAGE_OUT=$PWD/../twister-out-cov-subset
 cmake --build ../bdoc-zdocs --target doc-index
 cmake --build ../bdoc-zdocs --target test-specification-html test-report-html
 cmake --build ../bdoc-zdocs --target doc-check testspec-check
@@ -198,6 +199,16 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   `test-report/skips.rst` has the counts per class and board (`skipclasscounts::`,
   `_extensions/skip_classes.py`), the unexplained skips by module and the results that ran
   although their `depends_on` was false.
+- **Coverage adequacy** (test report, `test-report/adequacy.rst`): the zdocs `testcoverage`
+  directive reads a per-test coverage run (`-DZDOCS_COVERAGE_OUT=<dir>`: `twister.json`,
+  `coverage/test_matrix.json`, `zephyr.sha`). This run is not the run of the test results
+  (`ZDOCS_TWISTER_OUT`). It emits one `adequacy` need per requirement that has a verifying case in
+  the run: id `ADQ-<run>/<req>`, link `assesses` ("assessed by" on the requirement), fields
+  `verdict`, `evidence`, `coverage_run`, `judged_symbols`, `symbol_hits`, layout `adequacy`
+  (conf.py). The run name is the first tag on the run commit (`twister-cov-subset-run`). The
+  verdict is `true` if the own verifying tests run a body (`z_impl_`, `z_vrfy_`, plain, header
+  `static inline`) of each satisfying symbol, read at the run commit. A macro has no body, so
+  every LIFO/FIFO requirement and every `K_*_DEFINE` requirement reads `unresolved`.
 
 Each Doxygen project's `REQ_TRACEABILITY_INFO` shows only its own gap list on its
 requirements page: the API `UNSATISFIED_ONLY`, the testspec `UNVERIFIED_ONLY`, the detailed

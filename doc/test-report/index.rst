@@ -16,6 +16,7 @@ Zephyr Test Report (sphinx-needs)
    test-coverage
    reqs-coverage
    skips
+   adequacy
 
 .. toctree::
    :caption: Cross-reference test

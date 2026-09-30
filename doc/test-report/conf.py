@@ -75,6 +75,32 @@ needs_layouts = {
 }
 needs_default_layout = "test_result"
 
+# The adequacy needs of adequacy.rst (zdocs `testcoverage ... :layout:
+# adequacy`) get their own layout: their fields are not the fields of a test
+# result.
+needs_layouts["adequacy"] = {
+    "grid": "simple",
+    "layout": {
+        "head": [
+            '<<meta("type_name")>> <<meta_id()>>: **<<meta("title")>>** '
+            '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
+            'visible="icon:arrow-right-circle", initial=False)>>'
+        ],
+        "meta": [
+            '<<meta("verdict",        prefix="\\*\\*verdict:\\*\\* ", show_empty=True)>>',
+            '<<meta("evidence",       prefix="\\*\\*evidence:\\*\\* ")>>',
+            '<<meta("coverage_run",   prefix="\\*\\*coverage run:\\*\\* ")>>',
+            '<<meta("judged_symbols", prefix="\\*\\*judged symbols:\\*\\* ")>>',
+            '<<meta("symbol_hits",    prefix="\\*\\*symbol hits:\\*\\* ")>>',
+            "<<meta_links_all()>>",
+        ],
+    },
+}
+
+# The per-test coverage run for adequacy.rst comes from ZDOCS_COVERAGE_OUT
+# (zdocs sets coverage_output_dir). It has no fallback: without a run, the page
+# says that no coverage run is configured.
+
 
 def setup(app):
     app.add_css_file("css/custom.css")
