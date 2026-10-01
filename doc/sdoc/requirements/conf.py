@@ -29,3 +29,9 @@ configure(
 external_content_contents.append(
     (Path(os.environ["SAFETY_REQ_GEN_RST_DIR"]), "generated/zephyr_*.rst")
 )
+
+# The coverage table per component (traceability/components.rst) is generated
+# by the `component-gen` target from the component names of those pages.
+external_content_contents.append(
+    (Path(os.environ["SAFETY_COMPONENT_GEN_RST_DIR"]), "traceability/*.rst")
+)

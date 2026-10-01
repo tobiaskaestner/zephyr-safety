@@ -18,6 +18,12 @@ The requirements are imported from the Zephyr requirements repository
    generated/zephyr_software_requirements_*
 
 .. toctree::
+   :caption: Traceability
+   :maxdepth: 2
+
+   traceability/index
+
+.. toctree::
    :caption: Cross-reference test
    :maxdepth: 1
 

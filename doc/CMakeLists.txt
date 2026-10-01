@@ -186,6 +186,29 @@ add_custom_target(
 add_dependencies(design-gen requirements-gen)
 
 #-------------------------------------------------------------------------------
+# Coverage per component, for the traceability views of the requirements.
+#
+# _scripts/component_gen.py reads the component names of the generated
+# requirement pages and writes one table row per component into
+#   component-gen/rst/traceability/components.rst   copied into the
+#                         `requirements` document by its conf.py
+# Each cell is a `need_count`, so Sphinx counts the needs. Always runs, like
+# design-gen; unchanged output is not rewritten.
+
+set(COMPONENT_GEN_SCRIPT ${CMAKE_CURRENT_LIST_DIR}/_scripts/component_gen.py)
+set(COMPONENT_GEN_DIR ${CMAKE_CURRENT_BINARY_DIR}/component-gen)
+list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_COMPONENT_GEN_RST_DIR=${COMPONENT_GEN_DIR}/rst)
+
+add_custom_target(
+  component-gen
+  COMMAND ${PYTHON_EXECUTABLE} ${COMPONENT_GEN_SCRIPT}
+    --requirements-rst ${REQ_GEN_RST_DIR}/generated
+    --rst-out ${COMPONENT_GEN_DIR}/rst
+  COMMENT "Generating the coverage table per component..."
+)
+add_dependencies(component-gen requirements-gen)
+
+#-------------------------------------------------------------------------------
 # Documents
 
 set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
@@ -198,6 +221,7 @@ add_doc_check(REGISTRY ${DOC_REGISTRY})
 # file, so it reads requirements.dox itself — as Zephyr's own doxyfile does —
 # to resolve the `\satisfies` in the full API.
 add_dependencies(requirements-index requirements-gen)
+add_dependencies(requirements-index component-gen)
 add_dependencies(dox-requirements-tag requirements-gen)
 add_dependencies(dox-zephyr-tag requirements-gen)
 add_dependencies(dox-zephyr-safety-testspec-tag testspec-gen)

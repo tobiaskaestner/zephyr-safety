@@ -205,10 +205,20 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   (`ZDOCS_TWISTER_OUT`). It emits one `adequacy` need per requirement that has a verifying case in
   the run: id `ADQ-<run>/<req>`, link `assesses` ("assessed by" on the requirement), fields
   `verdict`, `evidence`, `coverage_run`, `judged_symbols`, `symbol_hits`, layout `adequacy`
-  (conf.py). The run name is the first tag on the run commit (`twister-cov-subset-run`). The
+  (conf.py). The run name is set on the page (`:run: twister-cov-full-run`), because it is part
+  of every id; change it together with `-DZDOCS_COVERAGE_OUT`. The
   verdict is `true` if the own verifying tests run a body (`z_impl_`, `z_vrfy_`, plain, header
-  `static inline`) of each satisfying symbol, read at the run commit. A macro has no body, so
+  `static inline`) of each satisfying symbol, read at the run commit. The files searched for
+  bodies are `testcoverage_impl_files` in the test report's conf.py: Anas's set plus
+  `kernel/include/*.h` and the public headers with a `@satisfies`. A macro has no body, so
   every LIFO/FIFO requirement and every `K_*_DEFINE` requirement reads `unresolved`.
+- **Traceability views** (requirements document, `sdoc/requirements/traceability/`): pie charts
+  and counts per layer (verified, satisfied, designed, adequacy verdicts), requirement ×
+  implementation, the hierarchy from system to software requirements with its gaps, and one row
+  per component. The component rows come from `_scripts/component_gen.py` (`component-gen`,
+  after `requirements-gen`); each cell is a `need_count`, so Sphinx counts. A `need_count`
+  filter has no `needs` mapping (a `needtable` filter has one), so the adequacy column selects
+  adequacy needs by the id prefix of their requirement (one `ZEP-SRS-<n>` per component).
 
 Each Doxygen project's `REQ_TRACEABILITY_INFO` shows only its own gap list on its
 requirements page: the API `UNSATISFIED_ONLY`, the testspec `UNVERIFIED_ONLY`, the detailed
