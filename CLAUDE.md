@@ -12,13 +12,11 @@ documents (API spec, detailed design, test specification) that can satisfy a saf
 ```
 /wrk/z/ws-safety/
 ├── safety/              ← this repo (you are here)
-│   ├── doc/             ← Sphinx + Doxygen documentation sources
-│   └── generated/       ← generated intermediate artefacts
+│   └── doc/             ← Sphinx + Doxygen documentation sources
 ├── zephyr/              ← Zephyr kernel source (branch: topic-safety-tskr from tiacsys fork)
 ├── doc/reqmgmt/         ← StrictDoc requirements (separate git project)
 ├── tools/zdocs/         ← the documentation engine (west project, Zephyr module)
-├── bdoc-zdocs/          ← CMake build output on zdocs
-└── bdoc/                ← pre-migration reference build — do not rebuild
+└── bdoc-zdocs/          ← CMake build output on zdocs
 ```
 
 ## Two Distinct Kernel Objects — Do Not Conflate
@@ -62,8 +60,7 @@ contract and calls `add_docs_from_registry()`; every document is declared once i
 groups and needs imports. Shared sphinx-needs vocabulary lives in `doc/needs_config.toml`.
 Each `doc/<document>/conf.py` is a thin shim around `zdocs_conf.configure()`.
 
-Build directory: `../bdoc-zdocs`. (`../bdoc` is the pre-migration reference build on the
-old in-tree engine — do not rebuild it.)
+Build directory: `../bdoc-zdocs`.
 
 ### Build Targets
 
