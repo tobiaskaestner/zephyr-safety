@@ -101,6 +101,29 @@ needs_layouts["adequacy"] = {
 # (zdocs sets coverage_output_dir). It has no fallback: without a run, the page
 # says that no coverage run is configured.
 
+# The files that hold the bodies of the satisfying symbols (adequacy.rst).
+# The first five patterns are the set of Anas's resolver (the zdocs default).
+# The other entries are the files with a @satisfies outside that set. There,
+# the implementation layer reads a symbol, so adequacy reads its body there too.
+testcoverage_impl_files = [
+    "kernel/*.c",
+    "kernel/**/*.c",
+    "include/zephyr/kernel.h",
+    "include/zephyr/kernel/**/*.h",
+    "include/zephyr/sys/**/*.h",
+    "kernel/include/*.h",
+    "include/zephyr/app_memory/mem_domain.h",
+    "include/zephyr/arch/arch_interface.h",
+    "include/zephyr/fatal.h",
+    "include/zephyr/internal/syscall_handler.h",
+    "include/zephyr/irq.h",
+    "include/zephyr/irq_multilevel.h",
+    "include/zephyr/sleep.h",
+    "include/zephyr/spinlock.h",
+    "include/zephyr/sw_isr_table.h",
+    "include/zephyr/syscall.h",
+]
+
 
 def setup(app):
     app.add_css_file("css/custom.css")
