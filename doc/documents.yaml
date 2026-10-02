@@ -205,39 +205,3 @@ documents:
     doc_dir: sdoc/safety-committee
     builders: [html, latex]
 
-  # -- Sandbox ----------------------------------------------------------------
-  #
-  # Sources under sandbox/; the ids keep their sandbox- prefix, so target names
-  # and deploy paths stay unique next to the real test documents.
-
-  sandbox-test-specification:
-    title: "Test Specification (hand-crafted)"
-    kind: sphinx
-    group: sandbox
-    prefix: sb_testspec
-    doc_dir: sandbox/test-specification
-    builders: [html]
-
-  sandbox-test-report:
-    title: "Test Report (hand-crafted)"
-    kind: sphinx
-    group: sandbox
-    prefix: sb_testreport
-    doc_dir: sandbox/test-report
-    builders: [html]
-
-  sandbox-mlx:
-    title: "Sandbox: mlx.traceability"
-    kind: sphinx
-    group: sandbox
-    prefix: sb_mlx
-    doc_dir: sandbox/mlx
-    builders: [html]
-
-  sandbox-sphinx-needs:
-    title: "Sandbox: sphinx-needs"
-    kind: sphinx
-    group: sandbox
-    prefix: sb_needs
-    doc_dir: sandbox/sphinx-needs
-    builders: [html]

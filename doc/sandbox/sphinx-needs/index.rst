@@ -1,2 +1,0 @@
-Sphinx-Needs Traceability Sandbox
-#################################
