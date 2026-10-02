@@ -35,7 +35,7 @@ manifest:
           - hal_nxp    # required by NXP boards
 
     - name: reqmgmt
-      path: doc/reqmgmnt
+      path: doc/reqmgmt
       revision: kernel-requirements
 
     - name: safety-committee
