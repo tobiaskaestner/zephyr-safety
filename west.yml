@@ -35,7 +35,8 @@ manifest:
           - hal_nxp    # required by NXP boards
 
     - name: reqmgmt
-      path: doc/reqmgmt
+      path: doc/reqmgmnt
+      revision: kernel-requirements
 
     - name: safety-committee
       url: git@github.com:zephyrproject-rtos/safety-committee.git
@@ -60,5 +61,12 @@ manifest:
       remote: tiacsys
       revision: main
       path: tools/zdocs
+
+    # The safety evidence graph tool. A plain project, not a Zephyr module:
+    # a Python package with its own venv, run beside the build.
+    - name: affirmatrix
+      remote: tiacsys
+      revision: main
+      path: tools/affirmatrix
 
   group-filter: [-safety-committee]
