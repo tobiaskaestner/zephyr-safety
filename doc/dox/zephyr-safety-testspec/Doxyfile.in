@@ -2468,7 +2468,11 @@ INCLUDE_FILE_PATTERNS  =
 # recursively expanded use the := operator instead of the = operator.
 # This tag requires that the tag ENABLE_PREPROCESSING is set to YES.
 
+# SMP_TEST: tests/arch/common/timing defines it from a Kconfig condition and
+# guards its real test_arch_timing_smp with it. The #else branch is a skip
+# stub. Doxygen knows no Kconfig values, so without this it documents the stub.
 PREDEFINED             = __DOXYGEN__ \
+                         SMP_TEST \
                           SYS_PORT_TRACING_TRACKING_FIELD(x)= \
                          "Z_DECL_POLL_EVENT=sys_dlist_t poll_events; /**< only when @kconfig{CONFIG_POLL} @kconfig_depends{CONFIG_POLL} */" \
                          _LINKER \
