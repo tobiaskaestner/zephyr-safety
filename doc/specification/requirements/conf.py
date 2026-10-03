@@ -21,6 +21,12 @@ configure(
     ],
 )
 
+# The Safety Committee document is left out of a build without its sources
+# (SAFETY_DOC_COMMITTEE in doc/CMakeLists.txt). The tag lets xref-test.rst
+# link to it only when the registry has it.
+if "committee" in intersphinx_mapping:
+    tags.add("committee")
+
 # The requirement pages are generated from the StrictDoc sources (doc/reqmgmt)
 # by the `requirements-gen` target — see doc/CMakeLists.txt — and copied in here
 # as generated/*.rst. Only the per-component pages: the generator's own

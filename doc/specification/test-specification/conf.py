@@ -23,6 +23,12 @@ configure(
     ],
 )
 
+# The Safety Committee document is left out of a build without its sources
+# (SAFETY_DOC_COMMITTEE in doc/CMakeLists.txt). The tag lets xref-test.rst
+# link to it only when the registry has it.
+if "committee" in intersphinx_mapping:
+    tags.add("committee")
+
 # The engine's testmodule_* config values (XML dir, doxygen URLs, spec
 # needs.json) all come from this document's `testmodule:` registry block — see
 # documents.yaml. Two things the registry cannot supply:

@@ -91,6 +91,10 @@ set(REQ_GEN_SCRIPT ${ZEPHYR_BASE}/doc/_scripts/gen_requirements.py)
 set(REQ_GEN_RST_DIR ${REQ_GEN_DIR}/rst)
 set(REQ_GEN_DOX_DIR ${REQ_GEN_DIR}/dox)
 list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_REQ_GEN_RST_DIR=${REQ_GEN_RST_DIR})
+# The downstream Sphinx extensions (skip_classes, strictdoc_runner). The conf.py
+# files read this, not the registry's directory: without the Safety Committee
+# sources, the registry is a copy in the build directory.
+list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_EXTENSIONS_DIR=${CMAKE_CURRENT_LIST_DIR}/_extensions)
 
 find_program(STRICTDOC strictdoc REQUIRED)
 file(GLOB_RECURSE REQ_SOURCES CONFIGURE_DEPENDS ${REQMGMT_DIR}/*.sdoc ${REQMGMT_DIR}/*.sgra)
@@ -212,6 +216,43 @@ add_dependencies(component-gen requirements-gen)
 # Documents
 
 set(DOC_REGISTRY ${CMAKE_CURRENT_LIST_DIR}/documents.yaml)
+
+# The Safety Committee document needs the sources of the safety-committee west
+# project. That project is in the west group `safety-committee`, which the
+# manifest leaves out by default, and it needs access rights. Without the
+# sources, the build uses a copy of the registry without the document, so no
+# peer links to it. Set -DSAFETY_DOC_COMMITTEE=ON or OFF to choose. The default
+# is ON when the sources are there.
+set(COMMITTEE_SOURCES ${WEST_TOPDIR}/doc/safety-committee/FSM_and_Concept)
+if(NOT DEFINED SAFETY_DOC_COMMITTEE)
+  if(EXISTS ${COMMITTEE_SOURCES})
+    set(SAFETY_DOC_COMMITTEE ON)
+  else()
+    set(SAFETY_DOC_COMMITTEE OFF)
+  endif()
+endif()
+if(SAFETY_DOC_COMMITTEE AND NOT EXISTS ${COMMITTEE_SOURCES})
+  message(FATAL_ERROR
+    "SAFETY_DOC_COMMITTEE is ON, but ${COMMITTEE_SOURCES} does not exist. "
+    "Run `west config manifest.group-filter -- +safety-committee` and "
+    "`west update`, or configure with -DSAFETY_DOC_COMMITTEE=OFF.")
+endif()
+if(NOT SAFETY_DOC_COMMITTEE)
+  set(_registry_without ${CMAKE_CURRENT_LIST_DIR}/_scripts/registry_without.py)
+  set(_filtered_registry ${CMAKE_CURRENT_BINARY_DIR}/registry/documents.yaml)
+  execute_process(
+    COMMAND ${PYTHON_EXECUTABLE} ${_registry_without}
+            --registry ${DOC_REGISTRY} --out ${_filtered_registry} --drop safety-committee
+    RESULT_VARIABLE _registry_result
+  )
+  if(NOT _registry_result EQUAL 0)
+    message(FATAL_ERROR "cannot write the registry without the Safety Committee document")
+  endif()
+  set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+               ${DOC_REGISTRY} ${_registry_without})
+  set(DOC_REGISTRY ${_filtered_registry})
+  message(STATUS "Safety Committee document left out (SAFETY_DOC_COMMITTEE=OFF)")
+endif()
 
 add_docs_from_registry(REGISTRY ${DOC_REGISTRY})
 add_doc_check(REGISTRY ${DOC_REGISTRY})

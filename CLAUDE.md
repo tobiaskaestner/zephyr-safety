@@ -80,7 +80,6 @@ A document's registry id is its target stem and deploy path:
 | `dox-zephyr-safety-testspec` | Doxygen | Test suite docs, parsed by `testmodule::` |
 | `dox-requirements` | Doxygen | Generated `\requirement` blocks; hidden (`internal` group). Its tag file makes `\verifies`/`\satisfies` resolve |
 | `safety-committee` | Sphinx | Governance |
-| `sandbox-*` | Sphinx | Superseded experiments (sources under `doc/sandbox/`, incl. the hand-crafted test spec/report) |
 
 The build is two-stage. `doc-index` builds every document's stage-1 index (objects.inv,
 tag files, needs.json); every `<id>-html` depends on **all** of them, so build
@@ -129,7 +128,7 @@ Sphinx documents pull rendered content from doxygen XML via Breathe directives:
 .. doxygengroup:: queue_apis
    :members:
 ```
-Example: `doc/api-documentation/queue_apis.rst` → `dox-zephyr-safety-api` XML.
+Example: `doc/specification/api-documentation/queue_apis.rst` → `dox-zephyr-safety-api` XML.
 
 ## Traceability Chain
 
@@ -153,7 +152,7 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
 (`TSPEC-*` test cases), **satisfied by** (`IMPL-<symbol>` needs) and **covered by**
 (`TR-*` results).
 
-- **satisfies**: `api-documentation/satisfied-requirements.rst` runs zdocs'
+- **satisfies**: `specification/api-documentation/satisfied-requirements.rst` runs zdocs'
   `.. symbolneeds::` (registry `symbol_needs: {doxygen_source: dox-zephyr-safety-api}`),
   one `impl` need `IMPL-<symbol>` per API symbol with a `@satisfies`, sectioned by API
   group, linked `satisfies` to the requirement.
@@ -163,7 +162,7 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   (`generated/design_elements.rst`), with the block's source file, line and a link to it
   at the zephyr HEAD. It fails on a UID the StrictDoc export lacks; `design-check`
   (POST_BUILD of `all-docs`) checks one need per block and prints the gap numbers
-  (`architecture/design_coverage.rst` renders them).
+  (`specification/architecture/design_coverage.rst` renders them).
   The kernel internals get the same from the detailed design: the architecture document's
   `detailed-design-symbols.rst` (registry `symbol_needs: {doxygen_source:
   dox-zephyr-safety-detailed-design}`). The `_* z_* Z_*` exclusion is the API's only; a
@@ -193,10 +192,10 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   condition). Each skipped result gets `skip_class`: `config` (ztest skip, `depends_met`
   `no`), `platform` (RAM overflow, filtered by platform), `build-only`, `unexplained`.
   Both are string fields in `needs_config.toml`; the result layout shows them.
-  `test-report/skips.rst` has the counts per class and board (`skipclasscounts::`,
+  `verification/test-report/skips.rst` has the counts per class and board (`skipclasscounts::`,
   `_extensions/skip_classes.py`), the unexplained skips by module and the results that ran
   although their `depends_on` was false.
-- **Coverage adequacy** (test report, `test-report/adequacy.rst`): the zdocs `testcoverage`
+- **Coverage adequacy** (test report, `verification/test-report/adequacy.rst`): the zdocs `testcoverage`
   directive reads a per-test coverage run (`-DZDOCS_COVERAGE_OUT=<dir>`: `twister.json`,
   `coverage/test_matrix.json`, `zephyr.sha`). This run is not the run of the test results
   (`ZDOCS_TWISTER_OUT`). It emits one `adequacy` need per requirement that has a verifying case in
@@ -209,7 +208,7 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   bodies are `testcoverage_impl_files` in the test report's conf.py: Anas's set plus
   `kernel/include/*.h` and the public headers with a `@satisfies`. A macro has no body, so
   every LIFO/FIFO requirement and every `K_*_DEFINE` requirement reads `unresolved`.
-- **Traceability views** (requirements document, `sdoc/requirements/traceability/`): pie charts
+- **Traceability views** (requirements document, `specification/requirements/traceability/`): pie charts
   and counts per layer (verified, satisfied, designed, adequacy verdicts), requirement ×
   implementation, the hierarchy from system to software requirements with its gaps, and one row
   per component. The component rows come from `_scripts/component_gen.py` (`component-gen`,
@@ -308,12 +307,18 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `needs_config.toml` — shared sphinx-needs types, links and fields
 - `_doxygen/safety-api-groups.dox` — API group stubs
 - `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
-- `api-documentation/queue_apis.rst` — Breathe pull for API doc
-- `api-documentation/satisfied-requirements.rst` — `impl` needs (`symbolneeds::`)
-- `test-specification/`, `test-report/` — the sphinx-needs test spec and report
-- `sdoc/requirements/` — requirements document (generated `req` needs; see Requirements generation)
-- `sdoc/safety-committee/` — governance, rendered by `strictdoc_runner`
-- `sandbox/` — superseded experiments, kept for reference
+- The Sphinx documents sit in three folders: `specification/` (requirements, architecture,
+  api-documentation, test-specification), `verification/` (test-report) and `governance/`
+  (safety-committee). Each registry entry names its folder with `doc_dir`. The folder is not
+  the navigation group: api-documentation is in `specification/` and in the `reference` group.
+- `specification/api-documentation/queue_apis.rst` — Breathe pull for API doc
+- `specification/api-documentation/satisfied-requirements.rst` — `impl` needs (`symbolneeds::`)
+- `specification/test-specification/`, `verification/test-report/` — the sphinx-needs test spec and report
+- `specification/requirements/` — requirements document (generated `req` needs; see Requirements generation)
+- `governance/safety-committee/` — governance, rendered by `strictdoc_runner`. It needs the
+  `safety-committee` west group. Without its sources, `doc/CMakeLists.txt` builds from a copy of the
+  registry without it (`SAFETY_DOC_COMMITTEE`, `_scripts/registry_without.py`), and the smoke pages
+  link to it only under the Sphinx tag `committee`.
 - `_extensions/strictdoc_runner.py` — runs `strictdoc export` on Sphinx build-init (safety-committee only)
 - `_extensions/skip_classes.py` — `skipclasscounts::`, the test report's skips by class and board
 - `_scripts/` — Doxygen input filters (`FILTER_PATTERNS`)

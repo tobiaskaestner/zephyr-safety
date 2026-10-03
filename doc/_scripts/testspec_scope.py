@@ -64,7 +64,7 @@ ZTEST_SUITE = re.compile(r"^\s*ZTEST_SUITE\s*\(\s*(\w+)", re.M)
 ZTEST_OF = re.compile(rf"^[ \t]*{ZTEST_MACRO}\s*\(\s*(\w+)\s*,", re.M)
 ROOT_GROUP = "all_tests"
 # Between the module group and the suite in the id of a generated suite group.
-# Must match testmodule_suite_qualifier in test-specification/conf.py.
+# Must match testmodule_suite_qualifier in specification/test-specification/conf.py.
 QUALIFIER = "__"
 
 

@@ -9,7 +9,7 @@ from zdocs_conf import configure
 
 # skip_classes is a downstream extension (see _extensions/README.rst): appended
 # after zdocs_conf, never before, so it cannot shadow an engine module.
-sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
+sys.path.append(os.environ["SAFETY_EXTENSIONS_DIR"])
 
 configure(
     globals(),
@@ -27,6 +27,12 @@ configure(
         "skip_classes",
     ],
 )
+
+# The Safety Committee document is left out of a build without its sources
+# (SAFETY_DOC_COMMITTEE in doc/CMakeLists.txt). The tag lets xref-test.rst
+# link to it only when the registry has it.
+if "committee" in intersphinx_mapping:
+    tags.add("committee")
 
 # The engine's testmodule_* config values (XML dir, doxygen URLs, spec
 # needs.json) all come from this document's `testmodule:` registry block — see

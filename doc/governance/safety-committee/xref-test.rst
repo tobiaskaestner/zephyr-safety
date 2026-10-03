@@ -14,11 +14,7 @@ Intersphinx — other Sphinx documents
 * Architecture: :external+arch:doc:`index`
 * Test Specification: :external+testspec:doc:`index`
 * Test Report: :external+testreport:doc:`index`
-* Safety Committee: :external+committee:doc:`index`
-* Test Specification (hand-crafted): :external+sb_testspec:doc:`index`
-* Test Report (hand-crafted): :external+sb_testreport:doc:`index`
-* Sandbox: mlx.traceability: :external+sb_mlx:doc:`index`
-* Sandbox: sphinx-needs: :external+sb_needs:doc:`index`
+* API Documentation: :external+api:doc:`index`
 
 Doxylink — Doxygen documents
 ----------------------------

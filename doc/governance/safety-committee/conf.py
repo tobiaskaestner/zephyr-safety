@@ -11,8 +11,8 @@ from zdocs_conf import configure
 # not ship it, so its directory has to be added AFTER zdocs_conf has put its own
 # _extensions first — never before, or a stale local copy of an engine module
 # would shadow the engine's.
-# doc/ is where the registry lives, however deep this document sits.
-sys.path.append(str(Path(os.environ["ZDOCS_REGISTRY"]).parent / "_extensions"))
+# doc/CMakeLists.txt passes the directory (SAFETY_EXTENSIONS_DIR).
+sys.path.append(os.environ["SAFETY_EXTENSIONS_DIR"])
 
 configure(
     globals(),

@@ -13,12 +13,11 @@ Intersphinx — other Sphinx documents
 * Requirements: :external+req:doc:`index`
 * Architecture: :external+arch:doc:`index`
 * Test Specification: :external+testspec:doc:`index`
-* API Documentation: :external+api:doc:`index`
-* Safety Committee: :external+committee:doc:`index`
-* Test Specification (hand-crafted): :external+sb_testspec:doc:`index`
-* Test Report (hand-crafted): :external+sb_testreport:doc:`index`
-* Sandbox: mlx.traceability: :external+sb_mlx:doc:`index`
-* Sandbox: sphinx-needs: :external+sb_needs:doc:`index`
+* Test Report: :external+testreport:doc:`index`
+
+.. only:: committee
+
+   * Safety Committee: :external+committee:doc:`index`
 
 Doxylink — Doxygen documents
 ----------------------------
@@ -32,4 +31,4 @@ External needs — sphinx-needs imports
 
 * Requirements: :need:`ZEP-SRS-20-6`
 * Test Specification: :need:`TSPEC-FIFO-1CPU-001`
-* API Documentation: :need:`IMPL-k_queue_get`
+* Test Report: :need:`TR-qemu-cortex-m0-nrf51822-kernel-fifo-fifo-api-TSPEC-FIFO-1CPU-001`
