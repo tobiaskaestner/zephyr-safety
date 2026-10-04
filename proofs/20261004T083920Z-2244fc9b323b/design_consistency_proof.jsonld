@@ -1,0 +1,263 @@
+{
+  "@context": "../../context.jsonld",
+  "designEdges": [
+    {
+      "from": "IMPL-K_LIFO_DEFINE",
+      "kind": "Implements",
+      "to": "ZEP-SRS-23-1"
+    },
+    {
+      "from": "IMPL-k_lifo_alloc_put",
+      "kind": "Implements",
+      "to": "ZEP-SRS-23-3"
+    },
+    {
+      "from": "IMPL-k_lifo_get",
+      "kind": "Implements",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "IMPL-k_lifo_put",
+      "kind": "Implements",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "ZEP-SRS-23-1",
+      "kind": "Refines",
+      "to": "ZEP-SYRS-23"
+    },
+    {
+      "from": "ZEP-SRS-23-2",
+      "kind": "Refines",
+      "to": "ZEP-SYRS-23"
+    },
+    {
+      "from": "ZEP-SRS-23-3",
+      "kind": "Refines",
+      "to": "ZEP-SYRS-23"
+    },
+    {
+      "from": "ZEP-SRS-23-4",
+      "kind": "Refines",
+      "to": "ZEP-SYRS-23"
+    },
+    {
+      "from": "TSPEC-LIFO-001",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-1"
+    },
+    {
+      "from": "TSPEC-LIFO-001",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-001",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-002",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-002",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-003",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-003",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-004",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-3"
+    },
+    {
+      "from": "TSPEC-LIFO-005",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-006",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-006",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-007",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-007",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-008",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-008",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-009",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-010",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-010",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-011",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-2"
+    },
+    {
+      "from": "TSPEC-LIFO-011",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    },
+    {
+      "from": "TSPEC-LIFO-012",
+      "kind": "Verifies",
+      "to": "ZEP-SRS-23-4"
+    }
+  ],
+  "nodeManifest": [
+    {
+      "hash": "4b9aefcc2f21ab226162b9de9f447a042ae5d8f9d8eb18d89a6e63b6fc00040d",
+      "id": "IMPL-K_LIFO_DEFINE",
+      "kind": "Implementation"
+    },
+    {
+      "hash": "46a834a7b1f64bf41d96406b5dc4ca566040033a62ed0a1ef31bd83e011fe228",
+      "id": "IMPL-k_lifo_alloc_put",
+      "kind": "Implementation"
+    },
+    {
+      "hash": "b5deab546fcf7ac7ce082d2a58ab9aafe4e7576e890c1e5dcfee3136138523fd",
+      "id": "IMPL-k_lifo_get",
+      "kind": "Implementation"
+    },
+    {
+      "hash": "1f1908736dee68324c2a629105d8357345f6e0321806b4c4006873080630eeca",
+      "id": "IMPL-k_lifo_put",
+      "kind": "Implementation"
+    },
+    {
+      "hash": "bf42a114beee755f03a49b5c921697061bafb0dc22bcc643dafd0fe93633f734",
+      "id": "TSPEC-LIFO-001",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "a1f026346fee4ca945fbeb9e6a1b40968882b23cd43a3145fbe7126703244b43",
+      "id": "TSPEC-LIFO-002",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "cc7e3ade99e8c7af0a33d548825cf88b84646a9a7ec2ffe49155e51d408a292d",
+      "id": "TSPEC-LIFO-003",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "b3a5aeca4a49c9cb8565faf78bb95821f2d3957a6b1032cb247b4f0a9294cdee",
+      "id": "TSPEC-LIFO-004",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "5151214378196c1f0db7184b4253260ad21a4e6a16687d2e4d981e313263556c",
+      "id": "TSPEC-LIFO-005",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "ab54ef25f41147e66a62198084c4d8d3225dbdbc2caa6d0f546816869f4ac969",
+      "id": "TSPEC-LIFO-006",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "1e73ff565e710fed8b93ad3c6b41ef697ff0dfa0808f79ebfa5222994c0c3453",
+      "id": "TSPEC-LIFO-007",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "34829aa09aaca5a33ebcfd67707ba6b49edd37db7727741127a1649ca7b9726a",
+      "id": "TSPEC-LIFO-008",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "06ae5e3afc4e3452683ee992cd8069127701fa1c10899eabc38eadd14ac94b89",
+      "id": "TSPEC-LIFO-009",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "881a1694db2de1d1bde03f4d6b6223f53107ff33b9f097f56c497749df603e82",
+      "id": "TSPEC-LIFO-010",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "5bc5685eba0a9f81ef31593d23cac5bb10e9998ef3a65869df77ed7482492d45",
+      "id": "TSPEC-LIFO-011",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "0b31473dbb4eaedcb8cdb0657657005fa496f99f3ed21a0eb2911c8144f897ad",
+      "id": "TSPEC-LIFO-012",
+      "kind": "TestSpecification"
+    },
+    {
+      "hash": "68a58ec258080806a398f4e1032571a20e76c8688b604b5750deed3136fd3af9",
+      "id": "ZEP-SRS-23-1",
+      "kind": "Requirement"
+    },
+    {
+      "hash": "045ba1c0df723ad9bfd52de66bb6507ca91e3062e7f424e73a7860cfaa71a16c",
+      "id": "ZEP-SRS-23-2",
+      "kind": "Requirement"
+    },
+    {
+      "hash": "e9056b254366065abaf7f901f5458475904a8ab2879361be2a45c94a5d47208f",
+      "id": "ZEP-SRS-23-3",
+      "kind": "Requirement"
+    },
+    {
+      "hash": "fcad994ec7eba16a0703d47fd77854b23a21e22ac33a4bd196c2a9637f3b6160",
+      "id": "ZEP-SRS-23-4",
+      "kind": "Requirement"
+    },
+    {
+      "hash": "7114d51be052fcfd92c13bc15d8975e5bc6506aec9d2bbd425f0beabfc4261f4",
+      "id": "ZEP-SYRS-23",
+      "kind": "Requirement"
+    }
+  ],
+  "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+  "root": "9f3ad020310312b43e30004acf1f2f58e1a17b0d4e9eae9ac7ac4249407ca289",
+  "scope": [
+    "ZEP-SYRS-23"
+  ],
+  "snapshotId": "20261004T083920Z-2244fc9b323b"
+}

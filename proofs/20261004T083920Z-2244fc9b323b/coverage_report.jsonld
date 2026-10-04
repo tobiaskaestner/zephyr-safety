@@ -1,0 +1,13 @@
+{
+  "@context": "../../context.jsonld",
+  "blocked": false,
+  "coverageGaps": [],
+  "designSetEmpty": false,
+  "diagnostics": [],
+  "discardedOutcomes": [],
+  "excusedOutcomes": [],
+  "skippedOutcomes": [],
+  "staleOutcomes": [],
+  "unreadyEdges": [],
+  "unwaivedOutcomes": []
+}

@@ -1,0 +1,185 @@
+{
+  "@context": "../../context.jsonld",
+  "outcomes": [
+    {
+      "confirms": "TSPEC-LIFO-007",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-007",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-008",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-008",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-009",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-009",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-010",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-010",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-011",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-011",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-012",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo.usage/TSPEC-LIFO-012",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-001",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-001",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-002",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-002",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-003",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-003",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-004",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-004",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-005",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-005",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-006",
+      "id": "twister-lifo-2026-10-04-80d36f1-mps2-an385-kernel.lifo/TSPEC-LIFO-006",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-001",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-001",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-002",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-002",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-003",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-003",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-004",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-004",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-005",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-005",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-006",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m0-nrf51822-kernel.lifo/TSPEC-LIFO-006",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-007",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-007",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-008",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-008",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-009",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-009",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-010",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-010",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-011",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-011",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-012",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo.usage/TSPEC-LIFO-012",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-001",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-001",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-002",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-002",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-003",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-003",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-004",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-004",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-005",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-005",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    },
+    {
+      "confirms": "TSPEC-LIFO-006",
+      "id": "twister-lifo-2026-10-04-80d36f1-qemu_cortex_m3-ti_lm3s6965-kernel.lifo/TSPEC-LIFO-006",
+      "result": "passed",
+      "revision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+    }
+  ]
+}
