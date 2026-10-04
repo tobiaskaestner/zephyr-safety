@@ -1,0 +1,996 @@
+{
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "id": "https://affirmatrix.dev/case/event/000001",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "392f860b095d13ee3cc124247906793ac160b13b",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Requirements Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
+      "seg:fromContentAnchors": {
+        "seg:contentHash": "098ec1cdd115af9508e69f3d72c6abbd0bcedd5e777153f082c7cbeb2452fc04",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-1",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Refines",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "fb0ec3ccdf9dd70f8c33836d9c2618283ff3e7c33595de9046451848f20b2db4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SYRS-23",
+          "seg:sourcePath": "docs/system_requirements/index.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000002",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "392f860b095d13ee3cc124247906793ac160b13b",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Requirements Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:fromContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Refines",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "fb0ec3ccdf9dd70f8c33836d9c2618283ff3e7c33595de9046451848f20b2db4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SYRS-23",
+          "seg:sourcePath": "docs/system_requirements/index.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000003",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "392f860b095d13ee3cc124247906793ac160b13b",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Requirements Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
+      "seg:fromContentAnchors": {
+        "seg:contentHash": "22eab2d52ea558bbc058a2d80be63c52a425a64550813b55259d446f542f3c5c",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-3",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Refines",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "fb0ec3ccdf9dd70f8c33836d9c2618283ff3e7c33595de9046451848f20b2db4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SYRS-23",
+          "seg:sourcePath": "docs/system_requirements/index.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000004",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "392f860b095d13ee3cc124247906793ac160b13b",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Requirements Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:fromContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Refines",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "fb0ec3ccdf9dd70f8c33836d9c2618283ff3e7c33595de9046451848f20b2db4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SYRS-23",
+          "seg:sourcePath": "docs/system_requirements/index.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000005",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Architect",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-K_LIFO_DEFINE",
+      "seg:fromContentAnchors": {
+        "seg:apiHash": "b3160180645224df5a5e6922fdabc7870d7a3c608880ae2c77b03ae29ab0bd1b",
+        "seg:apiHashSource": {
+          "seg:sourceLocator": "symbol:K_LIFO_DEFINE#api",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:bodyHash": "8d702b07f7e7748b1e39cc2093bf7414e62e654126cac4a5446cd7d90ba93c77",
+        "seg:bodyHashSource": {
+          "seg:sourceLocator": "symbol:K_LIFO_DEFINE#body",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Implements",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "098ec1cdd115af9508e69f3d72c6abbd0bcedd5e777153f082c7cbeb2452fc04",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-1",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000006",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Architect",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_alloc_put",
+      "seg:fromContentAnchors": {
+        "seg:apiHash": "57d5ae5d1fdd2951cb9d7512a78b35b160a3c2d2a12bae51a998a00773c51217",
+        "seg:apiHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_alloc_put#api",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:bodyHash": "4e415c10454c952af634b3d13ac3fe13ebeb64e5bf418b3ebd7e87527a0846ad",
+        "seg:bodyHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_alloc_put#body",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Implements",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "22eab2d52ea558bbc058a2d80be63c52a425a64550813b55259d446f542f3c5c",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-3",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000007",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Architect",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_get",
+      "seg:fromContentAnchors": {
+        "seg:apiHash": "77bf750be38cc13c98640ad6ff75757d27f35adf64a44af777b39bd526c66702",
+        "seg:apiHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_get#api",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:bodyHash": "00536c2dfda48c158245e7327cd19e2757941fdd35c64292247ab54cd87d2fce",
+        "seg:bodyHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_get#body",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Implements",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000008",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Architect",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_put",
+      "seg:fromContentAnchors": {
+        "seg:apiHash": "365fe6c1f01bcdecbf78bd085b37c9edec513600e225d7505d7b5b849370d9d7",
+        "seg:apiHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_put#api",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:bodyHash": "f7b6b21f02d820a1b8d4b9353a120de763360e8bdef4e17ad9abed9ec8b26e43",
+        "seg:bodyHashSource": {
+          "seg:sourceLocator": "symbol:k_lifo_put#body",
+          "seg:sourcePath": "include/zephyr/kernel.h",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Implements",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000009",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fde0cfe25766259555f9e414b489037803d1c0538f9d0676980998b676cb326e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "5e9305b420f095c79e54f723df81b2520b38c3da131b869ba7d086ea15f8c435",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "098ec1cdd115af9508e69f3d72c6abbd0bcedd5e777153f082c7cbeb2452fc04",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-1",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000010",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fde0cfe25766259555f9e414b489037803d1c0538f9d0676980998b676cb326e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "5e9305b420f095c79e54f723df81b2520b38c3da131b869ba7d086ea15f8c435",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000011",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fde0cfe25766259555f9e414b489037803d1c0538f9d0676980998b676cb326e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "5e9305b420f095c79e54f723df81b2520b38c3da131b869ba7d086ea15f8c435",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000012",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-002",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fb7a0c7de7d9b640a89fa1eed5f589ac87d386e23984088144cbb7a17bd83dd9",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2isr#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "8398506cb194ccf184d7600740711f8248740cb0f849a9728fb60526da3c777f",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2isr#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000013",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-002",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fb7a0c7de7d9b640a89fa1eed5f589ac87d386e23984088144cbb7a17bd83dd9",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2isr#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "8398506cb194ccf184d7600740711f8248740cb0f849a9728fb60526da3c777f",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_thread2isr#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000014",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-003",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "70b1280b1629cbe1e5536264bae987b85ab52c630bee18bc9c9f1811b4b81235",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_isr2thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "f00795f3de830d0dc0edf0651f069c0956bc9934e2ba82ac766405768acfa536",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_isr2thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000015",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-003",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "70b1280b1629cbe1e5536264bae987b85ab52c630bee18bc9c9f1811b4b81235",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_isr2thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "f00795f3de830d0dc0edf0651f069c0956bc9934e2ba82ac766405768acfa536",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_isr2thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000016",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-004",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "695b97c852e9e4b7efa15366d507051ce9fc8e1d17407895b975a15abe1fa495",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_alloc_put#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "b5cdf121de51b3bb24ae71ddd9fdbc4909564fb9a310cb2f3ae73e8345daf5f3",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_alloc_put#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_contexts.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "22eab2d52ea558bbc058a2d80be63c52a425a64550813b55259d446f542f3c5c",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-3",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000017",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-005",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "57d37ff3d0e9f0c928915e1681bab4115d84c0d1d8fa31bf0337f453225a970e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_get_fail#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_fail.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "ba01f046897e8ae06474d00e0bc1ae40b939a2a800d1f40d22b42c414f992dcf",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_get_fail#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_fail.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000018",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-006",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "a11930135043aaf269f83e24565963e5eeb93b5b5998d8efb1ec462da566ae4e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_loop#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_loop.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "71fd2b75ff8baf0a3468c4ed6c16cfb5371de41105a1ab584f231d3af3fb494a",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_loop#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_loop.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000019",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-006",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "a11930135043aaf269f83e24565963e5eeb93b5b5998d8efb1ec462da566ae4e",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_loop#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_loop.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "71fd2b75ff8baf0a3468c4ed6c16cfb5371de41105a1ab584f231d3af3fb494a",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_loop#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_api/src/test_lifo_loop.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000020",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-007",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "66e9d3f93a7560535881af371f171048da27df7988525070c2dbc0c7bec92f8f",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_nowait#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "b1bf08f0f143a0654a28f666ce02aa2e2cfe97daddcf8dbcad1a888e3c50873b",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_nowait#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000021",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-007",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "66e9d3f93a7560535881af371f171048da27df7988525070c2dbc0c7bec92f8f",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_nowait#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "b1bf08f0f143a0654a28f666ce02aa2e2cfe97daddcf8dbcad1a888e3c50873b",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_nowait#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000022",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-008",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "1bb63395186d5b19eb0faa60a03b51dffbe79f0a6afdc95484a0d7d7e4b26a58",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_wait#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "d5e1c677ad2fef58e17f96a4b99cf390924b06a3022dc7e18a200bb071745daa",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_wait#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000023",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-008",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "1bb63395186d5b19eb0faa60a03b51dffbe79f0a6afdc95484a0d7d7e4b26a58",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_wait#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "d5e1c677ad2fef58e17f96a4b99cf390924b06a3022dc7e18a200bb071745daa",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_lifo_wait#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000024",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-009",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "c91985956f04eab6457dacfd93ab94895e3d49326a8a66cdc0801c9aa15525f4",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_empty_lifo#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "5118745be3634e7720276120630ae05d57e686134c942befd104f806a98fcd00",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_empty_lifo#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000025",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-010",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fc22eb5c042644cec073c625b34476b256faab8797af923fa86e1c678bf78ae6",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_non_empty_lifo#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "f404b6fc1350a3e31efc4d3ae86e7a32059ef5f0669e382fb10e4d91d54d5c25",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_non_empty_lifo#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000026",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-010",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "fc22eb5c042644cec073c625b34476b256faab8797af923fa86e1c678bf78ae6",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_non_empty_lifo#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "f404b6fc1350a3e31efc4d3ae86e7a32059ef5f0669e382fb10e4d91d54d5c25",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_non_empty_lifo#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000027",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-011",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "42d5fc433f36d7f8bbb21ce43b606f9226b982abcec6e3a3791e1c7afcbef4a6",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_lifo_thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "80c1d42d59bbaf11605ac09976b471a034f6c7d5c730beb6affbf307454ac494",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_lifo_thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "bf50ad473228794d163bdc3bb58b308a48953d4f6068df29040740c345c8f65f",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-2",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000028",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-011",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "42d5fc433f36d7f8bbb21ce43b606f9226b982abcec6e3a3791e1c7afcbef4a6",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_lifo_thread#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "80c1d42d59bbaf11605ac09976b471a034f6c7d5c730beb6affbf307454ac494",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_lifo_thread#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/event/000029",
+      "seg:affirmedAt": {
+        "seg:fromRevision": "80d36f1e4d69bcf312f03bf0d408c42637bf4012",
+        "seg:toRevision": "392f860b095d13ee3cc124247906793ac160b13b"
+      },
+      "seg:affirmingRole": "Test Engineer",
+      "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-012",
+      "seg:fromContentAnchors": {
+        "seg:implHash": "85cfc8c07498e9c60c0db9764b59fcc705695598c2d817f7b90c20e64e168b74",
+        "seg:implHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_threads_pend_on_lifo#impl",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        },
+        "seg:specHash": "5c5f726faa3c4c35d8f93128ba63916da3a4df836fb8e7fcf5ec0bb282ad0fcb",
+        "seg:specHashSource": {
+          "seg:sourceLocator": "symbol:test_timeout_threads_pend_on_lifo#spec",
+          "seg:sourcePath": "tests/kernel/lifo/lifo_usage/src/main.c",
+          "seg:sourceRepo": "zephyr"
+        }
+      },
+      "seg:reason": "all links OK",
+      "seg:relation": "seg:Verifies",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:toContentAnchors": {
+        "seg:contentHash": "b247902139ca725767de2f4107686329221e1c4e05b18057cef8df8669eb4cf4",
+        "seg:contentHashSource": {
+          "seg:sourceLocator": "need:ZEP-SRS-23-4",
+          "seg:sourcePath": "docs/software_requirements/lifos.sdoc",
+          "seg:sourceRepo": "reqmgmt"
+        }
+      },
+      "type": "seg:ReviewEvent"
+    }
+  ]
+}

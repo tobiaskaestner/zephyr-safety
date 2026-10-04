@@ -1732,148 +1732,169 @@
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-001/ZEP-SRS-23-1",
+      "seg:edgeHash": "61c3ce34da865b2a23a1d1263f5cfa5ff9f28ea905aefc53a1957ca75e3b82fe",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-001/ZEP-SRS-23-2",
+      "seg:edgeHash": "260dad124883e6fbdb8ed84e99c3d54281edc51fef59ab859228e86db9ff2cad",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-001/ZEP-SRS-23-4",
+      "seg:edgeHash": "cf3fe68027b4e206709e7d7160ea8169ad224a7ba4579bbf757b4d94b19cec71",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-001",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-002/ZEP-SRS-23-2",
+      "seg:edgeHash": "78367df80deadf8000d4edc2439421908e698cb00a3c2b16218cc51cfe06fc42",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-002",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-002/ZEP-SRS-23-4",
+      "seg:edgeHash": "6054724f044619b895f7f0f374244169b92c2f47a93b69940849d9ec3744c819",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-002",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-003/ZEP-SRS-23-2",
+      "seg:edgeHash": "7944861bd73db2bc0cf9e870326241abbb4fd01716d6f8402866019211d211db",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-003",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-003/ZEP-SRS-23-4",
+      "seg:edgeHash": "01c8382e608baeb828930f03d1562004c13ec396b3cd3b154434e1c368821e89",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-003",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-004/ZEP-SRS-23-3",
+      "seg:edgeHash": "6eb608a952ce48ae3ea32e241ef2e404ef5bc76e4e719a235ccab36d63374d29",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-004",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-005/ZEP-SRS-23-4",
+      "seg:edgeHash": "ed5fa7b71d35a98be0d42aa9508bea4aa98b84d6f38f0c52a2d2c82b02ca338e",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-005",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-006/ZEP-SRS-23-2",
+      "seg:edgeHash": "98eff8a681d736f78374f76613a333ba5ec885cd2efbb00b737af7b635fbb2e4",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-006",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-006/ZEP-SRS-23-4",
+      "seg:edgeHash": "2c09be7f57d4e59cd9be906e38ec215f9f7427116c9b23921a0711f6d064e9b7",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-006",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-007/ZEP-SRS-23-2",
+      "seg:edgeHash": "d8daec5a30bca16a2281242339ca0691dfe4e59e8cee3d4b8241a27b0a7e71fc",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-007",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-007/ZEP-SRS-23-4",
+      "seg:edgeHash": "59c9d93ad30f9d84b5a53bd9cd451f6638b65b8557595241f8ab8a1a87faabe3",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-007",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-008/ZEP-SRS-23-2",
+      "seg:edgeHash": "64550ae520ac75c5abfe8b7a005f40053aadf704c43f19fdd65a39da285cabdb",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-008",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-008/ZEP-SRS-23-4",
+      "seg:edgeHash": "627ab71193af9e9f741a5fb034f3cbe95c09c65eb97d0383c60b872d32f7f95e",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-008",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-009/ZEP-SRS-23-4",
+      "seg:edgeHash": "8a2d9766fb006a401376c103c6335227e49cbf0bcc0d9b36f18103eb1ae74d7f",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-009",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-010/ZEP-SRS-23-2",
+      "seg:edgeHash": "852fbcd97284647725a7672810f308675c6b48813237c42725015e6f7ffe043d",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-010",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-010/ZEP-SRS-23-4",
+      "seg:edgeHash": "83b32f46cd1253aae36ce1cbed4a415ca583154f900716b103e17de23ec0b32b",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-010",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-011/ZEP-SRS-23-2",
+      "seg:edgeHash": "7c96c1ff229b9b8ec256d4a04b9633446d89d381afdf35ec1779fe819bbec056",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-011",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-011/ZEP-SRS-23-4",
+      "seg:edgeHash": "a7e353fcaf17fac267cef9b0c60088e041824dc972e3b3ea04b4cf91fd084c87",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-011",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
     {
       "id": "https://affirmatrix.dev/case/edge/verifies/TSPEC-LIFO-012/ZEP-SRS-23-4",
+      "seg:edgeHash": "7b68db442616ccf5d30ef01541a66c944a5f0284e72dbf8e2973ac5fcbfe31e9",
       "seg:from": "https://affirmatrix.dev/case/node/TSPEC-LIFO-012",
-      "seg:linkState": "pending",
+      "seg:linkState": "active",
       "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
       "type": "seg:Verifies"
     },
