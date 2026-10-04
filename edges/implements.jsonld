@@ -1,0 +1,33 @@
+{
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "id": "https://affirmatrix.dev/case/edge/implements/IMPL-K_LIFO_DEFINE/ZEP-SRS-23-1",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-K_LIFO_DEFINE",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
+      "type": "seg:Implements"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/implements/IMPL-k_lifo_alloc_put/ZEP-SRS-23-3",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_alloc_put",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
+      "type": "seg:Implements"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/implements/IMPL-k_lifo_get/ZEP-SRS-23-4",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_get",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "type": "seg:Implements"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/implements/IMPL-k_lifo_put/ZEP-SRS-23-2",
+      "seg:from": "https://affirmatrix.dev/case/node/IMPL-k_lifo_put",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "type": "seg:Implements"
+    }
+  ]
+}

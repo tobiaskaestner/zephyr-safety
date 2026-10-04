@@ -1,0 +1,4324 @@
+{
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-1/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-1/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-11/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-11/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-12/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-12/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-13/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-13/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-14/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-14/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-15/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-15/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-16/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-17/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-17/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-18/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-18/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-19/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-19/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-2/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-20/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-20/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-21/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-21/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-22/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-23/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-23/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-24/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-24/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-25/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-25/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-26/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-26/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-27/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-27/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-28/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-28",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-28/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-28",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-29/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-29/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-3/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-3/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-30/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-30",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-30/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-30",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-31/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-31",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-31/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-31",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-32/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-32",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-32/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-32",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-33/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-33",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-33/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-33",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-34/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-34",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-34/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-34",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-35/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-35",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-35/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-35",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-4/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-4/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-5/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-5/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-6/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-6/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-7/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-7/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-8/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-9/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-1-9/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-1-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-1/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-10/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-2/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-3/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-4/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-5/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-6/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-7/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-8/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-10-9/ZEP-SYRS-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-10-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-1/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-10/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-11/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-12/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-13/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-14/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-15/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-16/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-17/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-18/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-19/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-2/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-20/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-21/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-22/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-23/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-24/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-25/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-26/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-3/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-4/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-5/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-6/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-7/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-8/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-11-9/ZEP-SYRS-8",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-11-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-8",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-1/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-10/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-11/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-12/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-13/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-14/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-2/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-3/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-4/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-5/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-6/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-7/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-8/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-12-9/ZEP-SYRS-38",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-12-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-38",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-1/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-10/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-11/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-12/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-13/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-14/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-3/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-4/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-5/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-6/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-7/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-8/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-13-9/ZEP-SYRS-10",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-13-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-10",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-1/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-10/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-11/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-12/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-2/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-3/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-4/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-5/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-6/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-7/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-8/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-14-9/ZEP-SYRS-4",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-14-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-4",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-1/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-2/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-3/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-4/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-5/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-6/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-7/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-16-8/ZEP-SYRS-5",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-16-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-5",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-1/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-10/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-11/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-12/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-13/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-14/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-15/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-16/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-17/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-18/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-19/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-2/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-20/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-3/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-4/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-5/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-6/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-7/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-8/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-17-9/ZEP-SYRS-6",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-17-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-6",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-1/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-10/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-11/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-2/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-3/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-4/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-5/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-6/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-7/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-8/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-18-9/ZEP-SYRS-3",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-18-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-3",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-1/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-10/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-11/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-12/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-2/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-3/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-4/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-5/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-6/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-7/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-8/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-19-9/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-19-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-10/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-11/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-12/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-12/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-13/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-14/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-15/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-16/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-17/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-18/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-19/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-20/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-21/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-22/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-23/ZEP-SRS-2-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-2-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-24/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-25/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-26/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-27/ZEP-SYRS-16",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-16",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-28/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-28",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-29/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-4/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-5/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-8/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-2-9/ZEP-SYRS-17",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-2-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-17",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-1/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-10/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-11/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-12/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-13/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-14/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-15/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-2/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-3/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-4/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-5/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-6/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-7/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-8/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-20-9/ZEP-SYRS-22",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-20-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-22",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-1/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-10/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-2/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-3/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-4/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-5/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-6/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-7/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-8/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-21-9/ZEP-SYRS-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-21-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-23-1/ZEP-SYRS-23",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-23-2/ZEP-SYRS-23",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-23-3/ZEP-SYRS-23",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-23-4/ZEP-SYRS-23",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-23-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-23",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-1/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-10/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-2/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-3/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-4/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-5/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-6/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-7/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-8/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-24-9/ZEP-SYRS-24",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-24-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-24",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-1/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-10/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-11/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-12/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-13/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-14/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-15/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-16/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-17/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-2/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-3/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-4/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-5/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-6/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-7/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-8/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-25-9/ZEP-SYRS-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-25-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-1/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-10/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-11/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-12/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-13/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-14/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-15/ZEP-SRS-26-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-16/ZEP-SRS-26-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-17/ZEP-SRS-26-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-18/ZEP-SRS-26-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-19/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-2/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-20/ZEP-SRS-26-19",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-19",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-21/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-22/ZEP-SRS-26-21",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-21",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-23/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-24/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-25/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-26/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-27/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-28/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-28",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-29/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-3/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-30/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-30",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-31/ZEP-SRS-26-25",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-31",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-25",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-32/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-32",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-33/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-33",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-34/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-34",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-35/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-35",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-36/ZEP-SRS-26-35",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-36",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-35",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-37/ZEP-SRS-26-35",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-37",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-35",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-38/ZEP-SRS-26-35",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-38",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-35",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-39/ZEP-SRS-26-35",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-39",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-26-35",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-4/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-40/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-40",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-5/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-6/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-7/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-8/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-26-9/ZEP-SYRS-26",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-26-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-26",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-1/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-10/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-11/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-12/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-13/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-14/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-15/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-2/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-3/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-4/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-5/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-6/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-7/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-8/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-27-9/ZEP-SYRS-27",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-27-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-27",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-1/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-10/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-11/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-12/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-13/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-14/ZEP-SYRS-35",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-35",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-15/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-2/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-3/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-4/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-5/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-6/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-7/ZEP-SYRS-28",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-28",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-8/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-28-9/ZEP-SYRS-34",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-28-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-34",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-1/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-2/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-3/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-4/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-5/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-29-6/ZEP-SYRS-29",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-29-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-29",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-1/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-11/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-2/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-3/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-4/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-5/ZEP-SRS-30-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-30-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-5/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-6/ZEP-SRS-30-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SRS-30-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-6/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-7/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-8/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-30-9/ZEP-SYRS-30",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-30-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-30",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-1/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-10/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-11/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-12/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-13/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-14/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-15/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-16/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-17/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-19/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-2/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-20/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-21/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-3/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-4/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-5/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-6/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-7/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-8/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-31-9/ZEP-SYRS-31",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-31-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-31",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-1/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-10/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-11/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-12/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-2/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-3/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-4/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-5/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-6/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-7/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-8/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-32-9/ZEP-SYRS-32",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-32-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-32",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-1/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-10/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-11/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-2/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-3/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-4/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-5/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-6/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-7/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-8/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-33-9/ZEP-SYRS-33",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-33-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-33",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-1/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-10/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-11/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-12/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-13/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-14/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-15/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-16/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-17/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-18/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-19/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-2/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-20/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-21/ZEP-SYRS-12",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-12",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-3/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-4/ZEP-SYRS-2",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-2",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-5/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-6/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-7/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-8/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-34-9/ZEP-SYRS-11",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-34-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-11",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-1/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-2/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-3/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-4/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-5/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-6/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-35-7/ZEP-SYRS-39",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-35-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-39",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-1/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-10/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-11/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-12/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-13/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-14/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-15/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-2/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-3/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-4/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-5/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-6/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-7/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-8/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-36-9/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-36-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-37-1/ZEP-SYRS-36",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-37-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-36",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-37-2/ZEP-SYRS-36",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-37-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-36",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-37-3/ZEP-SYRS-36",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-37-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-36",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-1/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-1/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-10/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-11/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-12/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-13/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-14/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-15/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-16/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-17/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-18/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-19/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-2/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-20/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-21/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-22/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-23/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-24/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-25/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-26/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-27/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-28/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-28",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-29/ZEP-SYRS-15",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-15",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-29/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-29",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-3/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-30/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-30",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-31/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-31",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-32/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-32",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-33/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-33",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-34/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-34",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-35/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-35",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-36/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-36",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-37/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-37",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-38/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-38",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-39/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-39",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-4/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-40/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-40",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-41/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-41",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-42/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-42",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-43/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-43",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-44/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-44",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-45/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-45",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-46/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-46",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-47/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-47",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-48/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-48",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-49/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-49",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-5/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-50/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-50",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-51/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-51",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-52/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-52",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-53/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-53",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-6/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-7/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-8/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-38-9/ZEP-SYRS-37",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-38-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-37",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-1/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-10/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-11/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-12/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-13/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-14/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-15/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-16/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-17/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-18/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-2/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-3/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-4/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-5/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-6/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-7/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-8/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-4-9/ZEP-SYRS-18",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-4-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-18",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-1/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-10/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-11/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-12/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-13/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-14/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-15/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-16/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-17/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-18/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-19/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-2/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-20/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-3/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-4/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-5/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-6/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-7/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-8/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-5-9/ZEP-SYRS-14",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-5-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-14",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-1/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-10/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-11/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-12/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-13/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-2/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-3/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-4/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-5/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-6/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-7/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-8/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-6-9/ZEP-SYRS-13",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-6-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-13",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-1/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-10/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-11/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-12/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-13/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-14/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-15/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-16/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-2/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-3/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-4/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-5/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-6/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-7/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-8/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-7-9/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-7-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-1/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-10/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-11/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-12/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-13/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-14/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-15/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-16/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-17/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-18/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-19/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-19",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-2/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-20/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-21/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-21",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-22/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-22",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-23/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-23",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-24/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-24",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-25/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-25",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-26/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-26",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-27/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-27",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-3/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-4/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-5/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-6/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-7/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-8/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-8-9/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-8-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-1/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-1",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-10/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-10",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-11/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-11",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-12/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-12",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-13/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-13",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-14/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-14",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-15/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-15",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-16/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-16",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-17/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-17",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-18/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-18",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-2/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-3/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-3",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-4/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-4",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-5/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-5",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-6/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-6",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-7/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-7",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-8/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-8",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SRS-9-9/ZEP-SYRS-9",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SRS-9-9",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-9",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SYRS-2/ZEP-SYRS-1",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SYRS-2",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-1",
+      "type": "seg:Refines"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/edge/refines/ZEP-SYRS-20/ZEP-SYRS-7",
+      "seg:from": "https://affirmatrix.dev/case/node/ZEP-SYRS-20",
+      "seg:linkState": "pending",
+      "seg:to": "https://affirmatrix.dev/case/node/ZEP-SYRS-7",
+      "type": "seg:Refines"
+    }
+  ]
+}

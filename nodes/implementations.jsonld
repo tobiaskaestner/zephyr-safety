@@ -1,0 +1,85 @@
+{
+  "@context": "../context.jsonld",
+  "@graph": [
+    {
+      "id": "https://affirmatrix.dev/case/node/IMPL-K_LIFO_DEFINE",
+      "seg:apiHash": "b3160180645224df5a5e6922fdabc7870d7a3c608880ae2c77b03ae29ab0bd1b",
+      "seg:apiHashSource": {
+        "seg:sourceLocator": "symbol:K_LIFO_DEFINE#api",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:bodyHash": "8d702b07f7e7748b1e39cc2093bf7414e62e654126cac4a5446cd7d90ba93c77",
+      "seg:bodyHashSource": {
+        "seg:sourceLocator": "symbol:K_LIFO_DEFINE#body",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:extractedFrom": {
+        "zephyr": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+      },
+      "seg:localId": "IMPL-K_LIFO_DEFINE",
+      "type": "seg:Implementation"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/node/IMPL-k_lifo_alloc_put",
+      "seg:apiHash": "57d5ae5d1fdd2951cb9d7512a78b35b160a3c2d2a12bae51a998a00773c51217",
+      "seg:apiHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_alloc_put#api",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:bodyHash": "4e415c10454c952af634b3d13ac3fe13ebeb64e5bf418b3ebd7e87527a0846ad",
+      "seg:bodyHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_alloc_put#body",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:extractedFrom": {
+        "zephyr": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+      },
+      "seg:localId": "IMPL-k_lifo_alloc_put",
+      "type": "seg:Implementation"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/node/IMPL-k_lifo_get",
+      "seg:apiHash": "77bf750be38cc13c98640ad6ff75757d27f35adf64a44af777b39bd526c66702",
+      "seg:apiHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_get#api",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:bodyHash": "00536c2dfda48c158245e7327cd19e2757941fdd35c64292247ab54cd87d2fce",
+      "seg:bodyHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_get#body",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:extractedFrom": {
+        "zephyr": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+      },
+      "seg:localId": "IMPL-k_lifo_get",
+      "type": "seg:Implementation"
+    },
+    {
+      "id": "https://affirmatrix.dev/case/node/IMPL-k_lifo_put",
+      "seg:apiHash": "365fe6c1f01bcdecbf78bd085b37c9edec513600e225d7505d7b5b849370d9d7",
+      "seg:apiHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_put#api",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:bodyHash": "f7b6b21f02d820a1b8d4b9353a120de763360e8bdef4e17ad9abed9ec8b26e43",
+      "seg:bodyHashSource": {
+        "seg:sourceLocator": "symbol:k_lifo_put#body",
+        "seg:sourcePath": "include/zephyr/kernel.h",
+        "seg:sourceRepo": "zephyr"
+      },
+      "seg:extractedFrom": {
+        "zephyr": "80d36f1e4d69bcf312f03bf0d408c42637bf4012"
+      },
+      "seg:localId": "IMPL-k_lifo_put",
+      "type": "seg:Implementation"
+    }
+  ]
+}
