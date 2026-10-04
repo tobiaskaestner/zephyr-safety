@@ -1,0 +1,119 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/review_event.schema.json",
+  "title": "A review event record",
+  "description": "One recorded human judgement about one edge. States what was affirmed; who affirmed it, when, and by what authority are supplied by the commit that introduces this record (ADR-0009).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "seg:from",
+    "seg:to",
+    "seg:relation",
+    "seg:fromContentAnchors",
+    "seg:toContentAnchors",
+    "seg:affirmedAt",
+    "seg:affirmingRole",
+    "seg:reason"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "type": {
+      "const": "seg:ReviewEvent"
+    },
+    "seg:from": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "seg:to": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "seg:relation": {
+      "type": "string",
+      "pattern": "^seg:[A-Za-z]+$",
+      "description": "The kind of the edge that was affirmed."
+    },
+    "seg:fromNodeHash": {
+      "$ref": "#/$defs/sha256",
+      "description": "Optional. An event states each endpoint's hashes through its content anchors; an event recorded earlier also carries the composite node hash the edge hash folds. Absent or a valid digest, never anything else."
+    },
+    "seg:toNodeHash": {
+      "$ref": "#/$defs/sha256",
+      "description": "Optional. An event states each endpoint's hashes through its content anchors; an event recorded earlier also carries the composite node hash the edge hash folds. Absent or a valid digest, never anything else."
+    },
+    "seg:fromContentAnchors": {
+      "$ref": "#/$defs/contentAnchors",
+      "description": "Every named content hash the source endpoint carried at judgement, each paired with the anchor it was found at (SEG-SREQ-127) — the record an event binds, and the one a per-hash comparison reads."
+    },
+    "seg:toContentAnchors": {
+      "$ref": "#/$defs/contentAnchors",
+      "description": "Every named content hash the target endpoint carried at judgement, each paired with the anchor it was found at (SEG-SREQ-127) — the record an event binds, and the one a per-hash comparison reads."
+    },
+    "seg:affirmedAt": {
+      "type": "object",
+      "description": "The source revision of each endpoint at the moment of review. Its two keys are named apart from the endpoint fields above because a term is defined once for the whole context: reusing seg:from here would give a revision string the endpoint term's definition, and a processor would read it as an identifier.",
+      "required": [
+        "seg:fromRevision",
+        "seg:toRevision"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:fromRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$",
+          "description": "The source revision an endpoint stood at when the judgement was made. Nothing else correlates a source revision to the moment someone accepted it, so it is captured here or lost (SEG-SREQ-025)."
+        },
+        "seg:toRevision": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{40}([0-9a-f]{24})?$",
+          "description": "The source revision an endpoint stood at when the judgement was made. Nothing else correlates a source revision to the moment someone accepted it, so it is captured here or lost (SEG-SREQ-025)."
+        }
+      }
+    },
+    "seg:affirmingRole": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The role in which the affirmation was made (SEG-SREQ-049). Required, and deliberately a free string with no enum: role validation is a process concern enforced by organisational policy, not by the schema. The CamelCase spellings (RequirementsEngineer, SoftwareEngineer, TestEngineer, FunctionalSafetyManager) are documented convention, not constraint. Empty alone is refused — an empty role would satisfy the field while recording nothing."
+    },
+    "seg:reason": {
+      "type": "string",
+      "description": "The justification exactly as supplied (SEG-SREQ-028). No minimum length: a thin justification is the operator's to give and a reader's to judge."
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "contentAnchors": {
+      "type": "object",
+      "description": "Every named content hash one endpoint carried at judgement, keyed by hash name, each paired with the source location it was found at under the name's own 'Source' suffix — the same pairing rule a node record's own entry uses. Field names are open: which names an endpoint carries depends on its kind, so pairing is checked when a review event is read back, not by this schema.",
+      "minProperties": 2,
+      "additionalProperties": false,
+      "patternProperties": {
+        "^seg:[A-Za-z]+Source$": {
+          "type": "object",
+          "required": ["seg:sourceRepo", "seg:sourcePath", "seg:sourceLocator"],
+          "additionalProperties": false,
+          "properties": {
+            "seg:sourceRepo": { "type": "string", "minLength": 1 },
+            "seg:sourcePath": { "type": "string", "minLength": 1 },
+            "seg:sourceLocator": { "type": "string", "minLength": 1 }
+          }
+        },
+        "^seg:(?!.*Source$)[A-Za-z]+$": {
+          "$ref": "#/$defs/sha256"
+        }
+      }
+    }
+  }
+}

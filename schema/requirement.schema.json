@@ -1,0 +1,81 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/requirement.schema.json",
+  "title": "A Requirement node record",
+  "description": "A Requirement node record. Carries an identity, a kind, the digest of the requirement statement — never the statement itself (SEG-SREQ-018) — and, beside the digest, the source location of what it covers (SEG-SREQ-050).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "seg:localId",
+    "seg:contentHash",
+    "seg:contentHashSource"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "type": {
+      "const": "seg:Requirement"
+    },
+    "seg:localId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The case-local stable identifier — the string that enters a hash preimage. The id above is its serialization, not a second identity."
+    },
+    "seg:contentHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seg:contentHashSource": {
+      "type": "object",
+      "description": "Where the content behind seg:contentHash lives (SEG-SREQ-050). A reference for transient fetch, never integrity data: no part of a source location enters a hash preimage, so moving content changes this field without unsettling any affirmation.",
+      "required": [
+        "seg:sourceRepo",
+        "seg:sourcePath",
+        "seg:sourceLocator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:sourceRepo": {
+          "$ref": "#/$defs/sourceRepo"
+        },
+        "seg:sourcePath": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "seg:sourceLocator": {
+          "type": "string",
+          "pattern": "^(need:.+|file)$",
+          "description": "How the hashed span is found within the file. 'need:<id>' names the requirement directive the statement is extracted from — the extraction key, not offsets that drift with unrelated edits. 'file' says the digest covers the whole file."
+        }
+      }
+    },
+    "seg:extractedFrom": {
+      "type": "object",
+      "description": "The revision of each repository at which the content behind the digests was read (ADR-0016). Each key is a repository name that the content anchors name. Each value is a revision: 40 or 64 lowercase hexadecimal characters. A producer-recorded claim, never a hash preimage member. The field is optional, and a record that has no extraction revision carries no field.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "sourceRepo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The repository holding the content this digest covers."
+    },
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The path within the repository to the file holding the content."
+    }
+  }
+}

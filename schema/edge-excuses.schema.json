@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-excuses.schema.json",
+  "title": "A Excuses edge record",
+  "description": "An Excuses edge: Waiver to TestOutcome.",
+  "allOf": [
+    {
+      "$ref": "edge-base.schema.json#/$defs/baseEdge"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "seg:Excuses"
+    }
+  },
+  "unevaluatedProperties": false
+}

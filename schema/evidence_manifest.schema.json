@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/evidence_manifest.schema.json",
+  "title": "An evidence manifest document",
+  "description": "One evidence package's top-level binder (SEG-SREQ-035): the scope it was generated for and whether that scope is total (SEG-SREQ-038, SEG-SREQ-039), the current revision it was assembled against, and relative references to the three sibling documents it anchors. Carries no repository SHAs beyond the one this single-repository layout has (ADR-0002/ADR-0004), where a multi-repository layout would anchor one per repository.",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "requestedScope",
+    "memberScope",
+    "total",
+    "revision",
+    "designConsistencyProof",
+    "executionCoverageRecord",
+    "coverageReport"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The scope's own minted identifier (SEG-SREQ-052)."
+    },
+    "requestedScope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "The requirement identifiers the scope was requested for, sorted."
+    },
+    "memberScope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Every identifier the scope's expansion collected, sorted — a superset of requestedScope."
+    },
+    "total": {
+      "type": "boolean",
+      "description": "Whether memberScope includes every top-level requirement in the graph the scope was collected from (SEG-SREQ-039)."
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The current revision of the implementation repository this package was assembled against — the one source revision a single-repository binding has."
+    },
+    "designConsistencyProof": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The design consistency proof document's file name, relative to this manifest's own directory."
+    },
+    "executionCoverageRecord": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The execution coverage record document's file name, relative to this manifest's own directory."
+    },
+    "coverageReport": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The coverage report document's file name, relative to this manifest's own directory."
+    },
+    "runBundles": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "pattern": "^sha256:[0-9a-f]{64}$"
+      },
+      "uniqueItems": true,
+      "description": "The digest of every run bundle that supplied a test outcome in the package's scope, sorted. Optional, so that a package written before run bundles were recorded still reads."
+    }
+  }
+}

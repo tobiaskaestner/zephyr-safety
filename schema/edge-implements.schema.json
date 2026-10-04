@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-implements.schema.json",
+  "title": "A Implements edge record",
+  "description": "An Implements edge: Implementation to Requirement.",
+  "allOf": [
+    {
+      "$ref": "edge-base.schema.json#/$defs/baseEdge"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "seg:Implements"
+    }
+  },
+  "unevaluatedProperties": false
+}

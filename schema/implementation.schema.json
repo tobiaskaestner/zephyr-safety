@@ -1,0 +1,109 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/implementation.schema.json",
+  "title": "A Implementation node record",
+  "description": "An Implementation node record. The two digests separate intent from execution: a changed apiHash asks whether the thing still satisfies its requirement, a changed bodyHash asks whether it needs running again. Each digest carries its own source location (SEG-SREQ-050) — per hash, not per node, because the two spans of one function differ by locator even where repository and path coincide.",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "seg:localId",
+    "seg:apiHash",
+    "seg:apiHashSource",
+    "seg:bodyHash",
+    "seg:bodyHashSource"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "type": {
+      "const": "seg:Implementation"
+    },
+    "seg:localId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The case-local stable identifier — the string that enters a hash preimage. The id above is its serialization, not a second identity."
+    },
+    "seg:apiHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seg:apiHashSource": {
+      "type": "object",
+      "description": "Where the content behind seg:apiHash lives (SEG-SREQ-050). A reference for transient fetch, never integrity data: no part of a source location enters a hash preimage.",
+      "required": [
+        "seg:sourceRepo",
+        "seg:sourcePath",
+        "seg:sourceLocator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:sourceRepo": {
+          "$ref": "#/$defs/sourceRepo"
+        },
+        "seg:sourcePath": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "seg:sourceLocator": {
+          "type": "string",
+          "pattern": "^(symbol:[^#]+#api|file)$",
+          "description": "How the hashed span is found within the file. 'symbol:<path>#api' names the symbol whose api span the digest covers; the span boundary itself is the extractor's parser-independent rule, deliberately not recorded here, so unrelated edits above the symbol change nothing. 'file' says the digest covers the whole file."
+        }
+      }
+    },
+    "seg:bodyHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seg:bodyHashSource": {
+      "type": "object",
+      "description": "Where the content behind seg:bodyHash lives (SEG-SREQ-050). A reference for transient fetch, never integrity data: no part of a source location enters a hash preimage.",
+      "required": [
+        "seg:sourceRepo",
+        "seg:sourcePath",
+        "seg:sourceLocator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:sourceRepo": {
+          "$ref": "#/$defs/sourceRepo"
+        },
+        "seg:sourcePath": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "seg:sourceLocator": {
+          "type": "string",
+          "pattern": "^(symbol:[^#]+#body|file)$",
+          "description": "How the hashed span is found within the file. 'symbol:<path>#body' names the symbol whose body span the digest covers; the span boundary itself is the extractor's parser-independent rule, deliberately not recorded here. 'file' says the digest covers the whole file."
+        }
+      }
+    },
+    "seg:extractedFrom": {
+      "type": "object",
+      "description": "The revision of each repository at which the content behind the digests was read (ADR-0016). Each key is a repository name that the content anchors name. Each value is a revision: 40 or 64 lowercase hexadecimal characters. A producer-recorded claim, never a hash preimage member. The field is optional, and a record that has no extraction revision carries no field.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "sourceRepo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The repository holding the content this digest covers."
+    },
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The path within the repository to the file holding the content."
+    }
+  }
+}

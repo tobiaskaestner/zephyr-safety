@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-refines.schema.json",
+  "title": "A Refines edge record",
+  "description": "A Refines edge: child Requirement to parent Requirement.",
+  "allOf": [
+    {
+      "$ref": "edge-base.schema.json#/$defs/baseEdge"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "seg:Refines"
+    }
+  },
+  "unevaluatedProperties": false
+}

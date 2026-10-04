@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/test_outcome.schema.json",
+  "title": "A TestOutcome node record",
+  "description": "A TestOutcome node record. The digest covers the recorded result of one execution of one specification, and carries the source location of that result (SEG-SREQ-050).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "seg:localId",
+    "seg:contentHash",
+    "seg:contentHashSource",
+    "seg:result",
+    "seg:revision"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "type": {
+      "const": "seg:TestOutcome"
+    },
+    "seg:localId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The case-local stable identifier — the string that enters a hash preimage. The id above is its serialization, not a second identity."
+    },
+    "seg:contentHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seg:result": {
+      "enum": [
+        "passed",
+        "failed",
+        "error",
+        "skipped"
+      ],
+      "description": "The result of the test execution this outcome records (SEG-SREQ-055). A closed set. A recorded claim, like an edge's linkState: the content hash covers the artifact that is the authority on it, and the claim never enters a hash preimage."
+    },
+    "seg:revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The revision of the implementation repository this execution ran against (SEG-SREQ-062). A producer-recorded claim, like seg:result: never a hash preimage member. The spelling is deliberately open — unlike a sha256 digest or an enumerated vocabulary elsewhere in this schema, no pattern is pinned here."
+    },
+    "seg:contentHashSource": {
+      "type": "object",
+      "description": "Where the content behind seg:contentHash lives (SEG-SREQ-050). A reference for transient fetch, never integrity data: no part of a source location enters a hash preimage.",
+      "required": [
+        "seg:sourceRepo",
+        "seg:sourcePath",
+        "seg:sourceLocator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:sourceRepo": {
+          "$ref": "#/$defs/sourceRepo"
+        },
+        "seg:sourcePath": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "seg:sourceLocator": {
+          "type": "string",
+          "pattern": "^(nodeid:.+|file)$",
+          "description": "How the hashed result is found within the run artifact. 'nodeid:<id>' is the result's key within the artifact — the identity the runner assigned it, not offsets. 'file' says the digest covers the whole artifact file."
+        }
+      }
+    },
+    "seg:extractedFrom": {
+      "type": "object",
+      "description": "The revision of each repository at which the content behind the digests was read (ADR-0016). Each key is a repository name that the content anchors name. Each value is a revision: 40 or 64 lowercase hexadecimal characters. A producer-recorded claim, never a hash preimage member. The field is optional, and a record that has no extraction revision carries no field.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "sourceRepo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The repository holding the content this digest covers."
+    },
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The path within the repository to the file holding the content."
+    }
+  }
+}

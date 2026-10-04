@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-calls.schema.json",
+  "title": "A Calls edge record",
+  "description": "A Calls edge: Implementation to Implementation. Declared by the taxonomy and reserved; no producer emits one yet.",
+  "allOf": [
+    {
+      "$ref": "edge-base.schema.json#/$defs/baseEdge"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "seg:Calls"
+    }
+  },
+  "unevaluatedProperties": false
+}

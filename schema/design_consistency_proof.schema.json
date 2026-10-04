@@ -1,0 +1,107 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/design_consistency_proof.schema.json",
+  "title": "A design consistency proof document",
+  "description": "One evidence package's design consistency proof (SEG-SREQ-035). Self-contained: an auditor holding only this document can recompute the root from its own contents, without the graph that produced it (SEG-SYS-005) — sort the node manifest's hashes and the design edges' tuples, canonicalize snapshotId/scope/revision exactly as stated here, and fold them the way affirmatrix.commitment.design_root does. Evidence nodes and edges never appear: the design set is Requirements, TestSpecifications and Implementations, and the edges among them.",
+  "type": "object",
+  "required": [
+    "snapshotId",
+    "scope",
+    "revision",
+    "nodeManifest",
+    "designEdges",
+    "root"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The scope's own minted identifier (SEG-SREQ-052), the one this package is sealed under."
+    },
+    "scope": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "The requested requirement identifiers, sorted. Part of the canonical metadata the root is folded with."
+    },
+    "revision": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The current revision of the implementation repository this package was assembled against. Part of the canonical metadata the root is folded with."
+    },
+    "nodeManifest": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "kind",
+          "hash"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The case-local stable identifier the node hash was derived from. Opaque case IRIs never appear in this document; an auditor recomputes from local identifiers alone."
+          },
+          "kind": {
+            "enum": [
+              "Requirement",
+              "TestSpecification",
+              "Implementation"
+            ],
+            "description": "The design node kinds; TestOutcome and Waiver never appear here."
+          },
+          "hash": {
+            "$ref": "#/$defs/sha256"
+          }
+        }
+      },
+      "description": "Every in-scope design node's own hash (SEG-SREQ-037) — what the root recomputes from, together with designEdges and the canonical metadata."
+    },
+    "designEdges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "kind"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "enum": [
+              "Refines",
+              "Verifies",
+              "Implements"
+            ]
+          }
+        }
+      },
+      "description": "Every in-scope design edge, as the ⟨from, to, kind⟩ tuple the root folds."
+    },
+    "root": {
+      "$ref": "#/$defs/sha256"
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters (ADR-0005)."
+    }
+  }
+}

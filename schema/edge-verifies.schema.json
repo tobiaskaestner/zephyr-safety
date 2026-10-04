@@ -1,0 +1,17 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-verifies.schema.json",
+  "title": "A Verifies edge record",
+  "description": "A Verifies edge: TestSpecification to Requirement.",
+  "allOf": [
+    {
+      "$ref": "edge-base.schema.json#/$defs/baseEdge"
+    }
+  ],
+  "properties": {
+    "type": {
+      "const": "seg:Verifies"
+    }
+  },
+  "unevaluatedProperties": false
+}

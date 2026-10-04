@@ -1,0 +1,149 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/coverage_report.schema.json",
+  "title": "A coverage report document",
+  "description": "One evidence package's coverage report (SEG-SREQ-035): the package gate's CoverageReport, serialized. Single-authored — the generator adds nothing beyond what the gate itself found: the eight typed findings, the diagnostics each one becomes, and whether the scope is blocked.",
+  "type": "object",
+  "required": [
+    "unreadyEdges",
+    "coverageGaps",
+    "staleOutcomes",
+    "discardedOutcomes",
+    "unwaivedOutcomes",
+    "excusedOutcomes",
+    "designSetEmpty",
+    "diagnostics",
+    "blocked"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "unreadyEdges": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "from",
+          "to",
+          "kind",
+          "state"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "from": {
+            "type": "string",
+            "minLength": 1
+          },
+          "to": {
+            "type": "string",
+            "minLength": 1
+          },
+          "kind": {
+            "type": "string",
+            "minLength": 1
+          },
+          "state": {
+            "enum": [
+              "pending",
+              "directlyOutdated",
+              "transitivelySuspect",
+              "doublyOutdated",
+              "broken"
+            ],
+            "description": "Every non-active state (SEG-SREQ-043); active edges never appear on the worklist."
+          }
+        }
+      }
+    },
+    "coverageGaps": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Requirement identifiers whose own direct coverage fails (SEG-SREQ-044)."
+    },
+    "staleOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Outcome identifiers whose recorded revision differed from the package's current revision (SEG-SREQ-063, SEG-SREQ-067)."
+    },
+    "discardedOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Outcome identifiers discarded as incomplete evidence."
+    },
+    "unwaivedOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Failing outcome identifiers, that is failed or error, with no valid excusing waiver (SEG-SREQ-060)."
+    },
+    "excusedOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Failing outcome identifiers, that is failed or error, validly excused by a waiver (SEG-SREQ-061)."
+    },
+    "skippedOutcomes": {
+      "type": "array",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      },
+      "description": "Outcome identifiers whose result is skipped (SEG-SREQ-199). A skipped outcome is absence of evidence: it never blocks, and no waiver excuses it. The writer always emits this array. A package sealed before the field existed carries none, and a reader treats an absent array as not judged for skips, which differs from an empty array."
+    },
+    "designSetEmpty": {
+      "type": "boolean",
+      "description": "Whether the scope held no Requirement node at all (SEG-SREQ-045)."
+    },
+    "diagnostics": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "severity",
+          "condition",
+          "subject",
+          "detail"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "severity": {
+            "enum": [
+              "error",
+              "warning",
+              "info"
+            ]
+          },
+          "condition": {
+            "type": "string",
+            "minLength": 1,
+            "description": "One member of the gate's closed condition vocabulary (SEG-SREQ-064)."
+          },
+          "subject": {
+            "type": "string",
+            "minLength": 1
+          },
+          "detail": {
+            "type": "string",
+            "description": "Occurrence-specific detail, kept apart from condition (SEG-SREQ-065); empty when a finding has none to give."
+          }
+        }
+      }
+    },
+    "blocked": {
+      "type": "boolean",
+      "description": "Whether any diagnostic here has a severity that blocks generating a package (SEG-SREQ-042)."
+    }
+  }
+}

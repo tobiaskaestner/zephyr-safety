@@ -1,0 +1,137 @@
+{
+  "@context": {
+    "_comment": "The shared JSON-LD context for a case. Every instance document in the case references this file relatively, so the case describes itself offline and survives being moved.",
+    "@base": "https://affirmatrix.dev/case/",
+    "@vocab": "https://affirmatrix.dev/seg#",
+    "seg": "https://affirmatrix.dev/seg#",
+    "xsd": "http://www.w3.org/2001/XMLSchema#",
+    "id": {
+      "@id": "@id"
+    },
+    "type": {
+      "@id": "@type"
+    },
+    "seg:localId": {
+      "@id": "seg:localId"
+    },
+    "seg:from": {
+      "@id": "seg:from",
+      "@type": "@id"
+    },
+    "seg:to": {
+      "@id": "seg:to",
+      "@type": "@id"
+    },
+    "seg:linkState": {
+      "@id": "seg:linkState"
+    },
+    "seg:result": {
+      "@id": "seg:result"
+    },
+    "seg:edgeHash": {
+      "@id": "seg:edgeHash"
+    },
+    "seg:contentHash": {
+      "@id": "seg:contentHash"
+    },
+    "seg:apiHash": {
+      "@id": "seg:apiHash"
+    },
+    "seg:bodyHash": {
+      "@id": "seg:bodyHash"
+    },
+    "seg:specHash": {
+      "@id": "seg:specHash"
+    },
+    "seg:implHash": {
+      "@id": "seg:implHash"
+    },
+    "seg:contentHashSource": {
+      "@id": "seg:contentHashSource"
+    },
+    "seg:apiHashSource": {
+      "@id": "seg:apiHashSource"
+    },
+    "seg:bodyHashSource": {
+      "@id": "seg:bodyHashSource"
+    },
+    "seg:specHashSource": {
+      "@id": "seg:specHashSource"
+    },
+    "seg:implHashSource": {
+      "@id": "seg:implHashSource"
+    },
+    "seg:sourceRepo": {
+      "@id": "seg:sourceRepo"
+    },
+    "seg:sourcePath": {
+      "@id": "seg:sourcePath"
+    },
+    "seg:sourceLocator": {
+      "@id": "seg:sourceLocator"
+    },
+    "seg:relation": {
+      "@id": "seg:relation"
+    },
+    "seg:fromNodeHash": {
+      "@id": "seg:fromNodeHash"
+    },
+    "seg:toNodeHash": {
+      "@id": "seg:toNodeHash"
+    },
+    "seg:affirmedAt": {
+      "@id": "seg:affirmedAt"
+    },
+    "seg:fromRevision": {
+      "@id": "seg:fromRevision"
+    },
+    "seg:toRevision": {
+      "@id": "seg:toRevision"
+    },
+    "seg:affirmingRole": {
+      "@id": "seg:affirmingRole"
+    },
+    "seg:reason": {
+      "@id": "seg:reason"
+    },
+    "seg:Requirement": {
+      "@id": "seg:Requirement"
+    },
+    "seg:Implementation": {
+      "@id": "seg:Implementation"
+    },
+    "seg:TestSpecification": {
+      "@id": "seg:TestSpecification"
+    },
+    "seg:TestOutcome": {
+      "@id": "seg:TestOutcome"
+    },
+    "seg:Waiver": {
+      "@id": "seg:Waiver"
+    },
+    "seg:Refines": {
+      "@id": "seg:Refines"
+    },
+    "seg:Verifies": {
+      "@id": "seg:Verifies"
+    },
+    "seg:Implements": {
+      "@id": "seg:Implements"
+    },
+    "seg:Confirms": {
+      "@id": "seg:Confirms"
+    },
+    "seg:Witnesses": {
+      "@id": "seg:Witnesses"
+    },
+    "seg:Excuses": {
+      "@id": "seg:Excuses"
+    },
+    "seg:Calls": {
+      "@id": "seg:Calls"
+    },
+    "seg:ReviewEvent": {
+      "@id": "seg:ReviewEvent"
+    }
+  }
+}

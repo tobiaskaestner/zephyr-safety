@@ -1,0 +1,93 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/waiver.schema.json",
+  "title": "A Waiver node record",
+  "description": "A Waiver node record. The digest covers the waiver document — its justification lives in that document, not here — and carries the document's source location (SEG-SREQ-050).",
+  "type": "object",
+  "required": [
+    "id",
+    "type",
+    "seg:localId",
+    "seg:contentHash",
+    "seg:contentHashSource",
+    "seg:expiry",
+    "seg:approver"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^https?://",
+      "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+    },
+    "type": {
+      "const": "seg:Waiver"
+    },
+    "seg:localId": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The case-local stable identifier — the string that enters a hash preimage. The id above is its serialization, not a second identity."
+    },
+    "seg:contentHash": {
+      "$ref": "#/$defs/sha256"
+    },
+    "seg:expiry": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "The date on which the waiver expires (SEG-SREQ-057), an ISO 8601 calendar date. A producer-recorded claim, like a test outcome's result: the content hash covers the waiver document that is the authority on it, and the claim never enters a hash preimage."
+    },
+    "seg:approver": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The name of the approver who granted the waiver (SEG-SREQ-058). A producer-recorded claim, never a hash preimage member."
+    },
+    "seg:contentHashSource": {
+      "type": "object",
+      "description": "Where the content behind seg:contentHash lives (SEG-SREQ-050). A reference for transient fetch, never integrity data: no part of a source location enters a hash preimage.",
+      "required": [
+        "seg:sourceRepo",
+        "seg:sourcePath",
+        "seg:sourceLocator"
+      ],
+      "additionalProperties": false,
+      "properties": {
+        "seg:sourceRepo": {
+          "$ref": "#/$defs/sourceRepo"
+        },
+        "seg:sourcePath": {
+          "$ref": "#/$defs/sourcePath"
+        },
+        "seg:sourceLocator": {
+          "type": "string",
+          "pattern": "^file$",
+          "description": "A waiver is a document; the digest always covers the whole file at the path, so 'file' is the only span there is to name."
+        }
+      }
+    },
+    "seg:extractedFrom": {
+      "type": "object",
+      "description": "The revision of each repository at which the content behind the digests was read (ADR-0016). Each key is a repository name that the content anchors name. Each value is a revision: 40 or 64 lowercase hexadecimal characters. A producer-recorded claim, never a hash preimage member. The field is optional, and a record that has no extraction revision carries no field.",
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "^([0-9a-f]{40}|[0-9a-f]{64})$"
+      }
+    }
+  },
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "sourceRepo": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The repository holding the content this digest covers."
+    },
+    "sourcePath": {
+      "type": "string",
+      "minLength": 1,
+      "description": "The path within the repository to the file holding the content."
+    }
+  }
+}

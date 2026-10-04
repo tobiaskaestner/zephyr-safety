@@ -1,0 +1,73 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/execution_coverage_record.schema.json",
+  "title": "An execution coverage record document",
+  "description": "One evidence package's execution coverage record (SEG-SREQ-035): every fresh in-scope test outcome, the specification it confirms, and — for an excused failing outcome — a copy of the waiver's expiry, denormalised so a later check needs no graph walk. An outcome the gate reports stale is excluded (SEG-SREQ-040); a stale outcome's exclusion is told once, here by omission and in the coverage report by name, never both.",
+  "type": "object",
+  "required": [
+    "outcomes"
+  ],
+  "additionalProperties": false,
+  "properties": {
+    "outcomes": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": [
+          "id",
+          "result",
+          "revision",
+          "confirms"
+        ],
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The outcome's case-local stable identifier."
+          },
+          "result": {
+            "enum": [
+              "passed",
+              "failed",
+              "error",
+              "skipped"
+            ],
+            "description": "The recorded result of the execution (SEG-SREQ-055)."
+          },
+          "revision": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The revision this outcome ran against (SEG-SREQ-062) — matches the package's own revision, or the outcome would have been excluded as stale."
+          },
+          "confirms": {
+            "type": "string",
+            "minLength": 1,
+            "description": "The case-local identifier of the test specification this outcome confirms."
+          },
+          "waiver": {
+            "type": "object",
+            "required": [
+              "id",
+              "expiry"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "id": {
+                "type": "string",
+                "minLength": 1,
+                "description": "The excusing waiver's case-local identifier."
+              },
+              "expiry": {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+                "description": "A copy of the waiver's own expiry, denormalised here so a release check needs no graph walk. The waiver record remains the single source of truth."
+              }
+            },
+            "description": "Present only for a failing outcome the coverage report reports as validly excused; absent for a passed outcome, a skipped outcome and an unwaived failing one."
+          }
+        }
+      }
+    }
+  }
+}

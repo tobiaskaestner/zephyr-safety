@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://affirmatrix.dev/case/schema/edge-base.schema.json",
+  "title": "Shared definitions for every edge record",
+  "description": "Referenced by the per-kind edge schemas and never used to validate a record directly. The per-kind schemas narrow the type and forbid anything they have not evaluated.",
+  "$defs": {
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$",
+      "description": "A SHA-256 digest, lowercase hex, exactly 64 characters. SHA-256 is fixed for the whole graph, so the digest needs no algorithm beside it (ADR-0005)."
+    },
+    "baseEdge": {
+      "type": "object",
+      "description": "The fields every edge record carries, whatever its kind.",
+      "required": [
+        "id",
+        "type",
+        "seg:from",
+        "seg:to",
+        "seg:linkState"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^https?://",
+          "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+        },
+        "type": {
+          "type": "string",
+          "pattern": "^seg:[A-Za-z]+$",
+          "description": "The edge kind, prefixed. Narrowed to a constant per kind."
+        },
+        "seg:from": {
+          "type": "string",
+          "pattern": "^https?://",
+          "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+        },
+        "seg:to": {
+          "type": "string",
+          "pattern": "^https?://",
+          "description": "An absolute IRI minted at serialization time. Opaque: its parts are never split back out, because a part may itself contain the separator (ADR-0007)."
+        },
+        "seg:linkState": {
+          "enum": [
+            "pending",
+            "active",
+            "directlyOutdated",
+            "transitivelySuspect",
+            "doublyOutdated",
+            "broken"
+          ],
+          "description": "The state the edge was last left in. Read from the record rather than recomputed: what was affirmed is a fact about the past, and comparing it against today is drift detection."
+        },
+        "seg:edgeHash": {
+          "$ref": "#/$defs/sha256",
+          "description": "The hash the edge was affirmed against, present exactly when there was an affirmation to record one."
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "seg:linkState": {
+                "const": "pending"
+              }
+            },
+            "required": [
+              "seg:linkState"
+            ]
+          },
+          "then": {
+            "not": {
+              "required": [
+                "seg:edgeHash"
+              ]
+            },
+            "description": "A pending edge was never affirmed, so it has no hash it was affirmed against; a placeholder would be indistinguishable from a real hash that mismatches."
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "seg:linkState": {
+                "const": "active"
+              }
+            },
+            "required": [
+              "seg:linkState"
+            ]
+          },
+          "then": {
+            "required": [
+              "seg:edgeHash"
+            ],
+            "description": "An active edge claims both endpoints are unchanged since it was affirmed, which is only checkable against the hash it was affirmed with."
+          }
+        }
+      ]
+    }
+  }
+}
