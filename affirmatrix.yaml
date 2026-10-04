@@ -1,0 +1,90 @@
+# affirmatrix configuration for the Zephyr safety case.
+#
+# Invocation parameters only: where the case lineage lives, which checkout
+# is the implementation, and where the readers find the exports. Nothing
+# here enters a hash. Relative paths resolve against this file. The readers
+# anchor every hash at a path relative to the named repository. The
+# configuration names no test run: a run is given as a bundle on the command
+# line.
+#
+# The exports come from the Prague documentation build (build-prague/zephyr/docs).
+# That build used the same revisions as these checkouts: safety, zephyr,
+# doc/reqmgmt and tools/zdocs. A later documentation build changes only the
+# paths below.
+
+case: ./case
+
+implementation: zephyr
+
+repositories:
+  # The Zephyr tree: test specifications and implementations.
+  zephyr: ../zephyr
+  # The StrictDoc sources of the requirements.
+  reqmgmt: ../doc/reqmgmt
+
+producer:
+  requirements:
+    repository: reqmgmt
+    export: ../build-prague/zephyr/docs/deploy/html/requirements/needs.json
+    types: [req]
+    # StrictDoc's parent relation. It points from a child to its parent.
+    parent-field: trace
+    # Each generated requirements page, mapped to the .sdoc file that holds it.
+    source-map:
+      generated/zephyr_software_requirements_atomic_service: ../doc/reqmgmt/docs/software_requirements/atomic_service.sdoc
+      generated/zephyr_software_requirements_c_library: ../doc/reqmgmt/docs/software_requirements/c_library.sdoc
+      generated/zephyr_software_requirements_condition_variables: ../doc/reqmgmt/docs/software_requirements/condition_variables.sdoc
+      generated/zephyr_software_requirements_device_driver_api: ../doc/reqmgmt/docs/software_requirements/device_driver_api.sdoc
+      generated/zephyr_software_requirements_events: ../doc/reqmgmt/docs/software_requirements/events.sdoc
+      generated/zephyr_software_requirements_exception_and_error_handling: ../doc/reqmgmt/docs/software_requirements/exception_and_error_handling.sdoc
+      generated/zephyr_software_requirements_fifos: ../doc/reqmgmt/docs/software_requirements/fifos.sdoc
+      generated/zephyr_software_requirements_file_system: ../doc/reqmgmt/docs/software_requirements/file_system.sdoc
+      generated/zephyr_software_requirements_floating_point_services: ../doc/reqmgmt/docs/software_requirements/floating_point.sdoc
+      generated/zephyr_software_requirements_futex: ../doc/reqmgmt/docs/software_requirements/futex.sdoc
+      generated/zephyr_software_requirements_hardware_architecture_interface: ../doc/reqmgmt/docs/software_requirements/hw_arch_interface.sdoc
+      generated/zephyr_software_requirements_interrupts: ../doc/reqmgmt/docs/software_requirements/interrupts.sdoc
+      generated/zephyr_software_requirements_kernel_timing: ../doc/reqmgmt/docs/software_requirements/kernel_timing.sdoc
+      generated/zephyr_software_requirements_lifos: ../doc/reqmgmt/docs/software_requirements/lifos.sdoc
+      generated/zephyr_software_requirements_logging: ../doc/reqmgmt/docs/software_requirements/logging.sdoc
+      generated/zephyr_software_requirements_mailboxes: ../doc/reqmgmt/docs/software_requirements/mailboxes.sdoc
+      generated/zephyr_software_requirements_memory_objects: ../doc/reqmgmt/docs/software_requirements/memory_objects.sdoc
+      generated/zephyr_software_requirements_memory_protection: ../doc/reqmgmt/docs/software_requirements/memory_protection.sdoc
+      generated/zephyr_software_requirements_message_queues: ../doc/reqmgmt/docs/software_requirements/message_queue.sdoc
+      generated/zephyr_software_requirements_multicore_and_smp: ../doc/reqmgmt/docs/software_requirements/smp.sdoc
+      generated/zephyr_software_requirements_mutex: ../doc/reqmgmt/docs/software_requirements/mutex.sdoc
+      generated/zephyr_software_requirements_object_cores: ../doc/reqmgmt/docs/software_requirements/object_cores.sdoc
+      generated/zephyr_software_requirements_pipes: ../doc/reqmgmt/docs/software_requirements/pipe.sdoc
+      generated/zephyr_software_requirements_polling: ../doc/reqmgmt/docs/software_requirements/poll.sdoc
+      generated/zephyr_software_requirements_power_management: ../doc/reqmgmt/docs/software_requirements/power_management.sdoc
+      generated/zephyr_software_requirements_queues: ../doc/reqmgmt/docs/software_requirements/queues.sdoc
+      generated/zephyr_software_requirements_semaphores: ../doc/reqmgmt/docs/software_requirements/semaphore.sdoc
+      generated/zephyr_software_requirements_stacks: ../doc/reqmgmt/docs/software_requirements/stacks.sdoc
+      generated/zephyr_software_requirements_system_initialization: ../doc/reqmgmt/docs/software_requirements/system_initialization.sdoc
+      generated/zephyr_software_requirements_thread_scheduling: ../doc/reqmgmt/docs/software_requirements/thread_scheduling.sdoc
+      generated/zephyr_software_requirements_threads: ../doc/reqmgmt/docs/software_requirements/threads.sdoc
+      generated/zephyr_software_requirements_timers: ../doc/reqmgmt/docs/software_requirements/timers.sdoc
+      generated/zephyr_software_requirements_tracing: ../doc/reqmgmt/docs/software_requirements/tracing.sdoc
+      generated/zephyr_software_requirements_virtual_memory: ../doc/reqmgmt/docs/software_requirements/virtual_memory.sdoc
+      generated/zephyr_software_requirements_work_queues: ../doc/reqmgmt/docs/software_requirements/work_queues.sdoc
+      generated/zephyr_system_requirements: ../doc/reqmgmt/docs/system_requirements/index.sdoc
+  implementations:
+    repository: zephyr
+    export: ../build-prague/zephyr/docs/deploy/html/api-documentation/needs.json
+    doxygen: ../build-prague/zephyr/docs/deploy/xml/dox-zephyr-safety-api
+    types: [impl]
+    # The api Doxygen paths begin with zephyr/. The headers are under include/.
+    path-root: include/
+    # The first case covers the LIFO API only.
+    need-ids:
+      - IMPL-K_LIFO_DEFINE
+      - IMPL-k_lifo_put
+      - IMPL-k_lifo_alloc_put
+      - IMPL-k_lifo_get
+  specifications:
+    repository: zephyr
+    export: ../build-prague/zephyr/docs/deploy/html/test-specification/needs.json
+    # The export also holds test_procedure needs. They are not test specifications.
+    types: [test_case]
+    doxygen: ../build-prague/zephyr/docs/deploy/xml/dox-zephyr-safety-testspec
+    # Doxygen names the test files relative to the workspace root.
+    doxygen-prefix: zephyr/
