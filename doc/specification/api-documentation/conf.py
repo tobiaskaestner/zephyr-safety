@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
-from zdocs_conf import configure
+from zdocs_conf import configure, need_layout
 
 configure(
     globals(),
@@ -31,3 +31,8 @@ if "committee" in intersphinx_mapping:
 # doxylink is supplied by the engine and its mapping comes from the registry —
 # one role per `kind: doxygen` document, e.g. :dox_api:`k_queue_append`.
 todo_include_todos = True
+
+# The zdocs card for the API symbols (`symbolneeds`): the text links to the
+# symbol's Doxygen page; the fields are the requirements it satisfies.
+needs_layouts = {"zdocs_implementation": need_layout(fields=[])}
+needs_default_layout = "zdocs_implementation"

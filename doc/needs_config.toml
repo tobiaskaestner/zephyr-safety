@@ -47,7 +47,7 @@ style = "node"
 directive = "test_result"
 title = "Test Result"
 prefix = "TRESULT_"
-color = "#FCE4D6"
+color = "#F8DCE4"
 style = "node"
 
 # One per API symbol carrying a Doxygen \satisfies, emitted by the zdocs
@@ -98,45 +98,45 @@ style = "node"
 
 [needs.links.verifies]
 description = "Test case verifies a requirement"
-incoming = "verified by"
-outgoing = "verifies"
+incoming = "Verified by"
+outgoing = "Verifies"
 
 [needs.links.result_of]
 description = "Test result is an outcome of a test case"
-incoming = "has results"
-outgoing = "result of"
+incoming = "Has results"
+outgoing = "Result of"
 
 [needs.links.covers]
 description = "Test result covers a requirement (derived from its verifying test case)"
-incoming = "covered by"
-outgoing = "covers"
+incoming = "Covered by"
+outgoing = "Covers"
 
 # Mapped through symbolneeds_need_links. Declared here, project-wide, so the
 # requirements document shows the incoming side on every requirement.
 [needs.links.satisfies]
 description = "API symbol satisfies a requirement (Doxygen \\satisfies)"
-incoming = "satisfied by"
-outgoing = "satisfies"
+incoming = "Satisfied by"
+outgoing = "Satisfies"
 
 # Mapped through testcoverage_need_links: an adequacy need assesses its
 # requirement.
 [needs.links.assesses]
 description = "Adequacy need assesses a requirement (per-test coverage)"
-incoming = "assessed by"
-outgoing = "assesses"
+incoming = "Assessed by"
+outgoing = "Assesses"
 
 # Not an engine role: emitted by design_gen.py (the `design` directive's own
 # option name). "fulfilled by" keeps "satisfied by" meaning code only.
 [needs.links.fulfills]
 description = "Design element fulfills a requirement"
-incoming = "fulfilled by"
-outgoing = "fulfills"
+incoming = "Fulfilled by"
+outgoing = "Fulfills"
 
 # Not an engine role: emitted by gen_requirements.py, between requirements only.
 [needs.links.trace]
 description = "Requirement refines a parent requirement (StrictDoc Parent relation)"
-incoming = "refined by"
-outgoing = "traces"
+incoming = "Refined by"
+outgoing = "Traces"
 
 # -- Custom fields ------------------------------------------------------------
 #

@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
-from zdocs_conf import configure
+from zdocs_conf import configure, need_layout
 
 configure(
     globals(),
@@ -41,3 +41,15 @@ external_content_contents.append(
 external_content_contents.append(
     (Path(os.environ["SAFETY_COMPONENT_GEN_RST_DIR"]), "traceability/*.rst")
 )
+
+# A requirement can have hundreds of test results (TR-*) that cover it, and
+# the list hides the rest of the need. "assessed by" names the adequacy need of
+# the requirement. The links stay in needs.json; the test report and the
+# coverage tables show them.
+needs_layouts = {
+    "zdocs_requirement": need_layout(
+        fields=[("rtype", "Kind"), ("component", "Component")],
+        hide_backlinks=["covers", "assesses"],
+    )
+}
+needs_default_layout = "zdocs_requirement"

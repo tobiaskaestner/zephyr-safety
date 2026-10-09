@@ -10,7 +10,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
-from zdocs_conf import configure
+from zdocs_conf import configure, need_layout
 
 configure(
     globals(),
@@ -38,3 +38,8 @@ todo_include_todos = True
 external_content_contents.append(
     (Path(os.environ["SAFETY_DESIGN_GEN_RST_DIR"]), "generated/*.rst")
 )
+
+# The zdocs card for the design elements: the text links to the authored
+# design in the Zephyr docs; the fields are the requirements each fulfills.
+needs_layouts = {"zdocs_design": need_layout(fields=[])}
+needs_default_layout = "zdocs_design"

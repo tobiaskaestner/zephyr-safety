@@ -200,7 +200,7 @@ link renders on both ends. A requirement's page (default layout) lists **verifie
   `coverage/test_matrix.json`, `zephyr.sha`). This run is not the run of the test results
   (`ZDOCS_TWISTER_OUT`). It emits one `adequacy` need per requirement that has a verifying case in
   the run: id `ADQ-<run>/<req>`, link `assesses` ("assessed by" on the requirement), fields
-  `verdict`, `evidence`, `coverage_run`, `judged_symbols`, `symbol_hits`, layout `adequacy`
+  `verdict`, `evidence`, `coverage_run`, `judged_symbols`, `symbol_hits`, layout `zdocs_adequacy`
   (conf.py). The run name is set on the page (`:run: twister-cov-full-run`), because it is part
   of every id; change it together with `-DZDOCS_COVERAGE_OUT`. The
   verdict is `true` if the own verifying tests run a body (`z_impl_`, `z_vrfy_`, plain, header

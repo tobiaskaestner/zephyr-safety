@@ -30,9 +30,12 @@ The requirement page shows the need under "assessed by".
 ``no-impl``
    No symbol satisfies the requirement.
 
-Each need lists its symbols and their bodies (``z_impl_``, ``z_vrfy_``, a plain
-definition, or a header ``static inline``). For each body, it gives the lines
-that each own test ran, and the other tests that ran the body.
+Each need has the title of its requirement and says why its verdict is what it
+is. A table gives each body of the satisfying symbols (``z_impl_``,
+``z_vrfy_``, a plain definition, or a header ``static inline``): the lines that
+the own tests ran, of the lines that any test of the run ran, and the number of
+other test cases that ran it. For a body that the own tests never run, the need
+names the other tests that do.
 
 The coverage run is separate from the run of the test results. The coverage
 run builds with instrumentation, on one board. The build sets it with
@@ -44,4 +47,4 @@ run builds with instrumentation, on one board. The build sets it with
 
 .. testcoverage::
    :run: twister-cov-full-run
-   :layout: adequacy
+   :layout: zdocs_adequacy

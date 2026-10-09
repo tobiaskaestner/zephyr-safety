@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
-from zdocs_conf import configure
+from zdocs_conf import configure, need_layout
 
 configure(
     globals(),
@@ -57,27 +57,17 @@ if not twister_output_dir:
     twister_output_dir = str(Path(os.environ["ZDOCS_WEST_TOPDIR"]) / "twister-out")
 
 # Presentation stays per-document; the shared vocabulary is in needs_config.toml.
+# "Depends on" is not a field here: the test case text says it, with Source and
+# See also. Not the incoming "has results" links: a test case can have dozens of
+# test results (TR-*), one per platform and run. The links stay in needs.json;
+# the test report shows them.
 needs_layouts = {
-    "safety": {
-        "grid": "simple",
-        "layout": {
-            "head": [
-                '<<meta("type_name")>> <<meta_id()>>: **<<meta("title")>>** '
-                '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
-                'visible="icon:arrow-right-circle", initial=False)>>'
-            ],
-            "meta": [
-                '<<meta("test_function", prefix="\\*\\*test function:\\*\\* ")>>',
-                '<<meta("test_module",   prefix="\\*\\*test module:\\*\\* ")>>',
-                '<<meta("suite",         prefix="\\*\\*suite:\\*\\* ")>>',
-                '<<meta("depends_on",    prefix="\\*\\*depends on:\\*\\* ")>>',
-                '<<meta("status",        prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
-                "<<meta_links_all()>>",
-            ],
-        },
-    }
+    "zdocs_test_case": need_layout(
+        fields=[("test_function", "Function"), ("test_module", "Module"), ("suite", "Suite")],
+        hide_backlinks=["result_of"],
+    )
 }
-needs_default_layout = "safety"
+needs_default_layout = "zdocs_test_case"
 
 
 def setup(app):

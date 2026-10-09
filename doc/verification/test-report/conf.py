@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
-from zdocs_conf import configure
+from zdocs_conf import configure, need_layout
 
 # skip_classes is a downstream extension (see _extensions/README.rst): appended
 # after zdocs_conf, never before, so it cannot shadow an engine module.
@@ -55,53 +55,31 @@ external_content_contents.append(
 if not twister_output_dir:
     twister_output_dir = str(Path(os.environ["ZDOCS_WEST_TOPDIR"]) / "twister-out")
 
+# The zdocs card for a test result. The status is in its head. A field
+# without a value (no reason for a passed result) shows no row.
 needs_layouts = {
-    "test_result": {
-        "grid": "simple",
-        "layout": {
-            "head": [
-                '<<meta("type_name")>> <<meta_id()>>: **<<meta("title")>>** '
-                '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
-                'visible="icon:arrow-right-circle", initial=False)>>'
-            ],
-            "meta": [
-                '<<meta("test_module",    prefix="\\*\\*test module:\\*\\* ")>>',
-                '<<meta("platform",       prefix="\\*\\*platform:\\*\\* ")>>',
-                '<<meta("scenario",       prefix="\\*\\*scenario:\\*\\* ")>>',
-                '<<meta("twister_id",     prefix="\\*\\*twister id:\\*\\* ")>>',
-                '<<meta("execution_time", prefix="\\*\\*time:\\*\\* ", show_empty=True)>>',
-                '<<meta("status",         prefix="\\*\\*status:\\*\\* ", show_empty=True)>>',
-                '<<meta("reason",         prefix="\\*\\*reason:\\*\\* ")>>',
-                '<<meta("depends_met",    prefix="\\*\\*depends met:\\*\\* ")>>',
-                '<<meta("skip_class",     prefix="\\*\\*skip class:\\*\\* ")>>',
-                "<<meta_links_all()>>",
-            ],
-        },
-    }
+    "zdocs_test_result": need_layout(
+        fields=[
+            ("platform", "Platform"),
+            ("scenario", "Scenario"),
+            ("test_module", "Module"),
+            ("twister_id", "Twister ID"),
+            ("execution_time", "Time (s)"),
+            ("reason", "Reason"),
+            ("skip_class", "Skip class"),
+            ("depends_met", "Depends met"),
+        ],
+    )
 }
-needs_default_layout = "test_result"
+needs_default_layout = "zdocs_test_result"
 
 # The adequacy needs of adequacy.rst (zdocs `testcoverage ... :layout:
-# adequacy`) get their own layout: their fields are not the fields of a test
-# result.
-needs_layouts["adequacy"] = {
-    "grid": "simple",
-    "layout": {
-        "head": [
-            '<<meta("type_name")>> <<meta_id()>>: **<<meta("title")>>** '
-            '<<collapse_button("meta", collapsed="icon:arrow-down-circle", '
-            'visible="icon:arrow-right-circle", initial=False)>>'
-        ],
-        "meta": [
-            '<<meta("verdict",        prefix="\\*\\*verdict:\\*\\* ", show_empty=True)>>',
-            '<<meta("evidence",       prefix="\\*\\*evidence:\\*\\* ")>>',
-            '<<meta("coverage_run",   prefix="\\*\\*coverage run:\\*\\* ")>>',
-            '<<meta("judged_symbols", prefix="\\*\\*judged symbols:\\*\\* ")>>',
-            '<<meta("symbol_hits",    prefix="\\*\\*symbol hits:\\*\\* ")>>',
-            "<<meta_links_all()>>",
-        ],
-    },
-}
+# zdocs_adequacy`) get their own card: their fields are not the fields of a test
+# result, and the verdict is the pill in the head.
+# The body has the symbols, the run is in the summary of the page: the card
+# shows the evidence only. coverage_run, judged_symbols and symbol_hits stay
+# in the need data, for tables and filters.
+needs_layouts["zdocs_adequacy"] = need_layout(fields=[("evidence", "Evidence")], pill="verdict")
 
 # The per-test coverage run for adequacy.rst comes from ZDOCS_COVERAGE_OUT
 # (zdocs sets coverage_output_dir). It has no fallback: without a run, the page
