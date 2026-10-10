@@ -125,6 +125,11 @@ documents:
       # in the old CMakeLists, and fixes Phase 0 defect B2: the report used to
       # correlate against needs_external_needs[0], which was `requirements`.
       spec: test-specification
+      # The place of each body in adequacy.rst links to its source listing:
+      # the detailed design lists the kernel .c files and internal headers
+      # (SOURCE_BROWSER), the API the public headers (VERBATIM_HEADERS). The
+      # report waits for both Doxygen documents.
+      coverage_source_docs: [dox-zephyr-safety-detailed-design, dox-zephyr-safety-api]
 
   # -- Reference --------------------------------------------------------------
 
