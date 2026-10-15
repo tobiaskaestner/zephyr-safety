@@ -26,6 +26,9 @@ configure(
         "zephyr.application",
         "zephyr.link-roles",
         "strictdoc_runner",
+        # The committee's diagrams are SVG, which xelatex cannot embed: the
+        # PDF gets a PDF copy of each (rsvg-convert).
+        "sphinxcontrib.rsvgconverter",
     ],
 )
 
