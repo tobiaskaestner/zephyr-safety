@@ -71,7 +71,8 @@ Rank(o, t) == Cardinality({u \in W(o) : Before(u, t)}) + 1
 Best(o) == CHOOSE t \in W(o) : Rank(o, t) = 1
 
 \* The wait queue of o as a sequence, head first. This is the view of the
-\* trace records and of the generated tests.
+\* trace records and of the generated tests. For TLC only: Apalache does
+\* not accept a range with a bound that depends on the state.
 Ordered(o) == [i \in 1..Cardinality(W(o)) |-> CHOOSE t \in W(o) : Rank(o, t) = i]
 
 -----------------------------------------------------------------------------
@@ -126,14 +127,19 @@ Restamp(t) ==
 
 \* @kind invariant
 TypeOK ==
-    /\ pendedOn \in [Threads -> Objs \cup {None}]
-    /\ stamp \in [Threads -> 0..Cardinality(Threads)]
+    /\ DOMAIN pendedOn = Threads
+    /\ DOMAIN stamp = Threads
+    /\ \A t \in Threads :
+          /\ pendedOn[t] \in Objs \cup {None}
+          /\ 0 <= stamp[t] /\ stamp[t] <= Cardinality(Threads)
 
 \* The stamps of the waiters are 1..N, and each stamp is unique. A thread
-\* that does not wait has the stamp 0.
+\* that does not wait has the stamp 0. (N unique values in 1..N are all
+\* of 1..N.)
 \* @kind invariant
 StampsNormal ==
-    /\ {stamp[t] : t \in Waiting} = 1..Cardinality(Waiting)
+    /\ \A t \in Waiting : 1 <= stamp[t] /\ stamp[t] <= Cardinality(Waiting)
+    /\ \A a, b \in Waiting : a # b => stamp[a] # stamp[b]
     /\ \A t \in Threads \ Waiting : stamp[t] = 0
 
 \* Before is a strict total order on the waiters of each object. Thus Best
@@ -145,9 +151,11 @@ OrderIsTotal ==
         /\ a # b => (Before(a, b) \/ Before(b, a))
         /\ Before(a, b) => ~Before(b, a)
 
-\* The head of the ordered view is the waiter that a wake selects.
+\* The waiter that a wake selects is the head of the queue: the only
+\* waiter with the rank 1.
 \* @kind invariant
 BestIsHead ==
-    \A o \in Objs : W(o) # {} => Ordered(o)[1] = Best(o)
+    \A o \in Objs : W(o) # {} =>
+        \A t \in W(o) : (Rank(o, t) = 1) <=> (t = Best(o))
 
 =============================================================================

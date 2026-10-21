@@ -273,8 +273,16 @@ object module calls them:
 
 This is standard TLA+. TLC accepts it. Apalache also accepts operators as
 arguments (it expands them), but it does not accept ``CONSTANT``
-operators. The step 2.0 work must confirm this with a small Apalache run
-before the template grows.
+operators.
+
+A probe confirmed this on 2026-10-21 with Apalache 0.62.4. The probe has
+a template with operator arguments, a semaphore that calls it, and
+``lib/WaitQueue.tla`` below it. Apalache type-checks it and finds no error
+up to 8 steps. With a planted defect in an object operator, Apalache and
+TLC both report the violation. The probe gave three rules (see
+`Apalache`_): an object operator that the template calls has a type
+annotation, an argument is a named operator and not a ``LAMBDA``, and a
+range has constant bounds.
 
 Two grains
 **********
@@ -397,9 +405,24 @@ invariants and handles large integers, which TLC cannot list. It comes in
 roadmap step 5. The specs keep a style that it can read from the start:
 
 - Type annotations on each variable and constant (``\* @type: ...;``).
+- A type annotation on each operator that reads a record field of its
+  parameter, and on each generic helper (``Seq(a) => Set(a)``). Apalache
+  cannot infer the record type from ``r.count`` alone. A type alias
+  (``\* @typeAlias: semRes = { count: Int, limit: Int };``) keeps the
+  annotations short.
 - No ``CONSTANT`` operators (see `Composition pattern`_).
+- No ``LAMBDA`` as an operator argument. A ``LAMBDA`` cannot have an
+  annotation, so a ``LAMBDA`` that reads a record field does not
+  type-check. Use a named operator.
+- A range has constant bounds: ``1..Cardinality(W(o))`` is not
+  accepted. ``WaitQueue!Ordered`` has such a range, so it is for TLC
+  only (trace views).
 - ``CHOOSE`` only over finite sets.
 - Records with a fixed set of fields.
+- No ``RECURSIVE`` operators (Apalache needs unroll limits for them).
+
+The doc extension takes ``@type`` and ``@typeAlias`` lines as tags, so
+they do not show in the rendered prose.
 
 Conventions
 ***********
@@ -450,7 +473,7 @@ Layout
      objects/          one module for each kernel object
      mc/               model configurations, expected.txt
      trace/            trace specs and the schema of the trace records
-     tools/            run_tlc.sh, tla2tools.sha256
+     tools/            run_tlc.sh, tla2tools.sha256, apalache.sha256
 
 Running
 *******
@@ -465,10 +488,17 @@ stops if the hash of the jar is not the hash in
    spec/tla/tools/run_tlc.sh              # all models in mc/expected.txt
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
 
+Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
+no run script yet. The library modules type-check:
+
+.. code-block:: console
+
+   cd spec/tla/lib && apalache-mc typecheck WaitQueue.tla
+
 Open points
 ***********
 
-1. Confirm with Apalache that operators as arguments work for the
+1. Done (2026-10-21): Apalache accepts operators as arguments for the
    template (see `Composition pattern`_).
 2. Abort: model ``k_thread_abort()`` of a waiter, and state the
    documented limits (``kernel.h``) as expected violations. The mutex has
