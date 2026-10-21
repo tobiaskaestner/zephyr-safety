@@ -1,0 +1,41 @@
+# Expected test inventory of the twister scenario kernel.unit.sem.no_runtime_checks.
+# Each line is "<state> <suite>.<test>". The state is "run" or "skip".
+# To regenerate, see "Test inventory" in tests/kernel/unit/README.rst.
+run sem_unit.test_count_get_returns_count_without_lock
+run sem_unit.test_give_count_above_limit_grows
+run sem_unit.test_give_hands_over_to_waiting_thread
+run sem_unit.test_give_increments_count
+run sem_unit.test_give_saturates_at_limit
+run sem_unit.test_give_wakes_one_thread_only
+run sem_unit.test_init_accepts_boundary_values
+run sem_unit.test_init_call_order
+run sem_unit.test_init_initializes_wait_queue
+run sem_unit.test_init_no_runtime_checks_accepts_invalid
+skip sem_unit.test_init_rejects_count_above_limit
+skip sem_unit.test_init_rejects_zero_limit
+run sem_unit.test_init_sets_count_and_limit
+run sem_unit.test_lock_give_no_ready_thread_unlocks
+skip sem_unit.test_lock_give_poll_ready_reschedules
+run sem_unit.test_lock_give_wake_reschedules
+run sem_unit.test_lock_not_used_by_init
+run sem_unit.test_lock_protects_count
+run sem_unit.test_lock_reset_no_ready_thread_unlocks
+skip sem_unit.test_lock_reset_poll_ready_reschedules
+run sem_unit.test_lock_reset_wake_reschedules
+run sem_unit.test_lock_shared_by_all_semaphores
+run sem_unit.test_lock_take_available_unlocks
+run sem_unit.test_lock_take_busy_unlocks
+run sem_unit.test_lock_take_wait_hands_lock_to_pend
+run sem_unit.test_poll_give_no_signal_after_wake
+skip sem_unit.test_poll_give_signals_at_limit
+run sem_unit.test_poll_not_called_without_config
+skip sem_unit.test_poll_reset_signals_after_wake
+run sem_unit.test_reset_sets_count_to_zero
+run sem_unit.test_reset_wakes_all_waiting_threads
+run sem_unit.test_take_available_does_not_wait
+run sem_unit.test_take_decrements_count
+run sem_unit.test_take_in_isr_with_wait_refused_by_scheduler
+run sem_unit.test_take_in_isr_without_wait
+run sem_unit.test_take_returns_wait_result
+run sem_unit.test_take_unavailable_no_wait_returns_ebusy
+run sem_unit.test_take_unavailable_waits
