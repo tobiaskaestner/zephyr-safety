@@ -46,7 +46,7 @@ VARIABLES
     \* The last operation on the queue and its cost in steps (loop
     \* iterations of the backend). n is the number of armed entries before
     \* the operation.
-    \* @type: [op: Str, n: Int, cost: Int];
+    \* @type: { op: Str, n: Int, cost: Int };
     tqCost
 
 ASSUME Backend \in {"DLIST", "MINHEAP"}
@@ -55,18 +55,20 @@ ASSUME HeapCapacity \in Nat
 -----------------------------------------------------------------------------
 (* Helpers *)
 
+\* @type: Seq(a) => Set(a);
 Range(s) == {s[i] : i \in DOMAIN s}
 
 \* The smallest k with 2^k >= n + 1: the height of a binary heap with n + 1
 \* entries.
-RECURSIVE Pow2(_)
-Pow2(k) == IF k = 0 THEN 1 ELSE 2 * Pow2(k - 1)
-Log2Ceil(n) == CHOOSE k \in 0..n : Pow2(k) >= n + 1 /\ (k = 0 \/ Pow2(k - 1) < n + 1)
+\* @type: Int => Int;
+Log2Ceil(n) == CHOOSE k \in 0..n : 2^k >= n + 1 /\ (k = 0 \/ 2^(k - 1) < n + 1)
 
 \* Sequence s with element e inserted at position i (1..Len(s) + 1).
+\* @type: (Seq(a), Int, a) => Seq(a);
 InsertAt(s, i, e) == SubSeq(s, 1, i - 1) \o <<e>> \o SubSeq(s, i, Len(s))
 
 \* Sequence s without element e.
+\* @type: (Seq(a), a) => Seq(a);
 RemoveElem(s, e) == SelectSeq(s, LAMBDA x : x # e)
 
 NoCost == [op |-> "none", n |-> 0, cost |-> 0]
