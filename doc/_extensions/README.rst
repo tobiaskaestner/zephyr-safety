@@ -100,6 +100,8 @@ Tag                        Meaning                                        Need f
                            (repeatable)                                   (joined, ``;``)
 ``@expected violation``    TLC must report a counterexample               ``expected``
                                                                           (``hold`` / ``violation``)
+``@type: <type>;``         the type annotation of Apalache (also          (none)
+                           ``@typeAlias``). Not shown.
 =========================  =============================================  =====================
 
 The extension also sets ``tla_module``, ``source_file`` (relative to

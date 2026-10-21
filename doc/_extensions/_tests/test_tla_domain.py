@@ -202,6 +202,9 @@ def test_the_warnings(app, warning):
         assert message in text, (message, text)
     # A duplicate is not indexed a second time: no docutils "Duplicate ID".
     assert "Duplicate ID" not in text
+    # The type annotations of Apalache are known tags, not prose.
+    assert "unknown TLA+ tag @type" not in text
+    assert "$pair" not in html(app, "index")
 
 
 def test_infer_kind(ksem_copy):

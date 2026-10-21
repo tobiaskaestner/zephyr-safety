@@ -104,8 +104,9 @@ KINDS = ("definition", "action", "invariant", "liveness", "probe")
 NEED_KINDS = ("invariant", "liveness", "probe")
 #: The values of the ``@expected`` tag.
 EXPECTED = ("hold", "violation")
-#: The tags that the extension knows.
-TAGS = ("expresses", "kind", "c-function", "expected")
+#: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
+#: annotations of Apalache: they are not prose, and the extension does not show them.
+TAGS = ("expresses", "kind", "c-function", "expected", "type", "typeAlias")
 
 CSS_NAME = "tla_domain.css"
 #: The start of the rawsource of a rendered block (see code_nodes()).
