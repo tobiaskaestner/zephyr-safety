@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Kconfig options of the kernel unit tests. A test application sources
+# this file from its own Kconfig file, before Kconfig.zephyr.
+
+config KERNEL_UNIT_USERSPACE
+	bool "Build the unit with user mode support"
+	select ARCH_HAS_USERSPACE
+	select CPU_HAS_MPU
+	help
+	  The unit_testing architecture has no user mode support, so
+	  CONFIG_USERSPACE cannot be enabled. This option tells Kconfig that
+	  the architecture has user mode support and an MPU. Then a test
+	  scenario can enable CONFIG_MPU and CONFIG_USERSPACE, and the unit
+	  under test compiles with its user mode code (the z_vrfy_*
+	  functions). No user thread runs.
+
+# Second definition of the ztest option. The first one depends on
+# COVERAGE_GCOV (target builds). On the unit_testing board,
+# common/src/gcov_native.c is the gcov backend of the ztest rule. Thus
+# twister --coverage-per-test works for the unit tests.
+config ZTEST_COVERAGE_PER_TEST
+	bool "Dump code coverage data per individual test"
+	depends on COVERAGE_NATIVE_GCOV
+	help
+	  Reset the gcov counters before each test and write a separate,
+	  test-tagged set of .gcda files after each test (named
+	  "<gcda-path>@@<suite>.<test>").
