@@ -12,6 +12,10 @@ sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
 from zdocs_conf import configure, need_layout
 
+# tla_domain is a downstream extension (see _extensions/README.rst): appended
+# after zdocs_conf, never before, so it cannot shadow an engine module.
+sys.path.append(os.environ["SAFETY_EXTENSIONS_DIR"])
+
 configure(
     globals(),
     doc_dir=Path(__file__).resolve().parent,
@@ -21,6 +25,7 @@ configure(
     extensions=[
         "sphinx_tabs.tabs",
         "sphinx.ext.todo",
+        "tla_domain",
     ],
 )
 
@@ -38,6 +43,12 @@ todo_include_todos = True
 external_content_contents.append(
     (Path(os.environ["SAFETY_DESIGN_GEN_RST_DIR"]), "generated/*.rst")
 )
+
+# The TLA+ spec library (formal-model.rst). The source_file field of a model
+# property is relative to the safety repository, the repository of the spec.
+tla_spec_dir = Path(os.environ["SAFETY_TLA_SPEC_DIR"])
+tla_spec_paths = [str(tla_spec_dir / "lib")]
+tla_source_root = str(tla_spec_dir.parents[1])
 
 # The zdocs card for the design elements: the text links to the authored
 # design in the Zephyr docs; the fields are the requirements each fulfills.

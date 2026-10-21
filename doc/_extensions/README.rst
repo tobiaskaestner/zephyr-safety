@@ -26,7 +26,8 @@ Modules
 ``tla_domain.py`` (with ``tla_lexer.py``, ``tla_unicode.py``, ``tla_extract.py``, ``tla_static/``)
     The ``tla`` domain: it shows the TLA+ specs (``spec/tla/*.tla``) in a
     document. The ASCII ``.tla`` files stay the source for TLC and Apalache.
-    Not used by a document yet. The tests are in ``_tests/``.
+    Used by ``architecture`` (``formal-model.rst``). The tests are in
+    ``_tests/``.
 
     - ``tla_lexer.py``: a Pygments lexer for TLA+ (ASCII and Unicode), names
       ``tla`` and ``tlaplus``. ``tla-unicode`` shows ASCII as Unicode.
@@ -128,55 +129,17 @@ ASCII column instead (spaces after each symbol). ``tla_unicode = False``
 shows ASCII. The browser font must have the symbols (see
 ``tla_static/tla_domain.css``).
 
-**Vocabulary.** The type, the link and the fields are not in
-``needs_config.toml`` yet. The test project (``_tests/roots/test-tla``)
-declares them. The proposed change of ``needs_config.toml``:
+**Vocabulary.** ``doc/needs_config.toml`` declares the need type ``prop``,
+the link ``expresses`` and the fields ``kind``, ``expected``,
+``tla_module`` and ``c_function``. A model property also uses the fields
+``source_file`` and ``source_line`` of the design elements. The test
+project (``_tests/roots/test-tla``) declares the same vocabulary in its
+``conf.py``.
 
-.. code-block:: toml
-
-    # One per model property of a TLA+ spec, emitted by tla:property
-    # (doc/_extensions/tla_domain.py; ids PROP-<Module>-<Name>).
-    [[needs.types]]
-    directive = "prop"
-    title = "Model Property"
-    prefix = "PROP_"
-    color = "#E8F4E4"
-    style = "node"
-
-    # Not an engine role: emitted by tla_domain from the @expresses tags.
-    [needs.links.expresses]
-    description = "Model property expresses a requirement (TLA+ @expresses)"
-    incoming = "Expressed by"
-    outgoing = "Expresses"
-
-    # kind, expected, tla_module, c_function: set by tla_domain on prop needs.
-    [needs.fields.kind]
-    description = "Kind of a model property (invariant / action / liveness / probe)"
-    nullable = true
-    [needs.fields.kind.schema]
-    type = "string"
-
-    [needs.fields.expected]
-    description = "Expected TLC result of a model property (hold / violation)"
-    nullable = true
-    [needs.fields.expected.schema]
-    type = "string"
-
-    [needs.fields.tla_module]
-    description = "TLA+ module of a model property"
-    nullable = true
-    [needs.fields.tla_module.schema]
-    type = "string"
-
-    [needs.fields.c_function]
-    description = "C functions that a TLA+ action models, joined with '; '"
-    nullable = true
-    [needs.fields.c_function.schema]
-    type = "string"
-
-The ``source_file`` and ``source_line`` fields exist already. Their
-descriptions name the zephyr tree: change them to "relative to the
-repository of the source".
+**Wiring.** ``doc/CMakeLists.txt`` gives the Sphinx builds the directory of
+the spec library as ``SAFETY_TLA_SPEC_DIR``. The ``conf.py`` of the
+architecture sets ``tla_spec_paths`` (``spec/tla/lib``) and
+``tla_source_root`` (the safety repository) from it.
 
 **Tests.** Run them with the Python environment of the workspace::
 
