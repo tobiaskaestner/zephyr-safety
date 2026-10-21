@@ -1,0 +1,55 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/obj_core.c:
+# - CONFIG_OBJ_CORE: the unit itself. Each scenario enables it.
+#   CONFIG_OBJ_CORE_SYSTEM has no prompt and is always enabled with it.
+# - CONFIG_OBJ_CORE_STATS: the statistics functions and the statistics part
+#   of the boot init.
+# - CONFIG_OBJ_CORE_STATS_SYSTEM: the statistics of the kernel object. It is
+#   enabled by default with CONFIG_OBJ_CORE_STATS. The scenario
+#   stats_no_system disables it.
+# - CONFIG_MP_MAX_NUM_CPUS: the size of the kernel statistics.
+# - CONFIG_USERSPACE: the path of a user thread through z_vrfy_k_sem_init()
+#   in the second test source (kernel/sem.c).
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST. Without it,
+# __ASSERT() ends in CODE_UNREACHABLE after the hook assert_post_action().
+# CONFIG_ASSERT also enables CONFIG_SPIN_VALIDATE: obj_core.c has no
+# __ASSERT(), but the spinlock validation runs in each lock.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+  kernel.unit.obj_core.stats:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_STATS=y
+  kernel.unit.obj_core.stats_no_system:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_STATS=y
+      - CONFIG_OBJ_CORE_STATS_SYSTEM=n
+  kernel.unit.obj_core.userspace:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.obj_core.all:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_STATS=y
+      - CONFIG_MP_MAX_NUM_CPUS=2
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
