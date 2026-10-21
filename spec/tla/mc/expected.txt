@@ -1,0 +1,20 @@
+# Expected result of each model. One line for each run:
+#
+#   <module> <config> <expected>
+#
+# <module>   a module in mc/ (without .tla)
+# <config>   the configuration mc/<module>_<config>.cfg
+# <expected> pass          TLC finds no error
+#            fail:<Name>   TLC finds a violation of the property <Name>
+#            probes        TLC finds a violation of each invariant of the
+#                          configuration (run with -continue)
+#
+# tools/run_tlc.sh runs each line and compares the result. A difference
+# fails the run.
+
+MCWaitQueue default pass
+MCWaitQueue reach   probes
+MCTimeout   dlist         pass
+MCTimeout   minheap       pass
+MCTimeout   reach_dlist   probes
+MCTimeout   reach_minheap probes
