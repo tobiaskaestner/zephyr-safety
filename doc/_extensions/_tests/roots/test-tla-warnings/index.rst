@@ -14,4 +14,6 @@ Warnings
 
 .. tla:property:: Bad!Prop
 
+.. tla:definition:: Bad!Typed
+
 See :tla:def:`Bad!Nope`.
