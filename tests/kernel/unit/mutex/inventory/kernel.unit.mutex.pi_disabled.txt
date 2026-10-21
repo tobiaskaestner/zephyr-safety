@@ -1,0 +1,27 @@
+# Expected test inventory of the twister scenario kernel.unit.mutex.pi_disabled.
+# Each line is "<state> <suite>.<test>". The state is "run" or "skip".
+# To regenerate, see "Test inventory" in tests/kernel/unit/README.rst.
+run mutex_unit.test_init_call_sequence
+run mutex_unit.test_init_initializes_wait_queue
+run mutex_unit.test_init_makes_mutex_free
+run mutex_unit.test_lock_busy_no_wait_returns_ebusy
+run mutex_unit.test_lock_count_zero_means_free
+run mutex_unit.test_lock_free_mutex_lock_sequence
+run mutex_unit.test_lock_free_mutex_takes_ownership
+run mutex_unit.test_lock_free_mutex_with_no_wait
+run mutex_unit.test_lock_recursive_increments_count
+run mutex_unit.test_lock_recursive_lock_sequence
+run mutex_unit.test_unlock_free_mutex_returns_einval
+run mutex_unit.test_unlock_handover_lock_sequence
+run mutex_unit.test_unlock_handover_wakes_new_owner
+run mutex_unit.test_unlock_hands_over_to_first_waiter
+run mutex_unit.test_unlock_last_without_waiter_frees_mutex
+run mutex_unit.test_unlock_last_without_waiter_lock_sequence
+run mutex_unit.test_unlock_not_owner_returns_eperm
+run mutex_unit.test_unlock_recursive_decrements_count
+run mutex_unit.test_wait_handover_gives_ownership
+run mutex_unit.test_wait_handover_no_relock
+run mutex_unit.test_wait_pends_on_mutex_wait_queue
+run mutex_unit.test_wait_timeout_returns_eagain
+run mutex_unit.test_wait_without_pi_no_boost
+run mutex_unit.test_wait_without_pi_returns_pend_result
