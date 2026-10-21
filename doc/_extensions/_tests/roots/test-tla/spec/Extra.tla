@@ -48,6 +48,11 @@ Text == "a == b \* c"   \* not a definition == here
 \* @c-function k_extra_step
 Step == x' = x ++ 1
 
+\* Each step increments x. A rule without @expresses: its kind makes the
+\* need.
+\* @kind action-property
+StepIncrements == [][x' = x ++ 1]_x
+
 Init == x = 0
 Spec == Init /\ [][Step]_x
 

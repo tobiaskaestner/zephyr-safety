@@ -94,8 +94,9 @@ Tag                        Meaning                                        Need f
 =========================  =============================================  =====================
 ``@expresses <UID>``       the requirement that the property expresses    link ``expresses``
                            (one UID for each line, repeatable)
-``@kind <kind>``           ``invariant``, ``action``, ``liveness``,        ``kind``
-                           ``probe`` or ``definition`` (default)
+``@kind <kind>``           ``invariant``, ``action-property``,            ``kind``
+                           ``liveness``, ``probe``, ``action`` or
+                           ``definition`` (default)
 ``@c-function <name>``     the C function that an action models           ``c_function``
                            (repeatable)                                   (joined, ``;``)
 ``@expected violation``    TLC must report a counterexample               ``expected``
@@ -108,16 +109,18 @@ The extension also sets ``tla_module``, ``source_file`` (relative to
 ``tla_source_root``) and ``source_line`` (the line of the head). An option
 of ``tla:property`` replaces the tag value. Without a ``@kind`` and without
 ``:kind:``, the extension uses the formula: ``~>``, ``<>``, ``WF_`` or
-``SF_`` give ``liveness``, ``[][`` gives ``action``, else ``invariant``. An
+``SF_`` give ``liveness``, ``[][`` gives ``action-property``, else ``invariant``. An
 unknown tag or value gives a warning.
 
 **Property needs.** ``tla:property`` makes one need of the type ``prop``
 with the id ``PROP-<Module>-<Name>`` (``tla_property_id``). Its title is
 the name, its content is the doc comment and the formula. With
 ``:property-needs:``, the body makes a need of each definition that has an
-``@expresses`` tag or the kind ``invariant``, ``liveness`` or ``probe``.
-The kind ``action`` alone does not make a need: an action and an action
-property both use it.
+``@expresses`` tag or the kind ``invariant``, ``action-property``,
+``liveness`` or ``probe``. The kind ``action`` (a step of the system, for
+example a model of a C function) does not make a need. The kind
+``action-property`` is a rule for each step (``[][A]_v``), the term of the
+TLC output ("Action property ... is violated").
 
 **Unicode alignment.** Each Unicode symbol takes one column. The
 indentation of each line is calculated again: a line with the same
@@ -149,7 +152,7 @@ architecture sets ``tla_spec_paths`` (``spec/tla/lib``) and
 
 The Sphinx test project must build with ``-W``::
 
-    ../.venv/bin/sphinx-build -W -b html doc/_extensions/_tests/roots/test-tla <out dir>
+    PYTHONPATH=doc/_extensions ../.venv/bin/sphinx-build -W -b html doc/_extensions/_tests/roots/test-tla <out dir>
 
 Adding this directory to ``sys.path``
 -------------------------------------
