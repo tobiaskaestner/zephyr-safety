@@ -32,6 +32,8 @@ directions.
 | `doc/dox/` | The Doxygen projects |
 | `doc/test-scope.yaml` | The Zephyr test modules in the test specification |
 | `doc/_scripts/`, `doc/_extensions/` | Generators, checks and Sphinx extensions of this document set |
+| `tests/kernel/unit/`, `cmake/kernel_unit.cmake` | Unit tests of single kernel source files, with FFF fakes (see `tests/kernel/unit/README.rst`) |
+| `zephyr/module.yml` | Makes this repository a Zephyr module, so that the unit tests find `cmake/kernel_unit.cmake` |
 
 ## Prerequisites
 
