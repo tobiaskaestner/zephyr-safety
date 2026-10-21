@@ -343,7 +343,7 @@ PollSignalMeansAvailable == obs.poll # NoPoll => obs.poll > 0
 (* Safety properties (action properties) *)
 
 \* Reset wakes all threads that waited before the reset, with -EAGAIN.
-\* @kind action
+\* @kind action-property
 \* @expresses TEST-REQ-4
 ResetWakesAll ==
     [][obs'.op = "reset" =>

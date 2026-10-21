@@ -99,9 +99,9 @@ logger = logging.getLogger(__name__)
 __version__ = "0.1.0"
 
 #: The values of the ``@kind`` tag.
-KINDS = ("definition", "action", "invariant", "liveness", "probe")
+KINDS = ("definition", "action", "action-property", "invariant", "liveness", "probe")
 #: The kinds that ``:property-needs:`` makes a need of (with or without @expresses).
-NEED_KINDS = ("invariant", "liveness", "probe")
+NEED_KINDS = ("invariant", "action-property", "liveness", "probe")
 #: The values of the ``@expected`` tag.
 EXPECTED = ("hold", "violation")
 #: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
@@ -155,7 +155,7 @@ def infer_kind(unit):
     """The kind of a property without a ``@kind`` tag, from its formula.
 
     ``~>``, ``<>``, ``WF_`` or ``SF_`` in the body: liveness. ``[][`` (an
-    action under a box): action. Else: invariant.
+    action under a box): action-property. Else: invariant.
     """
     tokens = [(t, v) for t, v in TLALexer().get_tokens(unit.text) if t not in Whitespace]
     body = tokens
@@ -168,7 +168,7 @@ def infer_kind(unit):
         return "liveness"
     for k, (_, value) in enumerate(body[:-1]):
         if value in ("[]", "□") and body[k + 1][1] == "[":
-            return "action"
+            return "action-property"
     return "invariant"
 
 

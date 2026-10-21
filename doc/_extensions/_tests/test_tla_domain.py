@@ -139,6 +139,7 @@ def test_the_property_needs(app):
         "PROP-KSem-ResetWakesAll",
         "PROP-KSem-WaiterServedIfGives",
         "PROP-KSem-TimedWaitEnds",
+        "PROP-Extra-StepIncrements",
     }
     nwa = props["PROP-KSem-NoWaitWhileAvailable"]
     assert nwa["expresses"] == ["TEST-REQ-2", "TEST-REQ-3"]
@@ -147,7 +148,10 @@ def test_the_property_needs(app):
     assert nwa["tla_module"] == "KSem"
     assert nwa["source_file"] == "spec/KSem.tla"
     assert nwa["content"].startswith("No thread waits while the semaphore is available.")
-    assert props["PROP-KSem-ResetWakesAll"]["kind"] == "action"
+    assert props["PROP-KSem-ResetWakesAll"]["kind"] == "action-property"
+    # An action property makes a need by its kind, an action does not.
+    assert props["PROP-Extra-StepIncrements"]["kind"] == "action-property"
+    assert "PROP-Extra-Step" not in props
     assert props["PROP-KSem-WaiterServedIfGives"]["expected"] == "violation"
     # The options override the tags.
     timed = props["PROP-KSem-TimedWaitEnds"]
@@ -212,7 +216,7 @@ def test_infer_kind(ksem_copy):
     assert infer_kind(module.definition("NoWaitWhileAvailable")) == "invariant"
     assert infer_kind(module.definition("TimedWaitEnds")) == "liveness"
     assert infer_kind(module.definition("WaiterServedIfGives")) == "liveness"
-    assert infer_kind(module.definition("ResetWakesAll")) == "action"
+    assert infer_kind(module.definition("ResetWakesAll")) == "action-property"
     assert infer_kind(module.definition("TypeOK")) == "invariant"
 
 

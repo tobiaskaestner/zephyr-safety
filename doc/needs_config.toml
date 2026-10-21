@@ -314,7 +314,7 @@ type = "string"
 
 # kind, expected, tla_module, c_function: set by tla_domain on a model property.
 [needs.fields.kind]
-description = "Kind of a model property (invariant / action / liveness / probe)"
+description = "Kind of a model property (invariant / action-property / liveness / probe)"
 nullable = true
 [needs.fields.kind.schema]
 type = "string"
