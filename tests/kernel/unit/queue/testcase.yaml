@@ -1,0 +1,56 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/queue.c: the #ifdef blocks (POLL, USERSPACE, OBJ_CORE_FIFO and
+# OBJ_CORE_LIFO) and the CHECKIF() variants (RUNTIME_ERROR_CHECKS by
+# default, NO_RUNTIME_CHECKS, ASSERT_ON_ERRORS).
+#
+# CONFIG_OBJ_CORE enables CONFIG_OBJ_CORE_FIFO and CONFIG_OBJ_CORE_LIFO by
+# default. The two blocks are independent and have no branches, so one
+# scenario covers both.
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST. Without it,
+# __ASSERT() ends in CODE_UNREACHABLE after the hook assert_post_action().
+# The hook is a fake that returns, so the unit continues into undefined
+# behavior. With CONFIG_ASSERT_TEST, the unit continues after the hook.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.queue: {}
+  kernel.unit.queue.poll:
+    extra_configs:
+      - CONFIG_POLL=y
+  kernel.unit.queue.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_FIFO=y
+      - CONFIG_OBJ_CORE_LIFO=y
+  kernel.unit.queue.userspace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.queue.no_runtime_checks:
+    extra_configs:
+      - CONFIG_NO_RUNTIME_CHECKS=y
+  kernel.unit.queue.assert_on_errors:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_ASSERT_ON_ERRORS=y
+  kernel.unit.queue.all:
+    extra_configs:
+      - CONFIG_POLL=y
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_FIFO=y
+      - CONFIG_OBJ_CORE_LIFO=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
