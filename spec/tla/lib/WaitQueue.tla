@@ -96,6 +96,7 @@ NextStamp == Cardinality(Waiting) + 1
 
 \* Thread t starts to wait on o. It comes after all waiters of o with the
 \* same or a higher priority.
+\* @kind action
 \* @c-function z_priq_simple_add
 \* @c-function z_priq_rb_add
 Add(t, o) ==
@@ -104,6 +105,7 @@ Add(t, o) ==
     /\ stamp' = Renumber([stamp EXCEPT ![t] = NextStamp], Waiting \cup {t})
 
 \* The threads in S stop to wait (wake, timeout, abort, flush).
+\* @kind action
 \* @c-function z_priq_simple_remove
 \* @c-function z_priq_rb_remove
 RemoveSet(S) ==
@@ -111,11 +113,14 @@ RemoveSet(S) ==
     /\ pendedOn' = [t \in Threads |-> IF t \in S THEN None ELSE pendedOn[t]]
     /\ stamp' = Renumber(stamp, Waiting \ S)
 
+\* Thread t stops to wait.
+\* @kind action
 Remove(t) == RemoveSet({t})
 
 \* The priority of waiter t changes. z_thread_prio_set() removes the thread
 \* and adds it again, so it comes after the other waiters with its new
 \* priority. The caller sets prio'.
+\* @kind action
 \* @c-function z_thread_prio_set
 Restamp(t) ==
     /\ t \in Waiting
@@ -157,5 +162,33 @@ OrderIsTotal ==
 BestIsHead ==
     \A o \in Objs : W(o) # {} =>
         \A t \in W(o) : (Rank(o, t) = 1) <=> (t = Best(o))
+
+\* The variables of the module, for the action properties.
+wqVars == <<pendedOn, stamp, prio>>
+
+\* A new waiter comes after each waiter of the same object with the same
+\* priority (FIFO among equal priorities). No requirement states this rule
+\* for all objects yet (see README.rst, open points).
+\* @kind action-property
+AddIsFifo ==
+    [][\A t \in Threads, o \in Objs :
+         (pendedOn[t] = None /\ pendedOn'[t] = o) =>
+            \A u \in W(o) : prio[u] = prio[t] => stamp'[u] < stamp'[t]]_wqVars
+
+\* A change keeps the order of arrival of the threads that wait before and
+\* after it, except for a thread whose priority changes.
+\* @kind action-property
+KeepsArrivalOrder ==
+    [][\A a, b \in Waiting \cap {t \in Threads : pendedOn'[t] # None} :
+         (prio'[a] = prio[a] /\ prio'[b] = prio[b]) =>
+            ((stamp[a] < stamp[b]) <=> (stamp'[a] < stamp'[b]))]_wqVars
+
+\* After a priority change of a waiter, it comes after the other waiters of
+\* its object with the new priority (z_thread_prio_set()).
+\* @kind action-property
+PrioChangeGoesLast ==
+    [][\A t \in Threads :
+         (t \in Waiting /\ prio'[t] # prio[t]) =>
+            \A u \in W(pendedOn[t]) \ {t} : prio'[u] = prio'[t] => stamp'[u] < stamp'[t]]_wqVars
 
 =============================================================================

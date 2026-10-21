@@ -106,6 +106,7 @@ CostBound(op, n) ==
 
 \* z_add_timeout() with a finite timeout: entry e is armed at position i.
 \* The caller must handle Full first (the real code panics).
+\* @kind action
 \* @c-function z_add_timeout
 \* @c-function z_timeout_q_insert
 Insert(e, i) ==
@@ -116,10 +117,12 @@ Insert(e, i) ==
     /\ tqCost' = [op |-> "insert", n |-> Len(tq), cost |-> InsertCost(i, Len(tq))]
 
 \* An insertion at a position that the deadline selects (not known).
+\* @kind action
 InsertAny(e) == \E i \in 1..(Len(tq) + 1) : Insert(e, i)
 
 \* z_abort_timeout(): entry e is no longer armed (a give or a flush won
 \* the race against the expiry). Without effect if e is not armed.
+\* @kind action
 \* @c-function z_abort_timeout
 \* @c-function z_timeout_q_remove
 Cancel(e) ==
@@ -130,6 +133,7 @@ Cancel(e) ==
 
 \* sys_clock_announce(): the first entry expires (atomic form). The caller
 \* runs the handler of First in the same step.
+\* @kind action
 \* @c-function sys_clock_announce
 Expire ==
     /\ tq # <<>>

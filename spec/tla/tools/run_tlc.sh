@@ -72,7 +72,9 @@ while read -r module config expected rest; do
 
 	distinct=$(grep -oE '[0-9,]+ distinct states found' "$log" | tail -1 | cut -d' ' -f1)
 	depth=$(grep -oE 'depth of the complete state graph search is [0-9]+' "$log" | grep -oE '[0-9]+$')
-	violated=$(grep -oE '(Invariant|Temporal properties|Action property) [A-Za-z_0-9]* ?(is|were) violated' "$log" |
+	# A property that is an alias of an instance definition (Prop_X == WQ!X)
+	# has the name of that definition in the TLC output: WQ!X.
+	violated=$(grep -oE '(Invariant|Temporal properties|Action property) [A-Za-z_0-9!]* ?(is|were) violated' "$log" |
 		sed -E 's/^(Invariant|Temporal properties|Action property) //; s/ ?(is|were) violated//' | sort -u | tr '\n' ' ')
 	violated=${violated% }
 

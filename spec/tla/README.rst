@@ -446,10 +446,23 @@ Comments
       \* @expected violation
 
    ``@expresses`` names a requirement that the definition expresses (one
-   UID on each line). ``@kind`` is ``invariant``, ``action``,
-   ``liveness``, ``probe`` or ``definition``. ``@expected violation``
-   marks a property that TLC must find false (a documented limit, or a
-   probe that shows a state is reachable).
+   UID on each line). ``@kind`` is one of:
+
+   - ``action``: a step of the system, usually the model of a C function
+     (with ``@c-function``). It is part of ``Next``.
+   - ``action-property``: a rule for each step (``[][A]_v``). TLC checks
+     it as a ``PROPERTY`` and reports "Action property ... is violated".
+   - ``invariant``, ``liveness``, ``probe``: the other properties.
+   - ``definition``: a helper (the default).
+
+   A property that expresses a design rule is in ``lib/`` or
+   ``objects/``, so that the documents show it. ``mc/`` has only what
+   belongs to one model run: the constants, the environment and the
+   probes. A model checks a library property through an alias
+   (``Prop_AddIsFifo == WQ!AddIsFifo``).
+
+   ``@expected violation`` marks a property that TLC must find false (a
+   documented limit, or a probe that shows a state is reachable).
 
 Model configurations
    ``mc/MC<Object>_<scenario>.tla`` and ``.cfg``, one for each twister
