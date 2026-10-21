@@ -1,0 +1,40 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/condvar.c: the #ifdef blocks CONFIG_USERSPACE (the z_vrfy_*
+# functions) and CONFIG_OBJ_CORE_CONDVAR (the object type). condvar.c has
+# no CHECKIF() and no __ASSERT(), so there is no CHECKIF scenario and no
+# separate assert scenario.
+#
+# "all" also sets CONFIG_ASSERT (with CONFIG_ASSERT_TEST). This enables
+# CONFIG_SPIN_VALIDATE in zephyr/spinlock.h, so the tests also run with the
+# spinlock validation calls. Without CONFIG_ASSERT_TEST, a failed __ASSERT()
+# ends in CODE_UNREACHABLE after the hook assert_post_action(), which is a
+# fake that returns.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.condvar: {}
+  kernel.unit.condvar.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_CONDVAR=y
+  kernel.unit.condvar.userspace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.condvar.all:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_CONDVAR=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
