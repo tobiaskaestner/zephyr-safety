@@ -1,0 +1,32 @@
+/* tla_domain: the TLA+ code blocks.
+ *
+ * The Unicode rendering keeps the columns of the junction lists only if each
+ * symbol takes one column. Thus the font must have the TLA+ symbols. A
+ * fallback font for one symbol gives that symbol another width.
+ */
+div.highlight-tla pre.tla-code {
+    font-family: "JuliaMono", "DejaVu Sans Mono", "Noto Sans Mono",
+                 "Noto Sans Math", "Cascadia Mono", monospace;
+    font-variant-ligatures: none;
+    tab-size: 8;
+}
+
+/* A name that links to its definition: the color of the token, a thin line. */
+pre.tla-code a.tla-ref {
+    color: inherit;
+    text-decoration: underline dotted;
+    text-underline-offset: 2px;
+}
+
+pre.tla-code a.tla-ref:hover {
+    text-decoration: underline solid;
+}
+
+dl.tla > dt .sig-prename,
+dl.tla > dt em.property {
+    font-style: normal;
+}
+
+p.rubric.tla-section {
+    margin-top: 1.5em;
+}
