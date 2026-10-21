@@ -1,9 +1,8 @@
 ---------------------------- MODULE MCWaitQueue ----------------------------
 (***************************************************************************)
 (* Model of lib/WaitQueue.tla alone. An environment adds and removes       *)
-(* waiters and changes priorities in any order. TLC checks that the order  *)
-(* rule holds in each reachable state, and that each change keeps the      *)
-(* order of arrival.                                                       *)
+(* waiters and changes priorities in any order. TLC checks the invariants  *)
+(* and the action properties of the library module.                        *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 
@@ -51,28 +50,11 @@ Inv_OrderIsTotal == WQ!OrderIsTotal
 Inv_BestIsHead   == WQ!BestIsHead
 
 -----------------------------------------------------------------------------
-(* Action properties *)
+(* Action properties of the library module *)
 
-\* A new waiter comes after each waiter of the same object with the same
-\* priority (FIFO among equal priorities).
-AddIsFifo ==
-    [][\A t \in Threads, o \in Objs :
-         (pendedOn[t] = NoObj /\ pendedOn'[t] = o) =>
-            \A u \in WQ!W(o) : prio[u] = prio[t] => stamp'[u] < stamp'[t]]_vars
-
-\* A change keeps the order of arrival of the threads that wait before and
-\* after it, except for the thread whose priority changes.
-KeepsArrivalOrder ==
-    [][\A a, b \in WQ!Waiting \cap {t \in Threads : pendedOn'[t] # NoObj} :
-         (prio'[a] = prio[a] /\ prio'[b] = prio[b]) =>
-            ((stamp[a] < stamp[b]) <=> (stamp'[a] < stamp'[b]))]_vars
-
-\* After a priority change of a waiter, it comes after the other waiters of
-\* its object with the new priority.
-PrioChangeGoesLast ==
-    [][\A t \in Threads :
-         (t \in WQ!Waiting /\ prio'[t] # prio[t]) =>
-            \A u \in WQ!W(pendedOn[t]) \ {t} : prio'[u] = prio'[t] => stamp'[u] < stamp'[t]]_vars
+Prop_AddIsFifo          == WQ!AddIsFifo
+Prop_KeepsArrivalOrder  == WQ!KeepsArrivalOrder
+Prop_PrioChangeGoesLast == WQ!PrioChangeGoesLast
 
 -----------------------------------------------------------------------------
 (* Reachability probes. Each one is the negation of a situation that the   *)
