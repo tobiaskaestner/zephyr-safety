@@ -1,0 +1,15 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+rsource "../common/Kconfig"
+
+# kernel/mem_slab.c has code for CONFIG_MULTITHREADING=n. The option is
+# visible only if the architecture has single thread support. The
+# unit_testing architecture does not declare it. This option declares it,
+# so that a scenario can disable CONFIG_MULTITHREADING. No thread runs in
+# a unit test, so the build does not change otherwise.
+config KERNEL_UNIT_MEM_SLAB_SINGLE_THREAD
+	bool "Let the mem_slab unit build without multithreading"
+	select ARCH_HAS_SINGLE_THREAD_SUPPORT
+
+source "Kconfig.zephyr"
