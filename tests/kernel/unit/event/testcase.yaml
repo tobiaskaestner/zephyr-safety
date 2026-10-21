@@ -1,0 +1,52 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/events.c: the #ifdef blocks (WAITQ_SCALABLE, USERSPACE,
+# OBJ_CORE_EVENT) and CONFIG_ASSERT (the __ASSERT() of k_event_init() and
+# of the wait functions). events.c has no CHECKIF(), so the options
+# CONFIG_NO_RUNTIME_CHECKS and CONFIG_ASSERT_ON_ERRORS do not change its
+# code and have no scenario.
+#
+# CONFIG_WAITQ_SCALABLE is a choice against CONFIG_WAITQ_SIMPLE (the
+# default). It changes how k_event_post() wakes the threads: in the walk
+# callback (simple) or in a second pass after the walk (scalable).
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST. Without it,
+# __ASSERT() ends in CODE_UNREACHABLE after the hook assert_post_action().
+# The hook is a fake that returns, so the unit continues into undefined
+# behavior. With CONFIG_ASSERT_TEST, the unit continues after the hook.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.event: {}
+  kernel.unit.event.waitq_scalable:
+    extra_configs:
+      - CONFIG_WAITQ_SCALABLE=y
+  kernel.unit.event.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_EVENT=y
+  kernel.unit.event.userspace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.event.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+  kernel.unit.event.all:
+    extra_configs:
+      - CONFIG_WAITQ_SCALABLE=y
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_EVENT=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
