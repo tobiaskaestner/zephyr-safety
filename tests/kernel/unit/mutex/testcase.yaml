@@ -1,0 +1,92 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/mutex.c:
+# - Z_MUTEX_PI_ENABLED (zephyr/kernel/thread.h): priority inheritance is in
+#   the code only if CONFIG_PRIORITY_CEILING < CONFIG_NUM_PREEMPT_PRIORITIES
+#   (15 on unit_testing). The default ceiling -128 enables it and does not
+#   limit it. Scenario "ceiling" sets the ceiling 0: it limits the boost to
+#   priority 0. Scenario "pi_disabled" sets the ceiling 15, the lowest value
+#   that removes priority inheritance;
+# - the #ifdef blocks: USERSPACE, OBJ_CORE_MUTEX, MUTEX_DEADLOCK_DETECT;
+# - CONFIG_MP_MAX_NUM_CPUS: with more than one CPU, LOCK_SCHED_SPINLOCK
+#   (kernel/include/kspinlock.h) locks the scheduler spinlock inside
+#   mutex_lock. With one CPU, the macro is empty;
+# - the CHECKIF() variants of k_mutex_unlock(): RUNTIME_ERROR_CHECKS by
+#   default, NO_RUNTIME_CHECKS, ASSERT_ON_ERRORS;
+# - CONFIG_ASSERT: the __ASSERT() checks (ISR, lock count). CONFIG_ASSERT
+#   enables CONFIG_MUTEX_DEADLOCK_DETECT by default. Scenario "assert"
+#   disables it, scenario "deadlock_detect" enables it;
+# - CONFIG_KERNEL_LOG_LEVEL: only with the level DBG, the LOG_DBG() calls of
+#   mutex.c run, and their arguments read the thread state. Scenario
+#   "logging", and "pi_disabled_logging" for the LOG_DBG() calls of the
+#   code without priority inheritance. The scenario "all" does not set the level DBG: with
+#   CONFIG_USERSPACE, each LOG_DBG() calls k_is_user_context(), and the
+#   fake arch_is_user_context() then is in the call history of the tests.
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST. Without it,
+# __ASSERT() ends in CODE_UNREACHABLE after the hook assert_post_action().
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.mutex: {}
+  kernel.unit.mutex.ceiling:
+    extra_configs:
+      - CONFIG_PRIORITY_CEILING=0
+  kernel.unit.mutex.pi_disabled:
+    extra_configs:
+      - CONFIG_PRIORITY_CEILING=15
+  kernel.unit.mutex.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_MUTEX=y
+  kernel.unit.mutex.userspace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.mutex.multi_cpu:
+    extra_configs:
+      - CONFIG_MP_MAX_NUM_CPUS=2
+  kernel.unit.mutex.no_runtime_checks:
+    extra_configs:
+      - CONFIG_NO_RUNTIME_CHECKS=y
+  kernel.unit.mutex.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_MUTEX_DEADLOCK_DETECT=n
+  kernel.unit.mutex.deadlock_detect:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_MUTEX_DEADLOCK_DETECT=y
+  kernel.unit.mutex.assert_on_errors:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_ASSERT_ON_ERRORS=y
+      - CONFIG_MUTEX_DEADLOCK_DETECT=n
+  kernel.unit.mutex.logging:
+    extra_configs:
+      - CONFIG_KERNEL_LOG_LEVEL_DBG=y
+  kernel.unit.mutex.pi_disabled_logging:
+    extra_configs:
+      - CONFIG_PRIORITY_CEILING=15
+      - CONFIG_KERNEL_LOG_LEVEL_DBG=y
+  kernel.unit.mutex.all:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_MUTEX=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_MP_MAX_NUM_CPUS=2
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_MUTEX_DEADLOCK_DETECT=y
