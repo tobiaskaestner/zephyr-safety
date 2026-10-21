@@ -1,0 +1,53 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# One scenario per configuration axis that changes the code of
+# kernel/stack.c: the #ifdef blocks (USERSPACE, OBJ_CORE_STACK) and the
+# CHECKIF() variants (RUNTIME_ERROR_CHECKS by default, NO_RUNTIME_CHECKS,
+# ASSERT_ON_ERRORS). stack.c has no CONFIG_POLL code.
+#
+# CONFIG_ASSERT enables CONFIG_SPIN_VALIDATE in zephyr/spinlock.h. The
+# scenario "assert" runs the default CHECKIF() variant with it.
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST. Without it,
+# __ASSERT() ends in CODE_UNREACHABLE after the hook assert_post_action().
+# The hook is a fake that returns, so the unit continues into undefined
+# behavior. With CONFIG_ASSERT_TEST, the unit continues after the hook.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.stack: {}
+  kernel.unit.stack.obj_core:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_STACK=y
+  kernel.unit.stack.userspace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+  kernel.unit.stack.no_runtime_checks:
+    extra_configs:
+      - CONFIG_NO_RUNTIME_CHECKS=y
+  kernel.unit.stack.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+  kernel.unit.stack.assert_on_errors:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+      - CONFIG_ASSERT_ON_ERRORS=y
+  kernel.unit.stack.all:
+    extra_configs:
+      - CONFIG_OBJ_CORE=y
+      - CONFIG_OBJ_CORE_STACK=y
+      - CONFIG_KERNEL_UNIT_USERSPACE=y
+      - CONFIG_MPU=y
+      - CONFIG_USERSPACE=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
