@@ -65,7 +65,7 @@ while read -r module config expected rest; do
 
 	start=$(date +%s.%N)
 	(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
-		-cp "$TLA2TOOLS" tlc2.TLC -workers auto -cleanup "${extra[@]}" \
+		-cp "$TLA2TOOLS" tlc2.TLC -workers auto -cleanup -noGenerateSpecTE "${extra[@]}" \
 		-metadir "$out/states/${module}_${config}" -config "$cfg" "$module.tla") > "$log" 2>&1
 	end=$(date +%s.%N)
 	secs=$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.1f s", b - a }')
@@ -73,9 +73,13 @@ while read -r module config expected rest; do
 	distinct=$(grep -oE '[0-9,]+ distinct states found' "$log" | tail -1 | cut -d' ' -f1)
 	depth=$(grep -oE 'depth of the complete state graph search is [0-9]+' "$log" | grep -oE '[0-9]+$')
 	# A property that is an alias of an instance definition (Prop_X == WQ!X)
-	# has the name of that definition in the TLC output: WQ!X.
-	violated=$(grep -oE '(Invariant|Temporal properties|Action property) [A-Za-z_0-9!]* ?(is|were) violated' "$log" |
-		sed -E 's/^(Invariant|Temporal properties|Action property) //; s/ ?(is|were) violated//' | sort -u | tr '\n' ' ')
+	# has the name of that definition in the TLC output: WQ!X. TLC 1.8.0
+	# names one violated temporal property ("Temporal property X was
+	# violated"). For more than one, it writes "Temporal properties were
+	# violated", without a name.
+	violated=$(grep -oE '(Invariant|Temporal propert(y|ies)|Action property) [A-Za-z_0-9!]* ?(is|was|were) violated' "$log" |
+		sed -E 's/^(Invariant|Temporal propert(y|ies)|Action property) //; s/ ?(is|was|were) violated//; /^$/d' |
+		sort -u | tr '\n' ' ')
 	violated=${violated% }
 
 	if grep -q 'No error has been found' "$log" && [ -z "$violated" ]; then
