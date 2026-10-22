@@ -81,7 +81,8 @@ module boundaries against eight kernel objects).
      - No clock. A finite timeout is an environment event. The cost of a
        timeout insertion is a step counter.
    * - Tools
-     - TLC from ``tla2tools.jar`` v1.7.4, pinned by hash (see `Running`_).
+     - TLC from ``tla2tools.jar`` v1.8.0 (pre-release, rev ``d2e1472``),
+       pinned by hash (see `Running`_).
        The style stays readable for Apalache (see `Apalache`_).
 
 Entities
@@ -491,9 +492,23 @@ Layout
 Running
 *******
 
-TLC needs Java 11 or later and ``tla2tools.jar`` v1.7.4. The run script
-stops if the hash of the jar is not the hash in
-``tools/tla2tools.sha256``.
+TLC needs Java 11 or later and ``tla2tools.jar`` v1.8.0, the pre-release
+build of 2026-10-20 (rev ``d2e1472``). The run script stops if the hash of
+the jar is not the hash in ``tools/tla2tools.sha256``.
+
+The pre-release is a rolling release: each new build replaces the jar at
+the download URL of the tag ``v1.8.0``. Keep a copy of the pinned jar. A
+later download has a different hash, and the run script refuses it. The
+version 1.8.0 has the REPL (``java -cp tla2tools.jar tlc2.REPL``), the
+parameters of an action in the steps of a trace (``Take(t1)``), and the
+name of a violated temporal property. These features are the reasons
+for the pin (2026-10-22). The results of the models in
+``mc/expected.txt`` are the same as with v1.7.4.
+
+TLC 1.8.0 can send usage statistics. Without the file
+``~/.tlaplus/esc.txt``, each run looks up a host name in DNS, and sends
+statistics if the name resolves. The line ``NO_STATISTICS`` in this file
+stops the lookup.
 
 .. code-block:: console
 
