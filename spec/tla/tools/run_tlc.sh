@@ -63,9 +63,11 @@ while read -r module config expected rest; do
 	extra=()
 	[ "$expected" = probes ] && extra=(-continue)
 
+	# One worker: TLC with more than one worker can miss states and
+	# violations (tlaplus issue #1445, open at the pinned revision).
 	start=$(date +%s.%N)
 	(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
-		-cp "$TLA2TOOLS" tlc2.TLC -workers auto -cleanup -noGenerateSpecTE "${extra[@]}" \
+		-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -cleanup -noGenerateSpecTE "${extra[@]}" \
 		-metadir "$out/states/${module}_${config}" -config "$cfg" "$module.tla") > "$log" 2>&1
 	end=$(date +%s.%N)
 	secs=$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.1f s", b - a }')
@@ -82,8 +84,13 @@ while read -r module config expected rest; do
 		sort -u | tr '\n' ' ')
 	violated=${violated% }
 
+	# TLC reports "No error has been found" also for a model without an
+	# initial state (tlaplus issue #1475). Such a run checks nothing.
 	if grep -q 'No error has been found' "$log" && [ -z "$violated" ]; then
-		result=pass
+		case "${distinct//,/}" in
+		''|0) result=no-states ;;
+		*) result=pass ;;
+		esac
 	elif [ -n "$violated" ]; then
 		result="fail:${violated// /,}"
 	else

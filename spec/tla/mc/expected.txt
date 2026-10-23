@@ -4,7 +4,9 @@
 #
 # <module>   a module in mc/ (without .tla)
 # <config>   the configuration mc/<module>_<config>.cfg
-# <expected> pass          TLC finds no error
+# <expected> pass          TLC finds no error, and the model has at least
+#                          one state (a model without an initial state
+#                          gives the result no-states)
 #            fail:<Name>   TLC finds a violation of the property <Name>
 #                          (for an alias Prop_X == WQ!X, TLC names WQ!X)
 #            probes        TLC finds a violation of each invariant of the
