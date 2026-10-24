@@ -4,7 +4,7 @@
 mainmenu "ISR to thread wake latency benchmark"
 
 choice LATBENCH_WAKE_ISR
-	prompt "How the EXTI0 ISR is connected"
+	prompt "How the ISR of the response pin is connected"
 	default LATBENCH_WAKE_ISR_WRAPPED
 
 config LATBENCH_WAKE_ISR_WRAPPED

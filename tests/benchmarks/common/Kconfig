@@ -84,8 +84,9 @@ config LATBENCH_STIM_PERIOD_ADJ_CYC
 	range -10000 10000
 	default 1
 	help
-	  With a period of a whole number of ticks, the tick phase of each
-	  edge moves by this many cycles. 0 keeps the phase constant. A
+	  The unit is one count of the stimulus timer (a core cycle on
+	  nucleo_g474re). With a period of a whole number of ticks, the tick
+	  phase of each edge moves by this many counts. 0 keeps the phase constant. A
 	  small value scans the full tick slowly: 1 cycle at 170 MHz and
 	  10000 ticks/s scans the tick in 17000 edges.
 

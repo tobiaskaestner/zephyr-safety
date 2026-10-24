@@ -248,6 +248,9 @@ def main():
         repos = trees.board_repos(boards, board)
         sdk = trees.check_toolchain(tree_cfg)
         for t in exp["trees"]:
+            if t not in tree_cfg["trees"]:
+                raise trees.TreeError(f"unknown tree '{t}'")
+            trees.check_tree_has(tree_cfg, t, repos)
             trees.check_tree(tree_cfg, t, repos)
     except trees.TreeError as e:
         fail(str(e))
@@ -310,7 +313,8 @@ def main():
         "tools": {
             "cmake": tool_version(["cmake", "--version"]),
             "ninja": tool_version(["ninja", "--version"]),
-            "openocd": tool_version(["openocd", "--version"]),
+            # The tools that flash this board (first word of each flash command).
+            **{cmd[0]: tool_version([cmd[0], "--version"]) for cmd in board_cfg["flash"]},
             "python": sys.version.split()[0],
             "pyserial": serial.__version__,
         },

@@ -21,8 +21,8 @@
 
 /*
  * The core clock. A board port gives the real value (latbench/port.h).
- * Without a port (loopback_check), the system timer clock is the best
- * guess: on SysTick boards it is the core clock.
+ * Without a port, the system timer clock is the best guess: on SysTick
+ * boards it is the core clock.
  */
 __weak uint32_t port_core_hz(void)
 {

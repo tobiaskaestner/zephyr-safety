@@ -51,6 +51,13 @@ def board_repos(boards, board):
     return ["zephyr", *boards["boards"][board]["modules"]]
 
 
+def check_tree_has(cfg, tree, repos):
+    """Raise TreeError if the tree does not pin all of repos."""
+    missing = [r for r in repos if r not in cfg["trees"][tree]["repos"]]
+    if missing:
+        raise TreeError(f"tree '{tree}' does not pin {missing}; add them to {TREES_FILE}")
+
+
 def repo_dir(cfg, tree, repo):
     return cfg["root"] / tree / cfg["trees"][tree]["repos"][repo]["path"]
 

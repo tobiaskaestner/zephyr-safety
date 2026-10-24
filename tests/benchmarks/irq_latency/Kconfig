@@ -4,7 +4,7 @@
 mainmenu "IRQ latency benchmark"
 
 choice LATBENCH_IRQ_PATH
-	prompt "Interrupt path from the EXTI0 line to the measurement point"
+	prompt "Interrupt path from the response pin to the measurement point"
 	default LATBENCH_IRQ_PATH_STOCK
 
 config LATBENCH_IRQ_PATH_STOCK
@@ -16,18 +16,21 @@ config LATBENCH_IRQ_PATH_STOCK
 config LATBENCH_IRQ_PATH_WRAPPED
 	bool "Own ISR through _isr_wrapper (IRQ_CONNECT)"
 	help
-	  Needs exti_line0_app.overlay.
+	  Set it on the cmake command line, so that the board port gives the
+	  response IRQ to the app.
 
 config LATBENCH_IRQ_PATH_DIRECT
 	bool "Own direct ISR (IRQ_DIRECT_CONNECT)"
 	help
-	  Needs exti_line0_app.overlay.
+	  Set it on the cmake command line, so that the board port gives the
+	  response IRQ to the app.
 
 config LATBENCH_IRQ_PATH_ZLI
 	bool "Own direct zero-latency ISR"
 	select ZERO_LATENCY_IRQS
 	help
-	  Needs exti_line0_app.overlay. BASEPRI does not mask this IRQ, so
+	  Set it on the cmake command line, so that the board port gives the
+	  response IRQ to the app. BASEPRI does not mask this IRQ, so
 	  kernel critical sections do not delay it.
 
 endchoice

@@ -159,26 +159,30 @@ static void phase_check(const char *key)
 	       (uint32_t)((stim_next_phase + to_sys(now - stim_next_ccr)) % tick_period));
 }
 
+/* Microseconds to stimulus timer counts, exact for any timer clock. */
+static uint32_t us_to_counts(uint32_t us)
+{
+	return (uint32_t)((uint64_t)us * stim_hz / 1000000U);
+}
+
 int stim_init(void)
 {
-	uint32_t cyc_per_us;
 	int ret;
 
 	stim_hz = port_stim_hz();
 	sys_hz = sys_clock_hw_cycles_per_sec();
-	cyc_per_us = stim_hz / 1000000U;
 	tick_period = sys_hz / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
 	printk("LAT META port=%s\n", port_name);
 	printk("LAT META stim_timer_hz=%u\n", stim_hz);
 	printk("LAT META sys_timer_hz=%u\n", sys_hz);
 #if defined(CONFIG_LATBENCH_STIM_RANDOM)
-	stim_min = CONFIG_LATBENCH_STIM_MIN_US * cyc_per_us;
-	stim_span = (CONFIG_LATBENCH_STIM_MAX_US - CONFIG_LATBENCH_STIM_MIN_US) * cyc_per_us;
+	stim_min = us_to_counts(CONFIG_LATBENCH_STIM_MIN_US);
+	stim_span = us_to_counts(CONFIG_LATBENCH_STIM_MAX_US) - stim_min;
 	printk("LAT META stim_mode=random\n");
 	printk("LAT META stim_us=%u..%u\n", CONFIG_LATBENCH_STIM_MIN_US,
 	       CONFIG_LATBENCH_STIM_MAX_US);
 #else
-	stim_period = CONFIG_LATBENCH_STIM_PERIOD_US * cyc_per_us + CONFIG_LATBENCH_STIM_PERIOD_ADJ_CYC;
+	stim_period = us_to_counts(CONFIG_LATBENCH_STIM_PERIOD_US) + CONFIG_LATBENCH_STIM_PERIOD_ADJ_CYC;
 	printk("LAT META stim_mode=fixed\n");
 	printk("LAT META stim_period_cyc=%u\n", stim_period);
 #endif
