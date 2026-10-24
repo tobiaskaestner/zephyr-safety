@@ -91,6 +91,11 @@ def expand_points(exp):
     points = []
     axes = exp.get("axes", {})
     if axes:
+        for axis, values in axes.items():
+            bad = [k for k in values if not isinstance(k, str)]
+            if bad:
+                # YAML reads on/off/yes/no/true/false as booleans.
+                fail(f"axis '{axis}': value names must be strings, not {bad} (quote them or rename them)")
         names = list(axes)
         for combo in itertools.product(*(axes[n].items() for n in names)):
             spec = common
