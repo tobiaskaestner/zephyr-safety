@@ -380,8 +380,10 @@ def main():
     # 4. Summary.
     with open(run_dir / "summary.txt", "w") as f:
         sys.stdout = f
-        latbench.summary(argparse.Namespace(logs=[str(x) for x in logs], json=False))
-        sys.stdout = sys.__stdout__
+        try:
+            latbench.summary(argparse.Namespace(logs=[str(x) for x in logs], json=False))
+        finally:
+            sys.stdout = sys.__stdout__
     print((run_dir / "summary.txt").read_text())
     print(f"results in {run_dir}")
 

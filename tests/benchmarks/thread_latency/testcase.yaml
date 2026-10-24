@@ -9,6 +9,10 @@ common:
     - latency
   platform_allow:
     - nucleo_g474re
+    # Build only: these ports never ran on hardware (boards.yaml).
+    - nrf52840dk/nrf52840
+    - nrf54l15dk/nrf54l15/cpuapp
+    - mimxrt1060_evk@C/mimxrt1062/qspi
   build_only: true
 tests:
   benchmark.latency.t2t.sem: {}
