@@ -18,6 +18,8 @@ Rules (a run stops before it builds anything if one is broken):
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
 devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
+src/ is the snapshot of the committed sources (git archive) that the run
+built from.
 
 Experiment file:
 
@@ -129,7 +131,24 @@ def find_openocd_cfg(zephyr, board):
     return cfgs[0]
 
 
-def build_point(tree_cfg, tree, point, app_dir, board, sdk, bdir, log):
+def export_snapshot(repo_root, rev, dest):
+    """Export the committed benchmark sources at rev to dest; return the bench folder in dest.
+
+    A run builds from this snapshot, not from the worktree, so that work in
+    the worktree during a long run cannot change what the run builds.
+    """
+    rel = BENCH_DIR.relative_to(repo_root)
+    dest.mkdir(parents=True, exist_ok=True)
+    archive = subprocess.Popen(["git", "archive", "--format=tar", rev, "--", str(rel)], cwd=repo_root,
+                               stdout=subprocess.PIPE)
+    subprocess.run(["tar", "-x", "-C", str(dest)], stdin=archive.stdout, check=True)
+    if archive.wait() != 0:
+        fail(f"git archive {rev} failed")
+    return dest / rel
+
+
+def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, sdk, bdir, log):
+    app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
     modules = [
         str(trees.repo_dir(tree_cfg, tree, name)) for name in tree_cfg["trees"][tree]["repos"] if name != "zephyr"
@@ -145,9 +164,10 @@ def build_point(tree_cfg, tree, point, app_dir, board, sdk, bdir, log):
         f"-DZEPHYR_MODULES={';'.join(modules)}",
     ]
     if point["conf_files"]:
-        args.append("-DEXTRA_CONF_FILE=" + ";".join(str(BENCH_DIR / f) for f in point["conf_files"]))
+        args.append("-DEXTRA_CONF_FILE=" + ";".join(str(src_bench / f) for f in point["conf_files"]))
     if point["dtc_overlays"]:
-        args.append("-DEXTRA_DTC_OVERLAY_FILE=" + ";".join(str(BENCH_DIR / f) for f in point["dtc_overlays"]))
+        args.append("-DEXTRA_DTC_OVERLAY_FILE=" + ";".join(str(src_bench / f) for f in point["dtc_overlays"]))
+    args.append(f"-DLATBENCH_SRC_REV={src_rev}")
     for sym, value in point["kconfig"].items():
         args.append(f"-DCONFIG_{sym}={kconfig_value(value)}")
 
@@ -199,7 +219,8 @@ def main():
         fail(str(e))
 
     board = exp.get("board", tree_cfg["board"])
-    app_dir = BENCH_DIR / exp["app"]
+    if not (BENCH_DIR / exp["app"]).is_dir():
+        fail(f"no app folder {exp['app']}")
     points = expand_points(exp)
     if args.only:
         points = [pt for pt in points if pt["id"] in args.only]
@@ -215,12 +236,14 @@ def main():
         import tempfile
 
         with tempfile.TemporaryDirectory(prefix="latbench-build-") as tmp:
+            src_bench = export_snapshot(repo_root, repo_rev, Path(tmp) / "src")
             for tree in exp["trees"]:
                 for pt in points:
                     bdir = Path(tmp) / tree / pt["id"]
                     bdir.mkdir(parents=True)
                     print(f"[{tree}/{pt['id']}] build", flush=True)
-                    build_point(tree_cfg, tree, pt, app_dir, board, sdk, bdir / "build", bdir / "build.log")
+                    build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, sdk, bdir / "build",
+                                bdir / "build.log")
         print("all points build")
         return
 
@@ -228,6 +251,7 @@ def main():
     started = datetime.datetime.now(datetime.timezone.utc)
     run_dir = Path(args.out).resolve() / exp["name"] / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
+    src_bench = export_snapshot(repo_root, repo_rev, run_dir / "src")
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", args.port], capture_output=True, text=True
     ).stdout
@@ -242,7 +266,7 @@ def main():
         "command": shlex.join(sys.argv),
         "started": started.isoformat(),
         "host": platform.node(),
-        "safety": {"path": str(repo_root), "rev": repo_rev},
+        "safety": {"path": str(repo_root), "rev": repo_rev, "snapshot": str(src_bench.relative_to(run_dir))},
         "trees": {t: tree_cfg["trees"][t] for t in exp["trees"]},
         "trees_root": str(tree_cfg["root"]),
         "toolchain": {"zephyr_sdk": str(tree_cfg["toolchain"]["zephyr_sdk"]["version"]), "path": str(sdk)},
@@ -274,7 +298,8 @@ def main():
             bdir = pdir / "build"
             pdir.mkdir(parents=True)
             print(f"[{tree}/{pt['id']}] build", flush=True)
-            cmake_args = build_point(tree_cfg, tree, pt, app_dir, board, sdk, bdir, pdir / "build.log")
+            cmake_args = build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, sdk, bdir,
+                                     pdir / "build.log")
             elf = bdir / "zephyr" / "zephyr.elf"
             for f in (elf, bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
                 shutil.copy2(f, pdir / f.name)

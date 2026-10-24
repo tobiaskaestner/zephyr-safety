@@ -76,6 +76,7 @@ static uint32_t stim_min;
 static uint32_t stim_span;
 static uint32_t rng_state = 0x2545f491U;
 static volatile uint32_t n_seen;
+static volatile uint32_t n_spurious;
 static volatile bool done;
 
 static inline uint32_t rng_next(void)
@@ -94,6 +95,7 @@ static inline void stim_arm(uint32_t now)
 	LL_TIM_OC_SetMode(TIM, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_INACTIVE);
 	next_ccr = now + stim_min + (rng_next() % stim_span);
 	LL_TIM_OC_SetCompareCH4(TIM, next_ccr);
+	LL_TIM_ClearFlag_CC4(TIM);
 	LL_TIM_OC_SetMode(TIM, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_ACTIVE);
 }
 
@@ -101,6 +103,10 @@ static inline void on_edge(uint32_t now)
 {
 	uint32_t n = n_seen;
 
+	/* An edge without a TIM2 compare match did not come from the stimulus. */
+	if (!LL_TIM_IsActiveFlag_CC4(TIM)) {
+		n_spurious++;
+	}
 	if (n >= CONFIG_LATBENCH_WARMUP) {
 		lat_hist_add(&hist, now - next_ccr);
 	}
@@ -285,6 +291,7 @@ int main(void)
 		k_msleep(CONFIG_LATBENCH_POLL_MS);
 	}
 
+	printk("LAT META spurious_edges=%u\n", n_spurious);
 	lat_hist_print(&hist);
 	lat_done();
 	return 0;
