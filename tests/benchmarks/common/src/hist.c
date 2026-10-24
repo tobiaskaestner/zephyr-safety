@@ -22,9 +22,10 @@ void lat_hist_print(const struct lat_hist *h)
 	/* Mean in 1/100 cycles, so that the output needs no float printk. */
 	uint64_t mean100 = h->count ? (h->sum * 100U) / h->count : 0U;
 
-	printk("LAT HIST %s n=%u min=%u max=%u mean=%llu.%02llu overflow=%u\n",
+	/* invalid is the last field, so that an old parser can read the line. */
+	printk("LAT HIST %s n=%u min=%u max=%u mean=%llu.%02llu overflow=%u invalid=%u\n",
 	       h->name, h->count, h->count ? h->min : 0U, h->max,
-	       mean100 / 100U, mean100 % 100U, h->overflow);
+	       mean100 / 100U, mean100 % 100U, h->overflow, h->invalid);
 	for (uint32_t v = 0; v < CONFIG_LATBENCH_HIST_BINS; v++) {
 		if (h->bins[v] != 0U) {
 			printk("LAT BIN %u %u\n", v, h->bins[v]);
@@ -46,6 +47,16 @@ void lat_hist_print(const struct lat_hist *h)
 		}
 	}
 	printk("LAT END %s\n", h->name);
+}
+
+void lat_phase_init(struct lat_phase *p, uint32_t period)
+{
+	if (period > LAT_PHASE_PERIOD_MAX) {
+		printk("LAT ERROR phase %s period=%u is larger than %u\n", p->name, period,
+		       LAT_PHASE_PERIOD_MAX);
+		period = 0U;
+	}
+	p->period = period;
 }
 
 void lat_phase_print(const struct lat_phase *p)

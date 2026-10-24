@@ -9,8 +9,9 @@ The apps print "LAT" lines (see common/src/hist.c and common/src/meta.c):
     LAT BEGIN
     LAT META <key>=<value>
     LAT CFG <SYM>=<0|1> ...
-    LAT HIST <name> n=.. min=.. max=.. mean=.. overflow=..
+    LAT HIST <name> n=.. min=.. max=.. mean=.. overflow=.. invalid=..
     LAT BIN <cycles> <count>
+    LAT CBIN <lower edge> <count> <width>
     LAT OVF <log2> <count>
     LAT END <name>
     LAT PHASE <name> bins=.. period=..
@@ -26,6 +27,12 @@ Subcommands:
              For development only: a data point comes from run.py.
     parse    convert a raw log to JSON.
     summary  print percentiles for each histogram of one or more logs.
+
+A sample of 2^31 cycles or more is a negative difference (the event came
+before its reference time). It is not a latency. The apps count it only in
+"invalid=", so n, min, max, mean and the bins do not include it. An old log
+has no "invalid=" field: there these samples are in n, max, mean and in the
+overflow bin 31 (see invalid() and mean()).
 """
 
 import argparse
@@ -180,6 +187,29 @@ def quantile(hist, q):
     return hist["max"]
 
 
+def invalid(hist):
+    """Number of negative differences: the "invalid=" field, or overflow bin 31 of an old log."""
+    return hist.get("invalid", 0) + sum(c for e, c in hist["ovf_log2"].items() if e >= 31)
+
+
+def mean(hist):
+    """Mean without the negative differences.
+
+    A new log prints this mean. In an old log, the printed mean includes the
+    negative differences. Then the mean comes from the bins (a coarse bin
+    counts at its centre), if all other samples are in bins. Otherwise the
+    printed mean stays.
+    """
+    bad = sum(c for e, c in hist["ovf_log2"].items() if e >= 31)
+    if "invalid" in hist or bad == 0:
+        return hist["mean"]
+    valid = hist["n"] - bad
+    if valid <= 0 or sum(hist["bins"].values()) != valid:
+        return hist["mean"]
+    w = hist.get("width", {})
+    return round(sum(c * (v + (w.get(v, 1) - 1) / 2) for v, c in hist["bins"].items()) / valid, 2)
+
+
 def stddev(hist):
     """Standard deviation; a coarse bin counts at its centre."""
     in_bins = sum(hist["bins"].values())
@@ -208,9 +238,10 @@ def summary(args):
                 "min": h["min"],
                 **{k: quantile(h, q) for k, q in QUANTILES},
                 "max": h["max"],
-                "mean": h["mean"],
+                "mean": mean(h),
                 "sd": round(stddev(h), 2),
                 "ovf": h["overflow"],
+                "inv": invalid(h),
             }
             rows.append(row)
         for err in run["errors"]:

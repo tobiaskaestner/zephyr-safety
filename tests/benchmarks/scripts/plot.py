@@ -53,27 +53,37 @@ def style(ax):
 
 
 def values(hist):
-    """Return sorted (value, count) pairs. An overflow bin counts at 2^e.
+    """Return (value, count) pairs, sorted by value. An overflow bin counts at 2^e.
+
+    With coarse bins, 2^e of the first overflow bin can be less than the
+    last coarse edges, so the list is sorted after the overflow bins are in.
 
     A value of 2^31 or more is a negative difference (the ISR ran before
-    the edge time), so it is not a latency. It is left out here and named
-    in the label (see invalid()).
+    the edge time), so it is not a latency. An old log has these samples in
+    overflow bin 31. They are left out here and named in the label (see
+    invalid()).
     """
-    pairs = sorted(hist["bins"].items())
-    pairs += sorted(((1 << e), c) for e, c in hist["ovf_log2"].items() if e < 31)
-    return pairs
+    pairs = list(hist["bins"].items())
+    pairs += [((1 << e), c) for e, c in hist["ovf_log2"].items() if e < 31]
+    return sorted(pairs)
 
 
 def invalid(hist):
-    return sum(c for e, c in hist["ovf_log2"].items() if e >= 31)
+    return latbench.invalid(hist)
 
 
 def max_text(hist):
     bad = invalid(hist)
     if not bad:
         return f"max {hist['max']}"
-    valid = max(v for v, _ in values(hist))
-    return f"max {valid}, {bad} negative"
+    if "invalid" in hist:
+        # A new log: max is the largest valid sample.
+        valid = hist["max"] if hist["n"] else None
+    else:
+        # An old log: max is a negative difference. Use the largest bin.
+        pairs = values(hist)
+        valid = max(v for v, _ in pairs) if pairs else None
+    return f"max {'-' if valid is None else valid}, {bad} negative"
 
 
 def pick(run, name):
