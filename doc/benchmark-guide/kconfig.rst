@@ -25,7 +25,7 @@ Common options
      - Number of samples that the app discards at the start
    * - ``LATBENCH_HIST_BINS``
      - 4096
-     - Number of 1-cycle bins
+     - Number of 1-cycle bins (range 1 to 65536)
    * - ``LATBENCH_HIST_COARSE_BINS``
      - 0
      - Number of coarse bins after the 1-cycle bins
@@ -47,8 +47,8 @@ Common options
        ``LATBENCH_STIM_FIXED``)
    * - ``LATBENCH_STIM_PERIOD_ADJ_CYC``
      - 1
-     - Cycles added to the fixed period (range -10000 to 10000, only with
-       ``LATBENCH_STIM_FIXED``)
+     - Counts of the stimulus timer added to the fixed period (range -10000
+       to 10000, only with ``LATBENCH_STIM_FIXED``)
 
 Load generators
 ---------------
@@ -142,6 +142,10 @@ stimulus must define them too.
      - Poll period of the main thread in milliseconds
 
 ``irq_latency``:
+
+The interrupt path must be on the CMake command line, because
+``CMakeLists.txt`` selects the overlay of the port from it (see
+:doc:`apps`).
 
 .. list-table::
    :header-rows: 1
@@ -242,3 +246,7 @@ different defaults for these options (see :doc:`pitfalls`).
 ``wake_latency`` and ``thread_latency`` set
 ``CONFIG_MAIN_THREAD_PRIORITY=10``, so that the main thread does not compete
 with the measured threads.
+
+A board port can add a Kconfig fragment ``port.conf``. The port of the
+NUCLEO-G474RE sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y`` (see
+:doc:`hardware`).

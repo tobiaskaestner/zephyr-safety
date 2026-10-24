@@ -23,6 +23,7 @@ path starts with ``tests/``.
    kconfig
    output
    host-tools
+   unit-tests
    extending
    boards
    pitfalls

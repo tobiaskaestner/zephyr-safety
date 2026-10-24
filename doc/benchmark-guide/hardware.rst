@@ -1,11 +1,46 @@
-Hardware setup
-==============
+Method and hardware setup
+=========================
 
-This page describes the setup for the only board that the suite supports
-today, the NUCLEO-G474RE. :doc:`boards` lists the board-specific code.
+This page describes the measurement method and the hardware setup. The
+method is the same on each board. The board port supplies the hardware
+parts (see :doc:`boards`). The examples on this page are for the
+NUCLEO-G474RE, the only board with data points today.
 
-Parts and wiring
-----------------
+The method
+----------
+
+The method needs these hardware parts:
+
+- A stimulus timer. This is a free-running 32-bit up-counter with an
+  output compare channel.
+- A stimulus pin. At the compare value, the timer hardware drives this pin
+  high, with no software in the path.
+- A response pin with an interrupt on the rising edge. This is the
+  ``resp-gpios`` property of the ``zephyr,user`` devicetree node.
+- A wire from the stimulus pin to the response pin.
+
+The time stamp of the edge is the compare value. The measurement point
+reads the counter of the stimulus timer. Thus the latency is:
+
+.. code-block:: text
+
+   latency = stim_now() at the measurement point - stim_edge()
+
+The unit of the latency is one count of the stimulus timer. If the
+stimulus timer runs at the core clock, one count is one core cycle. The
+output gives both clocks (``stim_timer_hz`` and ``core_hz``).
+
+The subtraction is in unsigned 32-bit arithmetic. Thus a wrap of the
+counter between the edge and the measurement point gives the correct
+value. The timer counts also while the core sleeps in WFI, so the latency
+includes the wake-up from WFI.
+
+The ISR also reads the compare flag of the timer (``stim_fired()``). If a
+response interrupt comes without this flag, the edge did not come from
+the stimulus. The app counts such an edge in ``spurious_edges``.
+
+Hardware setup on the NUCLEO-G474RE
+-----------------------------------
 
 - One NUCLEO-G474RE board.
 - One USB cable to the ST-LINK connector of the board. The ST-LINK gives
@@ -21,15 +56,24 @@ Parts and wiring
      - Function
    * - D2
      - PA10
-     - Stimulus output. PA10 is also TIM2 channel 4. TIM2 makes the edge by
-       output compare.
+     - Stimulus pin. PA10 is also TIM2 channel 4. TIM2 is the stimulus
+       timer.
    * - A3
      - PB0
-     - Response input. PB0 is on EXTI line 0, which has its own interrupt
+     - Response pin. PB0 is on EXTI line 0, which has its own interrupt
        vector (``EXTI0_IRQn``).
 
+The port sets up TIM2 as follows (``common/boards/nucleo_g474re/port.c``):
+
+- The prescaler is 0, and the auto-reload value is ``UINT32_MAX``. TIM2
+  counts each cycle of its clock and wraps after 2\ :sup:`32` cycles.
+- TIM2 runs at the core clock. A ``BUILD_ASSERT`` makes sure that the AHB
+  prescaler and the APB1 prescaler are 1.
+- Channel 4 is in output compare mode, without preload, with active-high
+  polarity.
+
 Make sure that the wire is connected before you start a run. Each app with
-the TIM2 stimulus does a static check at start-up (see
+the stimulus does a static check at start-up (see
 :ref:`benchguide-static-check`). If the static check fails, the app prints
 ``LAT ERROR`` and stops.
 
@@ -45,46 +89,22 @@ workspace:
 If the wire is good, the console shows ``RESULT: OK``. The
 ``loopback_check`` app is also a Twister test with a console harness.
 
-How the app calculates the latency
-----------------------------------
-
-TIM2 is a 32-bit timer. The stimulus code (``common/src/stim.c``) sets it
-up as follows:
-
-- The prescaler is 0, and the auto-reload value is ``UINT32_MAX``. TIM2
-  counts each cycle of its clock and wraps after 2\ :sup:`32` cycles.
-- TIM2 runs at the core clock. A ``BUILD_ASSERT`` in ``stim.c`` makes sure
-  that the AHB prescaler and the APB1 prescaler are 1.
-- Channel 4 is in output compare mode, without preload, with active-high
-  polarity.
+How the app arms an edge
+------------------------
 
 To program the next edge, ``stim_arm()`` does these steps:
 
-#. It sets channel 4 to "forced inactive". PA10 goes low.
 #. It calculates the time of the next edge (see
    :ref:`benchguide-stim-modes`).
 #. It calculates the tick phase of that time (see
    :ref:`benchguide-tick-phase`).
-#. It writes the time to ``CCR4`` and clears the ``CC4`` flag.
-#. It sets channel 4 to "active on match". When ``TIM2->CNT`` reaches
-   ``CCR4``, PA10 goes high.
+#. It calls ``port_stim_set()``. On the NUCLEO-G474RE, this function sets
+   channel 4 to "forced inactive", so PA10 goes low. Then it writes the
+   time to ``CCR4``, clears the ``CC4`` flag, and sets channel 4 to "active
+   on match". When ``TIM2->CNT`` reaches ``CCR4``, PA10 goes high.
 
-The wire takes the rising edge to PB0. EXTI line 0 then starts the
-interrupt. The measurement point reads ``TIM2->CNT`` as its first action.
-The latency is:
-
-.. code-block:: text
-
-   latency = TIM2->CNT at the measurement point - CCR4
-
-The subtraction is in unsigned 32-bit arithmetic, so a wrap of TIM2
-between the edge and the measurement point gives the correct value. TIM2
-counts also while the core sleeps in WFI, so the latency includes the
-wake-up from WFI.
-
-The ISR also reads the ``CC4`` flag of TIM2 (``stim_fired()``). If an EXTI0
-interrupt comes without this flag, the edge did not come from the
-stimulus. The app counts such an edge in ``spurious_edges``.
+The wire takes the rising edge to the response pin, and its interrupt
+starts. The measurement point reads ``stim_now()`` as its first action.
 
 .. _benchguide-stim-modes:
 
@@ -103,13 +123,17 @@ calculates the time of the next edge.
 
 ``LATBENCH_STIM_FIXED``
    The next edge comes ``LATBENCH_STIM_PERIOD_US`` microseconds plus
-   ``LATBENCH_STIM_PERIOD_ADJ_CYC`` cycles after the previous edge. The
+   ``LATBENCH_STIM_PERIOD_ADJ_CYC`` counts after the previous edge. The
    period does not depend on the latency. If the code arms the next edge
-   less than 1000 cycles before its time, the stimulus counts an overrun
+   less than 1000 counts before its time, the stimulus counts an overrun
    (``stim_overruns``). Then it starts a new period from the time of the
    arm call.
 
-With a fixed period of a whole number of ticks, all edges have the same
+The stimulus calculates the microsecond values in counts of the stimulus
+timer, with ``stim_timer_hz / 1000000`` counts for each microsecond.
+
+On the NUCLEO-G474RE, TIM2 and the system timer count the same clock. With
+a fixed period of a whole number of ticks, all edges then have the same
 tick phase. ``LATBENCH_STIM_PERIOD_ADJ_CYC`` moves the phase by that number
 of cycles for each edge. A small value scans the full tick slowly. For
 example, 1 cycle at 170 MHz and 10000 ticks/s scans the tick in 17000
@@ -123,23 +147,26 @@ an edge arms the next edge.
 Tick phase
 ----------
 
-The tick phase of an edge is its position in the kernel tick, in cycles
-after the tick boundary (0 to ``tick_period_cyc - 1``). The system timer
-interrupts come at phase 0. The phase histograms (see
+The tick phase of an edge is its position in the kernel tick, in system
+timer cycles after the tick boundary (0 to ``tick_period_cyc - 1``). The
+system timer interrupts come at phase 0. The phase histograms (see
 :ref:`benchguide-phase-hist`) use this value to show where in the tick a
 latency comes from.
 
 The timer driver keeps its tick boundaries at multiples of the tick
-period in the count of ``k_cycle_get_64()``. TIM2 does not know this grid.
-Thus ``stim_arm()`` reads ``TIM2->CNT`` and ``k_cycle_get_64()`` together,
-with interrupts locked, and calculates:
+period in the count of ``k_cycle_get_64()``. The stimulus timer does not
+know this grid. Thus ``stim_arm()`` reads ``stim_now()`` and
+``k_cycle_get_64()`` together, with interrupts locked, and calculates:
 
 .. code-block:: text
 
-   phase = (k_cycle_get_64() + (t_edge - TIM2->CNT)) mod tick_period_cyc
+   phase = (k_cycle_get_64() + to_sys(t_edge - stim_now())) mod tick_period_cyc
 
-The code uses a fresh pair of readings for each edge, not a reference from
-the start of the run. :doc:`pitfalls` gives the reason.
+``to_sys()`` converts counts of the stimulus timer to system timer cycles.
+If the two clocks are the same (``stim_timer_hz`` = ``sys_timer_hz``), it
+does not change the value. The code uses a fresh pair of readings for
+each edge, not a reference from the start of the run. :doc:`pitfalls` gives
+the reason.
 
 The stimulus module prints two checks of the phase as ``LAT META``:
 
@@ -150,20 +177,25 @@ The stimulus module prints two checks of the phase as ``LAT META``:
    be small: the system timer ISR and one context switch.
 
 ``clock_drift_cyc``
-   The number of cycles that ``k_cycle_get_64()`` fell behind TIM2 since
-   ``stim_init()``. A negative value means that it ran ahead.
+   The number of cycles that ``k_cycle_get_64()`` fell behind the stimulus
+   timer since ``stim_init()``. A negative value means that it ran ahead.
    ``clock_elapsed_cyc`` gives the elapsed cycles of ``k_cycle_get_64()``
-   for the same time.
+   for the same time. If the two clocks are not the same, the value is
+   ``n/a``, because the stimulus timer can wrap before a long run ends.
 
-The phase code needs the SysTick driver and a 64-bit cycle counter
-(``CONFIG_CORTEX_M_SYSTICK`` and ``CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER``). A
-``BUILD_ASSERT`` in ``stim.c`` makes sure that both are set.
+The phase code needs a 64-bit cycle counter
+(``CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER``). A ``BUILD_ASSERT`` in ``stim.c``
+makes sure that it is set. On the NUCLEO-G474RE, the SysTick driver has
+the 64-bit counter by default only above 60 MHz. Thus ``port.conf`` of the
+port sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y``, for the 16 MHz
+clock overlay.
 
 Clock overlays
 --------------
 
-The board default is a core clock of 170 MHz. The folder ``common/clocks/``
-has two devicetree overlays that change the core clock:
+The board default of the NUCLEO-G474RE is a core clock of 170 MHz. The
+folder ``common/boards/nucleo_g474re/clocks/`` has two devicetree overlays
+that change the core clock:
 
 .. list-table::
    :header-rows: 1

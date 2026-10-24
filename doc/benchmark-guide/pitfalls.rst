@@ -14,9 +14,11 @@ each wake can program SysTick again for the slice timeout.
 
 Thus a tick phase that the code calculates from a reference at the start
 of the run moves away from the real tick grid. ``stim_arm()`` reads
-``TIM2->CNT`` and ``k_cycle_get_64()`` again for each edge, and calculates
-the phase from this fresh pair. ``clock_drift_cyc`` in the output shows
-the drift of a run. The experiment ``clock-drift`` measures it.
+the stimulus timer and ``k_cycle_get_64()`` again for each edge, and
+calculates the phase from this fresh pair. ``clock_drift_cyc`` in the
+output shows the drift of a run. The experiment ``clock-drift`` measures
+it. The experiment ``clock-drift-fix`` examines a change of the SysTick
+driver on the tree ``ws-safety-driftfix``.
 
 Kconfig ignores some requested values
 -------------------------------------
@@ -39,14 +41,15 @@ point with the ``.config`` of the build. If the ``.config`` does not have
 the requested value, the run stops. This check does not examine the
 values that come from ``conf_files``.
 
-DBGMCU bits from a debugger
----------------------------
+Debug register bits from a debugger
+-----------------------------------
 
-A debugger session can leave bits set in ``DBGMCU->CR`` that keep the
-clocks on in the sleep modes. Then WFI does not behave as without a
-debugger, and the latency from WFI changes. Each measurement app clears
-``DBGMCU->CR`` at the start and prints the old value as
-``dbgmcu_cr_at_boot``. ``loopback_check`` does not clear it.
+A debugger session can leave bits set in a debug register that keep the
+clocks on in the sleep modes (``DBGMCU->CR`` on the NUCLEO-G474RE). Then
+WFI does not behave as without a debugger, and the latency from WFI
+changes. Each measurement app calls ``port_debug_reset()`` at the start.
+This function clears the register and gives the old value, which the app
+prints as ``debug_reg_at_boot``. ``loopback_check`` does not clear it.
 
 The trees have different debug defaults
 ---------------------------------------
@@ -57,20 +60,34 @@ the suite measures. Each measurement app sets both to ``n`` in its
 ``prj.conf``, so that the trees build the same set of debug code. The
 ``LAT CFG`` line shows the values of the build.
 
-EXTI line 0 and TIM2 belong to the board
-----------------------------------------
+The board gives the timer and the IRQ to drivers
+------------------------------------------------
 
-The board devicetree gives TIM2 to ``pwm2`` (the LED on PA5), and EXTI
-line 0 to the GPIO interrupt driver. The overlays of the apps disable
-``pwm2``. An app with its own EXTI0 ISR also needs the EXTI node without
-line 0. In ``irq_latency``, a ``BUILD_ASSERT`` stops the build if the
-interrupt path and the overlay do not agree.
+On the NUCLEO-G474RE, the board devicetree gives TIM2 to ``pwm2`` (the LED
+on PA5), and EXTI line 0 to the GPIO interrupt driver. ``stim.overlay`` of
+the port disables ``pwm2``. An app with its own ISR on the response pin
+also needs ``resp_irq_own.overlay``. The port adds it if the app sets
+``LATBENCH_RESP_IRQ_OWN``.
+
+``irq_latency`` sets ``LATBENCH_RESP_IRQ_OWN`` only if the interrupt path is
+on the CMake command line. If the path comes from a Kconfig fragment, the
+port does not add the overlay, and a ``BUILD_ASSERT`` stops the build.
 
 Negative samples
 ----------------
 
 If the measurement point runs before the programmed edge time, the
 difference is negative and shows as a value of 2\ :sup:`31` or more. The
-apps count each EXTI0 interrupt without a TIM2 compare match in
-``spurious_edges``. A value other than 0 means that the data of the run
-needs an analysis before you use it.
+histogram counts such a value only in ``invalid`` (see
+:ref:`benchguide-hist`). The apps count each response interrupt without a
+compare match of the stimulus timer in ``spurious_edges``. A value other
+than 0 in ``invalid`` or in ``spurious_edges`` means that the data of the
+run needs an analysis before you use it.
+
+Tick phase in the zero-latency ISR
+----------------------------------
+
+In the ``zli`` path of ``irq_latency``, the ISR calls ``stim_arm()``, which
+reads ``k_cycle_get_64()``. BASEPRI does not mask a zero-latency IRQ. Thus
+the read can interrupt the timer driver in its locked section and see an
+inconsistent count. Only the phase histogram is at risk, not the latency.

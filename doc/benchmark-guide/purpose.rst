@@ -10,8 +10,9 @@ and the tail of a latency. An average hides the tail, and a safety
 argument needs the tail. For this reason, each app records every sample
 in a histogram on the target, not only a mean.
 
-All times are in core cycles. The stimulus timer runs at the core clock,
-so one timer count is one core cycle (see :doc:`hardware`).
+All times are in counts of the stimulus timer. On the NUCLEO-G474RE, the
+stimulus timer runs at the core clock, so one count is one core cycle (see
+:doc:`hardware`). This guide uses "cycles" for these counts.
 
 The suite has four measurement points:
 
@@ -80,6 +81,15 @@ Variant
 
 Sample
    One latency value in core cycles.
+
+Board target
+   A Zephyr board target with qualifiers, for example
+   ``nrf54l15dk/nrf54l15/cpuapp``. ``boards.yaml`` declares the board
+   targets of the suite.
+
+Board port
+   The board-specific code of the stimulus, in ``common/boards/<board>/``
+   (see :doc:`boards`).
 
 Tree
    A pinned set of source repositories (Zephyr and its modules), declared
