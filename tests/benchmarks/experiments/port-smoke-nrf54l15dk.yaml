@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Smoke test of the nrf54l15dk board port: wake_latency with the defaults, on
+# both trees. It checks that run.py builds, flashes and reads the board.
+
+name: port-smoke-nrf54l15dk
+board: nrf54l15dk/nrf54l15/cpuapp
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 400
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 10000
+
+points:
+  - id: default

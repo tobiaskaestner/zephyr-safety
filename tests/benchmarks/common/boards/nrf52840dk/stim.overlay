@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Pins of the nrf52840dk port: the stimulus pin is D2 (P1.03), the
+ * response pin is A3 (P0.29). Connect one wire D2 -> A3, as on the other
+ * boards. No LED, button, UART or QSPI flash of the DK uses these pins.
+ * The GPIOTE serves both ports. TIMER3 stays disabled, so that no driver
+ * uses it.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/gpio/arduino-header-r3.h>
+
+/ {
+	zephyr,user {
+		stim-gpios = <&arduino_header ARDUINO_HEADER_R3_D2 GPIO_ACTIVE_HIGH>;
+		resp-gpios = <&arduino_header ARDUINO_HEADER_R3_A3 GPIO_ACTIVE_HIGH>;
+	};
+};

@@ -1,0 +1,21 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Take the GPIOTE (IRQ 6) away from the GPIO driver, so that the app can
+ * connect its own ISR. The nRF52840 has one GPIOTE for both ports. Without
+ * it, the GPIO driver has no pin interrupts on P0 and P1.
+ */
+
+&gpio0 {
+	/delete-property/ gpiote-instance;
+};
+
+&gpio1 {
+	/delete-property/ gpiote-instance;
+};
+
+&gpiote {
+	status = "disabled";
+};

@@ -12,8 +12,28 @@
 
 #define USER_NODE DT_PATH(zephyr_user)
 
-/* The tick phase needs a cycle counter with the tick grid of the timer driver. */
-BUILD_ASSERT(IS_ENABLED(CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER), "the tick phase needs k_cycle_get_64()");
+/*
+ * The tick phase needs a cycle counter with the tick grid of the timer
+ * driver. Without k_cycle_get_64() (nrf_rtc_timer), the 32-bit count has
+ * the same grid if the tick period is a power of two.
+ */
+#if defined(CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER)
+#define SYS_CYC_MASK UINT64_MAX
+static inline uint64_t sys_cyc(void)
+{
+	return k_cycle_get_64();
+}
+#else
+BUILD_ASSERT(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC % CONFIG_SYS_CLOCK_TICKS_PER_SEC == 0 &&
+		     IS_POWER_OF_TWO(CONFIG_SYS_CLOCK_HW_CYCLES_PER_SEC /
+				     CONFIG_SYS_CLOCK_TICKS_PER_SEC),
+	     "without k_cycle_get_64(), the tick period must be a power of two cycles");
+#define SYS_CYC_MASK UINT32_MAX
+static inline uint64_t sys_cyc(void)
+{
+	return k_cycle_get_32();
+}
+#endif
 
 /* A fixed-rate edge needs at least this many cycles between arm and edge. */
 #define STIM_ARM_MARGIN 1000U
@@ -99,7 +119,7 @@ void stim_arm(uint32_t now)
 	 */
 	key = irq_lock();
 	cnt = port_stim_now();
-	cyc = k_cycle_get_64();
+	cyc = sys_cyc();
 	if ((int32_t)(next - cnt) < (int32_t)STIM_ARM_MARGIN) {
 		n_late++;
 		next = cnt + STIM_ARM_MARGIN;
@@ -119,7 +139,7 @@ static void phase_init(void)
 {
 	unsigned int key = irq_lock();
 	uint32_t cnt = port_stim_now();
-	uint64_t cyc = k_cycle_get_64();
+	uint64_t cyc = sys_cyc();
 
 	irq_unlock(key);
 	ref_cnt = cnt;
@@ -139,10 +159,10 @@ static void drift_check(void)
 {
 	unsigned int key = irq_lock();
 	uint32_t cnt = port_stim_now();
-	uint64_t cyc = k_cycle_get_64();
+	uint64_t cyc = sys_cyc();
 
 	irq_unlock(key);
-	printk("LAT META clock_elapsed_cyc=%llu\n", cyc - ref_cyc);
+	printk("LAT META clock_elapsed_cyc=%llu\n", (cyc - ref_cyc) & SYS_CYC_MASK);
 	if (stim_hz == sys_hz) {
 		printk("LAT META clock_drift_cyc=%d\n",
 		       (int32_t)((cnt - ref_cnt) - (uint32_t)(cyc - ref_cyc)));

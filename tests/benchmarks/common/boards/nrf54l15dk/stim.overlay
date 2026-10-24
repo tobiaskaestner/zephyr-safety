@@ -1,0 +1,20 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Pins of the nrf54l15dk port. The DK has no Arduino header, so D2 -> A3
+ * is not possible. The stimulus pin is P1.11 and the response pin is
+ * P1.12, on the "PORT P1" header. Connect one wire P1.11 -> P1.12. No
+ * LED, button or enabled UART of the DK uses these pins (spi22, which is
+ * disabled, has SCK on P1.11). GPIOTE20 serves port P1. TIMER00 stays
+ * disabled, so that no driver uses it.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	zephyr,user {
+		stim-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		resp-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+};

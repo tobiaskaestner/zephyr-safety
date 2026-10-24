@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Loopback wire P1.11 (output) -> P1.12 (input), on the "PORT P1" header.
+ * The DK has no Arduino header.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+
+/ {
+	zephyr,user {
+		stim-gpios = <&gpio1 11 GPIO_ACTIVE_HIGH>;
+		resp-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+	};
+};
