@@ -259,7 +259,13 @@ these steps:
 - It includes ``common/boards/<board>/port.cmake``. If this file does not
   exist, the build stops with ``no board port for <board>``.
 - If the app sets ``LATBENCH_RESP_IRQ_OWN`` before the include, the port
-  also takes the response IRQ away from the GPIO driver.
+  also takes the response IRQ away from the GPIO driver. An app can
+  instead set ``LATBENCH_RESP_IRQ_OWN_IF`` to a list of ``CONFIG_``
+  symbols: if one of them is ``y`` on the command line, the app owns the
+  IRQ.
+- Under sysbuild an image gets ``BOARD`` and the ``-D`` values only
+  through the sysbuild cache. ``latbench_cache_get()`` reads them from
+  there.
 
 ``common/latbench.cmake`` comes after ``find_package(Zephyr)``. It does these
 steps:

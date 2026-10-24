@@ -82,9 +82,12 @@ The paths ``wrapped``, ``direct`` and ``zli`` connect an ISR of the app.
 For these paths, the port must take the response IRQ away from the GPIO
 driver. The steps are:
 
-#. ``irq_latency/CMakeLists.txt`` reads the path from the CMake command
-   line (``-DCONFIG_LATBENCH_IRQ_PATH_WRAPPED=y``, ``_DIRECT`` or ``_ZLI``).
-   For these paths, it sets ``LATBENCH_RESP_IRQ_OWN``.
+#. ``irq_latency/CMakeLists.txt`` sets ``LATBENCH_RESP_IRQ_OWN_IF`` to the
+   three path symbols. ``common/latbench_board.cmake`` reads them from the
+   CMake command line (``-DCONFIG_LATBENCH_IRQ_PATH_WRAPPED=y``, ``_DIRECT``
+   or ``_ZLI``), or from the sysbuild cache if the build uses sysbuild
+   (Twister does this for ``nrf54l15dk``). If one of them is ``y``, it sets
+   ``LATBENCH_RESP_IRQ_OWN``.
 #. The port then adds its ``resp_irq_own.overlay``. On the NUCLEO-G474RE,
    this overlay removes EXTI line 0 from the GPIO interrupt driver.
 #. A ``BUILD_ASSERT`` in ``main.c`` compares the path with

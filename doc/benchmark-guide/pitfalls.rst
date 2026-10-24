@@ -112,8 +112,8 @@ the port disables ``pwm2``. An app with its own ISR on the response pin
 also needs ``resp_irq_own.overlay``. The port adds it if the app sets
 ``LATBENCH_RESP_IRQ_OWN``.
 
-``irq_latency`` sets ``LATBENCH_RESP_IRQ_OWN`` only if the interrupt path is
-on the CMake command line. If the path comes from a Kconfig fragment, the
+``irq_latency`` gets ``LATBENCH_RESP_IRQ_OWN`` only if the interrupt path is
+on the CMake command line (or in the sysbuild cache). If the path comes from a Kconfig fragment, the
 port does not add the overlay, and a ``BUILD_ASSERT`` stops the build.
 
 Negative samples

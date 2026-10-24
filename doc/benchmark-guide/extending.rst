@@ -134,7 +134,7 @@ Add an app
 
 #. Give each histogram of the app its own name.
 #. Write ``testcase.yaml`` with ``build_only: true``,
-   ``platform_allow: [nucleo_g474re]``, and one scenario for each important
+   ``platform_allow`` with the four board targets of ``boards.yaml``, and one scenario for each important
    variant. Use the tags ``benchmark`` and ``latency``.
 #. Add the app to the table in ``tests/benchmarks/README.md`` and to
    :doc:`apps` in this guide.
