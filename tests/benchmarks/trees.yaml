@@ -83,3 +83,33 @@ trees:
         url: https://github.com/zephyrproject-rtos/hal_nxp
         rev: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
         source: /wrk/z/ws-up/modules/hal/nxp
+
+  ws-safety-driftfix:
+    description: ws-safety Zephyr plus the SysTick reload gap experiment (branch tkaestner/latency-systick-drift)
+    repos:
+      zephyr:
+        path: zephyr
+        url: https://github.com/tiacsys/zephyr
+        branch: tkaestner/latency-systick-drift   # local branch in source, not pushed
+        rev: d793263cd6c0f2f8a2c8fb5d5188aab26e3e439f
+        source: /wrk/z/ws-safety/zephyr
+      cmsis_6:
+        path: modules/hal/cmsis_6
+        url: https://github.com/ARM-software/CMSIS_6.git
+        rev: b2dfbe1a20bbd49c2d2c605073799671074bbb30
+        source: /wrk/z/ws-safety/modules/hal/cmsis_6
+      hal_stm32:
+        path: modules/hal/stm32
+        url: https://github.com/zephyrproject-rtos/hal_stm32
+        rev: 02baa06ccea3304d1f65ec6550c68e5e300fcc58
+        source: /wrk/z/ws-safety/modules/hal/stm32
+      hal_nordic:
+        path: modules/hal/nordic
+        url: https://github.com/zephyrproject-rtos/hal_nordic
+        rev: 4387c79cebd31927fb1ea7d64bee11728ae8041f
+        source: /wrk/z/ws-safety/modules/hal/nordic
+      hal_nxp:
+        path: modules/hal/nxp
+        url: https://github.com/zephyrproject-rtos/hal_nxp
+        rev: c2d68e4b9526aa03174d1da9464dd8e8b87e0a3e
+        source: /wrk/z/ws-safety/modules/hal/nxp

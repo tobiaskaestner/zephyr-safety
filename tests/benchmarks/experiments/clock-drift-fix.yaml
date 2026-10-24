@@ -1,0 +1,32 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Test of the cause of the clock drift (see clock-drift.yaml): the tree
+# ws-safety-driftfix adds CORTEX_M_SYSTICK_RELOAD_GAP_COMP to the SysTick
+# driver. It measures the uncounted cycles of each reprogram with the DWT
+# cycle counter and adds them to the software count. If the cause is
+# right, the drift with "on" is close to 0. "off" is the same tree
+# without the option (the control).
+
+name: clock-drift-fix
+app: wake_latency
+trees: [ws-safety-driftfix]
+repeat: 1
+timeout: 400
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  comp:
+    off: {}
+    on:
+      kconfig: {CORTEX_M_SYSTICK_RELOAD_GAP_COMP: y}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+    switch:
+      conf_files: [common/conf/use_switch.conf]
