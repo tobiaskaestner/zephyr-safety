@@ -5,7 +5,7 @@
 # ws-safety-driftfix adds CORTEX_M_SYSTICK_RELOAD_GAP_COMP to the SysTick
 # driver. It measures the uncounted cycles of each reprogram with the DWT
 # cycle counter and adds them to the software count. If the cause is
-# right, the drift with "on" is close to 0. "off" is the same tree
+# right, the drift with "gapcomp" is close to 0. "nocomp" is the same tree
 # without the option (the control).
 
 name: clock-drift-fix
@@ -21,8 +21,8 @@ common:
 
 axes:
   comp:
-    off: {}
-    on:
+    nocomp: {}
+    gapcomp:
       kconfig: {CORTEX_M_SYSTICK_RELOAD_GAP_COMP: y}
   anchor:
     default: {}
