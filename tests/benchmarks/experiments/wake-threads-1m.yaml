@@ -1,0 +1,47 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The thread axis (plan §2.4) for M1 and M2: ISR to thread wake (sem,
+# wrapped ISR, woken thread at priority 0) with N load threads. The point
+# with N = 0 is t0-default of wake-timers-1m.
+#
+#   blocked  each waits forever on a semaphore of its own (priority 5)
+#   sleeper  each sleeps 1..20 ms in a loop (priority 5): a timeout and
+#            a switch for each sleep
+#   busy     busy loop at the lowest priority; with time slicing the busy
+#            threads take turns at each slice expiry (20 ms)
+#
+# Expectation with SCHED_SIMPLE: the woken thread has the highest
+# priority, so its insert into the ready queue is O(1). Blocked threads
+# cost nothing. Sleepers add timer ISR work and timeouts in the queue.
+
+name: wake-threads-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  kind:
+    blocked:
+      kconfig: {LATBENCH_LOAD_THREAD_BLOCKED: y}
+    sleeper:
+      kconfig: {LATBENCH_LOAD_THREAD_SLEEPER: y}
+    busy:
+      kconfig: {LATBENCH_LOAD_THREAD_BUSY: y}
+  threads:
+    n2:
+      kconfig: {LATBENCH_LOAD_THREADS: 2}
+    n8:
+      kconfig: {LATBENCH_LOAD_THREADS: 8}
+    n16:
+      kconfig: {LATBENCH_LOAD_THREADS: 16}
+    n64:
+      kconfig: {LATBENCH_LOAD_THREADS: 64}
