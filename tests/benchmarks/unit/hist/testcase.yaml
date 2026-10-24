@@ -1,0 +1,27 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+common:
+  tags: latbench
+  platform_allow:
+    - native_sim/native/64
+    - mps2/an385
+  integration_platforms:
+    - native_sim/native/64
+tests:
+  # Default sizes: 4096 fine bins, no coarse bins, 64 phase bins.
+  latbench.unit.hist.fine: {}
+  # Small coarse region: 16 fine bins, 4 coarse bins of 4 cycles, so
+  # that the tests reach each region with small values.
+  latbench.unit.hist.coarse:
+    extra_configs:
+      - CONFIG_LATBENCH_HIST_BINS=16
+      - CONFIG_LATBENCH_HIST_COARSE_BINS=4
+      - CONFIG_LATBENCH_HIST_COARSE_SHIFT=2
+      - CONFIG_LATBENCH_PHASE_BINS=8
+  # The sizes of the 1M experiments (experiments/*-1m.yaml).
+  latbench.unit.hist.experiment:
+    extra_configs:
+      - CONFIG_LATBENCH_HIST_BINS=2048
+      - CONFIG_LATBENCH_HIST_COARSE_BINS=2048
+      - CONFIG_LATBENCH_HIST_COARSE_SHIFT=5

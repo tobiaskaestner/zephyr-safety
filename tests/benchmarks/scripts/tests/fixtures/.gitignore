@@ -1,0 +1,2 @@
+# The fixtures are logs; the top-level .gitignore ignores *.log.
+!*.log

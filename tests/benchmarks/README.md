@@ -26,6 +26,7 @@ latencies of Zephyr on a NUCLEO-G474RE. All times are in core cycles.
 | `irq_latency/` | IRQ to ISR latency with a hardware time stamp of the edge |
 | `wake_latency/` | Edge to ISR to woken thread, for each ISR-capable kernel object |
 | `loopback_check/` | Checks the wire |
+| `unit/` | Unit tests for the histogram code and the scripts, without the board (see `unit/README.md`) |
 
 ## Reproduce a data point
 
