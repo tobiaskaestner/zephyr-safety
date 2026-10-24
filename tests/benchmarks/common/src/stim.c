@@ -26,6 +26,7 @@ static uint32_t tick_period;
 static uint32_t stim_hz;
 static uint32_t sys_hz;
 static uint32_t n_overruns;
+static uint32_t n_late;
 /* The stimulus timer and k_cycle_get_64() at stim_init(), for the clock drift check. */
 static uint32_t ref_cnt;
 static uint64_t ref_cyc;
@@ -61,27 +62,12 @@ static inline uint64_t to_sys(uint32_t d)
 	return (stim_hz == sys_hz) ? d : (uint64_t)d * sys_hz / stim_hz;
 }
 
-/*
- * The tick phase (in system timer cycles) of a future time of the stimulus
- * timer. The tick grid is in the count of k_cycle_get_64(), and that count
- * can lose cycles against the stimulus timer (each SysTick reprogram loses
- * a few, see the clock_drift_cyc output). So take the phase from a pair of
- * fresh readings, not from a reference of the past.
- */
-static uint32_t phase_of(uint32_t t)
-{
-	unsigned int key = irq_lock();
-	uint32_t cnt = port_stim_now();
-	uint64_t cyc = k_cycle_get_64();
-
-	irq_unlock(key);
-	/* t is less than 2^31 counts after cnt. */
-	return (uint32_t)((cyc + to_sys(t - cnt)) % tick_period);
-}
-
 void stim_arm(uint32_t now)
 {
 	uint32_t next;
+	unsigned int key;
+	uint32_t cnt;
+	uint64_t cyc;
 
 #if defined(CONFIG_LATBENCH_STIM_RANDOM)
 	next = now + stim_min + (rng_next() % stim_span);
@@ -97,9 +83,31 @@ void stim_arm(uint32_t now)
 		next = now + stim_period;
 	}
 #endif
-	stim_next_phase = phase_of(next);
+	/*
+	 * An ISR can run between the read of now and the write of the
+	 * compare value. If it runs longer than the delay, the compare value
+	 * is in the past, and the timer reaches it only after a full wrap
+	 * (25 s for 32 bits at 170 MHz). So write it with interrupts locked,
+	 * and check it against a fresh count first. A late edge comes
+	 * STIM_ARM_MARGIN counts after the fresh count, and counts in
+	 * stim_late.
+	 *
+	 * The tick phase comes from the same fresh pair of readings: the
+	 * tick grid is in the count of k_cycle_get_64(), and that count can
+	 * lose cycles against the stimulus timer (each SysTick reprogram
+	 * loses a few, see clock_drift_cyc). A reference of the past drifts.
+	 */
+	key = irq_lock();
+	cnt = port_stim_now();
+	cyc = k_cycle_get_64();
+	if ((int32_t)(next - cnt) < (int32_t)STIM_ARM_MARGIN) {
+		n_late++;
+		next = cnt + STIM_ARM_MARGIN;
+	}
+	stim_next_phase = (uint32_t)((cyc + to_sys(next - cnt)) % tick_period);
 	stim_next_ccr = next;
 	port_stim_set(next);
+	irq_unlock(key);
 }
 
 /*
@@ -208,6 +216,7 @@ int stim_init(void)
 void stim_print_stats(void)
 {
 	printk("LAT META stim_overruns=%u\n", n_overruns);
+	printk("LAT META stim_late=%u\n", n_late);
 	drift_check();
 	/* The same check after the run: a clock drift shows here. */
 	phase_check("tick_phase_check_end");

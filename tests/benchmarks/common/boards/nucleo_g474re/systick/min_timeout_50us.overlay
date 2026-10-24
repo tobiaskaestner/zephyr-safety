@@ -1,0 +1,14 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Raise the shortest SysTick reload from the driver default (10 us) to
+ * 50 us at 170 MHz. The driver loses a full reload each time the
+ * SysTick IRQ stays masked for more than one reload (it sees at most one
+ * wrap). Used by clock-drift-fix.
+ */
+
+&systick {
+	zephyr,min-timeout-cycles = <8500>;
+};
