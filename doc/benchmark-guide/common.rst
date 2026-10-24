@@ -140,15 +140,17 @@ Stimulus
      - True if the stimulus timer reached the compare value since the last
        arm.
    * - ``stim_arm(now)``
-     - Programs the next edge. Read ``stim_edge()`` and ``stim_edge_phase()``
-       of the current edge before this call.
+     - Programs the next edge, with interrupts locked. It moves a late edge
+       and counts it in ``stim_late`` (see :doc:`hardware`). Read
+       ``stim_edge()`` and ``stim_edge_phase()`` of the current edge before
+       this call.
    * - ``stim_stop()``
      - Drives the stimulus pin low and programs no new edge.
    * - ``stim_tick_period()``
      - The length of a kernel tick in system timer cycles.
    * - ``stim_print_stats()``
-     - Prints ``stim_overruns``, the clock drift and the phase check at the
-       end of the run.
+     - Prints ``stim_overruns``, ``stim_late``, the clock drift and the phase
+       check at the end of the run.
 
 :doc:`hardware` describes the edge, the stimulus modes and the tick
 phase.
@@ -237,8 +239,8 @@ that returns the system timer clock. A board port gives the real value.
 ``lat_done()`` prints ``LAT DONE``. The host stops the capture at this line.
 
 Each measurement app also prints ``debug_reg_at_boot``: the value that
-``port_debug_reset()`` found in the debug register before it cleared it
-(``DBGMCU->CR`` on the NUCLEO-G474RE, see :doc:`pitfalls`).
+``port_debug_reset()`` found in the debug register. The text depends on
+the port (see :doc:`boards` and :doc:`pitfalls`).
 
 .. _benchguide-latbench-cmake:
 

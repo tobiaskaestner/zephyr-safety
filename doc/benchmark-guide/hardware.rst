@@ -42,6 +42,8 @@ the stimulus. The app counts such an edge in ``spurious_edges``.
 Hardware setup on the NUCLEO-G474RE
 -----------------------------------
 
+:doc:`boards` gives the pins and the wire of the other boards.
+
 - One NUCLEO-G474RE board.
 - One USB cable to the ST-LINK connector of the board. The ST-LINK gives
   the flash interface and the console (``/dev/ttyACM0``, 115200 baud).
@@ -94,14 +96,28 @@ How the app arms an edge
 
 To program the next edge, ``stim_arm()`` does these steps:
 
-#. It calculates the time of the next edge (see
-   :ref:`benchguide-stim-modes`).
-#. It calculates the tick phase of that time (see
-   :ref:`benchguide-tick-phase`).
+#. It calculates the time of the next edge from the count ``now`` that
+   the caller read (see :ref:`benchguide-stim-modes`).
+#. It locks interrupts.
+#. It reads a fresh count of the stimulus timer and a fresh count of the
+   system timer.
+#. If the edge time is less than 1000 counts after the fresh count, the
+   edge is late. Then ``stim_arm()`` moves the edge to 1000 counts after
+   the fresh count, and counts it in ``stim_late``.
+#. It calculates the tick phase of the edge from the fresh pair of counts
+   (see :ref:`benchguide-tick-phase`).
 #. It calls ``port_stim_set()``. On the NUCLEO-G474RE, this function sets
    channel 4 to "forced inactive", so PA10 goes low. Then it writes the
    time to ``CCR4``, clears the ``CC4`` flag, and sets channel 4 to "active
    on match". When ``TIM2->CNT`` reaches ``CCR4``, PA10 goes high.
+#. It unlocks interrupts.
+
+The check for a late edge is necessary because an ISR can run between the
+read of ``now`` and the write of the compare value. If the ISR takes more
+time than the delay to the edge, the compare value is in the past. Then
+the timer reaches it only after a full wrap of the 32-bit counter (25 s at
+170 MHz), and a repetition can time out. ``stim_late`` other than 0 shows
+that this occurred (see :doc:`pitfalls`).
 
 The wire takes the rising edge to the response pin, and its interrupt
 starts. The measurement point reads ``stim_now()`` as its first action.
@@ -129,8 +145,9 @@ calculates the time of the next edge.
    (``stim_overruns``). Then it starts a new period from the time of the
    arm call.
 
-The stimulus calculates the microsecond values in counts of the stimulus
-timer, with ``stim_timer_hz / 1000000`` counts for each microsecond.
+The stimulus converts the microsecond values to counts of the stimulus
+timer (``us * stim_timer_hz / 1000000``, in 64-bit arithmetic). The 1000
+counts of the overrun margin are in counts of the stimulus timer too.
 
 On the NUCLEO-G474RE, TIM2 and the system timer count the same clock. With
 a fixed period of a whole number of ticks, all edges then have the same
@@ -155,12 +172,17 @@ latency comes from.
 
 The timer driver keeps its tick boundaries at multiples of the tick
 period in the count of ``k_cycle_get_64()``. The stimulus timer does not
-know this grid. Thus ``stim_arm()`` reads ``stim_now()`` and
-``k_cycle_get_64()`` together, with interrupts locked, and calculates:
+know this grid. Thus ``stim_arm()`` reads ``stim_now()`` and the system
+timer count (``sys_cyc()``) together, with interrupts locked, and
+calculates:
 
 .. code-block:: text
 
-   phase = (k_cycle_get_64() + to_sys(t_edge - stim_now())) mod tick_period_cyc
+   phase = (sys_cyc() + to_sys(t_edge - stim_now())) mod tick_period_cyc
+
+``sys_cyc()`` is ``k_cycle_get_64()``. If the timer driver has no 64-bit
+counter, it is ``k_cycle_get_32()``, and the tick period must be a power of
+two cycles (see :doc:`boards`).
 
 ``to_sys()`` converts counts of the stimulus timer to system timer cycles.
 If the two clocks are the same (``stim_timer_hz`` = ``sys_timer_hz``), it
@@ -183,10 +205,8 @@ The stimulus module prints two checks of the phase as ``LAT META``:
    for the same time. If the two clocks are not the same, the value is
    ``n/a``, because the stimulus timer can wrap before a long run ends.
 
-The phase code needs a 64-bit cycle counter
-(``CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER``). A ``BUILD_ASSERT`` in ``stim.c``
-makes sure that it is set. On the NUCLEO-G474RE, the SysTick driver has
-the 64-bit counter by default only above 60 MHz. Thus ``port.conf`` of the
+On the NUCLEO-G474RE, the SysTick driver has the 64-bit counter by
+default only above 60 MHz. Thus ``port.conf`` of the
 port sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y``, for the 16 MHz
 clock overlay.
 

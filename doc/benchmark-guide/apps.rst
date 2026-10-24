@@ -89,6 +89,9 @@ driver. The steps are:
    this overlay removes EXTI line 0 from the GPIO interrupt driver.
 #. A ``BUILD_ASSERT`` in ``main.c`` compares the path with
    ``PORT_RESP_IRQ_OWNED``. If they do not agree, the build stops.
+#. If the port defines ``PORT_RESP_PIN``, ``irq_setup()`` compares it with
+   the pin of ``resp-gpios``. If they are different, the app prints
+   ``LAT ERROR irq setup`` and stops.
 
 Thus the path must be on the CMake command line. A path in a Kconfig
 fragment or in ``prj.conf`` does not select the overlay, and the build
@@ -275,13 +278,17 @@ record ``t2t`` and ``t2t_ret`` for that wake. It counts the wake in
 ------------------
 
 The app does a test of the wire without the stimulus timer and without a
-board port. It drives D2 as a GPIO output. It has its own overlay
-``loopback_check/boards/nucleo_g474re.overlay`` and runs only on the
-NUCLEO-G474RE.
+board port. It drives the stimulus pin (``stim-gpios``) as a GPIO output
+and reads the response pin (``resp-gpios``). Each board has an overlay in
+``loopback_check/boards/`` with the same wire as its port. On the
+MIMXRT1060-EVKC, A3 drives and D2 reads. The ``testcase.yaml`` permits
+only ``nucleo_g474re``.
 
-#. Static check: it drives D2 low and high and reads A3.
-#. Interrupt check: 1000 times, it sets D2 high and measures the time to
-   the GPIO callback of A3 in DWT cycles (``timing_counter_get()``).
+#. Static check: it drives the stimulus pin low and high and reads the
+   response pin.
+#. Interrupt check: 1000 times, it sets the stimulus pin high and measures
+   the time to the GPIO callback of the response pin with
+   ``timing_counter_get()``.
 
 The app prints ``RESULT: OK`` or ``RESULT: FAIL``. It does not use the
 ``LAT`` line format. The ``use_switch`` scenario of its ``testcase.yaml``

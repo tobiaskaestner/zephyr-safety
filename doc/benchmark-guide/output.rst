@@ -150,7 +150,9 @@ Metadata keys
      - ``CONFIG_TIMESLICE_SIZE``, if it exists
    * - ``debug_reg_at_boot``
      - all
-     - The debug register before ``port_debug_reset()`` cleared it
+     - The debug register that ``port_debug_reset()`` found. The format
+       depends on the port: ``0x...`` (``DBGMCU->CR``), ``dhcsr=0x...``
+       (Nordic), ``n/a clpcr=0x...`` (RT1060).
    * - ``poll_ms``
      - all
      - ``LATBENCH_POLL_MS``
@@ -196,7 +198,11 @@ Metadata keys
      - Response interrupts without a compare match of the stimulus timer
    * - ``stim_overruns``
      - stimulus
-     - Edges that the fixed stimulus armed too late
+     - Edges that the fixed stimulus armed too late for its period
+   * - ``stim_late``
+     - stimulus
+     - Edges that ``stim_arm()`` moved, because the edge time was less than
+       1000 counts after the fresh count (see :doc:`hardware`)
    * - ``clock_elapsed_cyc``, ``clock_drift_cyc``
      - stimulus
      - Clock drift check (see :doc:`hardware`). ``clock_drift_cyc`` is

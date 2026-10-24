@@ -20,6 +20,43 @@ output shows the drift of a run. The experiment ``clock-drift`` measures
 it. The experiment ``clock-drift-fix`` examines a change of the SysTick
 driver on the tree ``ws-safety-driftfix``.
 
+.. _benchguide-systick-wrap:
+
+The SysTick driver sees at most one counter wrap
+------------------------------------------------
+
+Know this property of the SysTick driver when you read
+``clock_drift_cyc``. Between two reads of SysTick, the driver adds at most
+one wrap of the counter to the kernel time. It programs a reload of at
+least 10 us by default. This is correct only if the SysTick IRQ never
+stays masked for longer than the shortest reload.
+
+Long masked sections break this condition, for example timeout inserts
+with many load timers. Then the counter wraps more than once, and the
+kernel time loses whole reloads. ``clock_drift_cyc`` then includes these
+lost reloads, not only the few cycles of each reprogram.
+
+The devicetree property ``zephyr,min-timeout-cycles`` of the ``systick``
+node sets a longer shortest reload. The port ``nucleo_g474re`` has two
+overlays in ``common/boards/nucleo_g474re/systick/``:
+``min_timeout_50us.overlay`` and ``min_timeout_200us.overlay``. The
+experiment ``clock-drift-fix`` uses them.
+
+Late edges
+----------
+
+An ISR can run between the read of the counter and the write of the
+compare value. If it runs for longer than the delay to the edge, the
+compare value is in the past. Then the timer reaches it only after a full
+wrap of the 32-bit counter (25 s at 170 MHz). A repetition with many
+samples can time out.
+
+``stim_arm()`` writes the compare value with interrupts locked, after it
+compares the edge time with a fresh count. It moves a late edge to 1000
+counts after the fresh count and counts it in ``stim_late``. A late edge
+has a correct latency, but its delay is not the delay of the stimulus
+sequence.
+
 Kconfig ignores some requested values
 -------------------------------------
 
@@ -48,8 +85,14 @@ A debugger session can leave bits set in a debug register that keep the
 clocks on in the sleep modes (``DBGMCU->CR`` on the NUCLEO-G474RE). Then
 WFI does not behave as without a debugger, and the latency from WFI
 changes. Each measurement app calls ``port_debug_reset()`` at the start.
-This function clears the register and gives the old value, which the app
-prints as ``debug_reg_at_boot``. ``loopback_check`` does not clear it.
+On the NUCLEO-G474RE, this function clears the register and gives the old
+value, which the app prints as ``debug_reg_at_boot``. ``loopback_check``
+does not clear it.
+
+The other SoCs have no such register. On the Nordic SoCs, the SoC stays in
+debug interface mode while a debugger is connected, and software cannot
+stop this mode. The port only prints DHCSR. Disconnect the debugger or do
+a power cycle before a run. The RT1060 port prints ``CCM_CLPCR``.
 
 The trees have different debug defaults
 ---------------------------------------

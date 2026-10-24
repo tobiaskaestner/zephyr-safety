@@ -44,19 +44,30 @@ timeout backend) only with that tree. If Kconfig ignores a value (unmet
 dependencies, or a second member of a choice), the Kconfig check stops
 the run (see :doc:`pitfalls`).
 
-Add a tree
-----------
+Add a tree or a module
+----------------------
+
+A pinned revision never changes (see :ref:`benchguide-tree-rule`).
+
+To use another revision of a repository, add a new tree:
 
 #. Make sure that a local clone has the revision of each repository, or
    that the ``url`` has it.
-#. Add a new entry under ``trees`` in ``trees.yaml``. Do not change an
-   existing entry.
+#. Add a new entry under ``trees`` in ``trees.yaml``. Do not change the
+   revisions of an existing entry.
 #. Commit ``trees.yaml``.
 #. Create the tree:
 
    .. code-block:: console
 
       tests/benchmarks/scripts/trees.py setup <tree>
+
+To add a module repository that a new board needs to an existing tree:
+
+#. Add the repository to the ``repos`` of the tree in ``trees.yaml``, with
+   its pinned revision.
+#. Commit ``trees.yaml``.
+#. Run ``trees.py setup <tree>``. It creates only the missing repositories.
 
 Add an app
 ----------

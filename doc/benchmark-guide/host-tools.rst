@@ -30,8 +30,8 @@ an experiment file in the safety repository. These rules apply:
 
 - ``trees.yaml`` pins each tree: the Zephyr revision, the revision of each
   module, and the Zephyr SDK version.
-- A pinned revision does not change, because old results refer to it. To
-  change a tree, add a new tree to ``trees.yaml`` and keep the old tree.
+- A pinned revision does not change, because old results refer to it. A
+  changed revision means a new tree (see :ref:`benchguide-tree-rule`).
 - A Zephyr patch for the study goes on a branch in the Zephyr repository.
   The commit of the patch is the revision of the new tree.
 - ``run.py`` stops before it builds anything in these conditions:
@@ -106,6 +106,19 @@ needs are in ``boards.yaml``.
 
 Do not change files in a tree. A tree with changes is not clean, and
 ``run.py`` refuses it.
+
+.. _benchguide-tree-rule:
+
+Change the trees
+~~~~~~~~~~~~~~~~
+
+- A pinned revision never changes. To use another revision of a
+  repository, add a new tree with a new name, and keep the old tree.
+- You can add a module repository to an existing tree. This does not
+  change old builds, because each build uses only the modules of its
+  board (``boards.yaml``).
+- If a tree does not pin a module of the board, ``run.py`` stops before it
+  builds anything.
 
 .. _benchguide-boards-yaml:
 
@@ -190,8 +203,9 @@ Options:
    the experiment file is in it. It finds the board target (``board:`` of
    the experiment, or ``default`` of ``boards.yaml``). It makes sure that
    the SDK is as pinned. For each tree of the experiment, it makes sure
-   that ``zephyr`` and the modules of the board are as pinned. Other
-   repositories of the tree are not examined. Then it expands the points.
+   that the tree pins ``zephyr`` and the modules of the board. Then it
+   makes sure that these repositories are as pinned. Other repositories of the tree are
+   not examined. Then it expands the points.
    An axis value name that YAML reads as a Boolean (``on``, ``off``,
    ``yes``, ``no``, ``true``, ``false``) stops the run.
 #. **Snapshot.** It exports the committed benchmark sources at the
@@ -366,9 +380,9 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
 - ``trees``, ``trees_root``: the entries of the trees from ``trees.yaml``,
   with only the repositories that the build used.
 - ``toolchain``: the SDK version and path.
-- ``tools``: the versions of CMake, Ninja, OpenOCD, Python and pyserial.
-  The OpenOCD version is in the manifest also for a board that flashes
-  with another tool.
+- ``tools``: the versions of CMake, Ninja, Python, pyserial, and of each
+  tool in the ``flash`` commands of the board (for example ``openocd``,
+  ``nrfutil`` or ``pyocd``).
 - ``board``, ``board_cfg``, ``console``: the board target, its entry from
   ``boards.yaml``, and the serial port.
 - ``probe_serial``: the serial number of the debug probe of the console
@@ -400,7 +414,7 @@ Summary and parse (``latbench.py``)
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/latbench.py summary [--json] LOG ...
+   tests/benchmarks/scripts/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
    tests/benchmarks/scripts/latbench.py parse LOG
    tests/benchmarks/scripts/latbench.py capture [--flash BUILD_DIR] [--runner openocd] [--port P] [--timeout S] [--echo] OUT
 
@@ -413,7 +427,14 @@ Summary and parse (``latbench.py``)
    in an overflow bin shows as ``>=2^e`` (for example ``>=8192``). A
    percentile in a coarse bin shows the lower edge of the bin. ``sd`` is
    ``nan`` if samples are in overflow bins. ``--json`` prints the rows as
-   JSON. ``summary`` does not include the phase histograms.
+   JSON. ``--md`` prints a Markdown table. ``summary`` does not include the
+   phase histograms.
+
+   ``--hist H`` shows only the histogram ``H``. Give it more than once for
+   more histograms. ``--meta KEY`` adds the ``LAT META`` value ``KEY`` as a
+   column. The key ``drift_ppm`` is calculated: ``clock_drift_cyc`` divided
+   by ``clock_elapsed_cyc``, in parts per million. It is empty if
+   ``clock_drift_cyc`` is ``n/a``.
 
    A log from before the ``invalid=`` field has the invalid samples in the
    overflow bin 31. ``summary`` then counts them in ``inv``. If all other
