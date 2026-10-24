@@ -225,12 +225,30 @@ def stddev(hist):
 QUANTILES = [("p50", 0.5), ("p90", 0.9), ("p99", 0.99), ("p99.9", 0.999), ("p99.99", 0.9999)]
 
 
+def drift_ppm(meta):
+    """Drift of the kernel cycle counter against the stimulus timer in ppm, or None."""
+    try:
+        return round(int(meta["clock_drift_cyc"]) / int(meta["clock_elapsed_cyc"]) * 1e6, 1)
+    except (KeyError, ValueError, ZeroDivisionError):
+        return None
+
+
 def summary(args):
+    """Print one row per log and histogram.
+
+    args.hist: only these histograms (default: all). args.meta: META keys
+    to add as columns ("drift_ppm" is computed from the clock keys).
+    args.md: a Markdown table.
+    """
+    only = getattr(args, "hist", None)
+    meta_keys = getattr(args, "meta", None) or []
     rows = []
     for path in args.logs:
         run = parse_log(path)
         label = run["meta"].get("variant", "?")
         for name, h in run["hists"].items():
+            if only and name not in only:
+                continue
             row = {
                 "log": "/".join(Path(path).parts[-3:]),
                 "variant": label,
@@ -244,6 +262,8 @@ def summary(args):
                 "ovf": h["overflow"],
                 "inv": invalid(h),
             }
+            for key in meta_keys:
+                row[key] = drift_ppm(run["meta"]) if key == "drift_ppm" else run["meta"].get(key)
             rows.append(row)
         for err in run["errors"]:
             print(f"{path}: ERROR {err}", file=sys.stderr)
@@ -253,6 +273,12 @@ def summary(args):
         print(json.dumps(rows, indent=2))
         return
     cols = list(rows[0].keys())
+    if getattr(args, "md", False):
+        print("| " + " | ".join(cols) + " |")
+        print("|" + "|".join("---" for _ in cols) + "|")
+        for r in rows:
+            print("| " + " | ".join(str(r[c]) for c in cols) + " |")
+        return
     widths = {c: max(len(c), *(len(str(r[c])) for r in rows)) for c in cols}
     print("  ".join(c.rjust(widths[c]) for c in cols))
     for r in rows:
@@ -279,6 +305,9 @@ def main():
 
     s = sub.add_parser("summary")
     s.add_argument("--json", action="store_true")
+    s.add_argument("--md", action="store_true", help="print a Markdown table")
+    s.add_argument("--hist", action="append", help="only this histogram (repeat for more)")
+    s.add_argument("--meta", action="append", help="add this META key as a column (drift_ppm: computed)")
     s.add_argument("logs", nargs="+")
     s.set_defaults(fn=summary)
 
