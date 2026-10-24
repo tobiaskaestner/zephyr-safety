@@ -131,6 +131,19 @@ documents:
       # report waits for both Doxygen documents.
       coverage_source_docs: [dox-zephyr-safety-detailed-design, dox-zephyr-safety-api]
 
+  # The user and maintainer guide of the latency benchmark suite
+  # (tests/benchmarks/). A plain Sphinx document without needs. In the
+  # verification group, beside the test report: the suite measures the
+  # timing of the kernel, as evidence for the safety case. Its folder is
+  # doc/benchmark-guide, not under verification/ (user request).
+  benchmark-guide:
+    title: "Latency Benchmark Guide"
+    kind: sphinx
+    group: verification
+    prefix: benchguide
+    doc_dir: benchmark-guide
+    builders: [html]
+
   # -- Reference --------------------------------------------------------------
 
   api-documentation:
