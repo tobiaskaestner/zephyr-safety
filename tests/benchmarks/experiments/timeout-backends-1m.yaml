@@ -1,8 +1,8 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Timeout queue backends with 256 periodic load timers (the t256-default
-# point of wake-timers-1m is the DLIST point). M1 and M2 through
+# Timeout queue backends with 256 periodic load timers. dlist is the
+# default backend, for a comparison with the same binary. M1 and M2 through
 # wake_latency (sem, wrapped ISR). SKIPLIST is only in ws-up, see
 # timeout-skiplist-1m.
 
@@ -22,6 +22,8 @@ common:
 
 axes:
   backend:
+    dlist:
+      kconfig: {TIMEOUT_BACKEND_DLIST: y}
     minheap:
       kconfig: {TIMEOUT_BACKEND_MINHEAP: y, TIMEOUT_HEAP_MAX_ENTRIES: 320}
     wheel:

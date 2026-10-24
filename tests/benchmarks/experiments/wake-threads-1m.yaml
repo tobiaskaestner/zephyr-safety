@@ -3,7 +3,8 @@
 
 # The thread axis (plan §2.4) for M1 and M2: ISR to thread wake (sem,
 # wrapped ISR, woken thread at priority 0) with N load threads. The point
-# with N = 0 is t0-default of wake-timers-1m.
+# none-n0 has no load threads (same binary as the other points, apart
+# from the load).
 #
 #   blocked  each waits forever on a semaphore of its own (priority 5)
 #   sleeper  each sleeps 1..20 ms in a loop (priority 5): a timeout and
@@ -45,3 +46,6 @@ axes:
       kconfig: {LATBENCH_LOAD_THREADS: 16}
     n64:
       kconfig: {LATBENCH_LOAD_THREADS: 64}
+
+points:
+  - id: none-n0
