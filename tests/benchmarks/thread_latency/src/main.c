@@ -8,12 +8,12 @@
  * Thread to thread wake latency benchmark (measurement point M3 of the
  * latency plan).
  *
- * The TIM2 stimulus (see latbench/stim.h) makes the EXTI0 ISR give a
+ * The hardware stimulus (see latbench/stim.h) makes the response ISR give a
  * semaphore to the giver thread (priority 2). The giver takes the time
  * stamp t0 and wakes the taker thread through the kernel object under
  * test. The taker takes the time stamp t1 as soon as its wait call
  * returns. The giver takes t2 when its wake call returns. All time stamps
- * come from TIM2, which runs at the core clock. Three histograms:
+ * come from the stimulus timer. Three histograms:
  *
  *   isr2thr  ISR time stamp -> giver (the M2 path, as a check)
  *   t2t      t0 -> t1: the wake call -> first instruction of the taker
@@ -34,8 +34,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys/printk.h>
-
-#include <stm32_ll_exti.h>
 
 #include <latbench/hist.h>
 #include <latbench/load.h>
@@ -241,12 +239,12 @@ static inline void giver_wake(void)
 #endif
 }
 
-static void exti0_isr(const void *arg)
+static void resp_isr(const void *arg)
 {
 	uint32_t now = stim_now();
 
 	ARG_UNUSED(arg);
-	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+	stim_resp_ack();
 	if (!stim_fired()) {
 		n_spurious++;
 	}
@@ -325,18 +323,13 @@ int main(void)
 {
 	char buf[24];
 
-	/*
-	 * A debugger session can leave DBGMCU bits set that keep the clocks
-	 * on in sleep modes. Clear them, so that WFI behaves as without a
-	 * debugger.
-	 */
-	snprintk(buf, sizeof(buf), "0x%08x", DBGMCU->CR);
-	DBGMCU->CR = 0;
+	/* Undo debugger settings that keep clocks on in sleep (see the port). */
+	port_debug_reset(buf, sizeof(buf));
 
 	lat_meta_print("thread_latency", PRIMITIVE "-" MODE);
 	lat_meta_kv("primitive", PRIMITIVE);
 	lat_meta_kv("t2t_mode", MODE);
-	lat_meta_kv("dbgmcu_cr_at_boot", buf);
+	lat_meta_kv("debug_reg_at_boot", buf);
 	printk("LAT META giver_prio=%d taker_prio=%d\n", GIVER_PRIO, TAKER_PRIO);
 	printk("LAT META poll_ms=%u\n", CONFIG_LATBENCH_POLL_MS);
 
@@ -351,9 +344,9 @@ int main(void)
 		return 0;
 	}
 
-	stim_exti0_init();
-	IRQ_CONNECT(EXTI0_IRQn, 0, exti0_isr, NULL, 0);
-	irq_enable(EXTI0_IRQn);
+	stim_resp_irq_init();
+	IRQ_CONNECT(STIM_RESP_IRQN, 0, resp_isr, NULL, 0);
+	irq_enable(STIM_RESP_IRQN);
 	load_start();
 
 	/* The taker starts first, so that it waits before the first wake. */

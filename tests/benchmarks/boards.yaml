@@ -1,0 +1,57 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Boards for the latency benchmarks. scripts/run.py reads this file.
+#
+# For each board target:
+#   port      folder of the board port in common/boards/ (C code, overlays)
+#   modules   repos of the tree (trees.yaml) that the build needs; the
+#             build gets exactly these as ZEPHYR_MODULES
+#   flash     commands that program the board and reset it; run in order.
+#             {zephyr} is the Zephyr tree, {elf} and {hex} are the images.
+#   console   default serial port of the board's console
+#   status    tested: data points exist; untested: builds only
+#
+# An experiment selects a board with "board:"; without it, run.py uses
+# "default".
+
+default: nucleo_g474re
+
+boards:
+  nucleo_g474re:
+    port: nucleo_g474re
+    modules: [cmsis_6, hal_stm32]
+    flash:
+      - [openocd, -f, "{zephyr}/boards/st/nucleo_g474re/support/openocd.cfg",
+         -c, "program {elf} verify reset exit"]
+    console: /dev/ttyACM0
+    status: tested
+
+  nrf52840dk/nrf52840:
+    port: nrf52840dk
+    modules: [cmsis_6, hal_nordic]
+    flash:
+      - [nrfutil, device, program, --firmware, "{hex}",
+         --options, chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE]
+      - [nrfutil, device, reset]
+    console: /dev/ttyACM0
+    status: untested
+
+  nrf54l15dk/nrf54l15/cpuapp:
+    port: nrf54l15dk
+    modules: [cmsis_6, hal_nordic]
+    flash:
+      - [nrfutil, device, program, --firmware, "{hex}", --x-family, nrf54l,
+         --options, chip_erase_mode=ERASE_RANGES_TOUCHED_BY_FIRMWARE]
+      - [nrfutil, device, reset, --x-family, nrf54l]
+    console: /dev/ttyACM1
+    status: untested
+
+  mimxrt1060_evk@C/mimxrt1062/qspi:
+    port: mimxrt1060_evk
+    modules: [cmsis_6, hal_nxp]
+    flash:
+      - [pyocd, flash, -t, mimxrt1060, "{hex}"]
+      - [pyocd, reset, -t, mimxrt1060]
+    console: /dev/ttyACM0
+    status: untested

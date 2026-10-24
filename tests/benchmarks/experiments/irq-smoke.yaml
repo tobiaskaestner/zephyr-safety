@@ -16,13 +16,9 @@ points:
     kconfig: {LATBENCH_IRQ_PATH_STOCK: y}
   - id: wrapped-idle
     kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
-    dtc_overlays: [irq_latency/exti_line0_app.overlay]
   - id: direct-idle
     kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
-    dtc_overlays: [irq_latency/exti_line0_app.overlay]
   - id: zli-idle
     kconfig: {LATBENCH_IRQ_PATH_ZLI: y}
-    dtc_overlays: [irq_latency/exti_line0_app.overlay]
   - id: direct-busy
     kconfig: {LATBENCH_IRQ_PATH_DIRECT: y, LATBENCH_BG_BUSY: y}
-    dtc_overlays: [irq_latency/exti_line0_app.overlay]

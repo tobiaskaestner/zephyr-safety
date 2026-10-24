@@ -16,7 +16,6 @@ common:
   kconfig:
     LATBENCH_SAMPLES: 1000000
     LATBENCH_IRQ_PATH_DIRECT: y
-  dtc_overlays: [irq_latency/exti_line0_app.overlay]
 
 points:
   - id: random

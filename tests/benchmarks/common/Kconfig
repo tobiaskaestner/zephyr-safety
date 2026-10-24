@@ -45,7 +45,7 @@ config LATBENCH_PHASE_BINS
 	  the samples whose stimulus edge had that tick phase.
 
 choice LATBENCH_STIM_MODE
-	prompt "Time between two stimuli (apps with the TIM2 stimulus)"
+	prompt "Time between two stimuli (apps with the hardware stimulus)"
 	default LATBENCH_STIM_RANDOM
 
 config LATBENCH_STIM_RANDOM
@@ -72,7 +72,7 @@ config LATBENCH_STIM_PERIOD_US
 	depends on LATBENCH_STIM_FIXED
 	default 300
 	help
-	  TIM2 and the system timer count the same clock. If the period is a
+	  On nucleo_g474re TIM2 and the system timer count the same clock. If the period is a
 	  whole number of ticks, each edge has the same tick phase. Use
 	  LATBENCH_STIM_PERIOD_ADJ_CYC to move the phase.
 

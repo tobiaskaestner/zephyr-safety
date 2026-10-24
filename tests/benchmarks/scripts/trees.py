@@ -19,6 +19,7 @@ import yaml
 
 BENCH_DIR = Path(__file__).resolve().parent.parent
 TREES_FILE = BENCH_DIR / "trees.yaml"
+BOARDS_FILE = BENCH_DIR / "boards.yaml"
 
 
 class TreeError(Exception):
@@ -39,6 +40,17 @@ def load(trees_root=None):
     return cfg
 
 
+def load_boards():
+    return yaml.safe_load(BOARDS_FILE.read_text())
+
+
+def board_repos(boards, board):
+    """Return the repos of a tree that a build for board needs: zephyr and the board modules."""
+    if board not in boards["boards"]:
+        raise TreeError(f"unknown board '{board}', see {BOARDS_FILE}")
+    return ["zephyr", *boards["boards"][board]["modules"]]
+
+
 def repo_dir(cfg, tree, repo):
     return cfg["root"] / tree / cfg["trees"][tree]["repos"][repo]["path"]
 
@@ -50,11 +62,16 @@ def repo_state(path):
     return rev, dirty
 
 
-def check_tree(cfg, tree):
-    """Raise TreeError if a repo of the tree is missing, not at its rev, or dirty."""
+def check_tree(cfg, tree, repos=None):
+    """Raise TreeError if a repo of the tree is missing, not at its rev, or dirty.
+
+    repos: check only these repos (default: all repos of the tree).
+    """
     if tree not in cfg["trees"]:
         raise TreeError(f"unknown tree '{tree}'")
     for name, spec in cfg["trees"][tree]["repos"].items():
+        if repos is not None and name not in repos:
+            continue
         path = repo_dir(cfg, tree, name)
         if not path.is_dir():
             raise TreeError(f"{tree}/{name}: {path} does not exist, run 'trees.py setup {tree}'")

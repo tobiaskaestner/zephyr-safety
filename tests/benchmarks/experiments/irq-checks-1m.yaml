@@ -24,7 +24,6 @@ common:
     LATBENCH_STIM_MIN_US: 100
     LATBENCH_STIM_MAX_US: 500
     LATBENCH_IRQ_PATH_DIRECT: y
-  dtc_overlays: [irq_latency/exti_line0_app.overlay]
 
 points:
   - id: idle-poll10
@@ -32,9 +31,9 @@ points:
   - id: idle-poll1000
     kconfig: {LATBENCH_POLL_MS: 1000}
   - id: idle-85mhz
-    dtc_overlays: [common/clocks/nucleo_g474re_85mhz.overlay]
+    dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_85mhz.overlay]
   - id: idle-16mhz
-    dtc_overlays: [common/clocks/nucleo_g474re_16mhz.overlay]
+    dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_16mhz.overlay]
   - id: busy
     kconfig: {LATBENCH_BG_BUSY: y}
   - id: busy-noslice

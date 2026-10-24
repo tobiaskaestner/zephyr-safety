@@ -23,12 +23,9 @@ axes:
       kconfig: {LATBENCH_IRQ_PATH_STOCK: y}
     wrapped:
       kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
-      dtc_overlays: [irq_latency/exti_line0_app.overlay]
     direct:
       kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
-      dtc_overlays: [irq_latency/exti_line0_app.overlay]
     zli:
       kconfig: {LATBENCH_IRQ_PATH_ZLI: y}
-      dtc_overlays: [irq_latency/exti_line0_app.overlay]
   background:
     idle: {}

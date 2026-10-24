@@ -25,13 +25,13 @@ Experiment file:
 
     name: irq-smoke
     app: irq_latency                    # folder in tests/benchmarks
+    board: nucleo_g474re                # optional, a key of boards.yaml
     trees: [ws-safety]
     repeat: 1
     timeout: 600                        # s per repetition
     common:                             # added to every point
       kconfig: {LATBENCH_SAMPLES: 100000}
       conf_files: [common/conf/lean.conf]       # relative to tests/benchmarks
-      dtc_overlays: [irq_latency/exti_line0_app.overlay]
     axes:                               # cartesian product, id = values joined by '-'
       path:
         stock: {kconfig: {LATBENCH_IRQ_PATH_STOCK: y}}
@@ -124,11 +124,13 @@ def safety_repo_state():
     return root, rev, dirty
 
 
-def find_openocd_cfg(zephyr, board):
-    cfgs = list((zephyr / "boards").glob(f"*/{board}/support/openocd.cfg"))
-    if len(cfgs) != 1:
-        fail(f"no unique openocd.cfg for {board} in {zephyr}")
-    return cfgs[0]
+def flash_command(board_cfg, zephyr, pdir):
+    """Return one command that runs the flash commands of the board in order."""
+    images = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex")}
+    cmds = [[arg.format(**images) for arg in cmd] for cmd in board_cfg["flash"]]
+    if len(cmds) == 1:
+        return cmds[0]
+    return ["sh", "-c", " && ".join(shlex.join(c) for c in cmds)]
 
 
 def export_snapshot(repo_root, rev, dest):
@@ -170,12 +172,10 @@ def check_config(config_file, kconfig):
     return bad
 
 
-def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, sdk, bdir, log):
+def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log):
     app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
-    modules = [
-        str(trees.repo_dir(tree_cfg, tree, name)) for name in tree_cfg["trees"][tree]["repos"] if name != "zephyr"
-    ]
+    modules = [str(trees.repo_dir(tree_cfg, tree, name)) for name in board_cfg["modules"]]
     args = [
         "cmake",
         "-GNinja",
@@ -218,7 +218,7 @@ def main():
     p.add_argument("experiment")
     p.add_argument("--out", required=True)
     p.add_argument("--trees-root")
-    p.add_argument("--port", default="/dev/ttyACM0")
+    p.add_argument("--port", help="serial port of the console (default: console of the board in boards.yaml)")
     p.add_argument("--only", nargs="*", help="run only these point ids")
     p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
@@ -237,14 +237,17 @@ def main():
         fail(f"{exp_path} is not in the safety repo {repo_root}")
 
     tree_cfg = trees.load(args.trees_root)
+    boards = trees.load_boards()
+    board = exp.get("board", boards["default"])
     try:
+        repos = trees.board_repos(boards, board)
         sdk = trees.check_toolchain(tree_cfg)
         for t in exp["trees"]:
-            trees.check_tree(tree_cfg, t)
+            trees.check_tree(tree_cfg, t, repos)
     except trees.TreeError as e:
         fail(str(e))
-
-    board = exp.get("board", tree_cfg["board"])
+    board_cfg = boards["boards"][board]
+    port = args.port or board_cfg["console"]
     if not (BENCH_DIR / exp["app"]).is_dir():
         fail(f"no app folder {exp['app']}")
     points = expand_points(exp)
@@ -279,7 +282,7 @@ def main():
     run_dir.mkdir(parents=True)
     src_bench = export_snapshot(repo_root, repo_rev, run_dir / "src")
     probe = subprocess.run(
-        ["udevadm", "info", "--query=property", args.port], capture_output=True, text=True
+        ["udevadm", "info", "--query=property", port], capture_output=True, text=True
     ).stdout
     probe_serial = next((ln.split("=", 1)[1] for ln in probe.splitlines() if ln.startswith("ID_SERIAL_SHORT=")), None)
 
@@ -293,7 +296,10 @@ def main():
         "started": started.isoformat(),
         "host": platform.node(),
         "safety": {"path": str(repo_root), "rev": repo_rev, "snapshot": str(src_bench.relative_to(run_dir))},
-        "trees": {t: tree_cfg["trees"][t] for t in exp["trees"]},
+        "trees": {
+            t: {**tree_cfg["trees"][t], "repos": {r: tree_cfg["trees"][t]["repos"][r] for r in repos}}
+            for t in exp["trees"]
+        },
         "trees_root": str(tree_cfg["root"]),
         "toolchain": {"zephyr_sdk": str(tree_cfg["toolchain"]["zephyr_sdk"]["version"]), "path": str(sdk)},
         "tools": {
@@ -304,6 +310,8 @@ def main():
             "pyserial": serial.__version__,
         },
         "board": board,
+        "board_cfg": board_cfg,
+        "console": port,
         "probe_serial": probe_serial,
         "points": [],
     }
@@ -318,17 +326,17 @@ def main():
     logs = []
     for tree in exp["trees"]:
         zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
-        ocd_cfg = find_openocd_cfg(zephyr, board)
         for pt in points:
             pdir = run_dir / tree / pt["id"]
             bdir = pdir / "build"
             pdir.mkdir(parents=True)
             print(f"[{tree}/{pt['id']}] build", flush=True)
-            cmake_args = build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, sdk, bdir,
-                                     pdir / "build.log")
+            cmake_args = build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
+                                     bdir, pdir / "build.log")
             elf = bdir / "zephyr" / "zephyr.elf"
-            for f in (elf, bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
-                shutil.copy2(f, pdir / f.name)
+            for f in (elf, bdir / "zephyr" / "zephyr.hex", bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
+                if f.exists():
+                    shutil.copy2(f, pdir / f.name)
             entry = {
                 "tree": tree,
                 "id": pt["id"],
@@ -341,18 +349,12 @@ def main():
                 "logs": [],
             }
             manifest["points"].append(entry)
-            flash_cmd = [
-                "openocd",
-                "-f",
-                str(ocd_cfg),
-                "-c",
-                f"program {pdir / 'zephyr.elf'} verify reset exit",
-            ]
+            flash_cmd = flash_command(board_cfg, zephyr, pdir)
             for rep in range(1, exp.get("repeat", 1) + 1):
                 log = pdir / f"rep{rep}.log"
                 print(f"[{tree}/{pt['id']}] rep {rep}", flush=True)
                 try:
-                    latbench.run_capture(log, flash_cmd, args.port, timeout=exp.get("timeout", 600))
+                    latbench.run_capture(log, flash_cmd, port, timeout=exp.get("timeout", 600))
                 except latbench.CaptureError as e:
                     entry["error"] = str(e)
                     save_manifest()

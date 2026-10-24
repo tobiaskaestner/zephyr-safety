@@ -7,12 +7,14 @@
 /*
  * IRQ latency benchmark (measurement point M1 of the latency plan).
  *
- * TIM2 channel 4 sets PA10 high when TIM2->CNT reaches CCR4. A wire takes
- * the edge to PB0 (EXTI line 0). The measurement point reads TIM2->CNT.
- * TIM2 runs at the core clock, so CNT - CCR4 is the time from the edge to
- * the measurement point in core cycles. The time stamp of the edge comes
- * from hardware, and TIM2 counts also while the core sleeps in WFI. See
- * latbench/stim.h.
+ * The stimulus timer of the board port sets the stimulus pin high when
+ * its counter reaches the compare value. A wire takes the edge to the
+ * response pin. The measurement point reads the counter, so counter -
+ * compare value is the time from the edge to the measurement point (in
+ * core cycles, if the timer runs at the core clock, as on nucleo_g474re).
+ * The time stamp of the edge comes from hardware, and the timer counts
+ * also while the core sleeps in WFI. See latbench/stim.h and
+ * latbench/port.h.
  *
  * The measurement point schedules the next stimulus (random or fixed
  * rate). A second histogram records the latency by the tick phase of the
@@ -24,8 +26,6 @@
 #include <zephyr/drivers/gpio.h>
 #include <zephyr/sys/printk.h>
 
-#include <stm32_ll_exti.h>
-
 #include <latbench/hist.h>
 #include <latbench/load.h>
 #include <latbench/meta.h>
@@ -33,11 +33,10 @@
 
 #if defined(CONFIG_LATBENCH_IRQ_PATH_STOCK)
 #define IRQ_PATH "stock"
-BUILD_ASSERT(DT_IRQ_HAS_NAME(DT_NODELABEL(exti), line0),
-	     "the stock path needs EXTI line 0 in the GPIO interrupt driver");
+BUILD_ASSERT(!PORT_RESP_IRQ_OWNED, "the stock path needs the response IRQ in the GPIO driver");
 #else
-BUILD_ASSERT(!DT_IRQ_HAS_NAME(DT_NODELABEL(exti), line0),
-	     "build with EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay");
+BUILD_ASSERT(PORT_RESP_IRQ_OWNED,
+	     "the own ISR paths need -DCONFIG_LATBENCH_IRQ_PATH_<path>=y on the cmake command line");
 #if defined(CONFIG_LATBENCH_IRQ_PATH_WRAPPED)
 #define IRQ_PATH "wrapped"
 #elif defined(CONFIG_LATBENCH_IRQ_PATH_DIRECT)
@@ -66,7 +65,7 @@ static inline void on_edge(uint32_t now)
 {
 	uint32_t n = n_seen;
 
-	/* An edge without a TIM2 compare match did not come from the stimulus. */
+	/* An edge without a timer compare match did not come from the stimulus. */
 	if (!stim_fired()) {
 		n_spurious++;
 	}
@@ -101,26 +100,26 @@ static int irq_setup(void)
 	return gpio_pin_interrupt_configure_dt(&stim_resp, GPIO_INT_EDGE_TO_ACTIVE);
 }
 
-#else /* own ISR on EXTI0 */
+#else /* own ISR on the response IRQ */
 
 #if defined(CONFIG_LATBENCH_IRQ_PATH_WRAPPED)
 
-static void exti0_isr(const void *arg)
+static void resp_isr(const void *arg)
 {
 	uint32_t now = stim_now();
 
 	ARG_UNUSED(arg);
-	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+	stim_resp_ack();
 	on_edge(now);
 }
 
 #else
 
-ISR_DIRECT_DECLARE(exti0_isr)
+ISR_DIRECT_DECLARE(resp_isr)
 {
 	uint32_t now = stim_now();
 
-	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+	stim_resp_ack();
 	on_edge(now);
 	return 0;
 }
@@ -133,15 +132,15 @@ static int irq_setup(void)
 		return -EINVAL;
 	}
 
-	stim_exti0_init();
+	stim_resp_irq_init();
 #if defined(CONFIG_LATBENCH_IRQ_PATH_WRAPPED)
-	IRQ_CONNECT(EXTI0_IRQn, 0, exti0_isr, NULL, 0);
+	IRQ_CONNECT(STIM_RESP_IRQN, 0, resp_isr, NULL, 0);
 #elif defined(CONFIG_LATBENCH_IRQ_PATH_DIRECT)
-	IRQ_DIRECT_CONNECT(EXTI0_IRQn, 0, exti0_isr, 0);
+	IRQ_DIRECT_CONNECT(STIM_RESP_IRQN, 0, resp_isr, 0);
 #else
-	IRQ_DIRECT_CONNECT(EXTI0_IRQn, 0, exti0_isr, IRQ_ZERO_LATENCY);
+	IRQ_DIRECT_CONNECT(STIM_RESP_IRQN, 0, resp_isr, IRQ_ZERO_LATENCY);
 #endif
-	irq_enable(EXTI0_IRQn);
+	irq_enable(STIM_RESP_IRQN);
 	return 0;
 }
 
@@ -163,18 +162,13 @@ int main(void)
 {
 	char buf[24];
 
-	/*
-	 * A debugger session can leave DBGMCU bits set that keep the clocks
-	 * on in sleep modes. Clear them, so that WFI behaves as without a
-	 * debugger.
-	 */
-	snprintk(buf, sizeof(buf), "0x%08x", DBGMCU->CR);
-	DBGMCU->CR = 0;
+	/* Undo debugger settings that keep clocks on in sleep (see the port). */
+	port_debug_reset(buf, sizeof(buf));
 
 	lat_meta_print("irq_latency", IRQ_PATH);
 	lat_meta_kv("irq_path", IRQ_PATH);
 	lat_meta_kv("background", BACKGROUND);
-	lat_meta_kv("dbgmcu_cr_at_boot", buf);
+	lat_meta_kv("debug_reg_at_boot", buf);
 	printk("LAT META poll_ms=%u\n", CONFIG_LATBENCH_POLL_MS);
 
 	if (stim_init() < 0) {

@@ -16,14 +16,14 @@ tests:
     extra_configs:
       - CONFIG_LATBENCH_IRQ_PATH_STOCK=y
   benchmark.latency.irq.wrapped:
-    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
-    extra_configs:
-      - CONFIG_LATBENCH_IRQ_PATH_WRAPPED=y
+    # A cmake argument, not a Kconfig fragment: CMakeLists.txt needs the
+    # path to select the overlay of the board port.
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_WRAPPED=y
   benchmark.latency.irq.direct:
-    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
-    extra_configs:
-      - CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    # A cmake argument, not a Kconfig fragment: CMakeLists.txt needs the
+    # path to select the overlay of the board port.
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
   benchmark.latency.irq.zli:
-    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
-    extra_configs:
-      - CONFIG_LATBENCH_IRQ_PATH_ZLI=y
+    # A cmake argument, not a Kconfig fragment: CMakeLists.txt needs the
+    # path to select the overlay of the board port.
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_ZLI=y

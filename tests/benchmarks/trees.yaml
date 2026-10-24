@@ -16,7 +16,7 @@
 # Default root. Override with --trees-root or LATBENCH_TREES_ROOT.
 root: /wrk/z/ws-safety/latency-trees
 
-board: nucleo_g474re
+# The boards and the modules that each board needs are in boards.yaml.
 
 toolchain:
   zephyr_sdk:
@@ -43,6 +43,16 @@ trees:
         url: https://github.com/zephyrproject-rtos/hal_stm32
         rev: 02baa06ccea3304d1f65ec6550c68e5e300fcc58
         source: /wrk/z/ws-safety/modules/hal/stm32
+      hal_nordic:
+        path: modules/hal/nordic
+        url: https://github.com/zephyrproject-rtos/hal_nordic
+        rev: 4387c79cebd31927fb1ea7d64bee11728ae8041f
+        source: /wrk/z/ws-safety/modules/hal/nordic
+      hal_nxp:
+        path: modules/hal/nxp
+        url: https://github.com/zephyrproject-rtos/hal_nxp
+        rev: c2d68e4b9526aa03174d1da9464dd8e8b87e0a3e
+        source: /wrk/z/ws-safety/modules/hal/nxp
 
   ws-up:
     description: upstream Zephyr main, v4.5.0-rc3-8
@@ -63,3 +73,13 @@ trees:
         url: https://github.com/zephyrproject-rtos/hal_stm32
         rev: c9550199186236d610092f4005f8c9bae2a6bfcf
         source: /wrk/z/ws-up/modules/hal/stm32
+      hal_nordic:
+        path: modules/hal/nordic
+        url: https://github.com/zephyrproject-rtos/hal_nordic
+        rev: c708b9fe1b7a36090c468374811a6e934b97e54a
+        source: /wrk/z/ws-up/modules/hal/nordic
+      hal_nxp:
+        path: modules/hal/nxp
+        url: https://github.com/zephyrproject-rtos/hal_nxp
+        rev: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
+        source: /wrk/z/ws-up/modules/hal/nxp

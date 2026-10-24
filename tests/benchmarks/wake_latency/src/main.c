@@ -8,10 +8,11 @@
  * ISR to thread wake latency benchmark (measurement point M2 of the
  * latency plan).
  *
- * The TIM2 stimulus makes an edge on PA10 (see latbench/stim.h). The EXTI0
- * ISR takes a time stamp and wakes a thread through a kernel object. The
- * thread takes a time stamp as soon as its wait call returns. All time
- * stamps come from TIM2, which runs at the core clock. Three histograms:
+ * The hardware stimulus makes an edge on the stimulus pin (see
+ * latbench/stim.h). The ISR of the response pin takes a time stamp and
+ * wakes a thread through a kernel object. The thread takes a time stamp
+ * as soon as its wait call returns. All time stamps come from the
+ * stimulus timer. Three histograms:
  *
  *   irq      edge -> first instruction of the ISR
  *   isr2thr  ISR time stamp -> woken thread time stamp
@@ -27,8 +28,6 @@
 #include <zephyr/kernel.h>
 #include <zephyr/irq.h>
 #include <zephyr/sys/printk.h>
-
-#include <stm32_ll_exti.h>
 
 #include <latbench/hist.h>
 #include <latbench/load.h>
@@ -137,11 +136,11 @@ static inline void rearm_object(void)
 
 #if defined(CONFIG_LATBENCH_WAKE_ISR_DIRECT)
 
-ISR_DIRECT_DECLARE(exti0_isr)
+ISR_DIRECT_DECLARE(resp_isr)
 {
 	uint32_t now = stim_now();
 
-	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+	stim_resp_ack();
 	if (!stim_fired()) {
 		n_spurious++;
 	}
@@ -153,12 +152,12 @@ ISR_DIRECT_DECLARE(exti0_isr)
 
 #else
 
-static void exti0_isr(const void *arg)
+static void resp_isr(const void *arg)
 {
 	uint32_t now = stim_now();
 
 	ARG_UNUSED(arg);
-	LL_EXTI_ClearFlag_0_31(LL_EXTI_LINE_0);
+	stim_resp_ack();
 	if (!stim_fired()) {
 		n_spurious++;
 	}
@@ -214,19 +213,14 @@ int main(void)
 {
 	char buf[24];
 
-	/*
-	 * A debugger session can leave DBGMCU bits set that keep the clocks
-	 * on in sleep modes. Clear them, so that WFI behaves as without a
-	 * debugger.
-	 */
-	snprintk(buf, sizeof(buf), "0x%08x", DBGMCU->CR);
-	DBGMCU->CR = 0;
+	/* Undo debugger settings that keep clocks on in sleep (see the port). */
+	port_debug_reset(buf, sizeof(buf));
 
 	lat_meta_print("wake_latency", ISR_KIND "-" PRIMITIVE);
 	lat_meta_kv("wake_isr", ISR_KIND);
 	lat_meta_kv("primitive", PRIMITIVE);
 	lat_meta_kv("background", BACKGROUND);
-	lat_meta_kv("dbgmcu_cr_at_boot", buf);
+	lat_meta_kv("debug_reg_at_boot", buf);
 	printk("LAT META wake_prio=%d\n", CONFIG_LATBENCH_WAKE_PRIO);
 	printk("LAT META poll_ms=%u\n", CONFIG_LATBENCH_POLL_MS);
 
@@ -243,13 +237,13 @@ int main(void)
 		return 0;
 	}
 
-	stim_exti0_init();
+	stim_resp_irq_init();
 #if defined(CONFIG_LATBENCH_WAKE_ISR_DIRECT)
-	IRQ_DIRECT_CONNECT(EXTI0_IRQn, 0, exti0_isr, 0);
+	IRQ_DIRECT_CONNECT(STIM_RESP_IRQN, 0, resp_isr, 0);
 #else
-	IRQ_CONNECT(EXTI0_IRQn, 0, exti0_isr, NULL, 0);
+	IRQ_CONNECT(STIM_RESP_IRQN, 0, resp_isr, NULL, 0);
 #endif
-	irq_enable(EXTI0_IRQn);
+	irq_enable(STIM_RESP_IRQN);
 	load_start();
 
 	k_thread_create(&waker_thread, waker_stack, K_THREAD_STACK_SIZEOF(waker_stack), waker_fn,

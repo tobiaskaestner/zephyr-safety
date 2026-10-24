@@ -27,12 +27,18 @@ if(NOT LATBENCH_SRC_REV)
 endif()
 target_compile_definitions(app PRIVATE LATBENCH_SRC_REV="${LATBENCH_SRC_REV}")
 
-# The TIM2 stimulus (common/src/stim.c) needs the zephyr,user node of the
-# app overlay. An app that uses it sets LATBENCH_STIM before the include.
+# The hardware stimulus (common/src/stim.c) needs the board port that
+# common/latbench_board.cmake selected. An app that uses it sets
+# LATBENCH_STIM before the include.
 if(LATBENCH_STIM)
+  if(NOT LATBENCH_PORT_DIR)
+    message(FATAL_ERROR "latbench: include common/latbench_board.cmake before find_package(Zephyr)")
+  endif()
+  target_include_directories(app PRIVATE ${LATBENCH_PORT_DIR}/include)
   target_sources(app PRIVATE
+    ${LATBENCH_PORT_DIR}/port.c
     ${CMAKE_CURRENT_LIST_DIR}/src/stim.c
-    # The load timers take their tick phase from the stimulus.
+    # The load timers take their tick period from the stimulus.
     ${CMAKE_CURRENT_LIST_DIR}/src/load.c
   )
 endif()

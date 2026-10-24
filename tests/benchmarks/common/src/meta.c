@@ -7,6 +7,7 @@
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
 #include <zephyr/version.h>
+#include <zephyr/toolchain.h>
 #include <latbench/meta.h>
 
 #ifdef BUILD_VERSION
@@ -17,6 +18,16 @@
 
 /* Kconfig symbols that WP3 ranks as relevant for latency. */
 #define LAT_CFG(sym) printk(" " #sym "=%d", IS_ENABLED(CONFIG_##sym))
+
+/*
+ * The core clock. A board port gives the real value (latbench/port.h).
+ * Without a port (loopback_check), the system timer clock is the best
+ * guess: on SysTick boards it is the core clock.
+ */
+__weak uint32_t port_core_hz(void)
+{
+	return sys_clock_hw_cycles_per_sec();
+}
 
 void lat_meta_kv(const char *key, const char *value)
 {
@@ -31,7 +42,7 @@ void lat_meta_print(const char *app, const char *variant)
 	lat_meta_kv("zephyr", LAT_ZEPHYR_VERSION);
 	lat_meta_kv("bench_rev", LATBENCH_SRC_REV);
 	lat_meta_kv("board", CONFIG_BOARD_TARGET);
-	printk("LAT META core_hz=%u\n", sys_clock_hw_cycles_per_sec());
+	printk("LAT META core_hz=%u\n", port_core_hz());
 	printk("LAT META ticks_per_sec=%u\n", CONFIG_SYS_CLOCK_TICKS_PER_SEC);
 	printk("LAT META samples=%u\n", CONFIG_LATBENCH_SAMPLES);
 
