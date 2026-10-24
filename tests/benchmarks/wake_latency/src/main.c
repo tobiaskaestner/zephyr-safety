@@ -76,7 +76,7 @@ static K_SEM_DEFINE(wake_sem, 0, 1);
 #elif defined(CONFIG_LATBENCH_WAKE_EVENT)
 static K_EVENT_DEFINE(wake_event);
 #elif defined(CONFIG_LATBENCH_WAKE_MSGQ)
-K_MSGQ_DEFINE(wake_msgq, sizeof(uint32_t), 1, 4);
+static K_MSGQ_DEFINE(wake_msgq, sizeof(uint32_t), 1, 4);
 #elif defined(CONFIG_LATBENCH_WAKE_FIFO)
 static K_FIFO_DEFINE(wake_fifo);
 static struct {

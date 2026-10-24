@@ -61,6 +61,13 @@ static volatile uint32_t n_seen;
 static volatile uint32_t n_spurious;
 static volatile bool done;
 
+/*
+ * Note for the ZLI path: stim_arm() takes the tick phase of the next edge
+ * from k_cycle_get_64(). BASEPRI does not mask a zero-latency IRQ, so the
+ * read can interrupt the timer driver in its locked section and see an
+ * inconsistent count. Only the phase histogram is at risk, not the
+ * latency.
+ */
 static inline void on_edge(uint32_t now)
 {
 	uint32_t n = n_seen;

@@ -23,8 +23,9 @@
  * giver in the wake call, so t2t_ret also holds the taker's next wait
  * call and the switch back. With LATBENCH_T2T_PREEMPT=n the taker has
  * priority 3 and runs when the giver blocks for the next stimulus: t2t
- * then holds the rest of the giver loop and its block, and t2t_ret is
- * the wake call without a switch. In this mode the giver records a
+ * then holds the rest of the giver loop and its block (for the mutex:
+ * the giver blocks on the mutex in the next giver_prepare()), and
+ * t2t_ret is the wake call without a switch. In this mode the giver records a
  * sample one stimulus later, so the run has one sample less.
  *
  * The stimulus makes the giver run at a random time, so the wake call
@@ -104,7 +105,7 @@ static K_CONDVAR_DEFINE(obj_cv);
 #elif defined(CONFIG_LATBENCH_T2T_EVENT)
 static K_EVENT_DEFINE(obj_event);
 #elif defined(CONFIG_LATBENCH_T2T_MSGQ)
-K_MSGQ_DEFINE(obj_msgq, sizeof(uint32_t), 1, 4);
+static K_MSGQ_DEFINE(obj_msgq, sizeof(uint32_t), 1, 4);
 #elif defined(CONFIG_LATBENCH_T2T_FIFO)
 static K_FIFO_DEFINE(obj_fifo);
 static struct {
@@ -116,7 +117,7 @@ static struct {
 	void *lifo_reserved;
 } obj_item;
 #elif defined(CONFIG_LATBENCH_T2T_STACK)
-K_STACK_DEFINE(obj_stack, 1);
+static K_STACK_DEFINE(obj_stack, 1);
 #elif defined(CONFIG_LATBENCH_T2T_POLL)
 static struct k_poll_signal obj_signal = K_POLL_SIGNAL_INITIALIZER(obj_signal);
 static struct k_poll_event obj_poll_event =
@@ -330,7 +331,8 @@ int main(void)
 	lat_meta_kv("primitive", PRIMITIVE);
 	lat_meta_kv("t2t_mode", MODE);
 	lat_meta_kv("debug_reg_at_boot", buf);
-	printk("LAT META giver_prio=%d taker_prio=%d\n", GIVER_PRIO, TAKER_PRIO);
+	printk("LAT META giver_prio=%d\n", GIVER_PRIO);
+	printk("LAT META taker_prio=%d\n", TAKER_PRIO);
 	printk("LAT META poll_ms=%u\n", CONFIG_LATBENCH_POLL_MS);
 
 	if (stim_init() < 0) {

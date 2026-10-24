@@ -49,7 +49,9 @@ static inline uint32_t rng_range(uint32_t *state, uint32_t lo, uint32_t hi)
 
 static K_THREAD_STACK_ARRAY_DEFINE(load_stacks, N_THREADS, CONFIG_LATBENCH_LOAD_THREAD_STACK);
 static struct k_thread load_threads[N_THREADS];
+#if defined(CONFIG_LATBENCH_LOAD_THREAD_SLEEPER)
 static uint32_t n_sleeper_wakes;
+#endif
 
 #if defined(CONFIG_LATBENCH_LOAD_THREAD_BLOCKED)
 /* Nobody gives these semaphores. Each thread stays in the wait queue of its own. */
@@ -105,7 +107,7 @@ static void threads_start(void)
 static struct k_timer load_timers[N_TIMERS];
 static uint32_t n_timer_expiries;
 /*
- * Count, min and max of the expiry phase, in 64 bins over the tick. The
+ * Count, min and max of the expiry phase, in LATBENCH_PHASE_BINS bins over the tick. The
  * phase comes from the cycle counter of the timer driver, because the tick
  * grid is in that count.
  */

@@ -17,6 +17,7 @@ The apps print "LAT" lines (see common/src/hist.c and common/src/meta.c):
     LAT PHASE <name> bins=.. period=..
     LAT PB <bin> <count> <min> <max> <sum>
     LAT END <name>
+    LAT ERROR <text>
     LAT DONE
 
 Subcommands:

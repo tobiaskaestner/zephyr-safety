@@ -1,9 +1,14 @@
 # Latency benchmarks
 
 Benchmarks that measure the distributions of interrupt and scheduling
-latencies of Zephyr on a NUCLEO-G474RE. All times are in core cycles.
+latencies of Zephyr. All times are in counts of a hardware timer (core
+cycles on the NUCLEO-G474RE). The full guide is the Sphinx document
+`doc/benchmark-guide/`.
 
 ## Hardware
+
+Only the NUCLEO-G474RE has data points. `boards.yaml` lists the other
+boards; their ports build, but nobody ran them yet.
 
 - NUCLEO-G474RE, connected through its ST-LINK (console on
   `/dev/ttyACM0`, 115200 baud).
@@ -16,15 +21,18 @@ latencies of Zephyr on a NUCLEO-G474RE. All times are in core cycles.
 | Path | Content |
 |---|---|
 | `trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
+| `boards.yaml` | For each board: port folder, modules, flash commands, console |
 | `experiments/*.yaml` | One file for each experiment: app, trees, points, repetitions |
 | `scripts/trees.py` | Creates and checks the pinned worktrees |
 | `scripts/run.py` | Runs an experiment and records its provenance |
 | `scripts/latbench.py` | Parses logs and prints percentiles |
 | `scripts/plot.py` | Plots the exceedance probability and the histograms |
 | `scripts/requirements.txt` | Python packages for the scripts |
-| `common/` | Histogram, metadata and TIM2 stimulus code, Kconfig fragments (`conf/`), clock overlays (`clocks/`) |
+| `common/` | Histogram, metadata, stimulus and load code, Kconfig fragments (`conf/`) |
+| `common/boards/<board>/` | Board port: `port.cmake`, `port.c`, `include/latbench/port_impl.h`, overlays (see `common/include/latbench/port.h`) |
 | `irq_latency/` | IRQ to ISR latency with a hardware time stamp of the edge |
 | `wake_latency/` | Edge to ISR to woken thread, for each ISR-capable kernel object |
+| `thread_latency/` | Thread to thread wake, for each kernel primitive |
 | `loopback_check/` | Checks the wire |
 | `unit/` | Unit tests for the histogram code and the scripts, without the board (see `unit/README.md`) |
 
