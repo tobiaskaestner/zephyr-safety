@@ -145,7 +145,8 @@ def parse_log(path):
             phase = {"name": name, "bins": {}}
             for item in fields:
                 key, _, value = item.partition("=")
-                phase[key] = int(value)
+                # "bins=" is the bin count; "bins" holds the table.
+                phase["nbins" if key == "bins" else key] = int(value)
             run["phases"][name] = phase
         elif tag == "PB" and phase is not None:
             b, count, vmin, vmax, vsum = (int(x) for x in rest.split())

@@ -165,7 +165,7 @@ def phase(args):
                              gridspec_kw={"height_ratios": [1, 2] * len(runs)})
     for i, (label, run, _) in enumerate(runs):
         ph = run["phases"][args.hist] if args.hist else next(iter(run["phases"].values()))
-        nbins, period = ph["bins"], ph["period"]
+        nbins, period = ph["nbins"], ph["period"]
         width = period / nbins
         rows = sorted(ph["bins"].items())
         n = sum(r["count"] for _, r in rows)
