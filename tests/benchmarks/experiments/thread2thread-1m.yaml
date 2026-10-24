@@ -1,0 +1,36 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Thread to thread wake latency (M3) per kernel primitive, on both trees,
+# board and kernel defaults. The ISR wakes the giver thread (priority 2)
+# at a random time; the giver wakes the taker through the primitive. The
+# taker has priority 1 and preempts the giver (t2t = wake call -> taker).
+# One extra point without preemption (taker priority 3), for sem.
+
+name: thread2thread-1m
+app: thread_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+    condvar: {kconfig: {LATBENCH_T2T_CONDVAR: y}}
+    event: {kconfig: {LATBENCH_T2T_EVENT: y}}
+    msgq: {kconfig: {LATBENCH_T2T_MSGQ: y}}
+    fifo: {kconfig: {LATBENCH_T2T_FIFO: y}}
+    lifo: {kconfig: {LATBENCH_T2T_LIFO: y}}
+    stack: {kconfig: {LATBENCH_T2T_STACK: y}}
+    poll: {kconfig: {LATBENCH_T2T_POLL: y}}
+    work: {kconfig: {LATBENCH_T2T_WORK: y}}
+    wakeup: {kconfig: {LATBENCH_T2T_WAKEUP: y}}
+
+points:
+  - id: sem-nopreempt
+    kconfig: {LATBENCH_T2T_SEM: y, LATBENCH_T2T_PREEMPT: n}

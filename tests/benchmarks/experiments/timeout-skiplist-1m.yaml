@@ -1,0 +1,22 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The SKIPLIST timeout backend (ws-up only), as timeout-backends-1m.
+
+name: timeout-skiplist-1m
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_LOAD_TIMERS: 256
+
+points:
+  - id: skiplist
+    kconfig: {TIMEOUT_BACKEND_SKIPLIST: y}

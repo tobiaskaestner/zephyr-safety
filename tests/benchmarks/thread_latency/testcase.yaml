@@ -1,0 +1,47 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Build check only. Data points come from scripts/run.py.
+
+common:
+  tags:
+    - benchmark
+    - latency
+  platform_allow:
+    - nucleo_g474re
+  build_only: true
+tests:
+  benchmark.latency.t2t.sem: {}
+  benchmark.latency.t2t.sem.nopreempt:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_PREEMPT=n
+  benchmark.latency.t2t.mutex:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_MUTEX=y
+  benchmark.latency.t2t.condvar:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_CONDVAR=y
+  benchmark.latency.t2t.event:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_EVENT=y
+  benchmark.latency.t2t.msgq:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_MSGQ=y
+  benchmark.latency.t2t.fifo:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_FIFO=y
+  benchmark.latency.t2t.lifo:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_LIFO=y
+  benchmark.latency.t2t.stack:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_STACK=y
+  benchmark.latency.t2t.poll:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_POLL=y
+  benchmark.latency.t2t.work:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_WORK=y
+  benchmark.latency.t2t.wakeup:
+    extra_configs:
+      - CONFIG_LATBENCH_T2T_WAKEUP=y

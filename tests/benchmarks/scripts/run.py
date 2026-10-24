@@ -147,6 +147,29 @@ def export_snapshot(repo_root, rev, dest):
     return dest / rel
 
 
+def check_config(config_file, kconfig):
+    """Return the requested symbols that do not have their value in the .config.
+
+    Kconfig only warns about a symbol that the tree does not have or whose
+    dependencies are not met, and then builds with the default. This check
+    makes that an error.
+    """
+    have = {}
+    for line in Path(config_file).read_text().splitlines():
+        if line.startswith("CONFIG_") and "=" in line:
+            key, _, value = line.partition("=")
+            have[key[len("CONFIG_"):]] = value.strip('"')
+        elif line.startswith("# CONFIG_") and line.endswith(" is not set"):
+            have[line[len("# CONFIG_"):-len(" is not set")]] = "n"
+    bad = []
+    for sym, value in kconfig.items():
+        want = kconfig_value(value)
+        got = have.get(sym, "n")
+        if got != want:
+            bad.append(f"{sym}: requested {want}, .config has {got}")
+    return bad
+
+
 def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, sdk, bdir, log):
     app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
@@ -184,6 +207,9 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, sdk, bdir
             r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT)
             if r.returncode != 0:
                 fail(f"build failed for {tree}/{point['id']}, see {log}")
+    bad = check_config(bdir / "zephyr" / ".config", point["kconfig"])
+    if bad:
+        fail(f"Kconfig values not applied for {tree}/{point['id']}:\n  " + "\n  ".join(bad))
     return args
 
 

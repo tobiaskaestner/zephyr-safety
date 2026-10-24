@@ -1,0 +1,71 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "Thread to thread wake latency benchmark"
+
+choice LATBENCH_T2T_PRIMITIVE
+	prompt "Kernel object that the giver thread uses to wake the taker"
+	default LATBENCH_T2T_SEM
+
+config LATBENCH_T2T_SEM
+	bool "k_sem_give / k_sem_take"
+
+config LATBENCH_T2T_MUTEX
+	bool "k_mutex_unlock / k_mutex_lock (contended, priority inheritance)"
+
+config LATBENCH_T2T_CONDVAR
+	bool "k_condvar_signal / k_condvar_wait"
+
+config LATBENCH_T2T_EVENT
+	bool "k_event_post / k_event_wait"
+	select EVENTS
+
+config LATBENCH_T2T_MSGQ
+	bool "k_msgq_put / k_msgq_get (4-byte message)"
+
+config LATBENCH_T2T_FIFO
+	bool "k_fifo_put / k_fifo_get"
+
+config LATBENCH_T2T_LIFO
+	bool "k_lifo_put / k_lifo_get"
+
+config LATBENCH_T2T_STACK
+	bool "k_stack_push / k_stack_pop"
+
+config LATBENCH_T2T_POLL
+	bool "k_poll_signal_raise / k_poll"
+	select POLL
+
+config LATBENCH_T2T_WORK
+	bool "k_work_submit_to_queue / work handler in a work queue thread"
+
+config LATBENCH_T2T_WAKEUP
+	bool "k_wakeup / k_sleep(K_FOREVER)"
+
+endchoice
+
+config LATBENCH_T2T_PREEMPT
+	bool "The taker has a higher priority than the giver"
+	default y
+	help
+	  y: the taker (priority 1) preempts the giver (priority 2) in the
+	  wake call. n: the taker has priority 3 and runs when the giver
+	  blocks again.
+
+config LATBENCH_STIM_MIN_US
+	int "Minimum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
+	default 100
+
+config LATBENCH_STIM_MAX_US
+	int "Maximum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
+	default 500
+
+config LATBENCH_POLL_MS
+	int "Period of the main thread that checks for the end of the run (ms)"
+	default 100
+
+rsource "../common/Kconfig"
+
+source "Kconfig.zephyr"
