@@ -7,9 +7,8 @@ cmake_minimum_required(VERSION 3.20.0)
 # connect their own ISR, so the port must take the response interrupt
 # away from the GPIO driver. This needs the path on the command line
 # (-DCONFIG_LATBENCH_IRQ_PATH_...=y); main.c checks that both agree.
-if(CONFIG_LATBENCH_IRQ_PATH_WRAPPED OR CONFIG_LATBENCH_IRQ_PATH_DIRECT OR CONFIG_LATBENCH_IRQ_PATH_ZLI)
-  set(LATBENCH_RESP_IRQ_OWN ON)
-endif()
+set(LATBENCH_RESP_IRQ_OWN_IF
+  CONFIG_LATBENCH_IRQ_PATH_WRAPPED CONFIG_LATBENCH_IRQ_PATH_DIRECT CONFIG_LATBENCH_IRQ_PATH_ZLI)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../common/latbench_board.cmake)
 
 find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
