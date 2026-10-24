@@ -5,7 +5,14 @@
 # board and kernel defaults. The ISR wakes the giver thread (priority 2)
 # at a random time; the giver wakes the taker through the primitive. The
 # taker has priority 1 and preempts the giver (t2t = wake call -> taker).
-# One extra point without preemption (taker priority 3), for sem.
+# Two extra points without preemption (taker priority 3), for sem and
+# mutex.
+#
+# The stimulus comes every 50..150 us (not 100..500 us as in the M2
+# experiments), so that the 24 points fit in about one hour. All points
+# here use the same stimulus, so they compare with each other; the share
+# of the samples that meet the timer ISR is about 3 times larger than in
+# the M2 experiments.
 
 name: thread2thread-1m
 app: thread_latency
@@ -16,6 +23,10 @@ timeout: 1200
 common:
   kconfig:
     LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
 
 axes:
   primitive:
@@ -34,3 +45,5 @@ axes:
 points:
   - id: sem-nopreempt
     kconfig: {LATBENCH_T2T_SEM: y, LATBENCH_T2T_PREEMPT: n}
+  - id: mutex-nopreempt
+    kconfig: {LATBENCH_T2T_MUTEX: y, LATBENCH_T2T_PREEMPT: n}

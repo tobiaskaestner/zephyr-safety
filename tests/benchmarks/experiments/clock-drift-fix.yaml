@@ -7,6 +7,13 @@
 # cycle counter and adds them to the software count. If the cause is
 # right, the drift with "gapcomp" is close to 0. "nocomp" is the same tree
 # without the option (the control).
+#
+# A second cause: the driver programs a reload of at least 10 us
+# (min_delay) and sees at most one counter wrap. With 256 periodic timers
+# the kernel masks the SysTick IRQ for longer than that (timeout inserts
+# walk the list under the lock), so whole reloads get lost (an unpinned
+# check: 4668 ppm). The t256 points raise the shortest reload with
+# zephyr,min-timeout-cycles (overlays in common/boards/nucleo_g474re/systick/).
 
 name: clock-drift-fix
 app: wake_latency
@@ -30,3 +37,16 @@ axes:
       kconfig: {TIMESLICING: n}
     switch:
       conf_files: [common/conf/use_switch.conf]
+
+points:
+  - id: t256-min10us-gapcomp
+    kconfig: {CORTEX_M_SYSTICK_RELOAD_GAP_COMP: y, LATBENCH_LOAD_TIMERS: 256,
+              LATBENCH_HIST_BINS: 2048, LATBENCH_HIST_COARSE_BINS: 2048}
+  - id: t256-min50us-gapcomp
+    kconfig: {CORTEX_M_SYSTICK_RELOAD_GAP_COMP: y, LATBENCH_LOAD_TIMERS: 256,
+              LATBENCH_HIST_BINS: 2048, LATBENCH_HIST_COARSE_BINS: 2048}
+    dtc_overlays: [common/boards/nucleo_g474re/systick/min_timeout_50us.overlay]
+  - id: t256-min200us-gapcomp
+    kconfig: {CORTEX_M_SYSTICK_RELOAD_GAP_COMP: y, LATBENCH_LOAD_TIMERS: 256,
+              LATBENCH_HIST_BINS: 2048, LATBENCH_HIST_COARSE_BINS: 2048}
+    dtc_overlays: [common/boards/nucleo_g474re/systick/min_timeout_200us.overlay]

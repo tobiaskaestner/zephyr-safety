@@ -105,7 +105,7 @@ static K_CONDVAR_DEFINE(obj_cv);
 #elif defined(CONFIG_LATBENCH_T2T_EVENT)
 static K_EVENT_DEFINE(obj_event);
 #elif defined(CONFIG_LATBENCH_T2T_MSGQ)
-static K_MSGQ_DEFINE(obj_msgq, sizeof(uint32_t), 1, 4);
+K_MSGQ_DEFINE(obj_msgq, sizeof(uint32_t), 1, 4);
 #elif defined(CONFIG_LATBENCH_T2T_FIFO)
 static K_FIFO_DEFINE(obj_fifo);
 static struct {
