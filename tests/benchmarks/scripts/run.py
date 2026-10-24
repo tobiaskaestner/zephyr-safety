@@ -1,0 +1,315 @@
+#!/usr/bin/env python3
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+"""Run a latency experiment from pinned, clean trees and record its provenance.
+
+    run.py experiments/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
+
+Rules (a run stops before it builds anything if one is broken):
+
+- The safety repo that holds this script and the experiment file is clean.
+- Each tree of the experiment is at its pinned rev in trees.yaml and clean
+  (scripts/trees.py setup creates the trees).
+- The Zephyr SDK has the pinned version.
+- The build uses only the modules of the tree (ZEPHYR_MODULES), not the
+  modules of a west workspace.
+
+Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
+versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
+devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
+
+Experiment file:
+
+    name: irq-smoke
+    app: irq_latency                    # folder in tests/benchmarks
+    trees: [ws-safety]
+    repeat: 1
+    timeout: 600                        # s per repetition
+    common:                             # added to every point
+      kconfig: {LATBENCH_SAMPLES: 100000}
+      conf_files: [common/conf/lean.conf]       # relative to tests/benchmarks
+      dtc_overlays: [irq_latency/exti_line0_app.overlay]
+    axes:                               # cartesian product, id = values joined by '-'
+      path:
+        stock: {kconfig: {LATBENCH_IRQ_PATH_STOCK: y}}
+        direct: {...}
+      anchor:
+        default: {}
+    points:                             # or explicit points (also allowed together)
+      - id: direct-busy
+        kconfig: {...}
+"""
+
+import argparse
+import datetime
+import hashlib
+import itertools
+import json
+import os
+import platform
+import shlex
+import shutil
+import subprocess
+import sys
+from pathlib import Path
+
+import yaml
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import latbench  # noqa: E402
+import trees  # noqa: E402
+
+BENCH_DIR = trees.BENCH_DIR
+
+
+def fail(msg):
+    sys.exit(f"error: {msg}")
+
+
+def tool_version(cmd):
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True)
+    except FileNotFoundError:
+        return None
+    return (r.stdout or r.stderr).strip().splitlines()[0]
+
+
+def merge(a, b):
+    out = {
+        "kconfig": {**a.get("kconfig", {}), **b.get("kconfig", {})},
+        "conf_files": a.get("conf_files", []) + b.get("conf_files", []),
+        "dtc_overlays": a.get("dtc_overlays", []) + b.get("dtc_overlays", []),
+    }
+    return out
+
+
+def expand_points(exp):
+    common = exp.get("common", {})
+    points = []
+    axes = exp.get("axes", {})
+    if axes:
+        names = list(axes)
+        for combo in itertools.product(*(axes[n].items() for n in names)):
+            spec = common
+            for _, value in combo:
+                spec = merge(spec, value or {})
+            spec["id"] = "-".join(k for k, _ in combo)
+            spec["axes"] = {n: k for n, (k, _) in zip(names, combo)}
+            points.append(spec)
+    for p in exp.get("points", []):
+        spec = merge(common, p)
+        spec["id"] = p["id"]
+        spec["axes"] = {}
+        points.append(spec)
+    ids = [p["id"] for p in points]
+    if len(ids) != len(set(ids)):
+        fail(f"duplicate point ids: {ids}")
+    return points
+
+
+def kconfig_value(v):
+    if v is True:
+        return "y"
+    if v is False:
+        return "n"
+    return str(v)
+
+
+def safety_repo_state():
+    root = Path(trees.git("rev-parse", "--show-toplevel", cwd=BENCH_DIR))
+    rev, dirty = trees.repo_state(root)
+    return root, rev, dirty
+
+
+def find_openocd_cfg(zephyr, board):
+    cfgs = list((zephyr / "boards").glob(f"*/{board}/support/openocd.cfg"))
+    if len(cfgs) != 1:
+        fail(f"no unique openocd.cfg for {board} in {zephyr}")
+    return cfgs[0]
+
+
+def build_point(tree_cfg, tree, point, app_dir, board, sdk, bdir, log):
+    zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
+    modules = [
+        str(trees.repo_dir(tree_cfg, tree, name)) for name in tree_cfg["trees"][tree]["repos"] if name != "zephyr"
+    ]
+    args = [
+        "cmake",
+        "-GNinja",
+        "-S",
+        str(app_dir),
+        "-B",
+        str(bdir),
+        f"-DBOARD={board}",
+        f"-DZEPHYR_MODULES={';'.join(modules)}",
+    ]
+    if point["conf_files"]:
+        args.append("-DEXTRA_CONF_FILE=" + ";".join(str(BENCH_DIR / f) for f in point["conf_files"]))
+    if point["dtc_overlays"]:
+        args.append("-DEXTRA_DTC_OVERLAY_FILE=" + ";".join(str(BENCH_DIR / f) for f in point["dtc_overlays"]))
+    for sym, value in point["kconfig"].items():
+        args.append(f"-DCONFIG_{sym}={kconfig_value(value)}")
+
+    env = {k: v for k, v in os.environ.items() if not k.startswith("ZEPHYR_")}
+    env.update(
+        ZEPHYR_BASE=str(zephyr),
+        ZEPHYR_TOOLCHAIN_VARIANT="zephyr",
+        ZEPHYR_SDK_INSTALL_DIR=str(sdk),
+    )
+    with open(log, "w") as f:
+        f.write("$ " + shlex.join(args) + "\n")
+        f.flush()
+        for cmd in (args, ["ninja", "-C", str(bdir)]):
+            r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT)
+            if r.returncode != 0:
+                fail(f"build failed for {tree}/{point['id']}, see {log}")
+    return args
+
+
+def main():
+    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    p.add_argument("experiment")
+    p.add_argument("--out", required=True)
+    p.add_argument("--trees-root")
+    p.add_argument("--port", default="/dev/ttyACM0")
+    p.add_argument("--only", nargs="*", help="run only these point ids")
+    p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
+    p.add_argument("--keep-build", action="store_true")
+    args = p.parse_args()
+
+    exp_path = Path(args.experiment).resolve()
+    exp_text = exp_path.read_text()
+    exp = yaml.safe_load(exp_text)
+
+    # 1. Provenance checks, before anything is built.
+    repo_root, repo_rev, repo_dirty = safety_repo_state()
+    if repo_dirty:
+        fail(f"safety repo {repo_root} is dirty, commit first:\n{repo_dirty}")
+    if not exp_path.is_relative_to(repo_root):
+        fail(f"{exp_path} is not in the safety repo {repo_root}")
+
+    tree_cfg = trees.load(args.trees_root)
+    try:
+        sdk = trees.check_toolchain(tree_cfg)
+        for t in exp["trees"]:
+            trees.check_tree(tree_cfg, t)
+    except trees.TreeError as e:
+        fail(str(e))
+
+    board = exp.get("board", tree_cfg["board"])
+    app_dir = BENCH_DIR / exp["app"]
+    points = expand_points(exp)
+    if args.only:
+        points = [pt for pt in points if pt["id"] in args.only]
+    if not points:
+        fail("no points to run")
+
+    print(f"safety {repo_rev[:12]}  trees {', '.join(exp['trees'])}  {len(points)} points x {exp.get('repeat', 1)}")
+    for pt in points:
+        print(f"  {pt['id']}: {pt['kconfig']} {pt['conf_files']} {pt['dtc_overlays']}")
+    if args.dry_run:
+        return
+
+    # 2. Output folder and manifest.
+    started = datetime.datetime.now(datetime.timezone.utc)
+    run_dir = Path(args.out).resolve() / exp["name"] / started.strftime("%Y%m%dT%H%M%SZ")
+    run_dir.mkdir(parents=True)
+    probe = subprocess.run(
+        ["udevadm", "info", "--query=property", args.port], capture_output=True, text=True
+    ).stdout
+    probe_serial = next((ln.split("=", 1)[1] for ln in probe.splitlines() if ln.startswith("ID_SERIAL_SHORT=")), None)
+
+    import serial
+
+    manifest = {
+        "experiment": exp["name"],
+        "experiment_file": str(exp_path.relative_to(repo_root)),
+        "experiment_yaml": exp_text,
+        "command": shlex.join(sys.argv),
+        "started": started.isoformat(),
+        "host": platform.node(),
+        "safety": {"path": str(repo_root), "rev": repo_rev},
+        "trees": {t: tree_cfg["trees"][t] for t in exp["trees"]},
+        "trees_root": str(tree_cfg["root"]),
+        "toolchain": {"zephyr_sdk": str(tree_cfg["toolchain"]["zephyr_sdk"]["version"]), "path": str(sdk)},
+        "tools": {
+            "cmake": tool_version(["cmake", "--version"]),
+            "ninja": tool_version(["ninja", "--version"]),
+            "openocd": tool_version(["openocd", "--version"]),
+            "python": sys.version.split()[0],
+            "pyserial": serial.__version__,
+        },
+        "board": board,
+        "probe_serial": probe_serial,
+        "points": [],
+    }
+    manifest_file = run_dir / "manifest.json"
+
+    def save_manifest():
+        manifest_file.write_text(json.dumps(manifest, indent=2) + "\n")
+
+    save_manifest()
+
+    # 3. Build, flash and capture each point.
+    logs = []
+    for tree in exp["trees"]:
+        zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
+        ocd_cfg = find_openocd_cfg(zephyr, board)
+        for pt in points:
+            pdir = run_dir / tree / pt["id"]
+            bdir = pdir / "build"
+            pdir.mkdir(parents=True)
+            print(f"[{tree}/{pt['id']}] build", flush=True)
+            cmake_args = build_point(tree_cfg, tree, pt, app_dir, board, sdk, bdir, pdir / "build.log")
+            elf = bdir / "zephyr" / "zephyr.elf"
+            for f in (elf, bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
+                shutil.copy2(f, pdir / f.name)
+            entry = {
+                "tree": tree,
+                "id": pt["id"],
+                "axes": pt["axes"],
+                "kconfig": pt["kconfig"],
+                "conf_files": pt["conf_files"],
+                "dtc_overlays": pt["dtc_overlays"],
+                "cmake": cmake_args,
+                "elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest(),
+                "logs": [],
+            }
+            manifest["points"].append(entry)
+            flash_cmd = [
+                "openocd",
+                "-f",
+                str(ocd_cfg),
+                "-c",
+                f"program {pdir / 'zephyr.elf'} verify reset exit",
+            ]
+            for rep in range(1, exp.get("repeat", 1) + 1):
+                log = pdir / f"rep{rep}.log"
+                print(f"[{tree}/{pt['id']}] rep {rep}", flush=True)
+                try:
+                    latbench.run_capture(log, flash_cmd, args.port, timeout=exp.get("timeout", 600))
+                except latbench.CaptureError as e:
+                    entry["error"] = str(e)
+                    save_manifest()
+                    fail(f"{tree}/{pt['id']} rep {rep}: {e}")
+                entry["logs"].append(str(log.relative_to(run_dir)))
+                logs.append(log)
+                save_manifest()
+            if not args.keep_build:
+                shutil.rmtree(bdir)
+
+    manifest["finished"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    save_manifest()
+
+    # 4. Summary.
+    with open(run_dir / "summary.txt", "w") as f:
+        sys.stdout = f
+        latbench.summary(argparse.Namespace(logs=[str(x) for x in logs], json=False))
+        sys.stdout = sys.__stdout__
+    print((run_dir / "summary.txt").read_text())
+    print(f"results in {run_dir}")
+
+
+if __name__ == "__main__":
+    main()

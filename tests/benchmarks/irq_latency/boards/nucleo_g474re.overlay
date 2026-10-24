@@ -1,0 +1,24 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Loopback wire D2 (PA10) -> A3 (PB0, EXTI line 0).
+ * TIM2 channel 4 drives PA10 by output compare. TIM2 runs at the core
+ * clock, so CNT - CCR4 in the ISR is the latency in core cycles.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/gpio/arduino-header-r3.h>
+
+/ {
+	zephyr,user {
+		resp-gpios = <&arduino_header ARDUINO_HEADER_R3_A3 GPIO_ACTIVE_HIGH>;
+		pinctrl-0 = <&tim2_ch4_pa10>;
+		pinctrl-names = "default";
+	};
+};
+
+/* The board uses TIM2 for the LED PWM on PA5. The benchmark owns TIM2. */
+&pwm2 {
+	status = "disabled";
+};

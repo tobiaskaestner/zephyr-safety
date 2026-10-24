@@ -1,0 +1,65 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Pinned source trees for the latency benchmarks.
+#
+# scripts/trees.py setup creates one detached git worktree per repo at
+# <root>/<tree>/<path>, at the pinned rev. A run (scripts/run.py) builds
+# only from these worktrees, with exactly the modules that are listed
+# here, and refuses to run if a worktree is not at its rev or is dirty.
+#
+# "source" is a local clone that has the rev (no network access needed).
+# If it does not exist, trees.py clones "url" instead.
+# A Zephyr patch for the study goes on a branch; pin its commit as a new
+# tree and keep the old tree, so that old results stay reproducible.
+
+# Default root. Override with --trees-root or LATBENCH_TREES_ROOT.
+root: /wrk/z/ws-safety/latency-trees
+
+board: nucleo_g474re
+
+toolchain:
+  zephyr_sdk:
+    version: 1.0.1
+    path: ~/zephyr-sdk-1.0.1
+
+trees:
+  ws-safety:
+    description: ws-safety Zephyr (tiacsys topic-safety-tskr), v4.4.0-13511
+    repos:
+      zephyr:
+        path: zephyr
+        url: https://github.com/tiacsys/zephyr
+        branch: topic-safety-tskr
+        rev: 770fdef15673c1f2d04a27ca0b750f75a6bec3da
+        source: /wrk/z/ws-safety/zephyr
+      cmsis_6:
+        path: modules/hal/cmsis_6
+        url: https://github.com/ARM-software/CMSIS_6.git
+        rev: b2dfbe1a20bbd49c2d2c605073799671074bbb30
+        source: /wrk/z/ws-safety/modules/hal/cmsis_6
+      hal_stm32:
+        path: modules/hal/stm32
+        url: https://github.com/zephyrproject-rtos/hal_stm32
+        rev: 02baa06ccea3304d1f65ec6550c68e5e300fcc58
+        source: /wrk/z/ws-safety/modules/hal/stm32
+
+  ws-up:
+    description: upstream Zephyr main, v4.5.0-rc3-8
+    repos:
+      zephyr:
+        path: zephyr
+        url: https://github.com/zephyrproject-rtos/zephyr
+        branch: main
+        rev: 3b42ac0d24bda3d655b70127186bd43115d69223
+        source: /wrk/z/ws-up/zephyr
+      cmsis_6:
+        path: modules/hal/cmsis_6
+        url: https://github.com/zephyrproject-rtos/CMSIS_6
+        rev: 1c1840af7a7e757d6e2fec3ddb0e5ce0dfcc93c8
+        source: /wrk/z/ws-up/modules/hal/cmsis_6
+      hal_stm32:
+        path: modules/hal/stm32
+        url: https://github.com/zephyrproject-rtos/hal_stm32
+        rev: c9550199186236d610092f4005f8c9bae2a6bfcf
+        source: /wrk/z/ws-up/modules/hal/stm32

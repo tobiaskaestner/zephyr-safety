@@ -1,0 +1,64 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "IRQ latency benchmark"
+
+choice LATBENCH_IRQ_PATH
+	prompt "Interrupt path from the EXTI0 line to the measurement point"
+	default LATBENCH_IRQ_PATH_STOCK
+
+config LATBENCH_IRQ_PATH_STOCK
+	bool "GPIO driver callback"
+	help
+	  The EXTI driver owns the IRQ. The time stamp is in the user
+	  callback, after _isr_wrapper and the driver dispatch.
+
+config LATBENCH_IRQ_PATH_WRAPPED
+	bool "Own ISR through _isr_wrapper (IRQ_CONNECT)"
+	help
+	  Needs exti_line0_app.overlay.
+
+config LATBENCH_IRQ_PATH_DIRECT
+	bool "Own direct ISR (IRQ_DIRECT_CONNECT)"
+	help
+	  Needs exti_line0_app.overlay.
+
+config LATBENCH_IRQ_PATH_ZLI
+	bool "Own direct zero-latency ISR"
+	select ZERO_LATENCY_IRQS
+	help
+	  Needs exti_line0_app.overlay. BASEPRI does not mask this IRQ, so
+	  kernel critical sections do not delay it.
+
+endchoice
+
+choice LATBENCH_BACKGROUND
+	prompt "What the CPU does between the stimuli"
+	default LATBENCH_BG_IDLE
+
+config LATBENCH_BG_IDLE
+	bool "Idle thread (WFI)"
+
+config LATBENCH_BG_BUSY
+	bool "Busy thread at the lowest priority"
+
+endchoice
+
+config LATBENCH_STIM_MIN_US
+	int "Minimum time between two stimuli (us)"
+	default 200
+
+config LATBENCH_STIM_MAX_US
+	int "Maximum time between two stimuli (us)"
+	default 1000
+	help
+	  The time between two stimuli is random in [MIN, MAX), so the
+	  stimuli do not lock to the phase of the system timer.
+
+config LATBENCH_POLL_MS
+	int "Period of the main thread that checks for the end of the run (ms)"
+	default 100
+
+rsource "../common/Kconfig"
+
+source "Kconfig.zephyr"

@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Build check only. Data points come from scripts/run.py with an
+# experiment file, which pins the trees (see ../README.md).
+
+common:
+  tags:
+    - benchmark
+    - latency
+  platform_allow:
+    - nucleo_g474re
+  build_only: true
+tests:
+  benchmark.latency.irq.stock:
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_PATH_STOCK=y
+  benchmark.latency.irq.wrapped:
+    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_PATH_WRAPPED=y
+  benchmark.latency.irq.direct:
+    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+  benchmark.latency.irq.zli:
+    extra_args: EXTRA_DTC_OVERLAY_FILE=exti_line0_app.overlay
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_PATH_ZLI=y
