@@ -17,3 +17,6 @@ common:
       - "RESULT: OK"
 tests:
   benchmark.latency.loopback_check: {}
+  benchmark.latency.loopback_check.use_switch:
+    extra_configs:
+      - CONFIG_USE_SWITCH=y
