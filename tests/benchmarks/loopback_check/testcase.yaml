@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Needs a wire from the stimulus pin to the response pin (see the board
+# overlay). Without the wire, the static check fails.
+
+common:
+  tags:
+    - benchmark
+    - latency
+  platform_allow:
+    - nucleo_g474re
+  harness: console
+  harness_config:
+    type: one_line
+    regex:
+      - "RESULT: OK"
+tests:
+  benchmark.latency.loopback_check: {}
