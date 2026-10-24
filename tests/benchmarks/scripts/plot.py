@@ -4,8 +4,8 @@
 
 """Plot latency distributions from run logs.
 
-    plot.py ccdf  --out f.svg [--title T] [--label L ...] LOG ...
-    plot.py hist  --out f.svg [--title T] [--label L ...] LOG ...
+    plot.py ccdf  --out f.svg [--title T] [--label L]... LOG ...
+    plot.py hist  --out f.svg [--title T] [--label L]... LOG ...
 
 ccdf: exceedance probability P(latency > x) on a log scale, one line per
       log. It shows the floor, the modes and the tail in one chart.
@@ -49,10 +49,27 @@ def style(ax):
 
 
 def values(hist):
-    """Return sorted (value, count) pairs. An overflow bin counts at 2^e."""
+    """Return sorted (value, count) pairs. An overflow bin counts at 2^e.
+
+    A value of 2^31 or more is a negative difference (the ISR ran before
+    the edge time), so it is not a latency. It is left out here and named
+    in the label (see invalid()).
+    """
     pairs = sorted(hist["bins"].items())
-    pairs += sorted(((1 << e), c) for e, c in hist["ovf_log2"].items())
+    pairs += sorted(((1 << e), c) for e, c in hist["ovf_log2"].items() if e < 31)
     return pairs
+
+
+def invalid(hist):
+    return sum(c for e, c in hist["ovf_log2"].items() if e >= 31)
+
+
+def max_text(hist):
+    bad = invalid(hist)
+    if not bad:
+        return f"max {hist['max']}"
+    valid = max(v for v, _ in values(hist))
+    return f"max {valid}, {bad} negative"
 
 
 def pick(run, name):
@@ -94,7 +111,7 @@ def ccdf(args):
             above -= c
             xs.append(v)
             ys.append(max(above, 0.5) / n)
-        ax.plot(xs, ys, color=SERIES[i], linewidth=2, label=f"{label}  (max {h['max']})", drawstyle="default")
+        ax.plot(xs, ys, color=SERIES[i], linewidth=2, label=f"{label}  ({max_text(h)})", drawstyle="default")
     ax.set_xscale("log")
     ax.set_yscale("log")
     ax.set_ylim(0.3 / max(pick(r[1], args.hist)["n"] for r in runs), 1.5)
@@ -126,7 +143,7 @@ def hist(args):
         ax.set_ylim(0.7, h["n"] * 2)
         p9999 = latbench.quantile(h, 0.9999)
         ax.set_title(
-            f"{label}   min {h['min']}   p50 {latbench.quantile(h, 0.5)}   p99.99 {p9999}   max {h['max']}",
+            f"{label}   min {h['min']}   p50 {latbench.quantile(h, 0.5)}   p99.99 {p9999}   {max_text(h)}",
             color=TEXT, fontsize=9, loc="left",
         )
         ax.set_ylabel("samples", color=TEXT2, fontsize=8)
@@ -143,7 +160,7 @@ def main():
     p.add_argument("kind", choices=["ccdf", "hist"])
     p.add_argument("--out", required=True)
     p.add_argument("--title")
-    p.add_argument("--label", nargs="*")
+    p.add_argument("--label", action="append", help="label of the next log, once per log")
     p.add_argument("--hist", default=None, help="histogram name (default: the first in each log)")
     p.add_argument("logs", nargs="+")
     args = p.parse_args()
