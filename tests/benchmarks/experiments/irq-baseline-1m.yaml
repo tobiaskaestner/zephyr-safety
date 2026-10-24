@@ -1,0 +1,34 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# IRQ latency baseline: the four interrupt paths with board defaults and
+# an idle CPU, on both trees. 1 million samples per point, for plots of
+# the distribution and its tail.
+
+name: irq-baseline-1m
+app: irq_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+
+axes:
+  path:
+    stock:
+      kconfig: {LATBENCH_IRQ_PATH_STOCK: y}
+    wrapped:
+      kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
+      dtc_overlays: [irq_latency/exti_line0_app.overlay]
+    direct:
+      kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
+      dtc_overlays: [irq_latency/exti_line0_app.overlay]
+    zli:
+      kconfig: {LATBENCH_IRQ_PATH_ZLI: y}
+      dtc_overlays: [irq_latency/exti_line0_app.overlay]
+  background:
+    idle: {}

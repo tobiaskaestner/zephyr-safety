@@ -1,0 +1,17 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Core clock 16 MHz from HSI. The flash needs 0 wait states at this
+ * frequency. APB1 stays at /1, so TIM2 still runs at the core clock.
+ */
+
+&clk_hsi {
+	status = "okay";
+};
+
+&rcc {
+	clocks = <&clk_hsi>;
+	clock-frequency = <DT_FREQ_M(16)>;
+};

@@ -1,0 +1,41 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Checks of two hypotheses from irq-smoke, on the direct path. The
+# reference point is direct-idle in irq-baseline-1m (same settings: poll
+# 100 ms, 170 MHz, idle CPU).
+#
+# H1: the second mode (+20 cycles, 1.2 %) is flash/ART cache misses after
+#     other code ran. Then its share follows the poll rate of the main
+#     thread, and it is gone at 16 MHz (0 flash wait states).
+# H2: the larger tail with a busy CPU comes from time slicing (the busy
+#     thread is preemptible, so it has a slice timeout). Then the tail
+#     goes back to the idle level with TIMESLICING=n.
+
+name: irq-checks-1m
+app: irq_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    LATBENCH_IRQ_PATH_DIRECT: y
+  dtc_overlays: [irq_latency/exti_line0_app.overlay]
+
+points:
+  - id: idle-poll10
+    kconfig: {LATBENCH_POLL_MS: 10}
+  - id: idle-poll1000
+    kconfig: {LATBENCH_POLL_MS: 1000}
+  - id: idle-85mhz
+    dtc_overlays: [common/clocks/nucleo_g474re_85mhz.overlay]
+  - id: idle-16mhz
+    dtc_overlays: [common/clocks/nucleo_g474re_16mhz.overlay]
+  - id: busy
+    kconfig: {LATBENCH_BG_BUSY: y}
+  - id: busy-noslice
+    kconfig: {LATBENCH_BG_BUSY: y, TIMESLICING: n}

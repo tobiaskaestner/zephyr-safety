@@ -175,6 +175,7 @@ def main():
     p.add_argument("--port", default="/dev/ttyACM0")
     p.add_argument("--only", nargs="*", help="run only these point ids")
     p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
+    p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
     args = p.parse_args()
 
@@ -209,6 +210,18 @@ def main():
     for pt in points:
         print(f"  {pt['id']}: {pt['kconfig']} {pt['conf_files']} {pt['dtc_overlays']}")
     if args.dry_run:
+        return
+    if args.build_only:
+        import tempfile
+
+        with tempfile.TemporaryDirectory(prefix="latbench-build-") as tmp:
+            for tree in exp["trees"]:
+                for pt in points:
+                    bdir = Path(tmp) / tree / pt["id"]
+                    bdir.mkdir(parents=True)
+                    print(f"[{tree}/{pt['id']}] build", flush=True)
+                    build_point(tree_cfg, tree, pt, app_dir, board, sdk, bdir / "build", bdir / "build.log")
+        print("all points build")
         return
 
     # 2. Output folder and manifest.
