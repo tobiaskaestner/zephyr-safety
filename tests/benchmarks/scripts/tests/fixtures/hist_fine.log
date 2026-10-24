@@ -1,0 +1,469 @@
+*** Booting Zephyr OS build v4.4.0-13511-g770fdef15673 ***
+Running TESTSUITE lat_hist
+===================================================================
+START - test_boundaries
+ PASS - test_boundaries in 0.000 seconds
+===================================================================
+START - test_config_literals
+ PASS - test_config_literals in 0.000 seconds
+===================================================================
+START - test_count_sum_min_max
+ PASS - test_count_sum_min_max in 0.000 seconds
+===================================================================
+START - test_define
+ PASS - test_define in 0.000 seconds
+===================================================================
+START - test_first_sample_extremes
+ PASS - test_first_sample_extremes in 0.000 seconds
+===================================================================
+START - test_log2_index
+ PASS - test_log2_index in 0.000 seconds
+===================================================================
+START - test_model_literals
+ PASS - test_model_literals in 0.000 seconds
+===================================================================
+START - test_reset_keeps_name
+ PASS - test_reset_keeps_name in 0.000 seconds
+===================================================================
+START - test_sweep
+ PASS - test_sweep in 0.000 seconds
+===================================================================
+TESTSUITE lat_hist succeeded
+Running TESTSUITE lat_phase
+===================================================================
+START - test_all_phases
+ PASS - test_all_phases in 0.000 seconds
+===================================================================
+START - test_bin_edges
+ PASS - test_bin_edges in 0.000 seconds
+===================================================================
+START - test_define_and_init
+ PASS - test_define_and_init in 0.000 seconds
+===================================================================
+START - test_large_period
+KNOWN GAP: lat_phase_add(period=67108865, phase=67108864) gives bin 0, expected 63 (phase * BINS wraps)
+ SKIP - test_large_period in 0.000 seconds
+===================================================================
+START - test_phase_not_below_period
+KNOWN GAP: lat_phase_add(phase=period=17000) writes bin 64: min[0]=1 max[0]=123 guard[0]=123
+ SKIP - test_phase_not_below_period in 0.000 seconds
+===================================================================
+START - test_stats_per_bin
+ PASS - test_stats_per_bin in 0.000 seconds
+===================================================================
+TESTSUITE lat_phase succeeded
+Running TESTSUITE lat_print
+===================================================================
+START - test_hist_all_regions
+ PASS - test_hist_all_regions in 0.000 seconds
+===================================================================
+START - test_hist_empty
+ PASS - test_hist_empty in 0.000 seconds
+===================================================================
+START - test_hist_fine
+ PASS - test_hist_fine in 0.000 seconds
+===================================================================
+START - test_hist_mean_large
+ PASS - test_hist_mean_large in 0.000 seconds
+===================================================================
+START - test_hist_mean_sum_overflow
+KNOWN GAP: count=sum/max=UINT32_MAX: printed LAT HIST max n=4294967295 min=4294967295 max=4294967295 mean=42949670.96 overflow=0
+LAT END max
+
+ SKIP - test_hist_mean_sum_overflow in 0.000 seconds
+===================================================================
+START - test_hook_capture
+ PASS - test_hook_capture in 0.000 seconds
+===================================================================
+START - test_phase_print
+ PASS - test_phase_print in 0.000 seconds
+===================================================================
+START - test_phase_print_empty
+ PASS - test_phase_print_empty in 0.000 seconds
+===================================================================
+TESTSUITE lat_print succeeded
+Running TESTSUITE lat_zfixture
+===================================================================
+START - test_emit_fixture
+LAT BEGIN
+LAT META test=hist_unit
+LAT META hist_bins=4096
+LAT META coarse_bins=0
+LAT META coarse_shift=5
+LAT META phase_bins=64
+LAT META seed=625341585
+LAT META samples=10000
+LAT META period=17000
+LAT CFG LATBENCH_FIXTURE=1
+LAT HIST fix n=10000 min=3840 max=4294967294 mean=88480919.28 overflow=2334
+LAT BIN 3840 24
+LAT BIN 3841 28
+LAT BIN 3842 32
+LAT BIN 3843 39
+LAT BIN 3844 32
+LAT BIN 3845 27
+LAT BIN 3846 39
+LAT BIN 3847 28
+LAT BIN 3848 26
+LAT BIN 3849 19
+LAT BIN 3850 33
+LAT BIN 3851 25
+LAT BIN 3852 35
+LAT BIN 3853 27
+LAT BIN 3854 26
+LAT BIN 3855 32
+LAT BIN 3856 34
+LAT BIN 3857 35
+LAT BIN 3858 25
+LAT BIN 3859 40
+LAT BIN 3860 33
+LAT BIN 3861 28
+LAT BIN 3862 23
+LAT BIN 3863 28
+LAT BIN 3864 35
+LAT BIN 3865 22
+LAT BIN 3866 29
+LAT BIN 3867 25
+LAT BIN 3868 29
+LAT BIN 3869 31
+LAT BIN 3870 23
+LAT BIN 3871 30
+LAT BIN 3872 26
+LAT BIN 3873 18
+LAT BIN 3874 19
+LAT BIN 3875 25
+LAT BIN 3876 20
+LAT BIN 3877 33
+LAT BIN 3878 26
+LAT BIN 3879 36
+LAT BIN 3880 32
+LAT BIN 3881 31
+LAT BIN 3882 29
+LAT BIN 3883 23
+LAT BIN 3884 24
+LAT BIN 3885 22
+LAT BIN 3886 19
+LAT BIN 3887 36
+LAT BIN 3888 30
+LAT BIN 3889 33
+LAT BIN 3890 23
+LAT BIN 3891 32
+LAT BIN 3892 34
+LAT BIN 3893 25
+LAT BIN 3894 24
+LAT BIN 3895 28
+LAT BIN 3896 26
+LAT BIN 3897 24
+LAT BIN 3898 29
+LAT BIN 3899 21
+LAT BIN 3900 20
+LAT BIN 3901 30
+LAT BIN 3902 26
+LAT BIN 3903 19
+LAT BIN 3904 25
+LAT BIN 3905 33
+LAT BIN 3906 32
+LAT BIN 3907 24
+LAT BIN 3908 24
+LAT BIN 3909 26
+LAT BIN 3910 37
+LAT BIN 3911 19
+LAT BIN 3912 28
+LAT BIN 3913 33
+LAT BIN 3914 26
+LAT BIN 3915 28
+LAT BIN 3916 16
+LAT BIN 3917 24
+LAT BIN 3918 28
+LAT BIN 3919 19
+LAT BIN 3920 25
+LAT BIN 3921 23
+LAT BIN 3922 19
+LAT BIN 3923 22
+LAT BIN 3924 22
+LAT BIN 3925 26
+LAT BIN 3926 32
+LAT BIN 3927 25
+LAT BIN 3928 35
+LAT BIN 3929 28
+LAT BIN 3930 33
+LAT BIN 3931 37
+LAT BIN 3932 32
+LAT BIN 3933 15
+LAT BIN 3934 28
+LAT BIN 3935 38
+LAT BIN 3936 21
+LAT BIN 3937 25
+LAT BIN 3938 29
+LAT BIN 3939 26
+LAT BIN 3940 29
+LAT BIN 3941 21
+LAT BIN 3942 18
+LAT BIN 3943 41
+LAT BIN 3944 29
+LAT BIN 3945 36
+LAT BIN 3946 30
+LAT BIN 3947 32
+LAT BIN 3948 34
+LAT BIN 3949 22
+LAT BIN 3950 27
+LAT BIN 3951 26
+LAT BIN 3952 27
+LAT BIN 3953 27
+LAT BIN 3954 26
+LAT BIN 3955 32
+LAT BIN 3956 28
+LAT BIN 3957 27
+LAT BIN 3958 28
+LAT BIN 3959 32
+LAT BIN 3960 26
+LAT BIN 3961 29
+LAT BIN 3962 25
+LAT BIN 3963 25
+LAT BIN 3964 28
+LAT BIN 3965 20
+LAT BIN 3966 21
+LAT BIN 3967 34
+LAT BIN 3968 30
+LAT BIN 3969 23
+LAT BIN 3970 24
+LAT BIN 3971 32
+LAT BIN 3972 26
+LAT BIN 3973 25
+LAT BIN 3974 22
+LAT BIN 3975 27
+LAT BIN 3976 31
+LAT BIN 3977 25
+LAT BIN 3978 24
+LAT BIN 3979 25
+LAT BIN 3980 25
+LAT BIN 3981 28
+LAT BIN 3982 28
+LAT BIN 3983 20
+LAT BIN 3984 23
+LAT BIN 3985 36
+LAT BIN 3986 30
+LAT BIN 3987 23
+LAT BIN 3988 31
+LAT BIN 3989 26
+LAT BIN 3990 31
+LAT BIN 3991 27
+LAT BIN 3992 27
+LAT BIN 3993 20
+LAT BIN 3994 27
+LAT BIN 3995 35
+LAT BIN 3996 35
+LAT BIN 3997 20
+LAT BIN 3998 34
+LAT BIN 3999 28
+LAT BIN 4000 33
+LAT BIN 4001 35
+LAT BIN 4002 27
+LAT BIN 4003 20
+LAT BIN 4004 23
+LAT BIN 4005 24
+LAT BIN 4006 26
+LAT BIN 4007 29
+LAT BIN 4008 24
+LAT BIN 4009 21
+LAT BIN 4010 29
+LAT BIN 4011 31
+LAT BIN 4012 31
+LAT BIN 4013 36
+LAT BIN 4014 29
+LAT BIN 4015 27
+LAT BIN 4016 23
+LAT BIN 4017 17
+LAT BIN 4018 25
+LAT BIN 4019 18
+LAT BIN 4020 30
+LAT BIN 4021 29
+LAT BIN 4022 20
+LAT BIN 4023 20
+LAT BIN 4024 25
+LAT BIN 4025 26
+LAT BIN 4026 29
+LAT BIN 4027 26
+LAT BIN 4028 22
+LAT BIN 4029 31
+LAT BIN 4030 22
+LAT BIN 4031 26
+LAT BIN 4032 31
+LAT BIN 4033 19
+LAT BIN 4034 21
+LAT BIN 4035 22
+LAT BIN 4036 30
+LAT BIN 4037 32
+LAT BIN 4038 26
+LAT BIN 4039 28
+LAT BIN 4040 28
+LAT BIN 4041 26
+LAT BIN 4042 19
+LAT BIN 4043 29
+LAT BIN 4044 34
+LAT BIN 4045 21
+LAT BIN 4046 31
+LAT BIN 4047 38
+LAT BIN 4048 23
+LAT BIN 4049 28
+LAT BIN 4050 26
+LAT BIN 4051 17
+LAT BIN 4052 25
+LAT BIN 4053 35
+LAT BIN 4054 29
+LAT BIN 4055 25
+LAT BIN 4056 19
+LAT BIN 4057 25
+LAT BIN 4058 27
+LAT BIN 4059 28
+LAT BIN 4060 28
+LAT BIN 4061 29
+LAT BIN 4062 31
+LAT BIN 4063 23
+LAT BIN 4064 26
+LAT BIN 4065 30
+LAT BIN 4066 24
+LAT BIN 4067 37
+LAT BIN 4068 28
+LAT BIN 4069 35
+LAT BIN 4070 31
+LAT BIN 4071 16
+LAT BIN 4072 29
+LAT BIN 4073 36
+LAT BIN 4074 27
+LAT BIN 4075 29
+LAT BIN 4076 25
+LAT BIN 4077 29
+LAT BIN 4078 35
+LAT BIN 4079 29
+LAT BIN 4080 28
+LAT BIN 4081 37
+LAT BIN 4082 32
+LAT BIN 4083 26
+LAT BIN 4084 24
+LAT BIN 4085 39
+LAT BIN 4086 22
+LAT BIN 4087 25
+LAT BIN 4088 109
+LAT BIN 4089 125
+LAT BIN 4090 100
+LAT BIN 4091 110
+LAT BIN 4092 105
+LAT BIN 4093 112
+LAT BIN 4094 120
+LAT BIN 4095 103
+LAT OVF 12 1494
+LAT OVF 13 435
+LAT OVF 14 199
+LAT OVF 31 206
+LAT END fix
+LAT PHASE fixph bins=64 period=17000
+LAT PB 0 155 3840 4294967194 12885593295
+LAT PB 1 160 3841 4294967124 21475562413
+LAT PB 2 162 3841 4294967258 4295690721
+LAT PB 3 172 3840 4294966846 8590733201
+LAT PB 4 152 3842 4294967203 21475520909
+LAT PB 5 140 3840 4294967019 17180504191
+LAT PB 6 146 3840 4294967233 8590606678
+LAT PB 7 174 3842 4294966828 17180652463
+LAT PB 8 152 3841 4294967178 17180538653
+LAT PB 9 157 3844 4294967281 12885580988
+LAT PB 10 156 3841 4294967036 8590728725
+LAT PB 11 142 3841 4294967005 17180513876
+LAT PB 12 129 3841 4294967279 8590549890
+LAT PB 13 168 3845 4294967109 8590772785
+LAT PB 14 184 3840 4294966839 12885763036
+LAT PB 15 160 3843 4294967019 12885603219
+LAT PB 16 152 3841 4294967187 17180579420
+LAT PB 17 150 3841 4294967201 8590638062
+LAT PB 18 161 3844 4294967294 8590703689
+LAT PB 19 185 3844 4294967131 17180748073
+LAT PB 20 148 3840 4294967290 17180514960
+LAT PB 21 178 3840 4294967294 42950422860
+LAT PB 22 165 3847 4294967205 25770600991
+LAT PB 23 159 3843 4294967146 12885636203
+LAT PB 24 150 3840 19618 687537
+LAT PB 25 150 3840 16791 681569
+LAT PB 26 150 3842 4294966965 8590584934
+LAT PB 27 153 3846 4294967151 17180523890
+LAT PB 28 161 3841 4294967265 21475589758
+LAT PB 29 122 3843 4294967184 21475403964
+LAT PB 30 146 3840 4294967224 12885568030
+LAT PB 31 167 3844 4294967132 21475546035
+LAT PB 32 161 3840 4294967245 25770568750
+LAT PB 33 152 3841 4294967268 12885552865
+LAT PB 34 161 3844 4294967173 12885692886
+LAT PB 35 163 3841 4294967072 4295707934
+LAT PB 36 157 3841 4294966751 17180590243
+LAT PB 37 147 3842 4294967096 8590656623
+LAT PB 38 137 3840 4294967094 8590574638
+LAT PB 39 158 3840 4294967159 8590656400
+LAT PB 40 140 3840 4294966945 8590581868
+LAT PB 41 150 3843 4294967216 4295653761
+LAT PB 42 161 3842 4294967179 25770557370
+LAT PB 43 158 3842 4294967281 25770521016
+LAT PB 44 149 3840 4294967060 17180520871
+LAT PB 45 152 3843 19901 701272
+LAT PB 46 174 3841 4294967245 17180689007
+LAT PB 47 149 3843 20381 738132
+LAT PB 48 147 3841 4294967160 25770445082
+LAT PB 49 154 3842 4294967230 4295663208
+LAT PB 50 167 3842 4294967279 8590725423
+LAT PB 51 157 3842 4294967037 8590738802
+LAT PB 52 155 3840 4294967189 21475476244
+LAT PB 53 148 3842 4294967265 12885689212
+LAT PB 54 150 3841 4294967238 12885525653
+LAT PB 55 157 3841 4294966776 8590664921
+LAT PB 56 170 3843 4294967268 17180625406
+LAT PB 57 129 3840 4294966842 4295544631
+LAT PB 58 160 3843 4294967187 17180599906
+LAT PB 59 168 3841 4294967023 12885685661
+LAT PB 60 178 3841 4294967174 21475627660
+LAT PB 61 151 3841 4294967148 21475549118
+LAT PB 62 170 3840 4294967070 17180635641
+LAT PB 63 164 3848 4294967283 8590687622
+LAT END fixph
+LAT DONE
+ PASS - test_emit_fixture in 0.000 seconds
+===================================================================
+TESTSUITE lat_zfixture succeeded
+
+------ TESTSUITE SUMMARY START ------
+
+SUITE PASS - 100.00% [lat_hist]: pass = 9, fail = 0, skip = 0, total = 9 duration = 0.000 seconds
+ - PASS - [lat_hist.test_boundaries] duration = 0.000 seconds
+ - PASS - [lat_hist.test_config_literals] duration = 0.000 seconds
+ - PASS - [lat_hist.test_count_sum_min_max] duration = 0.000 seconds
+ - PASS - [lat_hist.test_define] duration = 0.000 seconds
+ - PASS - [lat_hist.test_first_sample_extremes] duration = 0.000 seconds
+ - PASS - [lat_hist.test_log2_index] duration = 0.000 seconds
+ - PASS - [lat_hist.test_model_literals] duration = 0.000 seconds
+ - PASS - [lat_hist.test_reset_keeps_name] duration = 0.000 seconds
+ - PASS - [lat_hist.test_sweep] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [lat_phase]: pass = 4, fail = 0, skip = 2, total = 6 duration = 0.000 seconds
+ - PASS - [lat_phase.test_all_phases] duration = 0.000 seconds
+ - PASS - [lat_phase.test_bin_edges] duration = 0.000 seconds
+ - PASS - [lat_phase.test_define_and_init] duration = 0.000 seconds
+ - SKIP - [lat_phase.test_large_period] duration = 0.000 seconds
+ - SKIP - [lat_phase.test_phase_not_below_period] duration = 0.000 seconds
+ - PASS - [lat_phase.test_stats_per_bin] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [lat_print]: pass = 7, fail = 0, skip = 1, total = 8 duration = 0.000 seconds
+ - PASS - [lat_print.test_hist_all_regions] duration = 0.000 seconds
+ - PASS - [lat_print.test_hist_empty] duration = 0.000 seconds
+ - PASS - [lat_print.test_hist_fine] duration = 0.000 seconds
+ - PASS - [lat_print.test_hist_mean_large] duration = 0.000 seconds
+ - SKIP - [lat_print.test_hist_mean_sum_overflow] duration = 0.000 seconds
+ - PASS - [lat_print.test_hook_capture] duration = 0.000 seconds
+ - PASS - [lat_print.test_phase_print] duration = 0.000 seconds
+ - PASS - [lat_print.test_phase_print_empty] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [lat_zfixture]: pass = 1, fail = 0, skip = 0, total = 1 duration = 0.000 seconds
+ - PASS - [lat_zfixture.test_emit_fixture] duration = 0.000 seconds
+
+------ TESTSUITE SUMMARY END ------
+
+===================================================================
+RunID: e9fd39f63ff6c8b86792f89c4b62e407
+PROJECT EXECUTION SUCCESSFUL
