@@ -271,8 +271,8 @@ def main():
                     bdir = Path(tmp) / tree / pt["id"]
                     bdir.mkdir(parents=True)
                     print(f"[{tree}/{pt['id']}] build", flush=True)
-                    build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, sdk, bdir / "build",
-                                bdir / "build.log")
+                    build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
+                                bdir / "build", bdir / "build.log")
         print("all points build")
         return
 
