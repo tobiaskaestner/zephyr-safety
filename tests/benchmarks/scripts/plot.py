@@ -7,6 +7,7 @@
     plot.py ccdf  --out f.svg [--title T] [--label L]... LOG ...
     plot.py hist  --out f.svg [--title T] [--label L]... LOG ...
     plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+    plot.py sweep --out f.svg --x KEY [--series KEY]... [--hist H] LOG ...
 
 ccdf: exceedance probability P(latency > x) on a log scale, one line per
       log. It shows the floor, the modes and the tail in one chart.
@@ -14,6 +15,12 @@ hist: one panel per log, sample count per 1-cycle bin on a log scale.
 phase: two panels per log, by the tick phase of the stimulus edge: the
       share of the samples (1 = uniform), and min, mean and max latency.
       --hist selects the phase histogram.
+sweep: one panel per statistic (p50, p99, p99.99, max), the statistic
+      against a numeric key (--x), one line per value of --series. A key
+      is "meta:<META key>", "cfg:<CFG symbol>" or "tree" (from the run
+      folder path). Repeat --series to combine keys. A quantile in an
+      overflow bin is drawn at its lower bound, a coarse bin at its lower
+      edge.
 
 The default label of a log is "<tree>/<point>" from its run folder path.
 """
@@ -26,6 +33,7 @@ import matplotlib
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
+import matplotlib.ticker  # noqa: E402
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import latbench  # noqa: E402
@@ -205,16 +213,76 @@ def phase(args):
     print(f"saved {args.out}")
 
 
+def key_value(run, path, key):
+    if key == "tree":
+        return Path(path).parts[-3]
+    kind, _, name = key.partition(":")
+    if kind == "meta":
+        return run["meta"].get(name)
+    if kind == "cfg":
+        return run["cfg"].get(name)
+    sys.exit(f"bad key '{key}': use meta:<key>, cfg:<symbol> or tree")
+
+
+def stat(h, name):
+    if name == "max":
+        return h["max"]
+    v = latbench.quantile(h, float(name[1:]) / 100)
+    return int(v[2:]) if isinstance(v, str) else v
+
+
+def sweep(args):
+    stats = ["p50", "p99", "p99.99", "max"]
+    groups = {}
+    for path in args.logs:
+        run = latbench.parse_log(path)
+        h = pick(run, args.hist)
+        x = float(key_value(run, path, args.x))
+        label = ", ".join(f"{k.split(':')[-1]}={key_value(run, path, k)}" for k in (args.series or []))
+        groups.setdefault(label, []).append((x, h))
+    if len(groups) > len(SERIES):
+        sys.exit(f"at most {len(SERIES)} series per chart")
+    fig, axes = plt.subplots(1, len(stats), figsize=(3.1 * len(stats), 3.4), facecolor=SURFACE)
+    for ax, st in zip(axes, stats):
+        style(ax)
+        for i, (label, pts) in enumerate(sorted(groups.items())):
+            pts.sort(key=lambda p: p[0])
+            ax.plot([p[0] for p in pts], [stat(p[1], st) for p in pts], "-o", color=SERIES[i], linewidth=2,
+                    markersize=5, label=label or None)
+        ax.set_yscale("log")
+        ax.yaxis.set_major_locator(matplotlib.ticker.LogLocator(subs=(1, 2, 5)))
+        ax.yaxis.set_major_formatter(matplotlib.ticker.FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.yaxis.set_minor_formatter(matplotlib.ticker.NullFormatter())
+        # Loads grow in powers of two, and 0 must stay on the axis.
+        ax.set_xscale("symlog", linthresh=1)
+        xs = sorted({p[0] for pts in groups.values() for p in pts})
+        ax.set_xticks(xs, [f"{x:g}" for x in xs])
+        ax.set_xlim(min(xs) - 0.3, max(xs) * 1.3 if max(xs) > 0 else 1)
+        ax.set_title(st, color=TEXT, fontsize=9, loc="left")
+        ax.set_xlabel(args.x.split(":")[-1], color=TEXT2, fontsize=8)
+    axes[0].set_ylabel("latency (counts of the stimulus timer)", color=TEXT2, fontsize=8)
+    if any(groups):
+        axes[-1].legend(frameon=False, fontsize=7, loc="upper left", labelcolor=TEXT)
+    fig.suptitle(args.title or "Latency against load", color=TEXT, fontsize=11, x=0.01, ha="left")
+    fig.tight_layout(rect=(0, 0, 1, 0.93))
+    fig.savefig(args.out, facecolor=SURFACE)
+    print(f"saved {args.out}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("kind", choices=["ccdf", "hist", "phase"])
+    p.add_argument("kind", choices=["ccdf", "hist", "phase", "sweep"])
     p.add_argument("--out", required=True)
     p.add_argument("--title")
     p.add_argument("--label", action="append", help="label of the next log, once per log")
     p.add_argument("--hist", default=None, help="histogram name (default: the first in each log)")
+    p.add_argument("--x", help="sweep: numeric key for the x axis (meta:<key>, cfg:<sym>)")
+    p.add_argument("--series", action="append", help="sweep: key that makes one line per value (repeat)")
     p.add_argument("logs", nargs="+")
     args = p.parse_args()
-    {"ccdf": ccdf, "hist": hist, "phase": phase}[args.kind](args)
+    if args.kind == "sweep" and not args.x:
+        p.error("sweep needs --x")
+    {"ccdf": ccdf, "hist": hist, "phase": phase, "sweep": sweep}[args.kind](args)
 
 
 if __name__ == "__main__":
