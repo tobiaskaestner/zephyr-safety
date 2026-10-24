@@ -16,6 +16,9 @@ START - test_define
 START - test_first_sample_extremes
  PASS - test_first_sample_extremes in 0.000 seconds
 ===================================================================
+START - test_invalid_samples
+ PASS - test_invalid_samples in 0.000 seconds
+===================================================================
 START - test_log2_index
  PASS - test_log2_index in 0.000 seconds
 ===================================================================
@@ -31,6 +34,9 @@ START - test_sweep
 TESTSUITE lat_hist succeeded
 Running TESTSUITE lat_phase
 ===================================================================
+START - test_add_before_init
+ PASS - test_add_before_init in 0.000 seconds
+===================================================================
 START - test_all_phases
  PASS - test_all_phases in 0.000 seconds
 ===================================================================
@@ -40,9 +46,11 @@ START - test_bin_edges
 START - test_define_and_init
  PASS - test_define_and_init in 0.000 seconds
 ===================================================================
-START - test_large_period
-KNOWN GAP: lat_phase_add(period=536870913, phase=536870912) gives bin 0, expected 7 (phase * BINS wraps)
- SKIP - test_large_period in 0.000 seconds
+START - test_invalid_samples
+ PASS - test_invalid_samples in 0.000 seconds
+===================================================================
+START - test_period_limit
+ PASS - test_period_limit in 0.000 seconds
 ===================================================================
 START - test_phase_not_below_period
 KNOWN GAP: lat_phase_add(phase=period=17000) writes bin 8: min[0]=1 max[0]=123 guard[0]=123
@@ -67,7 +75,7 @@ START - test_hist_mean_large
  PASS - test_hist_mean_large in 0.000 seconds
 ===================================================================
 START - test_hist_mean_sum_overflow
-KNOWN GAP: count=sum/max=UINT32_MAX: printed LAT HIST max n=4294967295 min=4294967295 max=4294967295 mean=42949670.96 overflow=0
+KNOWN GAP: count=UINT32_MAX, sum=UINT32_MAX * (2^31 - 1): printed LAT HIST max n=4294967295 min=2147483647 max=2147483647 mean=42949671.46 overflow=0 invalid=0
 LAT END max
 
  SKIP - test_hist_mean_sum_overflow in 0.000 seconds
@@ -95,7 +103,7 @@ LAT META seed=625341585
 LAT META samples=10000
 LAT META period=17000
 LAT CFG LATBENCH_FIXTURE=1
-LAT HIST fix n=10000 min=0 max=4294967294 mean=88476335.51 overflow=1793
+LAT HIST fix n=9794 min=0 max=159 mean=18.96 overflow=1587 invalid=206
 LAT BIN 0 429
 LAT BIN 1 447
 LAT BIN 2 414
@@ -119,17 +127,16 @@ LAT CBIN 28 207 4
 LAT OVF 5 953
 LAT OVF 6 437
 LAT OVF 7 197
-LAT OVF 31 206
 LAT END fix
 LAT PHASE fixph bins=8 period=17000
-LAT PB 0 1261 0 4294967258 111669160367
-LAT PB 1 1248 0 4294967281 98784262020
-LAT PB 2 1298 0 4294967294 150323864370
-LAT PB 3 1199 0 4294967265 103079224573
-LAT PB 4 1236 0 4294967268 98784260443
-LAT PB 5 1233 0 4294967281 98784261377
-LAT PB 6 1235 0 4294967279 103079228017
-LAT PB 7 1290 0 4294967283 120259093965
+LAT PB 0 1235 0 159 23748
+LAT PB 1 1225 0 156 22972
+LAT PB 2 1263 0 159 24883
+LAT PB 3 1175 0 156 20811
+LAT PB 4 1213 0 158 23777
+LAT PB 5 1210 0 159 23807
+LAT PB 6 1211 0 154 22697
+LAT PB 7 1262 0 159 23047
 LAT END fixph
 LAT DONE
  PASS - test_emit_fixture in 0.000 seconds
@@ -138,22 +145,25 @@ TESTSUITE lat_zfixture succeeded
 
 ------ TESTSUITE SUMMARY START ------
 
-SUITE PASS - 100.00% [lat_hist]: pass = 9, fail = 0, skip = 0, total = 9 duration = 0.000 seconds
+SUITE PASS - 100.00% [lat_hist]: pass = 10, fail = 0, skip = 0, total = 10 duration = 0.000 seconds
  - PASS - [lat_hist.test_boundaries] duration = 0.000 seconds
  - PASS - [lat_hist.test_config_literals] duration = 0.000 seconds
  - PASS - [lat_hist.test_count_sum_min_max] duration = 0.000 seconds
  - PASS - [lat_hist.test_define] duration = 0.000 seconds
  - PASS - [lat_hist.test_first_sample_extremes] duration = 0.000 seconds
+ - PASS - [lat_hist.test_invalid_samples] duration = 0.000 seconds
  - PASS - [lat_hist.test_log2_index] duration = 0.000 seconds
  - PASS - [lat_hist.test_model_literals] duration = 0.000 seconds
  - PASS - [lat_hist.test_reset_keeps_name] duration = 0.000 seconds
  - PASS - [lat_hist.test_sweep] duration = 0.000 seconds
 
-SUITE PASS - 100.00% [lat_phase]: pass = 4, fail = 0, skip = 2, total = 6 duration = 0.000 seconds
+SUITE PASS - 100.00% [lat_phase]: pass = 7, fail = 0, skip = 1, total = 8 duration = 0.000 seconds
+ - PASS - [lat_phase.test_add_before_init] duration = 0.000 seconds
  - PASS - [lat_phase.test_all_phases] duration = 0.000 seconds
  - PASS - [lat_phase.test_bin_edges] duration = 0.000 seconds
  - PASS - [lat_phase.test_define_and_init] duration = 0.000 seconds
- - SKIP - [lat_phase.test_large_period] duration = 0.000 seconds
+ - PASS - [lat_phase.test_invalid_samples] duration = 0.000 seconds
+ - PASS - [lat_phase.test_period_limit] duration = 0.000 seconds
  - SKIP - [lat_phase.test_phase_not_below_period] duration = 0.000 seconds
  - PASS - [lat_phase.test_stats_per_bin] duration = 0.000 seconds
 
@@ -173,5 +183,5 @@ SUITE PASS - 100.00% [lat_zfixture]: pass = 1, fail = 0, skip = 0, total = 1 dur
 ------ TESTSUITE SUMMARY END ------
 
 ===================================================================
-RunID: 57f0fe0fb023b9168e8a50a037208323
+RunID: 705a7fe446f01b35be9a7219fa3d3ad4
 PROJECT EXECUTION SUCCESSFUL

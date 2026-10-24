@@ -32,14 +32,17 @@ def write_log(tmp_path, text, name="run.log"):
     return p
 
 
-def hist(bins=None, width=None, ovf=None, n=None, mean=0.0, vmax=0, vmin=0):
-    """A parsed histogram, as parse_log() returns it."""
+def hist(bins=None, width=None, ovf=None, n=None, mean=0.0, vmax=0, vmin=0, invalid=None):
+    """A parsed histogram, as parse_log() returns it. invalid=None makes an old log (no field)."""
     bins = dict(bins or {})
     ovf = dict(ovf or {})
     if n is None:
         n = sum(bins.values()) + sum(ovf.values())
-    return {"name": "h", "n": n, "min": vmin, "max": vmax, "mean": mean, "overflow": sum(ovf.values()),
-            "bins": bins, "width": dict(width or {}), "ovf_log2": ovf}
+    h = {"name": "h", "n": n, "min": vmin, "max": vmax, "mean": mean, "overflow": sum(ovf.values()),
+         "bins": bins, "width": dict(width or {}), "ovf_log2": ovf}
+    if invalid is not None:
+        h["invalid"] = invalid
+    return h
 
 
 # ------------------------------------------------------------------ parse_log
@@ -99,6 +102,21 @@ def test_parse_log_all_line_types(tmp_path):
         0: {"count": 2, "min": 3, "max": 9, "sum": 12},
         63: {"count": 1, "min": 4294967295, "max": 4294967295, "sum": 4294967295},
     }, "PB lines after END are not part of the table"
+
+
+def test_parse_log_invalid_field(tmp_path):
+    text = ("LAT BEGIN\nLAT HIST irq n=3 min=49 max=785 mean=294.33 overflow=0 invalid=2\n"
+            "LAT BIN 49 2\nLAT BIN 785 1\nLAT END irq\n")
+    h = latbench.parse_log(write_log(tmp_path, text))["hists"]["irq"]
+    assert h["invalid"] == 2
+    assert isinstance(h["invalid"], int)
+    assert (h["n"], h["overflow"]) == (3, 0)
+
+
+def test_parse_log_phase_error(tmp_path):
+    text = "LAT BEGIN\nLAT ERROR phase irq period=67108864 is larger than 67108863\nLAT DONE\n"
+    assert latbench.parse_log(write_log(tmp_path, text))["errors"] == [
+        "phase irq period=67108864 is larger than 67108863"]
 
 
 def test_parse_log_no_begin(tmp_path):
@@ -219,17 +237,14 @@ def test_summary(tmp_path, capsys):
             "LAT HIST irq n=4 min=2 max=4 mean=3.00 overflow=0\nLAT BIN 2 1\nLAT BIN 3 2\nLAT BIN 4 1\nLAT END irq\n")
     (row,) = summary_rows([write_log(tmp_path, text)], capsys)
     assert row["variant"] == "v1"
-    assert (row["n"], row["min"], row["max"], row["ovf"]) == (4, 2, 4, 0)
+    assert (row["n"], row["min"], row["max"], row["ovf"], row["inv"]) == (4, 2, 4, 0, 0)
     assert (row["p50"], row["p90"], row["p99.99"]) == (3, 4, 4)
     assert row["sd"] == pytest.approx(0.71)
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "design question: hist.c adds a negative difference (>= 2^31) to sum, so the printed mean and the "
-    "summary mean include it. One such sample in 1e6 adds 4295 cycles to the mean "
-    "(irq-baseline-1m wrapped-idle rep1: mean=4344.32, min=49, p99.99=785)."))
 def test_summary_mean_without_negative(tmp_path, capsys):
-    # 999 samples of 50 cycles and one negative difference of -1 (2^32 - 1).
+    # An old log (no "invalid=" field): 999 samples of 50 cycles and one
+    # negative difference of -1 (2^32 - 1) in n, max, mean and overflow bin 31.
     total = 999 * 50 + (2**32 - 1)
     mean100 = total * 100 // 1000
     text = ("LAT BEGIN\n"
@@ -237,6 +252,30 @@ def test_summary_mean_without_negative(tmp_path, capsys):
             "LAT BIN 50 999\nLAT OVF 31 1\nLAT END irq\n")
     (row,) = summary_rows([write_log(tmp_path, text)], capsys)
     assert row["mean"] == pytest.approx(50.0, abs=0.01)
+    assert row["inv"] == 1
+
+
+def test_summary_new_log(tmp_path, capsys):
+    # A new log: the negative difference is only in "invalid=".
+    text = ("LAT BEGIN\nLAT HIST irq n=999 min=50 max=50 mean=50.00 overflow=0 invalid=1\n"
+            "LAT BIN 50 999\nLAT END irq\n")
+    (row,) = summary_rows([write_log(tmp_path, text)], capsys)
+    assert (row["n"], row["max"], row["mean"], row["inv"]) == (999, 50, 50.0, 1)
+    assert row["sd"] == 0.0
+
+
+def test_mean():
+    # A new log keeps the printed mean, also with invalid samples.
+    assert latbench.mean(hist(bins={50: 9}, mean=50.0, invalid=3)) == 50.0
+    # An old log without negative differences keeps the printed mean.
+    assert latbench.mean(hist(bins={3: 1}, ovf={12: 1}, mean=2049.5)) == 2049.5
+    # An old log: the mean from the bins, a coarse bin at its centre.
+    h = hist(bins={2047: 1, 2048: 1}, width={2048: 32}, ovf={31: 2}, mean=1e9)
+    assert latbench.mean(h) == pytest.approx(2055.25)
+    # An old log with a sample outside the bins (overflow bin 12): the printed mean stays.
+    assert latbench.mean(hist(bins={3: 1}, ovf={12: 1, 31: 1}, mean=1431656532.0)) == 1431656532.0
+    # Only negative differences: the printed mean stays.
+    assert latbench.mean(hist(ovf={31: 2}, mean=4294967295.0)) == 4294967295.0
 
 
 # ----------------------------------------------------------------------- plot
@@ -247,29 +286,29 @@ plot = pytest.importorskip("plot")
 def test_values_and_invalid():
     h = hist(bins={3: 2, 5: 1}, ovf={12: 4, 30: 1, 31: 7})
     assert plot.values(h) == [(3, 2), (5, 1), (4096, 4), (1 << 30, 1)]
-    assert plot.invalid(h) == 7
+    assert plot.invalid(h) == 7, "an old log: overflow bin 31"
     assert plot.invalid(hist(bins={3: 1})) == 0
+    assert plot.invalid(hist(bins={3: 1}, invalid=4)) == 4, "a new log: the invalid= field"
+    assert plot.invalid(hist(bins={3: 1}, ovf={31: 1}, invalid=4)) == 5
 
 
 def test_max_text():
     assert plot.max_text(hist(bins={3: 1}, vmax=3)) == "max 3"
     assert plot.max_text(hist(bins={3: 1, 9: 1}, ovf={31: 2}, vmax=4294967295)) == "max 9, 2 negative"
+    # A new log: max is the largest valid sample, also if it is in an overflow bin.
+    assert plot.max_text(hist(bins={3: 1}, ovf={14: 1}, vmax=20000, invalid=2)) == "max 20000, 2 negative"
 
 
-@pytest.mark.xfail(strict=True, reason=(
-    "defect: plot.values() appends an overflow bin at 2^e. With coarse bins (2048 + 2048 x 32, "
-    "experiments/*-1m.yaml) the first overflow bin e=16 is at 65536, below the last coarse edges "
-    "(up to 67552), so the pairs are not sorted and the CCDF line steps back."))
 def test_values_sorted_with_coarse_bins():
-    h = hist(bins={100: 5, 66000: 1, 67552: 1}, width={66000: 32, 67552: 32}, ovf={16: 1})
-    pairs = plot.values(h)
-    assert pairs == sorted(pairs)
+    # 2048 + 2048 x 32 (experiments/*-1m.yaml): overflow bin 16 is at 65536,
+    # below the last coarse edges (up to 67552).
+    h = hist(bins={100: 5, 66016: 1, 67552: 1}, width={66016: 32, 67552: 32}, ovf={16: 1})
+    assert plot.values(h) == [(100, 5), (65536, 1), (66016, 1), (67552, 1)]
 
 
-@pytest.mark.xfail(strict=True, raises=ValueError, reason=(
-    "defect: plot.max_text() calls max() on an empty list if all samples are negative differences."))
 def test_max_text_all_negative():
     assert plot.max_text(hist(ovf={31: 3}, vmax=4294967295)) == "max -, 3 negative"
+    assert plot.max_text(hist(n=0, invalid=3)) == "max -, 3 negative"
 
 
 # ---------------------------------------------- round trip with the ztest app
@@ -331,9 +370,11 @@ def fixture_run(request):
 def test_roundtrip_hist(fixture_run):
     run, samples = fixture_run
     meta = run["meta"]
-    vals = [v for v, _ in samples]
+    vals = [v for v, _ in samples if v < 2**31]
     h = run["hists"]["fix"]
     n = len(vals)
+    assert h["invalid"] == len(samples) - n
+    assert h["invalid"] > 0
 
     assert run["cfg"] == {"LATBENCH_FIXTURE": 1}
     assert h["n"] == n
@@ -358,14 +399,15 @@ def test_roundtrip_hist(fixture_run):
     assert h["overflow"] == sum(want_ovf.values())
     # The generator reaches each region.
     assert any(k >= int(meta["hist_bins"]) for k in want_width) == (int(meta["coarse_bins"]) > 0)
-    assert 31 in want_ovf
+    assert 31 not in h["ovf_log2"]
+    assert latbench.mean(h) == h["mean"]
 
 
 def test_roundtrip_quantiles(fixture_run):
     run, samples = fixture_run
     meta = run["meta"]
     h = run["hists"]["fix"]
-    ordered = sorted(v for v, _ in samples)
+    ordered = sorted(v for v, _ in samples if v < 2**31)
     for _, q in latbench.QUANTILES + [("p10", 0.1), ("p70", 0.7), ("p75", 0.75), ("p80", 0.8)]:
         x = ordered[math.ceil(Fraction(str(q)) * len(ordered)) - 1]
         kind, key = ref_bin(meta, x)
@@ -387,6 +429,8 @@ def test_roundtrip_phase(fixture_run):
     assert (ph["nbins"], ph["period"]) == (nbins, period)
     want = {}
     for v, phase in samples:
+        if v >= 2**31:
+            continue
         b = phase * nbins // period
         e = want.setdefault(b, {"count": 0, "min": v, "max": v, "sum": 0})
         e["count"] += 1
@@ -394,7 +438,6 @@ def test_roundtrip_phase(fixture_run):
         e["max"] = max(e["max"], v)
         e["sum"] += v
     assert ph["bins"] == want
-    assert any(e["sum"] >= 2**32 for e in want.values()), "a sum that needs 64 bits"
 
 
 def test_roundtrip_plot(fixture_run):
@@ -402,11 +445,16 @@ def test_roundtrip_plot(fixture_run):
     h = run["hists"]["fix"]
     negative = sum(1 for v, _ in samples if v >= 2**31)
     assert plot.invalid(h) == negative
-    assert sum(c for _, c in plot.values(h)) == len(samples) - negative
+    assert sum(c for _, c in plot.values(h)) == len(samples) - negative == h["n"]
+    pairs = plot.values(h)
+    assert pairs == sorted(pairs)
+    assert plot.max_text(h) == f"max {h['max']}, {negative} negative"
 
 
 def test_roundtrip_summary(fixture_run, capsys):
     run, _ = fixture_run
     (row,) = summary_rows([run["source"]], capsys)
-    assert row["n"] == int(run["meta"]["samples"])
-    assert row["ovf"] == run["hists"]["fix"]["overflow"]
+    h = run["hists"]["fix"]
+    assert row["n"] + row["inv"] == int(run["meta"]["samples"])
+    assert row["inv"] == h["invalid"]
+    assert row["ovf"] == h["overflow"]

@@ -32,6 +32,13 @@ failure:
 - In pytest, the test has `xfail(strict=True)`. If the test passes, pytest
   reports a failure. Then remove the marker.
 
+These gaps are open:
+
+- `test_phase_not_below_period`: `lat_phase_add()` does not check that
+  phase is less than period. A larger phase writes after the last bin.
+- `test_hist_mean_sum_overflow`: in `lat_hist_print()`, `sum * 100` wraps
+  at 2^64. This occurs only if sum is more than 1.8e17 cycles.
+
 ## Run the ztest app
 
 1. Set the environment:
@@ -51,7 +58,7 @@ failure:
      -O /wrk/z/ws-safety/build-hist-tests/twister-out
    ```
 
-The result is 21 passed and 3 skipped test cases for each scenario. The 3
+The result is 25 passed and 2 skipped test cases for each scenario. The 2
 skipped test cases are the known gaps.
 
 ## Run the pytest module
@@ -63,8 +70,8 @@ cd tests/benchmarks/scripts
 python3 -m pytest tests
 ```
 
-The result is 3 expected failures (`xfailed`) and no failures. The
-packages in `scripts/requirements.txt` and `pytest` are necessary.
+The result is 88 passed test cases and no failures. The packages in
+`scripts/requirements.txt` and `pytest` are necessary.
 
 ## Make the fixtures again
 

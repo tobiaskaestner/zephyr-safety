@@ -16,11 +16,13 @@ config LATBENCH_WARMUP
 
 config LATBENCH_HIST_BINS
 	int "Number of 1-cycle histogram bins"
+	range 1 65536
 	default 4096
 	help
 	  Values from 0 to LATBENCH_HIST_BINS - 1 go into a bin of their own.
 	  Larger values go into log2 overflow bins, and max records the
-	  largest one.
+	  largest one. A value of 2^31 or more is a negative difference. It
+	  only counts as invalid.
 
 config LATBENCH_HIST_COARSE_BINS
 	int "Number of coarse histogram bins"

@@ -45,6 +45,7 @@ enum region {
 	FINE,
 	COARSE,
 	OVF,
+	INVALID, /* a negative difference: 2^31 or more */
 };
 
 struct loc {
@@ -64,6 +65,9 @@ static uint32_t log2_floor(uint32_t v)
 
 static struct loc expect_loc(uint32_t v)
 {
+	if (v >= 0x80000000U) {
+		return (struct loc){INVALID, 0};
+	}
 	if (v < BINS) {
 		return (struct loc){FINE, v};
 	}
@@ -112,7 +116,8 @@ static void check_only(const struct lat_hist *x, uint32_t v, uint32_t n)
 			      "v=%u: ovf_log2[%u]=%u", v, e, x->ovf_log2[e]);
 	}
 	zassert_equal(x->overflow, l.r == OVF ? n : 0U, "v=%u: overflow=%u", v, x->overflow);
-	zassert_equal(x->count, n, "v=%u: count=%u", v, x->count);
+	zassert_equal(x->count, l.r == INVALID ? 0U : n, "v=%u: count=%u", v, x->count);
+	zassert_equal(x->invalid, l.r == INVALID ? n : 0U, "v=%u: invalid=%u", v, x->invalid);
 }
 
 static void add_one_check(uint32_t v)
@@ -120,9 +125,16 @@ static void add_one_check(uint32_t v)
 	fresh(&h, "t");
 	lat_hist_add(&h, v);
 	check_only(&h, v, 1);
-	zassert_equal(h.min, v);
-	zassert_equal(h.max, v);
-	zassert_equal(h.sum, (uint64_t)v);
+	if (expect_loc(v).r == INVALID) {
+		/* An invalid sample does not change the stats. */
+		zassert_equal(h.min, UINT32_MAX, "v=0x%x", v);
+		zassert_equal(h.max, 0, "v=0x%x", v);
+		zassert_equal(h.sum, 0, "v=0x%x", v);
+	} else {
+		zassert_equal(h.min, v);
+		zassert_equal(h.max, v);
+		zassert_equal(h.sum, (uint64_t)v);
+	}
 }
 
 /* ---------------------------------------------------------------- lat_hist */
@@ -160,10 +172,16 @@ ZTEST(lat_hist, test_boundaries)
 	add_one_check(BINS - 1);
 	zassert_equal(h.bins[BINS - 1], 1);
 	add_one_check(UINT32_MAX);
-	zassert_equal(h.ovf_log2[31], 1);
+	zassert_equal(h.invalid, 1);
+	zassert_equal(h.count, 0);
+	zassert_equal(h.ovf_log2[31], 0);
 	add_one_check(0x80000000U);
-	zassert_equal(h.ovf_log2[31], 1);
+	zassert_equal(h.invalid, 1);
+	zassert_equal(h.count, 0);
+	zassert_equal(h.ovf_log2[31], 0);
 	add_one_check(0x7fffffffU);
+	zassert_equal(h.invalid, 0);
+	zassert_equal(h.count, 1);
 	zassert_equal(h.ovf_log2[30], 1);
 #if CONFIG_LATBENCH_HIST_COARSE_BINS > 0
 	add_one_check(BINS);
@@ -224,8 +242,16 @@ ZTEST(lat_hist, test_log2_index)
 			}
 			fresh(&h, "t");
 			lat_hist_add(&h, vals[i]);
+			if (e == 31) {
+				/* 2^31 and more: invalid, not in ovf_log2[31]. */
+				zassert_equal(h.ovf_log2[31], 0, "v=0x%x", vals[i]);
+				zassert_equal(h.overflow, 0);
+				zassert_equal(h.invalid, 1);
+				continue;
+			}
 			zassert_equal(h.ovf_log2[e], 1, "v=0x%x e=%u", vals[i], e);
 			zassert_equal(h.overflow, 1);
+			zassert_equal(h.invalid, 0);
 		}
 	}
 }
@@ -236,13 +262,19 @@ static uint32_t exp_bins[CONFIG_LATBENCH_HIST_BINS];
 static uint32_t exp_cbins[CONFIG_LATBENCH_HIST_COARSE_BINS];
 #endif
 static uint32_t exp_ovf[32];
+static uint32_t exp_invalid;
 
-static void sweep_add(uint32_t v, uint64_t *sum)
+static void sweep_add(uint32_t v, uint64_t *sum, uint32_t *n)
 {
 	struct loc l = expect_loc(v);
 
 	lat_hist_add(&h, v);
+	if (l.r == INVALID) {
+		exp_invalid++;
+		return;
+	}
 	*sum += v;
+	(*n)++;
 	if (l.r == FINE) {
 		exp_bins[l.idx]++;
 #if CONFIG_LATBENCH_HIST_COARSE_BINS > 0
@@ -267,18 +299,18 @@ ZTEST(lat_hist, test_sweep)
 	memset(exp_cbins, 0, sizeof(exp_cbins));
 #endif
 	memset(exp_ovf, 0, sizeof(exp_ovf));
+	exp_invalid = 0;
 
-	for (uint32_t v = 0; v <= 4U * CEND + 64U; v++, n++) {
-		sweep_add(v, &sum);
+	for (uint32_t v = 0; v <= 4U * CEND + 64U; v++) {
+		sweep_add(v, &sum, &n);
 	}
 	for (uint32_t k = 1; k < 32; k++) {
-		sweep_add((1U << k) - 1U, &sum);
-		sweep_add(1U << k, &sum);
-		sweep_add((1U << k) + 1U, &sum);
-		n += 3;
+		sweep_add((1U << k) - 1U, &sum, &n);
+		sweep_add(1U << k, &sum, &n);
+		sweep_add((1U << k) + 1U, &sum, &n);
 	}
-	sweep_add(UINT32_MAX, &sum);
-	n++;
+	sweep_add(UINT32_MAX, &sum, &n);
+	zassert_equal(exp_invalid, 3, "2^31, 2^31 + 1, UINT32_MAX");
 
 	for (uint32_t i = 0; i < BINS; i++) {
 		zassert_equal(h.bins[i], exp_bins[i], "bins[%u]", i);
@@ -302,10 +334,11 @@ ZTEST(lat_hist, test_sweep)
 	}
 	zassert_equal(h.overflow, ovf);
 	zassert_equal(h.count, n);
-	zassert_equal(total + ovf, (uint64_t)n, "each sample is in exactly one bin");
+	zassert_equal(h.invalid, exp_invalid);
+	zassert_equal(total + ovf, (uint64_t)n, "each valid sample is in exactly one bin");
 	zassert_equal(h.sum, sum);
 	zassert_equal(h.min, 0);
-	zassert_equal(h.max, UINT32_MAX);
+	zassert_equal(h.max, 0x7fffffffU, "the largest valid sample");
 }
 
 ZTEST(lat_hist, test_count_sum_min_max)
@@ -326,24 +359,55 @@ ZTEST(lat_hist, test_count_sum_min_max)
 	zassert_equal(h.max, 100000);
 
 	/* The sum is 64 bits wide and does not wrap at 2^32. */
-	lat_hist_add(&h, UINT32_MAX);
-	lat_hist_add(&h, UINT32_MAX);
-	zassert_equal(h.count, 5);
-	zassert_equal(h.sum, 7ULL + 3ULL + 100000ULL + 2ULL * UINT32_MAX);
-	zassert_equal(h.max, UINT32_MAX);
+	lat_hist_add(&h, 0x7fffffffU);
+	lat_hist_add(&h, 0x7fffffffU);
+	lat_hist_add(&h, 0x7fffffffU);
+	zassert_equal(h.count, 6);
+	zassert_equal(h.sum, 7ULL + 3ULL + 100000ULL + 3ULL * 0x7fffffffU);
+	zassert_equal(h.max, 0x7fffffffU);
 	zassert_equal(h.min, 3);
+	zassert_equal(h.invalid, 0);
+}
+
+ZTEST(lat_hist, test_invalid_samples)
+{
+	/* A first invalid sample does not set min or max. */
+	fresh(&h, "t");
+	lat_hist_add(&h, UINT32_MAX);
+	zassert_equal(h.invalid, 1);
+	zassert_equal(h.count, 0);
+	zassert_equal(h.min, UINT32_MAX);
+	zassert_equal(h.max, 0);
+
+	/* Invalid samples between valid ones change only invalid. */
+	lat_hist_add(&h, 2);
+	lat_hist_add(&h, 0x80000000U);
+	lat_hist_add(&h, 1);
+	lat_hist_add(&h, 0x80000001U);
+	lat_hist_add(&h, 0x7fffffffU);
+	zassert_equal(h.invalid, 3);
+	zassert_equal(h.count, 3);
+	zassert_equal(h.sum, 3ULL + 0x7fffffffU);
+	zassert_equal(h.min, 1);
+	zassert_equal(h.max, 0x7fffffffU);
+	zassert_equal(h.bins[1], 1);
+	zassert_equal(h.bins[2], 1);
+	/* 2^31 - 1 is the largest valid sample: it is in ovf_log2[30]. */
+	zassert_equal(h.overflow, 1);
+	zassert_equal(h.ovf_log2[30], 1);
+	zassert_equal(h.ovf_log2[31], 0);
 }
 
 ZTEST(lat_hist, test_first_sample_extremes)
 {
-	/* A first sample of UINT32_MAX is the min, also with min = UINT32_MAX at the start. */
+	/* A first sample of the largest valid value is the min. */
 	fresh(&h, "t");
-	lat_hist_add(&h, UINT32_MAX);
-	zassert_equal(h.min, UINT32_MAX);
-	zassert_equal(h.max, UINT32_MAX);
+	lat_hist_add(&h, 0x7fffffffU);
+	zassert_equal(h.min, 0x7fffffffU);
+	zassert_equal(h.max, 0x7fffffffU);
 	lat_hist_add(&h, 0);
 	zassert_equal(h.min, 0);
-	zassert_equal(h.max, UINT32_MAX);
+	zassert_equal(h.max, 0x7fffffffU);
 
 	/* A first sample of 0 is the max. */
 	fresh(&h, "t");
@@ -371,12 +435,15 @@ ZTEST(lat_hist, test_reset_keeps_name)
 	lat_hist_add(&h, 0);
 	lat_hist_add(&h, BINS - 1);
 	lat_hist_add(&h, CEND - 1);
+	lat_hist_add(&h, 0x7fffffffU);
 	lat_hist_add(&h, UINT32_MAX);
+	zassert_equal(h.invalid, 1);
 
 	lat_hist_reset(&h);
 
 	zassert_equal_ptr(h.name, name, "reset keeps the name pointer");
 	zassert_equal(h.count, 0);
+	zassert_equal(h.invalid, 0);
 	zassert_equal(h.overflow, 0);
 	zassert_equal(h.sum, 0);
 	zassert_equal(h.max, 0);
@@ -398,6 +465,67 @@ ZTEST(lat_hist, test_reset_keeps_name)
 }
 
 ZTEST_SUITE(lat_hist, NULL, NULL, NULL, NULL, NULL);
+
+/* ----------------------------------------------------- printk capture */
+
+static char cap[16384];
+static size_t cap_len;
+static bool cap_full;
+static printk_hook_fn_t cap_prev;
+
+static int cap_hook(int c)
+{
+	if (cap_len < sizeof(cap) - 1U) {
+		cap[cap_len++] = (char)c;
+	} else {
+		cap_full = true;
+	}
+	return c;
+}
+
+static void cap_begin(void)
+{
+	cap_len = 0;
+	cap_full = false;
+	cap_prev = __printk_get_hook();
+	__printk_hook_install(cap_hook);
+}
+
+static const char *cap_end(void)
+{
+	__printk_hook_install(cap_prev);
+	cap[cap_len] = '\0';
+	zassert_false(cap_full, "capture buffer full");
+	return cap;
+}
+
+/* Expected text, built in parts. */
+static char want[16384];
+static size_t want_len;
+
+static void want_reset(void)
+{
+	want_len = 0;
+	want[0] = '\0';
+}
+
+static void want_add(const char *fmt, ...)
+{
+	va_list ap;
+
+	va_start(ap, fmt);
+	want_len += vsnprintf(want + want_len, sizeof(want) - want_len, fmt, ap);
+	va_end(ap);
+	zassert_true(want_len < sizeof(want));
+}
+
+static void assert_text(const char *got, const char *exp)
+{
+	if (strcmp(got, exp) != 0) {
+		TC_PRINT("got:\n%s\nexpected:\n%s\n", got, exp);
+	}
+	zassert_str_equal(got, exp);
+}
 
 /* --------------------------------------------------------------- lat_phase */
 
@@ -518,19 +646,76 @@ ZTEST(lat_phase, test_bin_edges)
 	}
 }
 
-ZTEST(lat_phase, test_large_period)
+ZTEST(lat_phase, test_period_limit)
 {
-	/*
-	 * phase * BINS wraps at 2^32 if period > 2^32 / BINS (67108864 cycles
-	 * at 64 bins). The comment in lat_phase_add() says that this does not
-	 * occur "for any tick".
-	 */
-	uint32_t P = UINT32_MAX / PBINS + 2U;
-	uint32_t b = bin_of(P, P - 1U);
+	/* phase * BINS fits in 32 bits up to period UINT32_MAX / BINS. */
+	uint32_t pmax = UINT32_MAX / PBINS;
 
-	KNOWN_GAP(b == PBINS - 1U,
-		  "lat_phase_add(period=%u, phase=%u) gives bin %u, expected %u (phase * BINS wraps)",
-		  P, P - 1U, b, PBINS - 1U);
+	if (PBINS == 64U) {
+		zassert_equal(pmax, 67108863);
+	}
+
+	/* The largest period: no error, and its last phase is in the last bin. */
+	cap_begin();
+	phase_fresh(pmax);
+	assert_text(cap_end(), "");
+	zassert_equal(ph.p.period, pmax);
+	zassert_equal(bin_of(pmax, pmax - 1U), PBINS - 1U);
+	zassert_equal(bin_of(pmax, 0), 0);
+
+	/* A larger period prints LAT ERROR and leaves the histogram empty. */
+	cap_begin();
+	phase_fresh(pmax + 1U);
+	cap_end();
+	want_reset();
+	want_add("LAT ERROR phase ph period=%u is larger than %u\n", pmax + 1U, pmax);
+	assert_text(cap, want);
+	zassert_equal(ph.p.period, 0);
+	lat_phase_add(&ph.p, 0, 5);
+	lat_phase_add(&ph.p, pmax, 5);
+	for (uint32_t b = 0; b < PBINS; b++) {
+		zassert_equal(ph.p.count[b], 0, "bin %u", b);
+	}
+	for (size_t i = 0; i < ARRAY_SIZE(ph.guard); i++) {
+		zassert_equal(ph.guard[i], 0);
+	}
+
+	cap_begin();
+	phase_fresh(UINT32_MAX);
+	cap_end();
+	zassert_equal(ph.p.period, 0);
+	zassert_not_null(strstr(cap, "LAT ERROR phase ph period=4294967295 "));
+}
+
+ZTEST(lat_phase, test_add_before_init)
+{
+	/* period is 0 before lat_phase_init(): lat_phase_add() does nothing. */
+	static LAT_PHASE_DEFINE(d, "noinit");
+
+	lat_phase_add(&d, 0, 5);
+	lat_phase_add(&d, 100, 5);
+	for (uint32_t b = 0; b < PBINS; b++) {
+		zassert_equal(d.count[b], 0, "bin %u", b);
+		zassert_equal(d.sum[b], 0, "bin %u", b);
+	}
+}
+
+ZTEST(lat_phase, test_invalid_samples)
+{
+	phase_fresh(17000);
+	lat_phase_add(&ph.p, 0, 0x80000000U);
+	lat_phase_add(&ph.p, 0, UINT32_MAX);
+	zassert_equal(ph.p.count[0], 0, "an invalid sample is not in the phase histogram");
+	zassert_equal(ph.p.max[0], 0);
+	zassert_equal(ph.p.sum[0], 0);
+
+	/* 2^31 - 1 is valid; a later invalid sample changes nothing. */
+	lat_phase_add(&ph.p, 0, 0x7fffffffU);
+	lat_phase_add(&ph.p, 0, 0xffffff00U);
+	zassert_equal(ph.p.count[0], 1);
+	zassert_equal(ph.p.min[0], 0x7fffffffU);
+	zassert_equal(ph.p.max[0], 0x7fffffffU);
+	zassert_equal(ph.p.sum[0], 0x7fffffffU);
 }
 
 ZTEST(lat_phase, test_stats_per_bin)
@@ -562,14 +747,14 @@ ZTEST(lat_phase, test_stats_per_bin)
 	zassert_equal(ph.p.max[0], 5);
 	zassert_equal(ph.p.sum[0], 5);
 
-	/* A first sample of UINT32_MAX; the 64-bit sum does not wrap. */
-	lat_phase_add(&ph.p, P - 1U, UINT32_MAX);
-	zassert_equal(ph.p.min[PBINS - 1U], UINT32_MAX);
-	zassert_equal(ph.p.max[PBINS - 1U], UINT32_MAX);
-	lat_phase_add(&ph.p, P - 1U, UINT32_MAX);
-	lat_phase_add(&ph.p, P - 1U, UINT32_MAX);
+	/* A first sample of 2^31 - 1, the largest valid value; the 64-bit sum does not wrap. */
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
+	zassert_equal(ph.p.min[PBINS - 1U], 0x7fffffffU);
+	zassert_equal(ph.p.max[PBINS - 1U], 0x7fffffffU);
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
 	zassert_equal(ph.p.count[PBINS - 1U], 3);
-	zassert_equal(ph.p.sum[PBINS - 1U], 3ULL * UINT32_MAX);
+	zassert_equal(ph.p.sum[PBINS - 1U], 3ULL * 0x7fffffffU);
 
 	/* The other bins have no sample. */
 	for (uint32_t b = 1; b < PBINS - 1U; b++) {
@@ -617,65 +802,6 @@ ZTEST_SUITE(lat_phase, NULL, NULL, NULL, NULL, NULL);
 
 /* --------------------------------------------------------------- lat_print */
 
-static char cap[16384];
-static size_t cap_len;
-static bool cap_full;
-static printk_hook_fn_t cap_prev;
-
-static int cap_hook(int c)
-{
-	if (cap_len < sizeof(cap) - 1U) {
-		cap[cap_len++] = (char)c;
-	} else {
-		cap_full = true;
-	}
-	return c;
-}
-
-static void cap_begin(void)
-{
-	cap_len = 0;
-	cap_full = false;
-	cap_prev = __printk_get_hook();
-	__printk_hook_install(cap_hook);
-}
-
-static const char *cap_end(void)
-{
-	__printk_hook_install(cap_prev);
-	cap[cap_len] = '\0';
-	zassert_false(cap_full, "capture buffer full");
-	return cap;
-}
-
-/* Expected text, built in parts. */
-static char want[16384];
-static size_t want_len;
-
-static void want_reset(void)
-{
-	want_len = 0;
-	want[0] = '\0';
-}
-
-static void want_add(const char *fmt, ...)
-{
-	va_list ap;
-
-	va_start(ap, fmt);
-	want_len += vsnprintf(want + want_len, sizeof(want) - want_len, fmt, ap);
-	va_end(ap);
-	zassert_true(want_len < sizeof(want));
-}
-
-static void assert_text(const char *got, const char *exp)
-{
-	if (strcmp(got, exp) != 0) {
-		TC_PRINT("got:\n%s\nexpected:\n%s\n", got, exp);
-	}
-	zassert_str_equal(got, exp);
-}
-
 ZTEST(lat_print, test_hook_capture)
 {
 	/* The capture itself works. */
@@ -689,7 +815,7 @@ ZTEST(lat_print, test_hist_empty)
 	fresh(&h, "empty");
 	cap_begin();
 	lat_hist_print(&h);
-	assert_text(cap_end(), "LAT HIST empty n=0 min=0 max=0 mean=0.00 overflow=0\n"
+	assert_text(cap_end(), "LAT HIST empty n=0 min=0 max=0 mean=0.00 overflow=0 invalid=0\n"
 			       "LAT END empty\n");
 }
 
@@ -702,7 +828,7 @@ ZTEST(lat_print, test_hist_fine)
 	cap_begin();
 	lat_hist_print(&h);
 	/* 11 / 3 = 3.666..: the mean is cut to 1/100 cycle, not rounded. */
-	assert_text(cap_end(), "LAT HIST t n=3 min=3 max=5 mean=3.66 overflow=0\n"
+	assert_text(cap_end(), "LAT HIST t n=3 min=3 max=5 mean=3.66 overflow=0 invalid=0\n"
 			       "LAT BIN 3 2\n"
 			       "LAT BIN 5 1\n"
 			       "LAT END t\n");
@@ -717,8 +843,10 @@ ZTEST(lat_print, test_hist_all_regions)
 	fresh(&h, "all");
 	for (size_t i = 0; i < ARRAY_SIZE(vals); i++) {
 		lat_hist_add(&h, vals[i]);
-		sum += vals[i];
-		n++;
+		if (vals[i] < 0x80000000U) {
+			sum += vals[i];
+			n++;
+		}
 	}
 	cap_begin();
 	lat_hist_print(&h);
@@ -727,9 +855,10 @@ ZTEST(lat_print, test_hist_all_regions)
 	uint64_t m100 = sum * 100U / n;
 
 	want_reset();
-	want_add("LAT HIST all n=%u min=0 max=4294967295 mean=%llu.%02llu overflow=%u\n", n,
-		 (unsigned long long)(m100 / 100U), (unsigned long long)(m100 % 100U),
-		 CBINS > 0 ? 3U : 4U);
+	/* The two invalid samples are only in invalid=. */
+	want_add("LAT HIST all n=%u min=0 max=%u mean=%llu.%02llu overflow=%u invalid=2\n", n,
+		 CEND, (unsigned long long)(m100 / 100U), (unsigned long long)(m100 % 100U),
+		 CBINS > 0 ? 1U : 2U);
 	want_add("LAT BIN 0 1\n");
 	if (CBINS > 0) {
 		want_add("LAT BIN %u 1\n", BINS - 1U);
@@ -741,7 +870,6 @@ ZTEST(lat_print, test_hist_all_regions)
 		want_add("LAT BIN %u 2\n", BINS - 1U);
 		want_add("LAT OVF %u 2\n", log2_floor(BINS));
 	}
-	want_add("LAT OVF 31 2\n");
 	want_add("LAT END all\n");
 	assert_text(cap, want);
 }
@@ -757,39 +885,40 @@ ZTEST(lat_print, test_hist_mean_large)
 	cap_begin();
 	lat_hist_print(&h);
 	assert_text(cap_end(), "LAT HIST big n=1000000 min=99000 max=101000 mean=100000.12 "
-			       "overflow=0\nLAT END big\n");
+			       "overflow=0 invalid=0\nLAT END big\n");
 
-	/* 1e6 negative differences near 2^32: sum * 100 still fits in 64 bits. */
-	fresh(&h, "neg");
+	/* 1e6 samples of 2^31 - 1, the largest valid value: sum * 100 still fits in 64 bits. */
+	fresh(&h, "top");
 	h.count = 1000000;
-	h.sum = 1000000ULL * UINT32_MAX;
-	h.min = UINT32_MAX;
-	h.max = UINT32_MAX;
+	h.sum = 1000000ULL * 0x7fffffffU;
+	h.min = 0x7fffffffU;
+	h.max = 0x7fffffffU;
 	h.overflow = 1000000;
-	h.ovf_log2[31] = 1000000;
+	h.ovf_log2[30] = 1000000;
+	h.invalid = 7;
 	cap_begin();
 	lat_hist_print(&h);
-	assert_text(cap_end(), "LAT HIST neg n=1000000 min=4294967295 max=4294967295 "
-			       "mean=4294967295.00 overflow=1000000\n"
-			       "LAT OVF 31 1000000\nLAT END neg\n");
+	assert_text(cap_end(), "LAT HIST top n=1000000 min=2147483647 max=2147483647 "
+			       "mean=2147483647.00 overflow=1000000 invalid=7\n"
+			       "LAT OVF 30 1000000\nLAT END top\n");
 }
 
 ZTEST(lat_print, test_hist_mean_sum_overflow)
 {
 	/*
 	 * Precondition gap: sum * 100 wraps at 2^64 if sum > 1.8e17. The
-	 * largest sum is UINT32_MAX samples of UINT32_MAX cycles.
+	 * largest sum is UINT32_MAX samples of 2^31 - 1 cycles.
 	 */
 	fresh(&h, "max");
 	h.count = UINT32_MAX;
-	h.sum = (uint64_t)UINT32_MAX * UINT32_MAX;
-	h.min = UINT32_MAX;
-	h.max = UINT32_MAX;
+	h.sum = (uint64_t)UINT32_MAX * 0x7fffffffU;
+	h.min = 0x7fffffffU;
+	h.max = 0x7fffffffU;
 	cap_begin();
 	lat_hist_print(&h);
 	cap_end();
-	KNOWN_GAP(strstr(cap, " mean=4294967295.00 ") != NULL,
-		  "count=sum/max=UINT32_MAX: printed %s", cap);
+	KNOWN_GAP(strstr(cap, " mean=2147483647.00 ") != NULL,
+		  "count=UINT32_MAX, sum=UINT32_MAX * (2^31 - 1): printed %s", cap);
 }
 
 ZTEST(lat_print, test_phase_print)
@@ -799,8 +928,10 @@ ZTEST(lat_print, test_phase_print)
 	phase_fresh(P);
 	lat_phase_add(&ph.p, 0, 9);
 	lat_phase_add(&ph.p, 1, 3);
-	lat_phase_add(&ph.p, P - 1U, UINT32_MAX);
-	lat_phase_add(&ph.p, P - 1U, UINT32_MAX);
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
+	lat_phase_add(&ph.p, P - 1U, UINT32_MAX); /* invalid: not printed */
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
+	lat_phase_add(&ph.p, P - 1U, 0x7fffffffU);
 	cap_begin();
 	lat_phase_print(&ph.p);
 	cap_end();
@@ -808,7 +939,7 @@ ZTEST(lat_print, test_phase_print)
 	want_reset();
 	want_add("LAT PHASE ph bins=%u period=17000\n", PBINS);
 	want_add("LAT PB 0 2 3 9 12\n");
-	want_add("LAT PB %u 2 4294967295 4294967295 8589934590\n", PBINS - 1U);
+	want_add("LAT PB %u 3 2147483647 2147483647 6442450941\n", PBINS - 1U);
 	want_add("LAT END ph\n");
 	assert_text(cap, want);
 }
@@ -892,7 +1023,8 @@ ZTEST(lat_zfixture, test_emit_fixture)
 	lat_hist_print(&fix_h);
 	lat_phase_print(&fix_p);
 	printk("LAT DONE\n");
-	zassert_equal(fix_h.count, FIX_SAMPLES);
+	zassert_equal(fix_h.count + fix_h.invalid, FIX_SAMPLES);
+	zassert_true(fix_h.invalid > 0U);
 }
 
 ZTEST_SUITE(lat_zfixture, NULL, NULL, NULL, NULL, NULL);

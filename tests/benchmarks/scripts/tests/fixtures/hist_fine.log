@@ -16,6 +16,9 @@ START - test_define
 START - test_first_sample_extremes
  PASS - test_first_sample_extremes in 0.000 seconds
 ===================================================================
+START - test_invalid_samples
+ PASS - test_invalid_samples in 0.000 seconds
+===================================================================
 START - test_log2_index
  PASS - test_log2_index in 0.000 seconds
 ===================================================================
@@ -31,6 +34,9 @@ START - test_sweep
 TESTSUITE lat_hist succeeded
 Running TESTSUITE lat_phase
 ===================================================================
+START - test_add_before_init
+ PASS - test_add_before_init in 0.000 seconds
+===================================================================
 START - test_all_phases
  PASS - test_all_phases in 0.000 seconds
 ===================================================================
@@ -40,9 +46,11 @@ START - test_bin_edges
 START - test_define_and_init
  PASS - test_define_and_init in 0.000 seconds
 ===================================================================
-START - test_large_period
-KNOWN GAP: lat_phase_add(period=67108865, phase=67108864) gives bin 0, expected 63 (phase * BINS wraps)
- SKIP - test_large_period in 0.000 seconds
+START - test_invalid_samples
+ PASS - test_invalid_samples in 0.000 seconds
+===================================================================
+START - test_period_limit
+ PASS - test_period_limit in 0.000 seconds
 ===================================================================
 START - test_phase_not_below_period
 KNOWN GAP: lat_phase_add(phase=period=17000) writes bin 64: min[0]=1 max[0]=123 guard[0]=123
@@ -67,7 +75,7 @@ START - test_hist_mean_large
  PASS - test_hist_mean_large in 0.000 seconds
 ===================================================================
 START - test_hist_mean_sum_overflow
-KNOWN GAP: count=sum/max=UINT32_MAX: printed LAT HIST max n=4294967295 min=4294967295 max=4294967295 mean=42949670.96 overflow=0
+KNOWN GAP: count=UINT32_MAX, sum=UINT32_MAX * (2^31 - 1): printed LAT HIST max n=4294967295 min=2147483647 max=2147483647 mean=42949671.46 overflow=0 invalid=0
 LAT END max
 
  SKIP - test_hist_mean_sum_overflow in 0.000 seconds
@@ -95,7 +103,7 @@ LAT META seed=625341585
 LAT META samples=10000
 LAT META period=17000
 LAT CFG LATBENCH_FIXTURE=1
-LAT HIST fix n=10000 min=3840 max=4294967294 mean=88480919.28 overflow=2334
+LAT HIST fix n=9794 min=3840 max=20467 mean=4699.14 overflow=2128 invalid=206
 LAT BIN 3840 24
 LAT BIN 3841 28
 LAT BIN 3842 32
@@ -355,73 +363,72 @@ LAT BIN 4095 103
 LAT OVF 12 1494
 LAT OVF 13 435
 LAT OVF 14 199
-LAT OVF 31 206
 LAT END fix
 LAT PHASE fixph bins=64 period=17000
-LAT PB 0 155 3840 4294967194 12885593295
-LAT PB 1 160 3841 4294967124 21475562413
-LAT PB 2 162 3841 4294967258 4295690721
-LAT PB 3 172 3840 4294966846 8590733201
-LAT PB 4 152 3842 4294967203 21475520909
-LAT PB 5 140 3840 4294967019 17180504191
-LAT PB 6 146 3840 4294967233 8590606678
-LAT PB 7 174 3842 4294966828 17180652463
-LAT PB 8 152 3841 4294967178 17180538653
-LAT PB 9 157 3844 4294967281 12885580988
-LAT PB 10 156 3841 4294967036 8590728725
-LAT PB 11 142 3841 4294967005 17180513876
-LAT PB 12 129 3841 4294967279 8590549890
-LAT PB 13 168 3845 4294967109 8590772785
-LAT PB 14 184 3840 4294966839 12885763036
-LAT PB 15 160 3843 4294967019 12885603219
-LAT PB 16 152 3841 4294967187 17180579420
-LAT PB 17 150 3841 4294967201 8590638062
-LAT PB 18 161 3844 4294967294 8590703689
-LAT PB 19 185 3844 4294967131 17180748073
-LAT PB 20 148 3840 4294967290 17180514960
-LAT PB 21 178 3840 4294967294 42950422860
-LAT PB 22 165 3847 4294967205 25770600991
-LAT PB 23 159 3843 4294967146 12885636203
+LAT PB 0 152 3840 19866 692331
+LAT PB 1 155 3841 20442 728242
+LAT PB 2 161 3841 20107 723463
+LAT PB 3 170 3840 18834 799978
+LAT PB 4 147 3842 18154 686478
+LAT PB 5 136 3840 20199 637427
+LAT PB 6 144 3840 19588 673028
+LAT PB 7 170 3842 20044 786305
+LAT PB 8 148 3841 18276 670669
+LAT PB 9 154 3844 17950 680091
+LAT PB 10 154 3841 18714 794829
+LAT PB 11 138 3841 20337 646304
+LAT PB 12 127 3841 17804 615794
+LAT PB 13 166 3845 20409 838860
+LAT PB 14 181 3840 19346 862975
+LAT PB 15 157 3843 20009 702602
+LAT PB 16 148 3841 19041 711458
+LAT PB 17 148 3841 20202 704414
+LAT PB 18 159 3844 20000 769897
+LAT PB 19 181 3844 19723 881280
+LAT PB 20 144 3840 20426 647331
+LAT PB 21 168 3840 19743 754591
+LAT PB 22 159 3847 19833 799749
+LAT PB 23 156 3843 18309 736051
 LAT PB 24 150 3840 19618 687537
 LAT PB 25 150 3840 16791 681569
-LAT PB 26 150 3842 4294966965 8590584934
-LAT PB 27 153 3846 4294967151 17180523890
-LAT PB 28 161 3841 4294967265 21475589758
-LAT PB 29 122 3843 4294967184 21475403964
-LAT PB 30 146 3840 4294967224 12885568030
-LAT PB 31 167 3844 4294967132 21475546035
-LAT PB 32 161 3840 4294967245 25770568750
-LAT PB 33 152 3841 4294967268 12885552865
-LAT PB 34 161 3844 4294967173 12885692886
-LAT PB 35 163 3841 4294967072 4295707934
-LAT PB 36 157 3841 4294966751 17180590243
-LAT PB 37 147 3842 4294967096 8590656623
-LAT PB 38 137 3840 4294967094 8590574638
-LAT PB 39 158 3840 4294967159 8590656400
-LAT PB 40 140 3840 4294966945 8590581868
-LAT PB 41 150 3843 4294967216 4295653761
-LAT PB 42 161 3842 4294967179 25770557370
-LAT PB 43 158 3842 4294967281 25770521016
-LAT PB 44 149 3840 4294967060 17180520871
+LAT PB 26 148 3842 19189 651250
+LAT PB 27 149 3846 19436 656387
+LAT PB 28 156 3841 20215 755407
+LAT PB 29 117 3843 18593 569778
+LAT PB 30 143 3840 19794 667311
+LAT PB 31 162 3844 18740 712716
+LAT PB 32 155 3840 18447 768115
+LAT PB 33 149 3841 18746 651866
+LAT PB 34 158 3844 20225 792926
+LAT PB 35 162 3841 18242 740862
+LAT PB 36 153 3841 20328 724028
+LAT PB 37 145 3842 18525 722550
+LAT PB 38 135 3840 20366 640946
+LAT PB 39 156 3840 17713 722380
+LAT PB 40 138 3840 19322 648392
+LAT PB 41 149 3843 17082 686545
+LAT PB 42 155 3842 20142 756711
+LAT PB 43 152 3842 20175 719462
+LAT PB 44 145 3840 15003 653688
 LAT PB 45 152 3843 19901 701272
-LAT PB 46 174 3841 4294967245 17180689007
+LAT PB 46 170 3841 19618 821525
 LAT PB 47 149 3843 20381 738132
-LAT PB 48 147 3841 4294967160 25770445082
-LAT PB 49 154 3842 4294967230 4295663208
-LAT PB 50 167 3842 4294967279 8590725423
-LAT PB 51 157 3842 4294967037 8590738802
-LAT PB 52 155 3840 4294967189 21475476244
-LAT PB 53 148 3842 4294967265 12885689212
-LAT PB 54 150 3841 4294967238 12885525653
-LAT PB 55 157 3841 4294966776 8590664921
-LAT PB 56 170 3843 4294967268 17180625406
-LAT PB 57 129 3840 4294966842 4295544631
-LAT PB 58 160 3843 4294967187 17180599906
-LAT PB 59 168 3841 4294967023 12885685661
-LAT PB 60 178 3841 4294967174 21475627660
-LAT PB 61 151 3841 4294967148 21475549118
-LAT PB 62 170 3840 4294967070 17180635641
-LAT PB 63 164 3848 4294967283 8590687622
+LAT PB 48 141 3841 20467 644561
+LAT PB 49 153 3842 18320 695978
+LAT PB 50 165 3842 19683 791265
+LAT PB 51 155 3842 19925 804835
+LAT PB 52 150 3840 19289 642028
+LAT PB 53 145 3842 20105 788147
+LAT PB 54 147 3841 19715 624823
+LAT PB 55 155 3841 19191 731588
+LAT PB 56 166 3843 18971 757424
+LAT PB 57 128 3840 19673 577789
+LAT PB 58 156 3843 20111 732272
+LAT PB 59 165 3841 19723 785241
+LAT PB 60 173 3841 19261 793811
+LAT PB 61 146 3841 19597 715311
+LAT PB 62 166 3840 19655 768836
+LAT PB 63 162 3848 20214 754043
 LAT END fixph
 LAT DONE
  PASS - test_emit_fixture in 0.000 seconds
@@ -430,22 +437,25 @@ TESTSUITE lat_zfixture succeeded
 
 ------ TESTSUITE SUMMARY START ------
 
-SUITE PASS - 100.00% [lat_hist]: pass = 9, fail = 0, skip = 0, total = 9 duration = 0.000 seconds
+SUITE PASS - 100.00% [lat_hist]: pass = 10, fail = 0, skip = 0, total = 10 duration = 0.000 seconds
  - PASS - [lat_hist.test_boundaries] duration = 0.000 seconds
  - PASS - [lat_hist.test_config_literals] duration = 0.000 seconds
  - PASS - [lat_hist.test_count_sum_min_max] duration = 0.000 seconds
  - PASS - [lat_hist.test_define] duration = 0.000 seconds
  - PASS - [lat_hist.test_first_sample_extremes] duration = 0.000 seconds
+ - PASS - [lat_hist.test_invalid_samples] duration = 0.000 seconds
  - PASS - [lat_hist.test_log2_index] duration = 0.000 seconds
  - PASS - [lat_hist.test_model_literals] duration = 0.000 seconds
  - PASS - [lat_hist.test_reset_keeps_name] duration = 0.000 seconds
  - PASS - [lat_hist.test_sweep] duration = 0.000 seconds
 
-SUITE PASS - 100.00% [lat_phase]: pass = 4, fail = 0, skip = 2, total = 6 duration = 0.000 seconds
+SUITE PASS - 100.00% [lat_phase]: pass = 7, fail = 0, skip = 1, total = 8 duration = 0.000 seconds
+ - PASS - [lat_phase.test_add_before_init] duration = 0.000 seconds
  - PASS - [lat_phase.test_all_phases] duration = 0.000 seconds
  - PASS - [lat_phase.test_bin_edges] duration = 0.000 seconds
  - PASS - [lat_phase.test_define_and_init] duration = 0.000 seconds
- - SKIP - [lat_phase.test_large_period] duration = 0.000 seconds
+ - PASS - [lat_phase.test_invalid_samples] duration = 0.000 seconds
+ - PASS - [lat_phase.test_period_limit] duration = 0.000 seconds
  - SKIP - [lat_phase.test_phase_not_below_period] duration = 0.000 seconds
  - PASS - [lat_phase.test_stats_per_bin] duration = 0.000 seconds
 
@@ -465,5 +475,5 @@ SUITE PASS - 100.00% [lat_zfixture]: pass = 1, fail = 0, skip = 0, total = 1 dur
 ------ TESTSUITE SUMMARY END ------
 
 ===================================================================
-RunID: e9fd39f63ff6c8b86792f89c4b62e407
+RunID: 78be84ea80c4f80fbbe0323ef84e1f28
 PROJECT EXECUTION SUCCESSFUL
