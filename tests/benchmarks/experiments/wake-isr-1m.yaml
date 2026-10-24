@@ -1,0 +1,31 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# ISR to thread wake latency (M2) for each ISR-capable kernel object, with
+# board defaults and an idle CPU. The woken thread has priority 0
+# (preemptible, can be time-sliced). The sem points come first, so that a
+# partial run still has the ISR kinds compared.
+
+name: wake-isr-1m
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+
+points:
+  - id: wrapped-sem
+    kconfig: {LATBENCH_WAKE_SEM: y}
+  - id: direct-sem
+    kconfig: {LATBENCH_WAKE_SEM: y, LATBENCH_WAKE_ISR_DIRECT: y}
+  - id: wrapped-event
+    kconfig: {LATBENCH_WAKE_EVENT: y}
+  - id: wrapped-msgq
+    kconfig: {LATBENCH_WAKE_MSGQ: y}
+  - id: wrapped-fifo
+    kconfig: {LATBENCH_WAKE_FIFO: y}
+  - id: wrapped-poll
+    kconfig: {LATBENCH_WAKE_POLL: y}

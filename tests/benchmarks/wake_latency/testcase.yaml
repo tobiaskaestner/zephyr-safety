@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Build check only. Data points come from scripts/run.py.
+
+common:
+  tags:
+    - benchmark
+    - latency
+  platform_allow:
+    - nucleo_g474re
+  build_only: true
+tests:
+  benchmark.latency.wake.sem: {}
+  benchmark.latency.wake.sem.direct:
+    extra_configs:
+      - CONFIG_LATBENCH_WAKE_ISR_DIRECT=y
+  benchmark.latency.wake.event:
+    extra_configs:
+      - CONFIG_LATBENCH_WAKE_EVENT=y
+  benchmark.latency.wake.msgq:
+    extra_configs:
+      - CONFIG_LATBENCH_WAKE_MSGQ=y
+  benchmark.latency.wake.fifo:
+    extra_configs:
+      - CONFIG_LATBENCH_WAKE_FIFO=y
+  benchmark.latency.wake.poll:
+    extra_configs:
+      - CONFIG_LATBENCH_WAKE_POLL=y

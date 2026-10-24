@@ -1,0 +1,76 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+mainmenu "ISR to thread wake latency benchmark"
+
+choice LATBENCH_WAKE_ISR
+	prompt "How the EXTI0 ISR is connected"
+	default LATBENCH_WAKE_ISR_WRAPPED
+
+config LATBENCH_WAKE_ISR_WRAPPED
+	bool "Through _isr_wrapper (IRQ_CONNECT)"
+
+config LATBENCH_WAKE_ISR_DIRECT
+	bool "Direct ISR (IRQ_DIRECT_CONNECT), reschedule at the exit"
+
+endchoice
+
+choice LATBENCH_WAKE_PRIMITIVE
+	prompt "Kernel object that the ISR uses to wake the thread"
+	default LATBENCH_WAKE_SEM
+
+config LATBENCH_WAKE_SEM
+	bool "k_sem_give / k_sem_take"
+
+config LATBENCH_WAKE_EVENT
+	bool "k_event_post / k_event_wait"
+	select EVENTS
+
+config LATBENCH_WAKE_MSGQ
+	bool "k_msgq_put / k_msgq_get (4-byte message)"
+
+config LATBENCH_WAKE_FIFO
+	bool "k_fifo_put / k_fifo_get"
+
+config LATBENCH_WAKE_POLL
+	bool "k_poll_signal_raise / k_poll"
+	select POLL
+
+endchoice
+
+config LATBENCH_WAKE_PRIO
+	int "Priority of the woken thread"
+	default 0
+	help
+	  0 is the highest preemptible priority. With TIMESLICING=y a
+	  preemptible thread at TIMESLICE_PRIORITY (0) or lower can be
+	  time-sliced, so the default shows the time-slice cost. A negative
+	  value makes the thread cooperative.
+
+choice LATBENCH_BACKGROUND
+	prompt "What the CPU does between the stimuli"
+	default LATBENCH_BG_IDLE
+
+config LATBENCH_BG_IDLE
+	bool "Idle thread (WFI)"
+
+config LATBENCH_BG_BUSY
+	bool "Busy thread at the lowest priority"
+
+endchoice
+
+config LATBENCH_STIM_MIN_US
+	int "Minimum time between two stimuli (us)"
+	default 100
+
+config LATBENCH_STIM_MAX_US
+	int "Maximum time between two stimuli (us)"
+	default 500
+
+config LATBENCH_POLL_MS
+	int "Period of the main thread that checks for the end of the run (ms)"
+	default 100
+
+rsource "../common/Kconfig"
+
+source "Kconfig.zephyr"

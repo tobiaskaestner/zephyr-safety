@@ -20,8 +20,11 @@ latencies of Zephyr on a NUCLEO-G474RE. All times are in core cycles.
 | `scripts/trees.py` | Creates and checks the pinned worktrees |
 | `scripts/run.py` | Runs an experiment and records its provenance |
 | `scripts/latbench.py` | Parses logs and prints percentiles |
-| `common/` | Histogram and metadata code, shared Kconfig fragments (`conf/`) |
+| `scripts/plot.py` | Plots the exceedance probability and the histograms |
+| `scripts/requirements.txt` | Python packages for the scripts |
+| `common/` | Histogram, metadata and TIM2 stimulus code, Kconfig fragments (`conf/`), clock overlays (`clocks/`) |
 | `irq_latency/` | IRQ to ISR latency with a hardware time stamp of the edge |
+| `wake_latency/` | Edge to ISR to woken thread, for each ISR-capable kernel object |
 | `loopback_check/` | Checks the wire |
 
 ## Reproduce a data point
@@ -57,6 +60,10 @@ not true:
 
 A build uses only the modules of its tree (`ZEPHYR_MODULES`). It does not
 use the modules or the Zephyr tree of a west workspace.
+
+A run builds from a snapshot of the committed sources (`git archive` of
+the safety rev into `<run>/src/`), not from the worktree. Work in the
+worktree during a long run does not change what the run builds.
 
 ## Change a tree
 

@@ -1,0 +1,4 @@
+# Python packages for the benchmark scripts (host side).
+pyserial>=3.5
+PyYAML>=6.0
+matplotlib>=3.8
