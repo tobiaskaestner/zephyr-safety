@@ -1,0 +1,47 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The timer axis (plan §2.4) for M1 and M2: ISR to thread wake (sem,
+# wrapped ISR) with T load timers, with and without time slicing.
+#
+#   tN      N periodic k_timers, period 10..100 ms, random start. Their
+#           expiry functions run in the SysTick ISR, and each restart
+#           inserts into the timeout queue.
+#   t256far 256 one-shot timers one hour away: only the queue length.
+#
+# Expectation with the DLIST backend (default): an insert walks the
+# timeouts that expire before the new one. So the far timers cost
+# nothing, and the periodic ones cost in the timer ISR (restart) and in
+# the slice reset of each wake. The SysTick ISR and the EXTI0 ISR have
+# the same priority, so the whole timer ISR delays the stimulus.
+#
+# 2048 fine bins plus 2048 coarse bins of 32 cycles: 0..67583 cycles.
+
+name: wake-timers-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  timers:
+    t0: {}
+    t16:
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+    t64:
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+    t256far:
+      kconfig: {LATBENCH_LOAD_TIMERS: 256, LATBENCH_LOAD_TIMER_FAR: y}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

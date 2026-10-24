@@ -1,0 +1,34 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Drift of the kernel cycle counter against TIM2 (same clock). A first
+# check (unpinned) showed about 8 lost cycles per SysTick reprogram: with
+# time slicing each wake reprograms SysTick for the slice timeout, unless
+# an earlier timeout is in the queue. The points vary the number of
+# reprograms: time slicing on or off, the arch interface, and 16 load
+# timers (the slice timeout is then seldom the first one).
+#
+# Output: LAT META clock_drift_cyc and clock_elapsed_cyc.
+
+name: clock-drift
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 400
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+    switch:
+      conf_files: [common/conf/use_switch.conf]
+  timers:
+    t0: {}
+    t16:
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
