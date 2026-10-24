@@ -20,6 +20,7 @@
 #include <stm32_ll_exti.h>
 #include <stm32_ll_tim.h>
 
+#define PORT_RESP_PIN  0
 #define PORT_RESP_IRQN EXTI0_IRQn
 
 /* resp_irq_own.overlay removes line 0 from the EXTI interrupts of the GPIO driver. */

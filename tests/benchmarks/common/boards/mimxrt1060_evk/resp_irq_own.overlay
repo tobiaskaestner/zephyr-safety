@@ -1,0 +1,15 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Take the GPIO1 interrupt for pins 0 to 15 (IRQ 80,
+ * GPIO1_Combined_0_15) away from the GPIO driver, so that the app can
+ * connect its own ISR for the response pin GPIO1_IO11. The driver keeps
+ * the interrupt for pins 16 to 31 (IRQ 81). Same as nxp_rt10xx.dtsi
+ * without IRQ 80.
+ */
+
+&gpio1 {
+	interrupts = <81 0>;
+};
