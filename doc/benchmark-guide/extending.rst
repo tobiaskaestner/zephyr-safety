@@ -9,12 +9,17 @@ Add an experiment
 #. Set ``name`` to the file name without ``.yaml``.
 #. At the top of the file, write a comment with the question, the
    expectation (if you have one), and the meaning of each point.
-#. Set ``app``, ``trees``, ``repeat`` and ``timeout``. A point with 1 million
+#. Set ``app``, ``trees``, ``repeat`` and ``timeout``. If the experiment is
+   not for the default board, set ``board`` to a board target of
+   ``boards.yaml``. A point with 1 million
    samples needs a timeout of approximately 900 s to 1200 s.
 #. Put the settings that all points share into ``common``.
 #. Put the factors into ``axes``. Put single extra points into ``points``.
-#. If a point needs an overlay of the app (for example
-   ``irq_latency/exti_line0_app.overlay``), add it to ``dtc_overlays``.
+#. Do not list the overlays of the board port. The port adds them. If a
+   point needs another overlay (for example a clock overlay), add it to
+   ``dtc_overlays``.
+#. Use text for the value names of an axis, not ``on``, ``off``, ``yes`` or
+   ``no``.
 #. Commit the file. ``run.py`` refuses a safety repository that is not
    clean.
 #. Make sure that the points are correct:
@@ -57,12 +62,19 @@ Add an app
 ----------
 
 #. Make a folder ``tests/benchmarks/<app>/``.
-#. Write ``CMakeLists.txt``. If the app uses the TIM2 stimulus, set
-   ``LATBENCH_STIM`` before the include:
+#. Write ``CMakeLists.txt``. Include ``latbench_board.cmake`` before
+   ``find_package(Zephyr)``. If the app connects its own ISR to the response
+   pin, set ``LATBENCH_RESP_IRQ_OWN`` before this include. If the app uses
+   the stimulus, set ``LATBENCH_STIM`` before the include of
+   ``latbench.cmake``:
 
    .. code-block:: cmake
 
       cmake_minimum_required(VERSION 3.20.0)
+
+      set(LATBENCH_RESP_IRQ_OWN ON)
+      include(${CMAKE_CURRENT_SOURCE_DIR}/../common/latbench_board.cmake)
+
       find_package(Zephyr REQUIRED HINTS $ENV{ZEPHYR_BASE})
       project(<app>)
 
@@ -83,24 +95,25 @@ Add an app
 #. Write ``prj.conf`` with ``CONFIG_GPIO=y``, ``CONFIG_PRINTK=y``,
    ``CONFIG_ASSERT=n`` and ``CONFIG_SPIN_VALIDATE=n``. If the main thread
    only waits, also set ``CONFIG_MAIN_THREAD_PRIORITY`` to a low priority.
-#. Write ``boards/nucleo_g474re.overlay``. Copy it from ``wake_latency``: it
-   gives the ``zephyr,user`` node, disables ``pwm2``, and removes EXTI
-   line 0 from the GPIO interrupt driver.
+#. Do not write a board overlay. The board port gives the ``zephyr,user``
+   node and the other devicetree changes.
 #. Write ``src/main.c`` with the frame of the existing apps (see
    :doc:`apps`):
 
-   - Save and clear ``DBGMCU->CR``. Print the old value as
-     ``dbgmcu_cr_at_boot``.
+   - Call ``port_debug_reset()``. Print the old value as
+     ``debug_reg_at_boot``.
    - Call ``lat_meta_print()`` with the app name and a variant name that
      names all variant options.
    - Call ``stim_init()``, ``lat_phase_init()`` for each phase histogram,
      and ``stim_static_check()``. If one of them fails, print ``LAT ERROR``
      and call ``lat_done()``.
-   - Call ``stim_exti0_init()``, connect the ISR to ``EXTI0_IRQn``, and
-     enable the IRQ.
+   - Call ``stim_resp_irq_init()``, connect the ISR to ``STIM_RESP_IRQN``,
+     and enable the IRQ.
    - Call ``load_start()``. Then arm the first edge.
-   - In the ISR, read ``stim_now()`` first, then clear the EXTI flag, then
-     examine ``stim_fired()``.
+   - In the ISR, read ``stim_now()`` first, then call ``stim_resp_ack()``,
+     then examine ``stim_fired()``.
+   - Do not use board-specific code in the app. Put it into the board
+     port.
    - Discard ``LATBENCH_WARMUP`` samples. Then record ``LATBENCH_SAMPLES``
      samples. Arm the next edge only after the time stamps of the current
      edge.

@@ -1,7 +1,7 @@
 The apps and their variants
 ===========================
 
-The suite has four apps. Three apps measure latencies with the TIM2
+The suite has four apps. Three apps measure latencies with the hardware
 stimulus. The fourth app does a test of the wire.
 
 .. list-table::
@@ -27,13 +27,13 @@ stimulus. The fourth app does a test of the wire.
 
 The three measurement apps have the same frame:
 
-#. ``main()`` clears ``DBGMCU->CR`` and prints the metadata (see
+#. ``main()`` calls ``port_debug_reset()`` and prints the metadata (see
    :ref:`benchguide-meta`).
-#. ``stim_init()`` sets up TIM2, PA10 and PB0, and prints the stimulus
-   settings.
+#. ``stim_init()`` sets up the stimulus timer and the pins through the
+   board port, and prints the stimulus settings.
 #. ``stim_static_check()`` does the static check of the wire.
-#. The app connects its ISR to EXTI0 (or a GPIO callback) and starts the
-   load generators (``load_start()``).
+#. The app connects its ISR to the response IRQ ``STIM_RESP_IRQN`` (or a
+   GPIO callback) and starts the load generators (``load_start()``).
 #. The app arms the first edge. It discards the first
    ``LATBENCH_WARMUP`` samples, and then records ``LATBENCH_SAMPLES``
    samples.
@@ -62,9 +62,9 @@ interrupt path. The time stamp then arms the next edge. The Kconfig choice
      - Interrupt path
    * - ``LATBENCH_IRQ_PATH_STOCK`` (default)
      - ``stock``
-     - The EXTI driver of Zephyr owns the IRQ. The time stamp is in the
-       user callback of the GPIO driver, after ``_isr_wrapper`` and the
-       driver dispatch.
+     - The GPIO driver of Zephyr owns the response IRQ. The time stamp is
+       in the user callback of the GPIO driver, after ``_isr_wrapper`` and
+       the driver dispatch.
    * - ``LATBENCH_IRQ_PATH_WRAPPED``
      - ``wrapped``
      - An ISR of the app, connected with ``IRQ_CONNECT()``. It runs through
@@ -78,11 +78,28 @@ interrupt path. The time stamp then arms the next edge. The Kconfig choice
        BASEPRI does not mask this IRQ, so kernel critical sections do not
        delay it.
 
-The paths ``wrapped``, ``direct`` and ``zli`` need the overlay
-``irq_latency/exti_line0_app.overlay``. This overlay removes EXTI line 0
-from the GPIO interrupt driver, so that the app can connect its own ISR.
-A ``BUILD_ASSERT`` in ``main.c`` stops the build if the overlay and the path
-do not agree.
+The paths ``wrapped``, ``direct`` and ``zli`` connect an ISR of the app.
+For these paths, the port must take the response IRQ away from the GPIO
+driver. The steps are:
+
+#. ``irq_latency/CMakeLists.txt`` reads the path from the CMake command
+   line (``-DCONFIG_LATBENCH_IRQ_PATH_WRAPPED=y``, ``_DIRECT`` or ``_ZLI``).
+   For these paths, it sets ``LATBENCH_RESP_IRQ_OWN``.
+#. The port then adds its ``resp_irq_own.overlay``. On the NUCLEO-G474RE,
+   this overlay removes EXTI line 0 from the GPIO interrupt driver.
+#. A ``BUILD_ASSERT`` in ``main.c`` compares the path with
+   ``PORT_RESP_IRQ_OWNED``. If they do not agree, the build stops.
+
+Thus the path must be on the CMake command line. A path in a Kconfig
+fragment or in ``prj.conf`` does not select the overlay, and the build
+stops. ``run.py`` puts each ``kconfig`` value of a point on the command
+line, and the Twister scenarios use ``extra_args``.
+
+Known limit of the ``zli`` path: ``stim_arm()`` takes the tick phase of the
+next edge from ``k_cycle_get_64()``. BASEPRI does not mask a zero-latency
+IRQ, so the read can interrupt the timer driver in its locked section and
+see an inconsistent count. Only the phase histogram is at risk, not the
+latency.
 
 The Kconfig choice ``LATBENCH_BACKGROUND`` selects what the CPU does between
 the edges:
@@ -97,8 +114,9 @@ Output: one histogram ``irq`` and one phase histogram ``irq``.
 ``wake_latency`` (M2)
 ---------------------
 
-The EXTI0 ISR takes a time stamp and wakes a thread through a kernel
-object. The woken thread takes a time stamp when its wait call returns.
+The ISR of the response pin takes a time stamp and wakes a thread
+through a kernel object. The app always connects its own ISR
+(``LATBENCH_RESP_IRQ_OWN`` in its ``CMakeLists.txt``). The woken thread takes a time stamp when its wait call returns.
 Then it arms the next edge.
 
 The Kconfig choice ``LATBENCH_WAKE_ISR`` selects how the ISR is connected:
@@ -163,7 +181,9 @@ Output:
 ``thread_latency`` (M3)
 -----------------------
 
-The EXTI0 ISR gives a semaphore to the giver thread (priority 2). The
+The ISR of the response pin gives a semaphore to the giver thread
+(priority 2). As in ``wake_latency``, the app always connects its own
+ISR. The
 giver takes the time stamp ``t0`` and wakes the taker thread through the
 primitive under test. The taker takes the time stamp ``t1`` when its wait
 call returns. The giver takes the time stamp ``t2`` when its wake call
@@ -239,7 +259,8 @@ Output:
    * - ``t2t``
      - ``t0`` to ``t1``: the wake call to the first instruction of the taker
        (M3). In ``nopreempt`` mode, this includes the rest of the giver loop
-       and its block.
+       and its block. For ``mutex``, the giver blocks on the mutex in its
+       next ``giver_prepare()``.
    * - ``t2t_ret``
      - ``t0`` to ``t2``: the wake call to its return. In ``preempt`` mode,
        this includes the taker, its next wait call and the switch back. In
@@ -253,8 +274,10 @@ record ``t2t`` and ``t2t_ret`` for that wake. It counts the wake in
 ``loopback_check``
 ------------------
 
-The app does a test of the wire without TIM2. It drives D2 as a GPIO
-output.
+The app does a test of the wire without the stimulus timer and without a
+board port. It drives D2 as a GPIO output. It has its own overlay
+``loopback_check/boards/nucleo_g474re.overlay`` and runs only on the
+NUCLEO-G474RE.
 
 #. Static check: it drives D2 low and high and reads A3.
 #. Interrupt check: 1000 times, it sets D2 high and measures the time to

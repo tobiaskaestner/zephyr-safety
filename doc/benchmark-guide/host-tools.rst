@@ -12,7 +12,8 @@ packages in ``scripts/requirements.txt`` (``pyserial``, ``PyYAML``,
    * - Script
      - Purpose
    * - ``trees.py``
-     - Creates and examines the pinned trees of ``trees.yaml``.
+     - Creates and examines the pinned trees of ``trees.yaml``. Reads
+       ``boards.yaml`` for ``run.py``.
    * - ``run.py``
      - Runs an experiment from pinned, clean trees and records its
        provenance.
@@ -36,7 +37,8 @@ an experiment file in the safety repository. These rules apply:
 - ``run.py`` stops before it builds anything in these conditions:
 
   - The safety repository is not clean.
-  - A tree is not at its pinned revision, or it is not clean.
+  - A repository of a tree that the build needs is not at its pinned
+    revision, or it is not clean.
   - The SDK version is not the pinned version.
 
 - A manual build or capture is for development only. Its results are
@@ -51,9 +53,6 @@ Pinned trees (``trees.yaml``)
    The folder that holds the trees. ``--trees-root`` or the environment
    variable ``LATBENCH_TREES_ROOT`` overrides it.
 
-``board``
-   The default board of the experiments (``nucleo_g474re``).
-
 ``toolchain.zephyr_sdk``
    The pinned SDK ``version`` and its ``path``. The scripts compare the
    version with the ``sdk_version`` file of the SDK.
@@ -65,9 +64,22 @@ Pinned trees (``trees.yaml``)
    ``source`` is a local clone that has the revision, so that no network
    access is necessary.
 
-The file declares two trees today. ``ws-safety`` is the Zephyr of the
-safety workspace. ``ws-up`` is an upstream Zephyr ``main``. Each tree has
-the repositories ``zephyr``, ``cmsis_6`` and ``hal_stm32``.
+The file declares three trees today:
+
+``ws-safety``
+   The Zephyr of the safety workspace.
+
+``ws-up``
+   An upstream Zephyr ``main``.
+
+``ws-safety-driftfix``
+   The Zephyr of ``ws-safety`` plus a SysTick experiment, on a local branch
+   (``tkaestner/latency-systick-drift``). The branch is not pushed, so
+   ``trees.py setup`` needs the local ``source`` clone for this tree.
+
+Each tree has the repositories ``zephyr``, ``cmsis_6``, ``hal_stm32``,
+``hal_nordic`` and ``hal_nxp``. The boards and the modules that each board
+needs are in ``boards.yaml``.
 
 ``trees.py`` has three commands:
 
@@ -95,6 +107,52 @@ the repositories ``zephyr``, ``cmsis_6`` and ``hal_stm32``.
 Do not change files in a tree. A tree with changes is not clean, and
 ``run.py`` refuses it.
 
+.. _benchguide-boards-yaml:
+
+Boards (``boards.yaml``)
+------------------------
+
+``boards.yaml`` has these keys:
+
+``default``
+   The board target of an experiment without ``board:``
+   (``nucleo_g474re``).
+
+``boards.<board target>``
+   One entry for each board target, with these keys:
+
+   ``port``
+      The folder of the board port in ``common/boards/``.
+
+   ``modules``
+      The repositories of the tree that the build needs. The build gets
+      exactly these as ``ZEPHYR_MODULES``.
+
+   ``flash``
+      A list of commands that program the board and reset it. ``run.py``
+      runs them in order. In each argument, ``{zephyr}`` is the Zephyr of
+      the tree, and ``{elf}`` and ``{hex}`` are the images of the point.
+
+   ``console``
+      The default serial port of the console.
+
+   ``status``
+      ``tested`` if data points exist, ``untested`` if the board only
+      builds.
+
+Example (the entry of the NUCLEO-G474RE):
+
+.. code-block:: yaml
+
+   nucleo_g474re:
+     port: nucleo_g474re
+     modules: [cmsis_6, hal_stm32]
+     flash:
+       - [openocd, -f, "{zephyr}/boards/st/nucleo_g474re/support/openocd.cfg",
+          -c, "program {elf} verify reset exit"]
+     console: /dev/ttyACM0
+     status: tested
+
 Run an experiment (``run.py``)
 ------------------------------
 
@@ -121,15 +179,21 @@ Options:
    * - ``--keep-build``
      - Keep the build folder of each point.
    * - ``--port <dev>``
-     - The serial port (default ``/dev/ttyACM0``).
+     - The serial port (default: ``console`` of the board in
+       ``boards.yaml``).
    * - ``--trees-root <dir>``
      - Override ``root`` of ``trees.yaml``.
 
 ``run.py`` does these steps:
 
 #. **Checks.** It makes sure that the safety repository is clean and that
-   the experiment file is in it. It makes sure that the SDK and each tree
-   of the experiment are as pinned. It expands the points.
+   the experiment file is in it. It finds the board target (``board:`` of
+   the experiment, or ``default`` of ``boards.yaml``). It makes sure that
+   the SDK is as pinned. For each tree of the experiment, it makes sure
+   that ``zephyr`` and the modules of the board are as pinned. Other
+   repositories of the tree are not examined. Then it expands the points.
+   An axis value name that YAML reads as a Boolean (``on``, ``off``,
+   ``yes``, ``no``, ``true``, ``false``) stops the run.
 #. **Snapshot.** It exports the committed benchmark sources at the
    current revision with ``git archive`` into ``<run>/src/``. All builds
    use this snapshot, not the worktree. Thus work in the worktree during
@@ -138,8 +202,9 @@ Options:
 
    - ``ZEPHYR_BASE`` set to the Zephyr of the tree, and all other
      ``ZEPHYR_*`` environment variables removed.
-   - ``-DZEPHYR_MODULES`` set to the modules of the tree only, so that no
-     module of a west workspace goes into the build.
+   - ``-DBOARD`` set to the board target.
+   - ``-DZEPHYR_MODULES`` set to the modules of the board from the tree
+     only, so that no module of a west workspace goes into the build.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
    - ``-DLATBENCH_SRC_REV`` set to the safety revision.
@@ -149,9 +214,8 @@ Options:
    value, the run stops. Kconfig can ignore a value without an error
    (see :doc:`pitfalls`).
 #. **Flash and capture.** For each repetition, it opens the serial port
-   and flashes the ELF with OpenOCD. OpenOCD uses the ``openocd.cfg`` of
-   the board in the Zephyr of the tree. Then ``run.py`` saves the output
-   until ``LAT DONE``. If no ``LAT DONE`` comes before the timeout,
+   and runs the ``flash`` commands of the board in order. Then it saves the
+   output until ``LAT DONE``. If no ``LAT DONE`` comes before the timeout,
    or the flash fails, the run stops.
 #. **Summary.** It writes ``summary.txt`` with the percentiles of each
    histogram.
@@ -181,7 +245,8 @@ An experiment file is a YAML file in ``experiments/``. The keys are:
    * - ``trees``
      - List of tree names from ``trees.yaml``.
    * - ``board``
-     - Optional. The default is ``board`` of ``trees.yaml``.
+     - Optional. A board target of ``boards.yaml``. The default is
+       ``default`` of ``boards.yaml``.
    * - ``repeat``
      - Number of repetitions of each point (default 1).
    * - ``timeout``
@@ -207,7 +272,12 @@ have these keys:
    A list of Kconfig fragments, relative to ``tests/benchmarks/``.
 
 ``dtc_overlays``
-   A list of devicetree overlays, relative to ``tests/benchmarks/``.
+   A list of devicetree overlays, relative to ``tests/benchmarks/``. The
+   board port adds its own overlays. Do not list them here.
+
+The value names of an axis must be text. YAML reads ``on``, ``off``,
+``yes``, ``no``, ``true`` and ``false`` as Booleans, so ``run.py`` refuses
+these names. Put them in quotes, or use other names.
 
 The settings merge in this order: ``common``, then the axis values in the
 order of the axes, or the point. For ``kconfig``, a later value replaces
@@ -241,13 +311,10 @@ Example: four interrupt paths times two anchors give eight points
          kconfig: {LATBENCH_IRQ_PATH_STOCK: y}
        wrapped:
          kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
-         dtc_overlays: [irq_latency/exti_line0_app.overlay]
        direct:
          kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
-         dtc_overlays: [irq_latency/exti_line0_app.overlay]
        zli:
          kconfig: {LATBENCH_IRQ_PATH_ZLI: y}
-         dtc_overlays: [irq_latency/exti_line0_app.overlay]
      anchor:
        default: {}
        lean:
@@ -256,9 +323,11 @@ Example: four interrupt paths times two anchors give eight points
    points:
      - id: direct-16mhz
        kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
-       dtc_overlays:
-         - irq_latency/exti_line0_app.overlay
-         - common/clocks/nucleo_g474re_16mhz.overlay
+       dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_16mhz.overlay]
+
+The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
+experiment. ``run.py`` puts their Kconfig value on the CMake command line,
+and the port then adds its ``resp_irq_own.overlay`` (see :doc:`apps`).
 
 The files in ``experiments/`` are the current experiments. Each file starts
 with a comment that gives the question of the experiment.
@@ -283,7 +352,8 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
        ├── build.log        CMake and Ninja output
        ├── .config          Kconfig of the build
        ├── zephyr.dts       devicetree of the build
-       ├── zephyr.elf       the flashed binary
+       ├── zephyr.elf       the binary
+       ├── zephyr.hex       the binary as Intel HEX, if the build makes it
        └── build/           only with --keep-build
 
 ``manifest.json`` has these fields:
@@ -293,12 +363,16 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
 - ``command``, ``started``, ``finished``, ``host``.
 - ``safety``: the path, the revision and the snapshot folder of the safety
   repository.
-- ``trees``, ``trees_root``: the full entries of the trees from
-  ``trees.yaml``.
+- ``trees``, ``trees_root``: the entries of the trees from ``trees.yaml``,
+  with only the repositories that the build used.
 - ``toolchain``: the SDK version and path.
 - ``tools``: the versions of CMake, Ninja, OpenOCD, Python and pyserial.
-- ``board``, ``probe_serial``: the board and the serial number of the
-  ST-LINK (from ``udevadm``).
+  The OpenOCD version is in the manifest also for a board that flashes
+  with another tool.
+- ``board``, ``board_cfg``, ``console``: the board target, its entry from
+  ``boards.yaml``, and the serial port.
+- ``probe_serial``: the serial number of the debug probe of the console
+  port (from ``udevadm``).
 - ``points``: one entry for each tree and point. An entry has the axes,
   the settings, the CMake command, the SHA-256 of the ELF and the logs.
   If the point failed, it also has an ``error``.
@@ -333,11 +407,18 @@ Summary and parse (``latbench.py``)
 ``summary``
    Prints one row for each histogram of each log. The columns are
    ``log``, ``variant``, ``hist``, ``n``, ``min``, ``p50``, ``p90``, ``p99``,
-   ``p99.9``, ``p99.99``, ``max``, ``mean``, ``sd`` and ``ovf``. A percentile
+   ``p99.9``, ``p99.99``, ``max``, ``mean``, ``sd``, ``ovf`` and ``inv``.
+   ``inv`` is the number of invalid samples (see :ref:`benchguide-hist`).
+   ``mean`` does not include them. A percentile
    in an overflow bin shows as ``>=2^e`` (for example ``>=8192``). A
    percentile in a coarse bin shows the lower edge of the bin. ``sd`` is
    ``nan`` if samples are in overflow bins. ``--json`` prints the rows as
    JSON. ``summary`` does not include the phase histograms.
+
+   A log from before the ``invalid=`` field has the invalid samples in the
+   overflow bin 31. ``summary`` then counts them in ``inv``. If all other
+   samples are in bins, it calculates ``mean`` again from the bins without
+   them.
 
 ``parse``
    Prints the last record of a log as JSON: ``meta``, ``cfg``, ``hists``,
@@ -373,6 +454,6 @@ Plots (``plot.py``)
 ``--hist`` selects the histogram (or the phase histogram) by name. The
 default is the first one in each log. ``--label`` gives the label of the
 next log. The default label is ``<tree>/<point>`` from the path of the log.
-A chart can have a maximum of 8 logs. ``plot.py`` leaves out values of
-2\ :sup:`31` or more (negative differences) and gives their number in the
-label.
+A chart can have a maximum of 8 logs. ``plot.py`` gives the number of
+invalid samples in the label. In a log from before the ``invalid=`` field,
+it leaves out the overflow bin 31.
