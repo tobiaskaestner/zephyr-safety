@@ -61,10 +61,12 @@ endchoice
 
 config LATBENCH_STIM_MIN_US
 	int "Minimum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
 	default 100
 
 config LATBENCH_STIM_MAX_US
 	int "Maximum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
 	default 500
 
 config LATBENCH_POLL_MS

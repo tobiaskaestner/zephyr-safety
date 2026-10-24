@@ -1,0 +1,25 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# IRQ to ISR latency (direct path, idle, board defaults) by the tick
+# phase of the stimulus edge. Checks that the random stimulus covers the
+# tick evenly, and shows where in the tick the second mode and the tail
+# come from. fixed-scan: see wake-phase-1m.yaml.
+
+name: irq-phase-1m
+app: irq_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_IRQ_PATH_DIRECT: y
+  dtc_overlays: [irq_latency/exti_line0_app.overlay]
+
+points:
+  - id: random
+    kconfig: {LATBENCH_STIM_MIN_US: 100, LATBENCH_STIM_MAX_US: 500}
+  - id: fixed-scan
+    kconfig: {LATBENCH_STIM_FIXED: y, LATBENCH_STIM_PERIOD_US: 300, LATBENCH_STIM_PERIOD_ADJ_CYC: 1}

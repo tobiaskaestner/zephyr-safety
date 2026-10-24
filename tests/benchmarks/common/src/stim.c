@@ -24,11 +24,26 @@
 BUILD_ASSERT(DT_PROP(RCC_NODE, ahb_prescaler) == 1 && DT_PROP(RCC_NODE, apb1_prescaler) == 1,
 	     "TIM2 must run at the core clock");
 
+/*
+ * The tick phase needs the system timer and TIM2 to count the same clock,
+ * and a cycle counter with the tick grid of the timer driver.
+ */
+BUILD_ASSERT(IS_ENABLED(CONFIG_CORTEX_M_SYSTICK) && IS_ENABLED(CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER),
+	     "the tick phase needs SysTick and k_cycle_get_64()");
+
+/* A fixed-rate edge needs at least this many cycles between arm and edge. */
+#define STIM_ARM_MARGIN 1000U
+
 PINCTRL_DT_DEFINE(USER_NODE);
 
-static const struct gpio_dt_spec resp = GPIO_DT_SPEC_GET(USER_NODE, resp_gpios);
+const struct gpio_dt_spec stim_resp = GPIO_DT_SPEC_GET(USER_NODE, resp_gpios);
 
 uint32_t stim_next_ccr;
+uint32_t stim_next_phase;
+static uint32_t tick_period;
+static uint32_t n_overruns;
+
+#if defined(CONFIG_LATBENCH_STIM_RANDOM)
 static uint32_t stim_min;
 static uint32_t stim_span;
 static uint32_t rng_state = 0x2545f491U;
@@ -43,30 +58,101 @@ static inline uint32_t rng_next(void)
 	rng_state = x;
 	return x;
 }
+#else
+static uint32_t stim_period;
+static bool started;
+#endif
+
+uint32_t stim_tick_period(void)
+{
+	return tick_period;
+}
 
 void stim_arm(uint32_t now)
 {
+	uint32_t prev = stim_next_ccr;
+	uint32_t next;
+
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_INACTIVE);
-	stim_next_ccr = now + stim_min + (rng_next() % stim_span);
-	LL_TIM_OC_SetCompareCH4(TIM2, stim_next_ccr);
+#if defined(CONFIG_LATBENCH_STIM_RANDOM)
+	next = now + stim_min + (rng_next() % stim_span);
+#else
+	next = prev + stim_period;
+	if (!started) {
+		/* The first edge: there is no previous edge yet. */
+		started = true;
+		next = now + stim_period;
+	} else if ((int32_t)(next - now) < (int32_t)STIM_ARM_MARGIN) {
+		/* Too late for this edge: start a new period from now. */
+		n_overruns++;
+		next = now + stim_period;
+	}
+#endif
+	/* next - prev is less than 2^32 cycles, so the 32-bit difference is exact. */
+	stim_next_phase = (stim_next_phase + (next - prev)) % tick_period;
+	stim_next_ccr = next;
+	LL_TIM_OC_SetCompareCH4(TIM2, next);
 	LL_TIM_ClearFlag_CC4(TIM2);
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_ACTIVE);
 }
 
-int stim_init(uint32_t min_us, uint32_t max_us)
+/*
+ * The timer driver keeps its tick boundaries at multiples of the tick
+ * period in the count of k_cycle_get_64(). Read that count and TIM2 at
+ * the same time once. After that, the phase of each edge follows from the
+ * TIM2 difference to the previous edge.
+ */
+static void phase_init(void)
+{
+	unsigned int key = irq_lock();
+	uint32_t cnt = TIM2->CNT;
+	uint64_t cyc = k_cycle_get_64();
+
+	irq_unlock(key);
+	stim_next_ccr = cnt;
+	stim_next_phase = (uint32_t)(cyc % tick_period);
+}
+
+/*
+ * Check the phase: a thread that sleeps for one tick wakes shortly after
+ * a tick boundary, so its phase must be small (the timer ISR and one
+ * switch, about 1000 to 3000 cycles at 170 MHz).
+ */
+static void phase_check(void)
+{
+	uint32_t now;
+
+	k_sleep(K_TICKS(1));
+	now = TIM2->CNT;
+	printk("LAT META tick_phase_check=%u\n",
+	       (stim_next_phase + (now - stim_next_ccr)) % tick_period);
+}
+
+int stim_init(void)
 {
 	const struct device *clk = DEVICE_DT_GET(STM32_CLOCK_CONTROL_NODE);
 	const struct stm32_pclken pclken = STM32_CLOCK_INFO(0, DT_NODELABEL(timers2));
 	uint32_t cyc_per_us = sys_clock_hw_cycles_per_sec() / 1000000U;
 	int ret;
 
-	stim_min = min_us * cyc_per_us;
-	stim_span = (max_us - min_us) * cyc_per_us;
+	tick_period = sys_clock_hw_cycles_per_sec() / CONFIG_SYS_CLOCK_TICKS_PER_SEC;
+#if defined(CONFIG_LATBENCH_STIM_RANDOM)
+	stim_min = CONFIG_LATBENCH_STIM_MIN_US * cyc_per_us;
+	stim_span = (CONFIG_LATBENCH_STIM_MAX_US - CONFIG_LATBENCH_STIM_MIN_US) * cyc_per_us;
+	printk("LAT META stim_mode=random\n");
+	printk("LAT META stim_us=%u..%u\n", CONFIG_LATBENCH_STIM_MIN_US,
+	       CONFIG_LATBENCH_STIM_MAX_US);
+#else
+	stim_period = CONFIG_LATBENCH_STIM_PERIOD_US * cyc_per_us + CONFIG_LATBENCH_STIM_PERIOD_ADJ_CYC;
+	printk("LAT META stim_mode=fixed\n");
+	printk("LAT META stim_period_cyc=%u\n", stim_period);
+#endif
+	printk("LAT META tick_period_cyc=%u\n", tick_period);
 
-	if (!gpio_is_ready_dt(&resp)) {
+	if (!gpio_is_ready_dt(&stim_resp)) {
 		return -ENODEV;
 	}
-	ret = gpio_pin_configure_dt(&resp, GPIO_INPUT);
+	ret = gpio_pin_configure_dt(&stim_resp, GPIO_INPUT);
 	if (ret < 0) {
 		return ret;
 	}
@@ -89,8 +175,14 @@ int stim_init(uint32_t min_us, uint32_t max_us)
 	LL_TIM_GenerateEvent_UPDATE(TIM2);
 	LL_TIM_EnableCounter(TIM2);
 
-	printk("LAT META stim_us=%u..%u\n", min_us, max_us);
+	phase_init();
+	phase_check();
 	return 0;
+}
+
+void stim_print_stats(void)
+{
+	printk("LAT META stim_overruns=%u\n", n_overruns);
 }
 
 bool stim_static_check(void)
@@ -100,10 +192,10 @@ bool stim_static_check(void)
 
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_INACTIVE);
 	k_busy_wait(10);
-	lo = gpio_pin_get_dt(&resp);
+	lo = gpio_pin_get_dt(&stim_resp);
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_ACTIVE);
 	k_busy_wait(10);
-	hi = gpio_pin_get_dt(&resp);
+	hi = gpio_pin_get_dt(&stim_resp);
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_INACTIVE);
 	k_busy_wait(10);
 

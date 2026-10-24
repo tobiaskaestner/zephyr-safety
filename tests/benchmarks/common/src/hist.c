@@ -37,3 +37,15 @@ void lat_hist_print(const struct lat_hist *h)
 	}
 	printk("LAT END %s\n", h->name);
 }
+
+void lat_phase_print(const struct lat_phase *p)
+{
+	printk("LAT PHASE %s bins=%u period=%u\n", p->name, CONFIG_LATBENCH_PHASE_BINS, p->period);
+	for (uint32_t b = 0; b < CONFIG_LATBENCH_PHASE_BINS; b++) {
+		if (p->count[b] != 0U) {
+			printk("LAT PB %u %u %u %u %llu\n", b, p->count[b], p->min[b], p->max[b],
+			       p->sum[b]);
+		}
+	}
+	printk("LAT END %s\n", p->name);
+}

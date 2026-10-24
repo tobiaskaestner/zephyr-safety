@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# ISR to thread wake latency (sem, wrapped ISR, board defaults) by the
+# tick phase of the stimulus edge. Question from wake-isr-1m: does the
+# phase of the edge in the kernel tick decide between the two modes of
+# isr2thr (80 % and 20 %, 310 cycles apart)?
+#
+#   random      random stimulus 100..500 us (as in wake-isr-1m)
+#   fixed-scan  fixed period 300 us + 1 cycle. 300 us is 3 ticks, so the
+#               tick phase moves by 1 cycle per edge and scans the full
+#               tick about 59 times in 1M samples.
+
+name: wake-phase-1m
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+
+points:
+  - id: random
+    kconfig: {LATBENCH_STIM_MIN_US: 100, LATBENCH_STIM_MAX_US: 500}
+  - id: fixed-scan
+    kconfig: {LATBENCH_STIM_FIXED: y, LATBENCH_STIM_PERIOD_US: 300, LATBENCH_STIM_PERIOD_ADJ_CYC: 1}

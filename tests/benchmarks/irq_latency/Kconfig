@@ -46,10 +46,12 @@ endchoice
 
 config LATBENCH_STIM_MIN_US
 	int "Minimum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
 	default 200
 
 config LATBENCH_STIM_MAX_US
 	int "Maximum time between two stimuli (us)"
+	depends on LATBENCH_STIM_RANDOM
 	default 1000
 	help
 	  The time between two stimuli is random in [MIN, MAX), so the

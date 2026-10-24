@@ -17,6 +17,9 @@
  *   isr2thr  ISR time stamp -> woken thread time stamp
  *   irq2thr  edge -> woken thread (end to end)
  *
+ * Two phase histograms record irq and isr2thr by the tick phase of the
+ * edge.
+ *
  * The thread arms the next stimulus after it took its time stamps, so one
  * stimulus is in flight at a time.
  */
@@ -60,6 +63,8 @@
 static LAT_HIST_DEFINE(h_irq, "irq");
 static LAT_HIST_DEFINE(h_isr2thr, "isr2thr");
 static LAT_HIST_DEFINE(h_irq2thr, "irq2thr");
+static LAT_PHASE_DEFINE(p_irq, "irq");
+static LAT_PHASE_DEFINE(p_isr2thr, "isr2thr");
 
 static volatile uint32_t t_isr;
 static volatile uint32_t n_spurious;
@@ -170,12 +175,15 @@ static void waker_fn(void *a, void *b, void *c)
 
 		uint32_t t_thr = stim_now();
 		uint32_t edge = stim_edge();
+		uint32_t phase = stim_edge_phase();
 		uint32_t ti = t_isr;
 
 		if (n >= CONFIG_LATBENCH_WARMUP) {
 			lat_hist_add(&h_irq, ti - edge);
 			lat_hist_add(&h_isr2thr, t_thr - ti);
 			lat_hist_add(&h_irq2thr, t_thr - edge);
+			lat_phase_add(&p_irq, phase, ti - edge);
+			lat_phase_add(&p_isr2thr, phase, t_thr - ti);
 		}
 		rearm_object();
 		if (n + 1 < N_TOTAL) {
@@ -221,11 +229,13 @@ int main(void)
 	printk("LAT META wake_prio=%d\n", CONFIG_LATBENCH_WAKE_PRIO);
 	printk("LAT META poll_ms=%u\n", CONFIG_LATBENCH_POLL_MS);
 
-	if (stim_init(CONFIG_LATBENCH_STIM_MIN_US, CONFIG_LATBENCH_STIM_MAX_US) < 0) {
+	if (stim_init() < 0) {
 		printk("LAT ERROR setup\n");
 		lat_done();
 		return 0;
 	}
+	lat_phase_init(&p_irq, stim_tick_period());
+	lat_phase_init(&p_isr2thr, stim_tick_period());
 	if (!stim_static_check()) {
 		printk("LAT ERROR static check failed (wire D2 -> A3?)\n");
 		lat_done();
@@ -248,9 +258,12 @@ int main(void)
 	}
 
 	printk("LAT META spurious_edges=%u\n", n_spurious);
+	stim_print_stats();
 	lat_hist_print(&h_irq);
 	lat_hist_print(&h_isr2thr);
 	lat_hist_print(&h_irq2thr);
+	lat_phase_print(&p_irq);
+	lat_phase_print(&p_isr2thr);
 	lat_done();
 	return 0;
 }

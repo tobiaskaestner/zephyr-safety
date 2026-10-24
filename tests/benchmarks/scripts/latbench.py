@@ -13,6 +13,9 @@ The apps print "LAT" lines (see common/src/hist.c and common/src/meta.c):
     LAT BIN <cycles> <count>
     LAT OVF <log2> <count>
     LAT END <name>
+    LAT PHASE <name> bins=.. period=..
+    LAT PB <bin> <count> <min> <max> <sum>
+    LAT END <name>
     LAT DONE
 
 Subcommands:
@@ -106,12 +109,13 @@ def parse_log(path):
     """Return the last run in the log as a dict."""
     run = None
     hist = None
+    phase = None
     for line in Path(path).read_text().splitlines():
         if not line.startswith("LAT "):
             continue
         tag, _, rest = line[4:].partition(" ")
         if tag == "BEGIN":
-            run = {"source": str(path), "meta": {}, "cfg": {}, "hists": {}, "errors": []}
+            run = {"source": str(path), "meta": {}, "cfg": {}, "hists": {}, "phases": {}, "errors": []}
         elif run is None:
             continue
         elif tag == "META":
@@ -136,8 +140,19 @@ def parse_log(path):
         elif tag == "OVF" and hist is not None:
             e, c = rest.split()
             hist["ovf_log2"][int(e)] = int(c)
+        elif tag == "PHASE":
+            name, *fields = rest.split()
+            phase = {"name": name, "bins": {}}
+            for item in fields:
+                key, _, value = item.partition("=")
+                phase[key] = int(value)
+            run["phases"][name] = phase
+        elif tag == "PB" and phase is not None:
+            b, count, vmin, vmax, vsum = (int(x) for x in rest.split())
+            phase["bins"][b] = {"count": count, "min": vmin, "max": vmax, "sum": vsum}
         elif tag == "END":
             hist = None
+            phase = None
     if run is None:
         raise ValueError(f"{path}: no 'LAT BEGIN'")
     return run

@@ -6,10 +6,14 @@
 
     plot.py ccdf  --out f.svg [--title T] [--label L]... LOG ...
     plot.py hist  --out f.svg [--title T] [--label L]... LOG ...
+    plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
 
 ccdf: exceedance probability P(latency > x) on a log scale, one line per
       log. It shows the floor, the modes and the tail in one chart.
 hist: one panel per log, sample count per 1-cycle bin on a log scale.
+phase: two panels per log, by the tick phase of the stimulus edge: the
+      share of the samples (1 = uniform), and min, mean and max latency.
+      --hist selects the phase histogram.
 
 The default label of a log is "<tree>/<point>" from its run folder path.
 """
@@ -155,16 +159,50 @@ def hist(args):
     print(f"saved {args.out}")
 
 
+def phase(args):
+    runs = load(args)
+    fig, axes = plt.subplots(2 * len(runs), 1, figsize=(8, 2.6 * len(runs) + 0.8), sharex=True, facecolor=SURFACE,
+                             gridspec_kw={"height_ratios": [1, 2] * len(runs)})
+    for i, (label, run, _) in enumerate(runs):
+        ph = run["phases"][args.hist] if args.hist else next(iter(run["phases"].values()))
+        nbins, period = ph["bins"], ph["period"]
+        width = period / nbins
+        rows = sorted(ph["bins"].items())
+        n = sum(r["count"] for _, r in rows)
+        xs = [(b + 0.5) * width for b, _ in rows]
+        ax_n, ax_v = axes[2 * i], axes[2 * i + 1]
+        style(ax_n)
+        style(ax_v)
+        ax_n.bar(xs, [r["count"] * nbins / n for _, r in rows], width=width - 2 * width / 8, color=SERIES[i])
+        ax_n.axhline(1.0, color=TEXT2, linewidth=0.8)
+        ax_n.set_ylabel("share\n(1 = uniform)", color=TEXT2, fontsize=8)
+        ax_n.set_title(f"{label}   {ph['name']}   n {n:,}   {nbins} bins of {width:.0f} cycles",
+                       color=TEXT, fontsize=9, loc="left")
+        ax_v.plot(xs, [r["sum"] / r["count"] for _, r in rows], color=SERIES[i], linewidth=2, label="mean")
+        ax_v.plot(xs, [r["min"] for _, r in rows], color=SERIES[i], linewidth=1, linestyle="--", label="min")
+        ax_v.plot(xs, [r["max"] for _, r in rows], "o", color=SERIES[i], markersize=3, markeredgewidth=0,
+                  label="max")
+        ax_v.set_yscale("log")
+        ax_v.set_ylabel("latency (cycles)", color=TEXT2, fontsize=8)
+        ax_v.legend(frameon=False, fontsize=8, loc="upper right", labelcolor=TEXT, ncol=3)
+    axes[-1].set_xlim(0, period)
+    axes[-1].set_xlabel("tick phase of the stimulus edge (cycles after the tick boundary)", color=TEXT2, fontsize=9)
+    fig.suptitle(args.title or "Latency by tick phase", color=TEXT, fontsize=11, x=0.01, ha="left")
+    fig.tight_layout()
+    fig.savefig(args.out, facecolor=SURFACE)
+    print(f"saved {args.out}")
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("kind", choices=["ccdf", "hist"])
+    p.add_argument("kind", choices=["ccdf", "hist", "phase"])
     p.add_argument("--out", required=True)
     p.add_argument("--title")
     p.add_argument("--label", action="append", help="label of the next log, once per log")
     p.add_argument("--hist", default=None, help="histogram name (default: the first in each log)")
     p.add_argument("logs", nargs="+")
     args = p.parse_args()
-    {"ccdf": ccdf, "hist": hist}[args.kind](args)
+    {"ccdf": ccdf, "hist": hist, "phase": phase}[args.kind](args)
 
 
 if __name__ == "__main__":

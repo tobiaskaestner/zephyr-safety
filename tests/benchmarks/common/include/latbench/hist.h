@@ -53,6 +53,45 @@ static inline void lat_hist_add(struct lat_hist *h, uint32_t v)
 
 void lat_hist_reset(struct lat_hist *h);
 
+/**
+ * Samples by the tick phase of their stimulus edge. Bin b holds the
+ * phases [b * period / BINS, (b + 1) * period / BINS). Set period with
+ * lat_phase_init() before the first lat_phase_add().
+ */
+struct lat_phase {
+	const char *name;
+	uint32_t period;
+	uint32_t count[CONFIG_LATBENCH_PHASE_BINS];
+	uint32_t min[CONFIG_LATBENCH_PHASE_BINS];
+	uint32_t max[CONFIG_LATBENCH_PHASE_BINS];
+	uint64_t sum[CONFIG_LATBENCH_PHASE_BINS];
+};
+
+#define LAT_PHASE_DEFINE(_var, _name) struct lat_phase _var = {.name = (_name)}
+
+static inline void lat_phase_init(struct lat_phase *p, uint32_t period)
+{
+	p->period = period;
+}
+
+static inline void lat_phase_add(struct lat_phase *p, uint32_t phase, uint32_t v)
+{
+	/* phase < period, so phase * BINS fits in 32 bits for any tick. */
+	uint32_t b = phase * CONFIG_LATBENCH_PHASE_BINS / p->period;
+
+	if (p->count[b] == 0U || v < p->min[b]) {
+		p->min[b] = v;
+	}
+	if (v > p->max[b]) {
+		p->max[b] = v;
+	}
+	p->count[b]++;
+	p->sum[b] += v;
+}
+
+/** Print the phase histogram in the LAT line format (see scripts/latbench.py). */
+void lat_phase_print(const struct lat_phase *p);
+
 /** Print the histogram in the LAT line format (see scripts/latbench.py). */
 void lat_hist_print(const struct lat_hist *h);
 

@@ -22,4 +22,55 @@ config LATBENCH_HIST_BINS
 	  Larger values go into log2 overflow bins, and max records the
 	  largest one.
 
+config LATBENCH_PHASE_BINS
+	int "Number of bins of a phase histogram"
+	default 64
+	help
+	  A phase histogram splits the kernel tick into this many bins of
+	  equal width. For each bin it records count, min, max and sum of
+	  the samples whose stimulus edge had that tick phase.
+
+choice LATBENCH_STIM_MODE
+	prompt "Time between two stimuli (apps with the TIM2 stimulus)"
+	default LATBENCH_STIM_RANDOM
+
+config LATBENCH_STIM_RANDOM
+	bool "Random"
+	help
+	  The next edge comes a random time in [LATBENCH_STIM_MIN_US,
+	  LATBENCH_STIM_MAX_US) after the code that handled the previous
+	  edge armed it. The seed is fixed, so each run uses the same
+	  sequence of delays.
+
+config LATBENCH_STIM_FIXED
+	bool "Fixed period"
+	help
+	  The next edge comes LATBENCH_STIM_PERIOD_US plus
+	  LATBENCH_STIM_PERIOD_ADJ_CYC core cycles after the previous edge.
+	  The period does not depend on the latency. If the code arms the
+	  next edge too late, the stimulus counts an overrun and starts a
+	  new period from the time of arming.
+
+endchoice
+
+config LATBENCH_STIM_PERIOD_US
+	int "Period of the fixed stimulus (us)"
+	depends on LATBENCH_STIM_FIXED
+	default 300
+	help
+	  TIM2 and the system timer count the same clock. If the period is a
+	  whole number of ticks, each edge has the same tick phase. Use
+	  LATBENCH_STIM_PERIOD_ADJ_CYC to move the phase.
+
+config LATBENCH_STIM_PERIOD_ADJ_CYC
+	int "Cycles added to the period of the fixed stimulus"
+	depends on LATBENCH_STIM_FIXED
+	range -10000 10000
+	default 1
+	help
+	  With a period of a whole number of ticks, the tick phase of each
+	  edge moves by this many cycles. 0 keeps the phase constant. A
+	  small value scans the full tick slowly: 1 cycle at 170 MHz and
+	  10000 ticks/s scans the tick in 17000 edges.
+
 endmenu
