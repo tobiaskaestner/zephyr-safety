@@ -42,6 +42,9 @@ uint32_t stim_next_ccr;
 uint32_t stim_next_phase;
 static uint32_t tick_period;
 static uint32_t n_overruns;
+/* TIM2 and k_cycle_get_64() at stim_init(), for the clock drift check. */
+static uint32_t ref_cnt;
+static uint64_t ref_cyc;
 
 #if defined(CONFIG_LATBENCH_STIM_RANDOM)
 static uint32_t stim_min;
@@ -68,16 +71,32 @@ uint32_t stim_tick_period(void)
 	return tick_period;
 }
 
+/*
+ * The tick phase of a future TIM2 time. The tick grid is in the count of
+ * k_cycle_get_64(), and that count loses cycles against TIM2 (each SysTick
+ * reprogram loses a few, see the clock_drift_cyc output). So take the
+ * phase from a pair of fresh readings, not from a reference of the past.
+ */
+static uint32_t phase_of(uint32_t t)
+{
+	unsigned int key = irq_lock();
+	uint32_t cnt = TIM2->CNT;
+	uint64_t cyc = k_cycle_get_64();
+
+	irq_unlock(key);
+	/* t is less than 2^31 cycles after cnt. */
+	return (uint32_t)((cyc + (uint32_t)(t - cnt)) % tick_period);
+}
+
 void stim_arm(uint32_t now)
 {
-	uint32_t prev = stim_next_ccr;
 	uint32_t next;
 
 	LL_TIM_OC_SetMode(TIM2, LL_TIM_CHANNEL_CH4, LL_TIM_OCMODE_FORCED_INACTIVE);
 #if defined(CONFIG_LATBENCH_STIM_RANDOM)
 	next = now + stim_min + (rng_next() % stim_span);
 #else
-	next = prev + stim_period;
+	next = stim_next_ccr + stim_period;
 	if (!started) {
 		/* The first edge: there is no previous edge yet. */
 		started = true;
@@ -88,8 +107,7 @@ void stim_arm(uint32_t now)
 		next = now + stim_period;
 	}
 #endif
-	/* next - prev is less than 2^32 cycles, so the 32-bit difference is exact. */
-	stim_next_phase = (stim_next_phase + (next - prev)) % tick_period;
+	stim_next_phase = phase_of(next);
 	stim_next_ccr = next;
 	LL_TIM_OC_SetCompareCH4(TIM2, next);
 	LL_TIM_ClearFlag_CC4(TIM2);
@@ -98,9 +116,8 @@ void stim_arm(uint32_t now)
 
 /*
  * The timer driver keeps its tick boundaries at multiples of the tick
- * period in the count of k_cycle_get_64(). Read that count and TIM2 at
- * the same time once. After that, the phase of each edge follows from the
- * TIM2 difference to the previous edge.
+ * period in the count of k_cycle_get_64(). Set the first reference, for
+ * phase_check() before the first stim_arm().
  */
 static void phase_init(void)
 {
@@ -109,8 +126,27 @@ static void phase_init(void)
 	uint64_t cyc = k_cycle_get_64();
 
 	irq_unlock(key);
+	ref_cnt = cnt;
+	ref_cyc = cyc;
 	stim_next_ccr = cnt;
 	stim_next_phase = (uint32_t)(cyc % tick_period);
+}
+
+/*
+ * TIM2 and the system timer count the same clock. Print how many cycles
+ * k_cycle_get_64() fell behind TIM2 since stim_init() (negative: it ran
+ * ahead). TIM2 wraps every 25 s, so the 32-bit difference is exact only
+ * while the drift is less than 2^31 cycles.
+ */
+static void drift_check(void)
+{
+	unsigned int key = irq_lock();
+	uint32_t cnt = TIM2->CNT;
+	uint64_t cyc = k_cycle_get_64();
+
+	irq_unlock(key);
+	printk("LAT META clock_elapsed_cyc=%llu\n", cyc - ref_cyc);
+	printk("LAT META clock_drift_cyc=%d\n", (int32_t)((cnt - ref_cnt) - (uint32_t)(cyc - ref_cyc)));
 }
 
 /*
@@ -118,14 +154,13 @@ static void phase_init(void)
  * a tick boundary, so its phase must be small (the timer ISR and one
  * switch, about 1000 to 3000 cycles at 170 MHz).
  */
-static void phase_check(void)
+static void phase_check(const char *key)
 {
 	uint32_t now;
 
 	k_sleep(K_TICKS(1));
 	now = TIM2->CNT;
-	printk("LAT META tick_phase_check=%u\n",
-	       (stim_next_phase + (now - stim_next_ccr)) % tick_period);
+	printk("LAT META %s=%u\n", key, (stim_next_phase + (now - stim_next_ccr)) % tick_period);
 }
 
 int stim_init(void)
@@ -176,13 +211,16 @@ int stim_init(void)
 	LL_TIM_EnableCounter(TIM2);
 
 	phase_init();
-	phase_check();
+	phase_check("tick_phase_check");
 	return 0;
 }
 
 void stim_print_stats(void)
 {
 	printk("LAT META stim_overruns=%u\n", n_overruns);
+	drift_check();
+	/* The same check after the run: a clock drift shows here. */
+	phase_check("tick_phase_check_end");
 }
 
 bool stim_static_check(void)

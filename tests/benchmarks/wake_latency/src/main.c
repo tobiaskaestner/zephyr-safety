@@ -31,6 +31,7 @@
 #include <stm32_ll_exti.h>
 
 #include <latbench/hist.h>
+#include <latbench/load.h>
 #include <latbench/meta.h>
 #include <latbench/stim.h>
 
@@ -249,6 +250,7 @@ int main(void)
 	IRQ_CONNECT(EXTI0_IRQn, 0, exti0_isr, NULL, 0);
 #endif
 	irq_enable(EXTI0_IRQn);
+	load_start();
 
 	k_thread_create(&waker_thread, waker_stack, K_THREAD_STACK_SIZEOF(waker_stack), waker_fn,
 			NULL, NULL, NULL, CONFIG_LATBENCH_WAKE_PRIO, 0, K_NO_WAIT);
@@ -259,6 +261,7 @@ int main(void)
 
 	printk("LAT META spurious_edges=%u\n", n_spurious);
 	stim_print_stats();
+	load_print();
 	lat_hist_print(&h_irq);
 	lat_hist_print(&h_isr2thr);
 	lat_hist_print(&h_irq2thr);

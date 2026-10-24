@@ -129,7 +129,9 @@ def parse_log(path):
             run["errors"].append(rest)
         elif tag == "HIST":
             name, *fields = rest.split()
-            hist = {"name": name, "bins": {}, "ovf_log2": {}}
+            # "bins" maps the lower edge of a bin to its count, "width" its
+            # width (only coarse bins have an entry, all others are 1 cycle).
+            hist = {"name": name, "bins": {}, "width": {}, "ovf_log2": {}}
             for item in fields:
                 key, _, value = item.partition("=")
                 hist[key] = float(value) if key == "mean" else int(value)
@@ -137,6 +139,10 @@ def parse_log(path):
         elif tag == "BIN" and hist is not None:
             v, c = rest.split()
             hist["bins"][int(v)] = int(c)
+        elif tag == "CBIN" and hist is not None:
+            v, c, w = (int(x) for x in rest.split())
+            hist["bins"][v] = c
+            hist["width"][v] = w
         elif tag == "OVF" and hist is not None:
             e, c = rest.split()
             hist["ovf_log2"][int(e)] = int(c)
@@ -175,10 +181,14 @@ def quantile(hist, q):
 
 
 def stddev(hist):
-    if hist["overflow"] or hist["n"] == 0:
+    """Standard deviation; a coarse bin counts at its centre."""
+    in_bins = sum(hist["bins"].values())
+    if in_bins != hist["n"] or hist["n"] == 0:
         return float("nan")
     m = hist["mean"]
-    return math.sqrt(sum(c * (v - m) ** 2 for v, c in hist["bins"].items()) / hist["n"])
+    w = hist.get("width", {})
+    return math.sqrt(
+        sum(c * (v + (w.get(v, 1) - 1) / 2 - m) ** 2 for v, c in hist["bins"].items()) / hist["n"])
 
 
 QUANTILES = [("p50", 0.5), ("p90", 0.9), ("p99", 0.99), ("p99.9", 0.999), ("p99.99", 0.9999)]

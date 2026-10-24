@@ -139,7 +139,9 @@ def hist(args):
     for i, (ax, (label, run, _)) in enumerate(zip(axes, runs)):
         style(ax)
         h = pick(run, args.hist)
-        pairs = values(h)
+        # A coarse bin shows its count per cycle, so that the scale stays the same.
+        width = h.get("width", {})
+        pairs = [(v, c / width.get(v, 1)) for v, c in values(h)]
         ax.vlines([v for v, _ in pairs], 0.7, [c for _, c in pairs], color=SERIES[i], linewidth=1.5)
         ax.plot([v for v, c in pairs if c <= 3], [c for _, c in pairs if c <= 3], "o", color=SERIES[i],
                 markersize=3, markeredgewidth=0)
@@ -150,7 +152,7 @@ def hist(args):
             f"{label}   min {h['min']}   p50 {latbench.quantile(h, 0.5)}   p99.99 {p9999}   {max_text(h)}",
             color=TEXT, fontsize=9, loc="left",
         )
-        ax.set_ylabel("samples", color=TEXT2, fontsize=8)
+        ax.set_ylabel("samples / cycle" if width else "samples", color=TEXT2, fontsize=8)
     axes[-1].set_xscale("log")
     axes[-1].set_xlabel("latency (core cycles)", color=TEXT2, fontsize=9)
     fig.suptitle(args.title or "IRQ latency: samples per 1-cycle bin", color=TEXT, fontsize=11, x=0.01, ha="left")

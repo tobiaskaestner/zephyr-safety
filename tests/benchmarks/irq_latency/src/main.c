@@ -27,6 +27,7 @@
 #include <stm32_ll_exti.h>
 
 #include <latbench/hist.h>
+#include <latbench/load.h>
 #include <latbench/meta.h>
 #include <latbench/stim.h>
 
@@ -193,6 +194,7 @@ int main(void)
 		return 0;
 	}
 
+	load_start();
 	stim_arm(stim_now());
 	while (!done) {
 		k_msleep(CONFIG_LATBENCH_POLL_MS);
@@ -200,6 +202,7 @@ int main(void)
 
 	printk("LAT META spurious_edges=%u\n", n_spurious);
 	stim_print_stats();
+	load_print();
 	lat_hist_print(&hist);
 	lat_phase_print(&phase);
 	lat_done();

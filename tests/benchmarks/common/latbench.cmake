@@ -30,5 +30,9 @@ target_compile_definitions(app PRIVATE LATBENCH_SRC_REV="${LATBENCH_SRC_REV}")
 # The TIM2 stimulus (common/src/stim.c) needs the zephyr,user node of the
 # app overlay. An app that uses it sets LATBENCH_STIM before the include.
 if(LATBENCH_STIM)
-  target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/stim.c)
+  target_sources(app PRIVATE
+    ${CMAKE_CURRENT_LIST_DIR}/src/stim.c
+    # The load timers take their tick phase from the stimulus.
+    ${CMAKE_CURRENT_LIST_DIR}/src/load.c
+  )
 endif()

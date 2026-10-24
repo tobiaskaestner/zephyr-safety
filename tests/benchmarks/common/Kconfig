@@ -22,6 +22,20 @@ config LATBENCH_HIST_BINS
 	  Larger values go into log2 overflow bins, and max records the
 	  largest one.
 
+config LATBENCH_HIST_COARSE_BINS
+	int "Number of coarse histogram bins"
+	default 0
+	help
+	  Coarse bins follow the 1-cycle bins. Each one is
+	  2^LATBENCH_HIST_COARSE_SHIFT cycles wide. Use them for loads that
+	  make long latencies: 2048 fine and 2048 coarse bins of 32 cycles
+	  cover 0 to 67583 cycles with the RAM of 4096 fine bins.
+
+config LATBENCH_HIST_COARSE_SHIFT
+	int "log2 of the width of a coarse bin"
+	range 1 12
+	default 5
+
 config LATBENCH_PHASE_BINS
 	int "Number of bins of a phase histogram"
 	default 64
@@ -72,5 +86,87 @@ config LATBENCH_STIM_PERIOD_ADJ_CYC
 	  edge moves by this many cycles. 0 keeps the phase constant. A
 	  small value scans the full tick slowly: 1 cycle at 170 MHz and
 	  10000 ticks/s scans the tick in 17000 edges.
+
+endmenu
+
+menu "Load generators (common/src/load.c)"
+
+config LATBENCH_LOAD_THREADS
+	int "Number of load threads"
+	range 0 64
+	default 0
+
+choice LATBENCH_LOAD_THREAD_KIND
+	prompt "What each load thread does"
+	default LATBENCH_LOAD_THREAD_BLOCKED
+
+config LATBENCH_LOAD_THREAD_BLOCKED
+	bool "Waits forever on a semaphore of its own"
+
+config LATBENCH_LOAD_THREAD_SLEEPER
+	bool "Sleeps for a random time, in a loop"
+	help
+	  Each sleep adds a timeout to the timeout queue, and each wake is
+	  a timer expiry and a switch.
+
+config LATBENCH_LOAD_THREAD_BUSY
+	bool "Busy loop at the lowest application priority"
+	help
+	  All busy threads have the same priority. With TIMESLICING=y they
+	  take turns at each slice expiry.
+
+endchoice
+
+config LATBENCH_LOAD_THREAD_PRIO
+	int "Priority of the blocked and sleeping load threads"
+	default 5
+
+config LATBENCH_LOAD_THREAD_STACK
+	int "Stack size of a load thread"
+	default 384
+
+config LATBENCH_LOAD_SLEEP_MIN_MS
+	int "Minimum sleep of a load thread (ms)"
+	depends on LATBENCH_LOAD_THREAD_SLEEPER
+	default 1
+
+config LATBENCH_LOAD_SLEEP_MAX_MS
+	int "Maximum sleep of a load thread (ms)"
+	depends on LATBENCH_LOAD_THREAD_SLEEPER
+	default 20
+
+config LATBENCH_LOAD_TIMERS
+	int "Number of load timers (k_timer)"
+	range 0 512
+	default 0
+
+choice LATBENCH_LOAD_TIMER_KIND
+	prompt "Kind of the load timers"
+	default LATBENCH_LOAD_TIMER_PERIODIC
+
+config LATBENCH_LOAD_TIMER_PERIODIC
+	bool "Periodic, with random period and start"
+	help
+	  Each timer gets a period in [LATBENCH_LOAD_TIMER_MIN_MS,
+	  LATBENCH_LOAD_TIMER_MAX_MS] and a random first expiry. The expiry
+	  function runs in the system timer ISR.
+
+config LATBENCH_LOAD_TIMER_FAR
+	bool "One-shot, one hour from the start"
+	help
+	  The timers stay in the timeout queue for the whole run and never
+	  expire. Only the length of the queue changes.
+
+endchoice
+
+config LATBENCH_LOAD_TIMER_MIN_MS
+	int "Minimum period of a periodic load timer (ms)"
+	depends on LATBENCH_LOAD_TIMER_PERIODIC
+	default 10
+
+config LATBENCH_LOAD_TIMER_MAX_MS
+	int "Maximum period of a periodic load timer (ms)"
+	depends on LATBENCH_LOAD_TIMER_PERIODIC
+	default 100
 
 endmenu

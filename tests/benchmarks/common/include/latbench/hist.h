@@ -8,8 +8,10 @@
  * @file
  * @brief Cycle histogram for latency samples.
  *
- * Each value below CONFIG_LATBENCH_HIST_BINS has a bin of its own. A
- * larger value goes into the log2 overflow bin of its magnitude.
+ * Each value below CONFIG_LATBENCH_HIST_BINS has a bin of its own. If
+ * CONFIG_LATBENCH_HIST_COARSE_BINS is not 0, the next values go into
+ * coarse bins of 2^CONFIG_LATBENCH_HIST_COARSE_SHIFT cycles. A larger
+ * value goes into the log2 overflow bin of its magnitude.
  * lat_hist_add() is safe to call from an ISR, but not from two contexts
  * at the same time for the same histogram.
  */
@@ -28,7 +30,14 @@ struct lat_hist {
 	uint64_t sum;
 	uint32_t ovf_log2[32];
 	uint32_t bins[CONFIG_LATBENCH_HIST_BINS];
+#if CONFIG_LATBENCH_HIST_COARSE_BINS > 0
+	uint32_t cbins[CONFIG_LATBENCH_HIST_COARSE_BINS];
+#endif
 };
+
+#define LAT_HIST_COARSE_END                                                                        \
+	(CONFIG_LATBENCH_HIST_BINS +                                                               \
+	 ((uint32_t)CONFIG_LATBENCH_HIST_COARSE_BINS << CONFIG_LATBENCH_HIST_COARSE_SHIFT))
 
 #define LAT_HIST_DEFINE(_var, _name) \
 	struct lat_hist _var = {.name = (_name), .min = UINT32_MAX}
@@ -45,6 +54,10 @@ static inline void lat_hist_add(struct lat_hist *h, uint32_t v)
 	}
 	if (v < CONFIG_LATBENCH_HIST_BINS) {
 		h->bins[v]++;
+#if CONFIG_LATBENCH_HIST_COARSE_BINS > 0
+	} else if (v < LAT_HIST_COARSE_END) {
+		h->cbins[(v - CONFIG_LATBENCH_HIST_BINS) >> CONFIG_LATBENCH_HIST_COARSE_SHIFT]++;
+#endif
 	} else {
 		h->overflow++;
 		h->ovf_log2[31 - __builtin_clz(v)]++;

@@ -30,6 +30,16 @@ void lat_hist_print(const struct lat_hist *h)
 			printk("LAT BIN %u %u\n", v, h->bins[v]);
 		}
 	}
+#if CONFIG_LATBENCH_HIST_COARSE_BINS > 0
+	/* A coarse bin: lower edge, count, width in cycles. */
+	for (uint32_t b = 0; b < CONFIG_LATBENCH_HIST_COARSE_BINS; b++) {
+		if (h->cbins[b] != 0U) {
+			printk("LAT CBIN %u %u %u\n",
+			       CONFIG_LATBENCH_HIST_BINS + (b << CONFIG_LATBENCH_HIST_COARSE_SHIFT),
+			       h->cbins[b], 1U << CONFIG_LATBENCH_HIST_COARSE_SHIFT);
+		}
+	}
+#endif
 	for (uint32_t e = 0; e < 32; e++) {
 		if (h->ovf_log2[e] != 0U) {
 			printk("LAT OVF %u %u\n", e, h->ovf_log2[e]);
