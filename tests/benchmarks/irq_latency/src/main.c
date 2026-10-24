@@ -135,9 +135,12 @@ ISR_DIRECT_DECLARE(resp_isr)
 
 static int irq_setup(void)
 {
-	if (stim_resp.pin != 0) {
+#if defined(PORT_RESP_PIN)
+	/* The own ISR serves only the pin that the port sets up. */
+	if (stim_resp.pin != PORT_RESP_PIN) {
 		return -EINVAL;
 	}
+#endif
 
 	stim_resp_irq_init();
 #if defined(CONFIG_LATBENCH_IRQ_PATH_WRAPPED)

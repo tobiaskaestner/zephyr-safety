@@ -27,6 +27,8 @@ boards:
     console: /dev/ttyACM0
     status: tested
 
+  # Wire D2 (P1.03) -> A3 (P0.29), as on nucleo_g474re. The flash
+  # commands are not tested yet.
   nrf52840dk/nrf52840:
     port: nrf52840dk
     modules: [cmsis_6, hal_nordic]
@@ -37,6 +39,9 @@ boards:
     console: /dev/ttyACM0
     status: untested
 
+  # No Arduino header: wire P1.11 -> P1.12 on the "PORT P1" header. The
+  # console (uart20) is on the second VCOM of the DK. The flash commands
+  # are not tested yet.
   nrf54l15dk/nrf54l15/cpuapp:
     port: nrf54l15dk
     modules: [cmsis_6, hal_nordic]

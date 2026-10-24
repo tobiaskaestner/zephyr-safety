@@ -1,0 +1,17 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Take GPIOTE20 (IRQ 219 on the secure cpuapp) away from the GPIO driver,
+ * so that the app can connect its own ISR. Without it, the GPIO driver
+ * has no pin interrupts on P1. GPIOTE30 (port P0) stays with the driver.
+ */
+
+&gpio1 {
+	/delete-property/ gpiote-instance;
+};
+
+&gpiote20 {
+	status = "disabled";
+};

@@ -48,6 +48,9 @@
  *                                    response interrupt (own ISR only)
  *   PORT_RESP_IRQN                   the IRQ line of the response pin
  *                                    (own ISR only)
+ *   PORT_RESP_PIN                    optional: the pin number that the
+ *                                    own ISR serves. If it is set, the
+ *                                    app checks resp-gpios against it.
  *   PORT_RESP_IRQ_OWNED              1 if the devicetree gives the
  *                                    response interrupt to the app, 0 if
  *                                    the GPIO driver has it
