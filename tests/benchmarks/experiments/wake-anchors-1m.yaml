@@ -1,0 +1,37 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# ISR to thread wake latency (M2) over the anchors, on both trees. One
+# primitive (sem, wrapped ISR), because wake-isr-1m showed the same two
+# modes (310 cycles apart, 80/20 %) for all five primitives. So the cost
+# is in the common wake and switch path. The anchors find out which
+# setting makes it:
+#
+#   default  board and kernel defaults
+#   noslice  only TIMESLICING=n
+#   lean     common/conf/lean.conf (no time slicing, no stack guard, -O2)
+#
+# times the arch interface (legacy PendSV, or USE_SWITCH=y).
+
+name: wake-anchors-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+    lean:
+      conf_files: [common/conf/lean.conf]
+  arch:
+    legacy: {}
+    switch:
+      conf_files: [common/conf/use_switch.conf]
