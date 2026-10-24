@@ -1,0 +1,38 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Stimulus of the mimxrt1060_evk port: GPT2 compare channel 1 drives A3
+ * (pad GPIO_AD_B1_05, ALT8 GPT2_COMPARE1). The response pin is D2 (pad
+ * GPIO_AD_B0_11, GPIO1_IO11). The loopback wire connects D2 and A3, as
+ * on nucleo_g474re, but here A3 drives and D2 reads.
+ *
+ * The port programs GPT2 directly, so the GPT2 counter node is disabled.
+ */
+#include <zephyr/dt-bindings/gpio/gpio.h>
+#include <zephyr/dt-bindings/gpio/arduino-header-r3.h>
+
+/ {
+	zephyr,user {
+		resp-gpios = <&arduino_header ARDUINO_HEADER_R3_D2 GPIO_ACTIVE_HIGH>;
+		pinctrl-0 = <&pinmux_latbench_stim>;
+		pinctrl-names = "default";
+	};
+};
+
+&pinctrl {
+	pinmux_latbench_stim: pinmux_latbench_stim {
+		group0 {
+			pinmux = <&iomuxc_gpio_ad_b1_05_gpt2_compare1>;
+			drive-strength = "r0-6";
+			bias-disable;
+			slew-rate = "fast";
+			nxp,speed = "100-mhz";
+		};
+	};
+};
+
+&gpt2 {
+	status = "disabled";
+};

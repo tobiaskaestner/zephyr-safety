@@ -47,11 +47,15 @@ boards:
     console: /dev/ttyACM1
     status: untested
 
+  # MIMXRT1060-EVKC. The wire is D2 - A3, as on nucleo_g474re, but A3
+  # drives (GPT2 compare output) and D2 reads. The build makes no .hex,
+  # so pyocd programs the .elf. If more than one probe is connected,
+  # pyocd asks which one to use: then add "-u <probe id>".
   mimxrt1060_evk@C/mimxrt1062/qspi:
     port: mimxrt1060_evk
     modules: [cmsis_6, hal_nxp]
     flash:
-      - [pyocd, flash, -t, mimxrt1060, "{hex}"]
+      - [pyocd, flash, -t, mimxrt1060, "{elf}"]
       - [pyocd, reset, -t, mimxrt1060]
     console: /dev/ttyACM0
     status: untested

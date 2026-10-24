@@ -1,0 +1,18 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# First check of the mimxrt1060_evk port: wake_latency with the board
+# defaults, on both trees. Wire D2 - A3 (A3 drives, D2 reads).
+
+name: port-smoke-mimxrt1060_evk
+app: wake_latency
+board: mimxrt1060_evk@C/mimxrt1062/qspi
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 300
+
+common:
+  kconfig: {LATBENCH_SAMPLES: 10000}
+
+points:
+  - id: default
