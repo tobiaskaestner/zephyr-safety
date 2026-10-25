@@ -1,0 +1,194 @@
+.. _benchguide-m4:
+
+M4: interrupt mask time per call site
+=====================================
+
+M4 measures how long the CPU masks the interrupts, for each place in the
+code that masks them. It also measures the time of each ISR body. The
+values are in DWT cycles (core clock cycles).
+
+M4 needs a Zephyr tree with the hooks of the branch
+``tkaestner/latency-irqoff-hook``. In ``trees.yaml`` this tree is
+``ws-up-irqoff``. The hooks are only for Cortex-M with BASEPRI (ARMv7-M,
+ARMv8-M Mainline) and the legacy context switch (``USE_SWITCH=n``).
+
+.. important::
+
+   The hooks make each mask section longer, and they add time to the
+   interrupt path and to the wake path. The latency histograms of an M4
+   run are not data. Each M4 log has ``LAT META m4=1`` and a
+   ``m4_note`` line that says this. Use only the M4 tables of such a
+   run.
+
+How it works
+------------
+
+The Zephyr branch adds two Kconfig options:
+
+``CONFIG_ARM_IRQ_MASK_HOOKS``
+   The CPU calls ``z_arm_irq_mask_hook_begin()`` when it starts to mask the
+   interrupts of ``irq_lock()``, and ``z_arm_irq_mask_hook_end()`` before
+   it stops:
+
+   - ``arch_irq_lock()`` with an old BASEPRI of 0, and
+     ``arch_irq_unlock()`` with a key of 0. ``k_spin_lock()`` and
+     ``arch_swap()`` use these functions.
+   - ``z_arm_pendsv()``: from ``BASEPRI_MAX`` to the restore of the
+     BASEPRI of the incoming thread.
+   - ``arch_cpu_idle()``: the section of the idle thread ends before
+     ``WFI``. A new section starts after the wake-up and ends at
+     ``cpsie i``. The sleep is not in a section.
+
+``CONFIG_ARM_IRQ_MASK_HOOKS_ISR``
+   ``_isr_wrapper()`` and ``sys_clock_isr()`` call
+   ``z_arm_isr_hook_enter()`` and ``z_arm_isr_hook_exit()`` around the
+   ISR body.
+
+``common/src/irqmask.c`` supplies the four functions. A section is a
+*site*: the return address of the start hook (it points into the code
+that masks), the exception number at the start (0 in a thread) and the
+kind (mask section or ISR body). The site table
+(``common/include/latbench/irqmask_table.h``) has 64 entries. Each entry
+has count, sum, min, max, the end address of the longest section and a
+histogram. The bins are 1 cycle wide below 16 cycles. Each octave above
+has 8 bins, up to 65535 cycles. A value of 65536 cycles or more counts in
+the overflow bin and in max. If the table is full, a new site counts
+only in ``dropped``.
+
+Two sections never overlap: while a section is open, no interrupt that
+can start a section can occur. Thus one set of start values is
+sufficient.
+
+An app with M4 calls ``irqmask_start()`` after the load starts,
+``irqmask_stop()`` at the end of the run and ``irqmask_print()`` before
+``lat_done()`` (``latbench/irqmask.h``). Without
+``CONFIG_ARM_IRQ_MASK_HOOKS`` these functions are empty, and
+``common/irqmask.cmake`` adds no source file. ``wake_latency`` and
+``thread_latency`` have M4.
+
+Calibration
+-----------
+
+``irqmask_start()`` measures the hooks before the run, as the minimum of
+256 tries:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 70
+
+   * - Line
+     - Value
+   * - ``m4_floor_cyc``
+     - The value of an empty section, ``irq_unlock(irq_lock())``. Each
+       section value contains it. ``m4.py`` subtracts it in ``max_net``.
+   * - ``m4_pair_cost_cyc``
+     - The extra CPU time of the hooks for one section, against the same
+       BASEPRI writes without hooks. The real mask time of each section is
+       longer than its value by the part of this cost after the end time
+       stamp.
+   * - ``m4_isr_floor_cyc``
+     - The value of an empty ISR body measurement.
+
+The probe (``LATBENCH_IRQMASK_PROBE_CYC``, ``LATBENCH_IRQMASK_PROBE_MS``)
+is a thread that masks the interrupts for a known number of cycles. Its
+site must show this length plus the floor. The IRQ tail of the same run
+must show it too. Use the probe only to check the method.
+
+Output
+------
+
+``irqmask_print()`` prints the calibration and the totals as ``LAT META``
+lines (``m4_window_cyc``, ``m4_sections``, ``m4_masked_cyc``,
+``m4_isr_cyc``, ``m4_unmatched_end``, ``m4_begin_open``), then the table:
+
+.. code-block:: text
+
+   LAT M4 BEGIN sites=64 used=37 dropped=0 bins=112 sub_bits=3
+   LAT M4SITE m4.mask.e15.08002f19 kind=mask ipsr=15 pc=0x08002f19 end_pc=0x08003001 n=.. sum=.. min=.. max=..
+   LAT HIST m4.mask.e15.08002f19 n=.. min=.. max=.. mean=.. overflow=0 invalid=0
+   LAT BIN 14 3
+   LAT CBIN 2048 17 256
+   LAT END m4.mask.e15.08002f19
+   ...
+   LAT M4 END
+
+The name of a site is ``m4.<kind>.<ctx>.<pc>``: ``ctx`` is ``t`` for a
+thread or ``e<n>`` for exception number n (14 PendSV, 15 SysTick, 16 + n
+IRQ n). The ``LAT HIST`` blocks have the normal format, so
+``latbench.py summary`` also reads them. ``m4_unmatched_end`` counts an
+end without an open section, ``m4_begin_open`` a start while a section is
+open; both must be 0 after the start.
+
+The tables
+----------
+
+``scripts/m4.py table`` prints one table for the mask sections and one
+for the ISR bodies, sorted by max. It finds the function and the source
+line of each site with ``addr2line`` and ``nm`` of the SDK in the run
+manifest. The ELF is ``zephyr.elf`` next to the log. For an inlined lock,
+``place`` is the line in the real function and ``via`` lists the inlined
+functions between:
+
+.. code-block:: console
+
+   python3 scripts/m4.py table <run>/ws-up-irqoff/<point>/rep1.log --top 20
+   python3 scripts/m4.py sweep <run>/ws-up-irqoff/*/rep1.log --md
+
+``sweep`` prints one row for each log: the calibration, the masked share
+of the window, the longest mask section and ISR body, and the IRQ tail of
+the same run.
+
+Limits
+------
+
+- The return address names the function that contains the lock. All
+  callers of a function that is not inlined (for example
+  ``z_add_timeout()``) share one site. The context column splits them
+  only by the exception number.
+- The hooks make each lock larger. GCC with ``SIZE_OPTIMIZATIONS`` then
+  can stop to inline a small lock wrapper. In the M4 builds
+  ``sys_clock_lock()`` is a function, so all its callers share its site.
+  In the builds without hooks it is inlined.
+- Not covered: ``USE_SWITCH=y``, ARMv6-M, direct ISRs
+  (``ISR_DIRECT_DECLARE()``), the hardware exception entry and exit, the
+  code of ``_isr_wrapper()`` and ``sys_clock_isr()`` outside the hooks,
+  and the direct BASEPRI write in the ISR exit hook itself.
+- The DWT counter stops while the CPU sleeps. No section contains a
+  sleep, but a measurement over a sleep is not possible with it. The
+  window length comes from ``k_cycle_get_64()``.
+
+``claude/latency-benchmarks/m4-design.md`` (outside this repository)
+has the full list of the mask paths and the reasons.
+
+Experiments
+-----------
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - File
+     - Content
+   * - ``experiments/m4-validate.yaml``
+     - Calibration, the probe, and the points of ``systick-prio-1m`` and
+       of the WHEEL backend, for the check against the IRQ tail
+   * - ``experiments/m4-sweep.yaml``
+     - Load timers 0/16/64/256 x sleeper threads 0/8/64 x time slicing
+       on/off
+   * - ``experiments/m4-thread.yaml``
+     - ``thread_latency`` with sem and mutex, 0 and 64 load timers
+   * - ``experiments/m4-image-check.yaml``
+     - Build check only: ``ws-up`` and ``ws-up-irqoff`` with the hooks
+       off give the same code
+
+The M4 points use smaller latency histograms (1024 fine bins and 1024
+coarse bins of 64 cycles), because the site table takes 31 KB of RAM.
+
+Unit tests
+----------
+
+``unit/irqmask/`` is a ztest app for the site table (bins, entries, full
+table, print format). ``scripts/tests/test_m4.py`` tests ``m4.py`` with
+the fixtures ``scripts/tests/fixtures/m4_*.log`` (the output of the
+ztest app on ``native_sim/native/64``). Run them as the other unit tests
+(see :doc:`unit-tests`), with ``-T tests/benchmarks/unit/irqmask``.
