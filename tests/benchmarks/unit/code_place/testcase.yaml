@@ -1,0 +1,24 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The choice LATBENCH_CODE_PLACE (common/Kconfig, common/latbench.cmake).
+# mps2/an385 is a Cortex-M3 in QEMU with an ARMv7-M MPU, as the G474.
+common:
+  tags: latbench
+  platform_allow:
+    - mps2/an385
+  integration_platforms:
+    - mps2/an385
+tests:
+  latbench.unit.code_place.flash: {}
+  latbench.unit.code_place.flash_pad:
+    extra_configs:
+      - CONFIG_LATBENCH_CODE_FLASH_PAD=y
+      - CONFIG_LATBENCH_CODE_PAD_BYTES=8
+  # The default RAM region (zephyr,sram): the path with the MPU region of
+  # CODE_DATA_RELOCATION_SRAM, and kernel/init.c and the MPU driver in flash.
+  latbench.unit.code_place.ram:
+    extra_configs:
+      - CONFIG_LATBENCH_CODE_RAM=y
+      - CONFIG_LATBENCH_CODE_RAM_REGION="RAM"
+      - CONFIG_LATBENCH_CODE_PAD_BYTES=8
