@@ -1,0 +1,91 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: what does each WP3 Kconfig factor (wp3-kconfig-ranking.md)
+# change, against a baseline of the same run? One factor at a time, from
+# the defaults of the app (SIZE_OPTIMIZATIONS, SCHED_SIMPLE, tickless,
+# 10000 ticks/s, time slicing 20 ms, MPU_STACK_GUARD=y, ASSERT=n).
+# The three files wp3-irq-1m, wp3-wake-1m and wp3-t2t-1m have the same
+# variants. Each prediction is against "baseline" of the same file.
+#
+# tickless-off sets SYS_CLOCK_TICKS_PER_SEC=10000 explicitly: without
+# TICKLESS_KERNEL the default is 100 ticks/s (kernel/Kconfig:731), which
+# would change a second factor. ticks1000 keeps tickless mode; each
+# timeout is rounded up to a 1 ms tick (170000 cycles).
+#
+# tickless-off-100 is the Zephyr default without TICKLESS_KERNEL (100
+# ticks/s): a tick ISR every 1.7M cycles (10 ms). Predictions: the wake
+# and t2t p50 the same as tickless-off (no reprogram, one mode, drift
+# about 0); the IRQ tail at T = 0 about 100 times smaller than
+# tickless-off. With 64 timers (10..100 ms) each tick ISR handles about
+# 64 * 10 ms * E[1/period] = 16 expiries, about 5000..10000 cycles every
+# 10 ms: a tail share of about 0.5 % and a max above baseline-t64
+# (10000..20000 cycles). Wrong if the wake keeps two modes, or if the
+# IRQ max with 64 timers is not above the max of baseline-t64.
+#
+# Predictions for IRQ to ISR (wrapped path, idle CPU):
+#
+#   scalable, multiq, fpu-sharing, no-mpu-guard: p50 the same (+-2);
+#     the entry path has no scheduler and no FP context.
+#   speed-opt: p50 -0..10 (the entry is mostly hardware).
+#   assert, assert-spin: p50 +0..10; the max a little higher (longer
+#     locked sections).
+#   tickless-off: the tail share grows. A SysTick ISR comes every 17000
+#     cycles, so about 1..3 % of the edges wait for up to one tick ISR:
+#     p99 rises from about 81 to some hundred cycles. The p50 stays.
+#   ticks1000: p50 the same (tickless).
+#   With 64 timers (the points *-t64): ticks1000 groups the expiries into
+#     fewer ticks: fewer SysTick ISRs, but longer ones. Prediction:
+#     p99 lower than baseline-t64, max higher. tickless-off-t64: the
+#     p99 higher than baseline-t64 (a tick ISR every 100 us).
+#
+# Wrong if: a scheduler or FPU variant moves the IRQ p50 by more than 2
+# cycles in mode B, or tickless-off does not add a tail of about 1..3 %.
+
+name: wp3-irq-1m
+app: irq_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    LATBENCH_IRQ_PATH_WRAPPED: y
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+
+axes:
+  variant:
+    baseline: {}
+    scalable:
+      kconfig: {SCHED_SCALABLE: y}
+    multiq:
+      kconfig: {SCHED_MULTIQ: y}
+    ticks1000:
+      kconfig: {SYS_CLOCK_TICKS_PER_SEC: 1000}
+    tickless-off:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+    tickless-off-100:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}
+    fpu-sharing:
+      kconfig: {FPU: y, FPU_SHARING: y}
+    speed-opt:
+      kconfig: {SPEED_OPTIMIZATIONS: y}
+    assert:
+      kconfig: {ASSERT: y}
+    assert-spin:
+      kconfig: {ASSERT: y, SPIN_VALIDATE: y}
+    no-mpu-guard:
+      kconfig: {MPU_STACK_GUARD: n}
+
+points:
+  - id: baseline-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64}
+  - id: ticks1000-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, SYS_CLOCK_TICKS_PER_SEC: 1000}
+  - id: tickless-off-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+  - id: tickless-off-100-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}

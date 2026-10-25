@@ -1,0 +1,84 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: does the thread to thread wake grow linearly with the load,
+# and with which variable? The starting question of the study was
+# whether the latency shows O(#timers) or O(#threads).
+#
+# Model (from the ISR to thread wake, review-2026-10-25 §4 and §5):
+#
+#   t2t(load) = t2t_fast(no load) + c * n
+#
+#   n: the number of timeouts that expire before the new slice deadline
+#      (20 ms after the reset). In each sample the give resets the slice
+#      of the taker (update_cache()), and the DLIST insert walks over
+#      these n timeouts with the timeout lock held.
+#   c: about 20..25 cycles per node (wake data: 24.5 per sleeper, about
+#      20 per timer node).
+#
+#   Periodic timers (10..100 ms): n = about 0.47 * T, so 7.5 / 30 / 120
+#   for T = 16 / 64 / 256. Sleepers (1..20 ms, all shorter than the
+#   slice): n = N, so 8 / 64.
+#
+# Predictions (p50, against the no-load point of the same primitive):
+#
+#   1. No load: two modes, about 20 % fast and 80 % slow, the slow mode
+#      about 640 cycles above the fast mode (two SysTick reprograms).
+#   2. With any load of this file, one mode (fast mode > 95 %): a timeout
+#      comes before the slice deadline, so the slice abort and add do not
+#      reprogram SysTick.
+#   3. Thus t16 and sl8 are FASTER than no load: about -475 and -450.
+#      t64 about +20, sl64 about +900, t256 about +2000.
+#   4. The p50 is linear in n, with the same slope c for sem, mutex and
+#      msgq (the walk is in the scheduler, not in the primitive). The
+#      differences between the primitives stay constant.
+#   5. Control without time slicing (sem): the p50 stays flat (change
+#      less than 30 cycles) at t256 and sl64, because no slice timeout
+#      is inserted.
+#   6. The tail (p99.99) grows with T and N: the SysTick ISR preempts the
+#      threads (as in the wake data).
+#
+# The model is wrong if: the slope differs between the primitives, the
+# slope is about 2c (two inserts per sample), a loaded point has two
+# modes, or the control without slicing grows with the load.
+
+name: t2t-load-1m
+app: thread_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1500
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+    msgq: {kconfig: {LATBENCH_T2T_MSGQ: y}}
+  load:
+    none: {}
+    t16:
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+    t64:
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+    sl8:
+      kconfig: {LATBENCH_LOAD_THREAD_SLEEPER: y, LATBENCH_LOAD_THREADS: 8}
+    sl64:
+      kconfig: {LATBENCH_LOAD_THREAD_SLEEPER: y, LATBENCH_LOAD_THREADS: 64}
+
+points:
+  - id: sem-none-noslice
+    kconfig: {LATBENCH_T2T_SEM: y, TIMESLICING: n}
+  - id: sem-t256-noslice
+    kconfig: {LATBENCH_T2T_SEM: y, TIMESLICING: n, LATBENCH_LOAD_TIMERS: 256}
+  - id: sem-sl64-noslice
+    kconfig: {LATBENCH_T2T_SEM: y, TIMESLICING: n, LATBENCH_LOAD_THREAD_SLEEPER: y, LATBENCH_LOAD_THREADS: 64}

@@ -1,0 +1,108 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: what does each WP3 Kconfig factor (wp3-kconfig-ranking.md)
+# change, against a baseline of the same run? One factor at a time, from
+# the defaults of the app (SIZE_OPTIMIZATIONS, SCHED_SIMPLE, tickless,
+# 10000 ticks/s, time slicing 20 ms, MPU_STACK_GUARD=y, ASSERT=n).
+# The three files wp3-irq-1m, wp3-wake-1m and wp3-t2t-1m have the same
+# variants. Each prediction is against "baseline" of the same file.
+#
+# tickless-off sets SYS_CLOCK_TICKS_PER_SEC=10000 explicitly: without
+# TICKLESS_KERNEL the default is 100 ticks/s (kernel/Kconfig:731), which
+# would change a second factor. ticks1000 keeps tickless mode; each
+# timeout is rounded up to a 1 ms tick (170000 cycles).
+#
+# tickless-off-100 is the Zephyr default without TICKLESS_KERNEL (100
+# ticks/s): a tick ISR every 1.7M cycles (10 ms). Predictions: the wake
+# and t2t p50 the same as tickless-off (no reprogram, one mode, drift
+# about 0); the IRQ tail at T = 0 about 100 times smaller than
+# tickless-off. With 64 timers (10..100 ms) each tick ISR handles about
+# 64 * 10 ms * E[1/period] = 16 expiries, about 5000..10000 cycles every
+# 10 ms: a tail share of about 0.5 % and a max above baseline-t64
+# (10000..20000 cycles). Wrong if the wake keeps two modes, or if the
+# IRQ max with 64 timers is not above the max of baseline-t64.
+#
+# Predictions for the ISR to thread wake (sem from the wrapped ISR):
+#
+#   scalable: +50..200, a constant (red-black tree against a list). With
+#     16 busy threads (scalable-busy16) at most +40 more than with none
+#     (log N), not linear.
+#   multiq: within +-30 of baseline, also with 16 busy threads.
+#   baseline-busy16 against baseline: about +400 (the busy thread is
+#     sliced: one more slice abort and add per wake, review §5), and the
+#     same value for 2..64 busy threads, thus O(1) in N: the busy threads
+#     have priority 5, lower than the woken thread, so the sorted insert
+#     of SCHED_SIMPLE stops at once.
+#   tickless-off: -250..-300. sys_clock_set_timeout() returns at once
+#     without TICKLESS_KERNEL (ws-up drivers/timer/system_timer_generic.h
+#     :650), so the slice reset never reprograms SysTick. The 20 % fast
+#     mode of the baseline becomes the only mode. The clock drift
+#     (clock_drift_cyc) goes to about 0 ppm, because no reload is reset.
+#   ticks1000: within +-30 at T = 0 (tickless; same slice, same
+#     reprogram). Drift per reprogram the same.
+#   fpu-sharing: +0..30 (PendSV examines the FP bit of EXC_RETURN).
+#   speed-opt: -10..-25 %.
+#   assert: +5..15 %. assert-spin: +100..150 more than assert (about 3..4
+#     spinlock pairs per wake, +25..40 each).
+#   no-mpu-guard: -100..-250 (PendSV skips the MPU region update).
+#   *-t64: the slice walk over about 30 timeouts (+600..700 against the
+#     fast mode) in all three; tickless-off-t64 without the reprograms.
+#
+# Wrong if: scalable grows linearly with the busy threads, tickless-off
+# keeps two modes or a drift above 20 ppm, or no-mpu-guard changes the
+# wake by less than 50 cycles.
+
+name: wp3-wake-1m
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+
+axes:
+  variant:
+    baseline: {}
+    scalable:
+      kconfig: {SCHED_SCALABLE: y}
+    multiq:
+      kconfig: {SCHED_MULTIQ: y}
+    ticks1000:
+      kconfig: {SYS_CLOCK_TICKS_PER_SEC: 1000}
+    tickless-off:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+    tickless-off-100:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}
+    fpu-sharing:
+      kconfig: {FPU: y, FPU_SHARING: y}
+    speed-opt:
+      kconfig: {SPEED_OPTIMIZATIONS: y}
+    assert:
+      kconfig: {ASSERT: y}
+    assert-spin:
+      kconfig: {ASSERT: y, SPIN_VALIDATE: y}
+    no-mpu-guard:
+      kconfig: {MPU_STACK_GUARD: n}
+
+points:
+  - id: baseline-busy16
+    kconfig: {LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: scalable-busy16
+    kconfig: {SCHED_SCALABLE: y, LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: multiq-busy16
+    kconfig: {SCHED_MULTIQ: y, LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: baseline-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64}
+  - id: ticks1000-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, SYS_CLOCK_TICKS_PER_SEC: 1000}
+  - id: tickless-off-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+  - id: tickless-off-100-t64
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}

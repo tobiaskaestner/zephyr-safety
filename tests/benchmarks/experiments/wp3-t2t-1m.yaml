@@ -1,0 +1,80 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: what does each WP3 Kconfig factor (wp3-kconfig-ranking.md)
+# change, against a baseline of the same run? One factor at a time, from
+# the defaults of the app (SIZE_OPTIMIZATIONS, SCHED_SIMPLE, tickless,
+# 10000 ticks/s, time slicing 20 ms, MPU_STACK_GUARD=y, ASSERT=n).
+# The three files wp3-irq-1m, wp3-wake-1m and wp3-t2t-1m have the same
+# variants. Each prediction is against "baseline" of the same file.
+#
+# tickless-off sets SYS_CLOCK_TICKS_PER_SEC=10000 explicitly: without
+# TICKLESS_KERNEL the default is 100 ticks/s (kernel/Kconfig:731), which
+# would change a second factor. ticks1000 keeps tickless mode; each
+# timeout is rounded up to a 1 ms tick (170000 cycles).
+#
+# tickless-off-100 is the Zephyr default without TICKLESS_KERNEL (100
+# ticks/s): a tick ISR every 1.7M cycles (10 ms). Predictions: the wake
+# and t2t p50 the same as tickless-off (no reprogram, one mode, drift
+# about 0); the IRQ tail at T = 0 about 100 times smaller than
+# tickless-off. With 64 timers (10..100 ms) each tick ISR handles about
+# 64 * 10 ms * E[1/period] = 16 expiries, about 5000..10000 cycles every
+# 10 ms: a tail share of about 0.5 % and a max above baseline-t64
+# (10000..20000 cycles). Wrong if the wake keeps two modes, or if the
+# IRQ max with 64 timers is not above the max of baseline-t64.
+#
+# Predictions for thread to thread (sem, the taker preempts the giver):
+#
+#   baseline: two modes, about 20 % fast and 80 % slow (+640, two
+#     SysTick reprograms), as in thread2thread-1m.
+#   tickless-off: one mode, at the fast mode of the baseline (-640 on the
+#     slow mode). This is the strongest test: it removes the reprograms
+#     but keeps the slice walk.
+#   scalable: +50..200, a constant. multiq: within +-30.
+#   fpu-sharing: +0..30. speed-opt: -10..-25 %.
+#   assert: +5..15 %. assert-spin: +100..150 more than assert.
+#   no-mpu-guard: -100..-250 (one switch per sample).
+#   ticks1000: within +-30.
+#
+# Wrong if: tickless-off keeps two modes, or the distance of the two
+# baseline modes is not about 640 cycles.
+
+name: wp3-t2t-1m
+app: thread_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_T2T_SEM: y
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+
+axes:
+  variant:
+    baseline: {}
+    scalable:
+      kconfig: {SCHED_SCALABLE: y}
+    multiq:
+      kconfig: {SCHED_MULTIQ: y}
+    ticks1000:
+      kconfig: {SYS_CLOCK_TICKS_PER_SEC: 1000}
+    tickless-off:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+    tickless-off-100:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}
+    fpu-sharing:
+      kconfig: {FPU: y, FPU_SHARING: y}
+    speed-opt:
+      kconfig: {SPEED_OPTIMIZATIONS: y}
+    assert:
+      kconfig: {ASSERT: y}
+    assert-spin:
+      kconfig: {ASSERT: y, SPIN_VALIDATE: y}
+    no-mpu-guard:
+      kconfig: {MPU_STACK_GUARD: n}
