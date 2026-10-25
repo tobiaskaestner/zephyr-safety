@@ -84,6 +84,36 @@ trees:
         rev: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
         source: /wrk/z/ws-up/modules/hal/nxp
 
+  ws-up-irqoff:
+    description: ws-up plus the interrupt mask hooks for M4 (branch tkaestner/latency-irqoff-hook)
+    repos:
+      zephyr:
+        path: zephyr
+        url: https://github.com/zephyrproject-rtos/zephyr
+        branch: tkaestner/latency-irqoff-hook   # local branch in source, not pushed
+        rev: f46df810a5ff32ea69fc8055a9a9633fcfd87b8f
+        source: /wrk/z/ws-up/zephyr
+      cmsis_6:
+        path: modules/hal/cmsis_6
+        url: https://github.com/zephyrproject-rtos/CMSIS_6
+        rev: 1c1840af7a7e757d6e2fec3ddb0e5ce0dfcc93c8
+        source: /wrk/z/ws-up/modules/hal/cmsis_6
+      hal_stm32:
+        path: modules/hal/stm32
+        url: https://github.com/zephyrproject-rtos/hal_stm32
+        rev: c9550199186236d610092f4005f8c9bae2a6bfcf
+        source: /wrk/z/ws-up/modules/hal/stm32
+      hal_nordic:
+        path: modules/hal/nordic
+        url: https://github.com/zephyrproject-rtos/hal_nordic
+        rev: c708b9fe1b7a36090c468374811a6e934b97e54a
+        source: /wrk/z/ws-up/modules/hal/nordic
+      hal_nxp:
+        path: modules/hal/nxp
+        url: https://github.com/zephyrproject-rtos/hal_nxp
+        rev: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
+        source: /wrk/z/ws-up/modules/hal/nxp
+
   ws-safety-driftfix:
     description: ws-safety Zephyr plus the SysTick reload gap experiment (branch tkaestner/latency-systick-drift)
     repos:
