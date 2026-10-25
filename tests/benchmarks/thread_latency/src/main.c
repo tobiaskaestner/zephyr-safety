@@ -37,6 +37,7 @@
 #include <zephyr/sys/printk.h>
 
 #include <latbench/hist.h>
+#include <latbench/irqmask.h>
 #include <latbench/load.h>
 #include <latbench/meta.h>
 #include <latbench/stim.h>
@@ -350,6 +351,8 @@ int main(void)
 	IRQ_CONNECT(STIM_RESP_IRQN, 0, resp_isr, NULL, 0);
 	irq_enable(STIM_RESP_IRQN);
 	load_start();
+	/* M4: empty unless CONFIG_ARM_IRQ_MASK_HOOKS=y. */
+	irqmask_start();
 
 	/* The taker starts first, so that it waits before the first wake. */
 #if defined(CONFIG_LATBENCH_T2T_WORK)
@@ -368,6 +371,7 @@ int main(void)
 	while (!done) {
 		k_msleep(CONFIG_LATBENCH_POLL_MS);
 	}
+	irqmask_stop();
 
 	printk("LAT META spurious_edges=%u\n", n_spurious);
 	printk("LAT META taker_missed=%u\n", n_missed);
@@ -376,6 +380,7 @@ int main(void)
 	lat_hist_print(&h_isr2thr);
 	lat_hist_print(&h_t2t);
 	lat_hist_print(&h_t2t_ret);
+	irqmask_print();
 	lat_done();
 	return 0;
 }
