@@ -23,6 +23,12 @@ Modules
     zdocs ``skip_class`` and board (one ``:need_count:`` per cell, the boards
     from the run's ``twister.json``). Used by ``test-report`` (``skips.rst``).
 
+``timeline_viz/``
+    The ``timeline-viz`` directive: a timing diagram from a TDL file, as
+    inline SVG. It uses the compiler and the renderer of
+    ``scripts/timeline-viz`` (see its ``README.md``) and needs Node on
+    ``PATH``. Used by ``benchmark-guide``.
+
 
 Adding this directory to ``sys.path``
 -------------------------------------

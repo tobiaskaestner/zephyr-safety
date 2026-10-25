@@ -1,0 +1,22 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ * SPDX-License-Identifier: Apache-2.0
+ *
+ * Colour tokens and box of the timeline-viz diagrams. The tokens are the
+ * light tokens of scripts/timeline-viz/tdl-svg.cjs. The documentation theme
+ * (sphinx_rtd_theme) has no dark mode, so there are no dark tokens here.
+ */
+.timeline-viz {
+  --bg: #f4f5f6; --panel: #fcfcfb; --fg: #15171a; --fg2: #52565c; --rule: #dcdfe3; --faint: #eceef0;
+  --c-dev: #eb6834; --c-tick: #6250d6; --c-sw: #1baf7a; --c-thr: #2a78d6; --c-hw: #8a8f96;
+  --c-mask: #3a3d42; --c-zli: #6d7178;
+  background: var(--panel);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 6px 4px;
+  overflow-x: auto;
+}
+.timeline-viz svg { display: block; }
+.timeline-viz svg text { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
+.timeline-viz-figure { margin: 0 0 24px; }
+.timeline-viz-figure .caption { text-align: left; }

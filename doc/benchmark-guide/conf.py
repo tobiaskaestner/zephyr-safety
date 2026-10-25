@@ -10,10 +10,15 @@ sys.path.insert(0, os.environ["ZDOCS_CONF_DIR"])
 
 from zdocs_conf import configure
 
+# timeline_viz is a downstream extension (see _extensions/README.rst): appended
+# after zdocs_conf, never before, so it cannot shadow an engine module.
+sys.path.append(os.environ["SAFETY_EXTENSIONS_DIR"])
+
 configure(
     globals(),
     doc_dir=Path(__file__).resolve().parent,
     project="Zephyr Latency Benchmark Guide",
     author="Zephyr Project Contributors",
     copyright_holder="Zephyr Project Contributors",
+    extensions=["timeline_viz"],
 )
