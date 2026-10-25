@@ -145,6 +145,9 @@ Metadata keys
    * - ``samples``
      - all
      - ``LATBENCH_SAMPLES``
+   * - ``code_pad``, ``code_pad_at``
+     - all
+     - ``LATBENCH_CODE_PAD_BYTES`` and the address of the pad function
    * - ``timeslice_ms``
      - all
      - ``CONFIG_TIMESLICE_SIZE``, if it exists

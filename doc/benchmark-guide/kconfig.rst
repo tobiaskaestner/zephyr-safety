@@ -23,6 +23,10 @@ Common options
    * - ``LATBENCH_WARMUP``
      - 16
      - Number of samples that the app discards at the start
+   * - ``LATBENCH_CODE_PAD_BYTES``
+     - 0
+     - Bytes of code padding before the app and kernel code (a multiple
+       of 4, see :doc:`common`)
    * - ``LATBENCH_HIST_BINS``
      - 4096
      - Number of 1-cycle bins (range 1 to 65536)

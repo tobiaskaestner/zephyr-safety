@@ -253,6 +253,20 @@ Each measurement app also prints ``debug_reg_at_boot``: the value that
 ``port_debug_reset()`` found in the debug register. The text depends on
 the port (see :doc:`boards` and :doc:`pitfalls`).
 
+Code padding
+~~~~~~~~~~~~
+
+``latbench.cmake`` adds ``src/pad.c`` as the first source file. It has one
+function, ``lat_code_pad()``, which is never called. Its size is
+``LATBENCH_CODE_PAD_BYTES``, and it comes before all other code of the app
+and the kernel. Thus a pad of N bytes moves all that code by N bytes, and
+nothing else changes. The linker script sorts the ``.text.*`` sections by
+alignment, so the function has an alignment of 4, and the pad must be a
+multiple of 4. ``lat_meta_print()`` prints ``code_pad`` and ``code_pad_at``.
+The reference in the print also keeps the function from the garbage
+collection of the linker. The experiment ``code-layout`` uses the option
+(see :ref:`benchguide-code-place`).
+
 .. _benchguide-latbench-cmake:
 
 Build integration

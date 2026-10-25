@@ -42,6 +42,28 @@ overlays in ``common/boards/nucleo_g474re/systick/``:
 ``min_timeout_50us.overlay`` and ``min_timeout_200us.overlay``. The
 experiment ``clock-drift-fix`` uses them.
 
+.. _benchguide-code-place:
+
+The place of the code changes the latency
+-----------------------------------------
+
+On the NUCLEO-G474RE the code runs from flash through the ART
+accelerator (a small instruction cache and a prefetch buffer). If the
+code of the hot paths starts at a different address, the number of
+cache misses can change, and so can the latency. A change in an
+unrelated part of the build can move all the code after it. For
+example, a different number of load threads changes the size of
+``load.c``.
+
+In wake-threads-1m, builds that differ only in the number of load
+threads gave an IRQ p50 of 82 or 86 cycles, and a clock drift of 8.0 or
+9.7 cycles per wake. The difference between the two trees in the ISR to
+thread p50 was from 0 to 190 cycles, by build.
+
+Thus do not compare single builds when the difference is small. Use
+``LATBENCH_CODE_PAD_BYTES`` to move the code by a known amount, and
+compare the range over some pad values.
+
 Late edges
 ----------
 
