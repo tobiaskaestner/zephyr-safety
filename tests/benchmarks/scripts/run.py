@@ -18,8 +18,8 @@ Rules (a run stops before it builds anything if one is broken):
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
 devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
-src/ is the snapshot of the committed sources (git archive) that the run
-built from.
+src/ is the snapshot of the committed safety repo (git archive) that the
+run built from. Each build also gets it as the Zephyr module "safety".
 
 Experiment file:
 
@@ -139,19 +139,21 @@ def flash_command(board_cfg, zephyr, pdir):
 
 
 def export_snapshot(repo_root, rev, dest):
-    """Export the committed benchmark sources at rev to dest; return the bench folder in dest.
+    """Export the safety repo at rev to dest; return the bench folder in dest.
 
     A run builds from this snapshot, not from the worktree, so that work in
-    the worktree during a long run cannot change what the run builds.
+    the worktree during a long run cannot change what the run builds. The
+    snapshot is also the Zephyr module "safety" of each build (see
+    build_point()).
     """
-    rel = BENCH_DIR.relative_to(repo_root)
     dest.mkdir(parents=True, exist_ok=True)
-    archive = subprocess.Popen(["git", "archive", "--format=tar", rev, "--", str(rel)], cwd=repo_root,
-                               stdout=subprocess.PIPE)
+    archive = subprocess.Popen(["git", "archive", "--format=tar", rev], cwd=repo_root, stdout=subprocess.PIPE)
     subprocess.run(["tar", "-x", "-C", str(dest)], stdin=archive.stdout, check=True)
     if archive.wait() != 0:
         fail(f"git archive {rev} failed")
-    return dest / rel
+    if not (dest / "zephyr" / "module.yml").is_file():
+        fail(f"the safety repo at {rev} has no zephyr/module.yml")
+    return dest / BENCH_DIR.relative_to(repo_root)
 
 
 def check_config(config_file, kconfig):
@@ -177,10 +179,36 @@ def check_config(config_file, kconfig):
     return bad
 
 
+def build_env(zephyr, sdk):
+    """Return the environment of a build: no ZEPHYR_* variable of the caller, the tree and the SDK."""
+    env = {k: v for k, v in os.environ.items() if not k.startswith("ZEPHYR_")}
+    env.update(
+        ZEPHYR_BASE=str(zephyr),
+        ZEPHYR_TOOLCHAIN_VARIANT="zephyr",
+        ZEPHYR_SDK_INSTALL_DIR=str(sdk),
+    )
+    return env
+
+
+def run_build(args, env, bdir, log, name):
+    """Run CMake (args) and Ninja for one point; the output goes to log."""
+    with open(log, "w") as f:
+        f.write("$ " + shlex.join(args) + "\n")
+        f.flush()
+        for cmd in (args, ["ninja", "-C", str(bdir)]):
+            r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT)
+            if r.returncode != 0:
+                fail(f"build failed for {name}, see {log}")
+
+
 def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log):
+    """Build one point. The modules are those of the board from the tree, plus the
+    safety snapshot (two folders above src_bench) as the module "safety".
+    """
     app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
     modules = [str(trees.repo_dir(tree_cfg, tree, name)) for name in board_cfg["modules"]]
+    modules.append(str(src_bench.parents[1]))
     args = [
         "cmake",
         "-GNinja",
@@ -199,19 +227,7 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     for sym, value in point["kconfig"].items():
         args.append(f"-DCONFIG_{sym}={kconfig_value(value)}")
 
-    env = {k: v for k, v in os.environ.items() if not k.startswith("ZEPHYR_")}
-    env.update(
-        ZEPHYR_BASE=str(zephyr),
-        ZEPHYR_TOOLCHAIN_VARIANT="zephyr",
-        ZEPHYR_SDK_INSTALL_DIR=str(sdk),
-    )
-    with open(log, "w") as f:
-        f.write("$ " + shlex.join(args) + "\n")
-        f.flush()
-        for cmd in (args, ["ninja", "-C", str(bdir)]):
-            r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT)
-            if r.returncode != 0:
-                fail(f"build failed for {tree}/{point['id']}, see {log}")
+    run_build(args, build_env(zephyr, sdk), bdir, log, f"{tree}/{point['id']}")
     bad = check_config(bdir / "zephyr" / ".config", point["kconfig"])
     if bad:
         fail(f"Kconfig values not applied for {tree}/{point['id']}:\n  " + "\n  ".join(bad))
@@ -303,7 +319,8 @@ def main():
         "command": shlex.join(sys.argv),
         "started": started.isoformat(),
         "host": platform.node(),
-        "safety": {"path": str(repo_root), "rev": repo_rev, "snapshot": str(src_bench.relative_to(run_dir))},
+        "safety": {"path": str(repo_root), "rev": repo_rev, "snapshot": str(src_bench.relative_to(run_dir)),
+                   "module": str(src_bench.parents[1].relative_to(run_dir))},
         "trees": {
             t: {**tree_cfg["trees"][t], "repos": {r: tree_cfg["trees"][t]["repos"][r] for r in repos}}
             for t in exp["trees"]

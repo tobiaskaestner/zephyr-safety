@@ -208,17 +208,22 @@ Options:
    not examined. Then it expands the points.
    An axis value name that YAML reads as a Boolean (``on``, ``off``,
    ``yes``, ``no``, ``true``, ``false``) stops the run.
-#. **Snapshot.** It exports the committed benchmark sources at the
-   current revision with ``git archive`` into ``<run>/src/``. All builds
-   use this snapshot, not the worktree. Thus work in the worktree during
-   a long run does not change what the run builds.
+#. **Snapshot.** It exports the safety repository at the current revision
+   with ``git archive`` into ``<run>/src/``. All builds use this snapshot,
+   not the worktree. Thus work in the worktree during a long run does not
+   change what the run builds. The snapshot stays in the result folder, so
+   the sources of each data point stay available also after a rebase of
+   the branch.
 #. **Build.** For each tree and each point, it runs CMake and Ninja with:
 
    - ``ZEPHYR_BASE`` set to the Zephyr of the tree, and all other
      ``ZEPHYR_*`` environment variables removed.
    - ``-DBOARD`` set to the board target.
    - ``-DZEPHYR_MODULES`` set to the modules of the board from the tree
-     only, so that no module of a west workspace goes into the build.
+     only, so that no module of a west workspace goes into the build. The
+     snapshot is one more module: the safety repository is the Zephyr
+     module ``safety`` (``zephyr/module.yml``), so an app finds it as
+     ``ZEPHYR_SAFETY_MODULE_DIR``.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
    - ``-DLATBENCH_SRC_REV`` set to the safety revision.
@@ -359,7 +364,7 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
    <out>/<name>/<UTC time>/
    ├── manifest.json        provenance of the run
    ├── summary.txt          percentiles of each histogram
-   ├── src/tests/benchmarks/ snapshot of the committed sources
+   ├── src/                 snapshot of the safety repository
    └── <tree>/<point>/
        ├── rep1.log         serial output of repetition 1
        ├── rep2.log         ...
@@ -375,8 +380,11 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
 - ``experiment``, ``experiment_file``, ``experiment_yaml``: the name, the
   path in the repository and the full text of the experiment file.
 - ``command``, ``started``, ``finished``, ``host``.
-- ``safety``: the path, the revision and the snapshot folder of the safety
-  repository.
+- ``safety``: the path and the revision of the safety repository, the
+  benchmark folder in the snapshot (``snapshot``), and the module folder
+  (``module``). A run of an older ``run.py`` has only
+  ``tests/benchmarks`` in the snapshot and no ``module``. The oldest runs
+  have no ``snapshot``, because they built from the worktree.
 - ``trees``, ``trees_root``: the entries of the trees from ``trees.yaml``,
   with only the repositories that the build used.
 - ``toolchain``: the SDK version and path.
