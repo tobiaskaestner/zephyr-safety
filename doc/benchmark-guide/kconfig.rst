@@ -107,6 +107,11 @@ Load generators
      - 100
      - Maximum period of a periodic timer (only with
        ``LATBENCH_LOAD_TIMER_PERIODIC``)
+   * - ``LATBENCH_SYSTICK_PRIO``
+     - -1
+     - IRQ priority of SysTick, in the numbers of ``IRQ_CONNECT()``. The
+       value -1 keeps the driver default (0). Only with
+       ``CONFIG_CORTEX_M_SYSTICK``.
 
 Options of each app
 -------------------

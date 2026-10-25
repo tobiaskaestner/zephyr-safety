@@ -220,6 +220,17 @@ The expiry function records its own tick phase in the phase histogram
 ``tmr``. The value of each sample is the phase itself. Thus ``tmr`` shows
 where in the tick the system timer ISR runs.
 
+SysTick priority
+~~~~~~~~~~~~~~~~
+
+The SysTick driver gives SysTick the same priority as an IRQ with
+priority 0. If both are pending, SysTick goes first. If
+``LATBENCH_SYSTICK_PRIO`` is 0 or more, ``load_start()`` sets this priority
+for SysTick. With a value of 1, the stimulus IRQ (priority 0) can preempt
+the SysTick ISR, but not its locked sections. ``load_print()`` prints the
+priority that the NVIC has as ``systick_prio``. The option is available
+only on a board with ``CONFIG_CORTEX_M_SYSTICK``.
+
 .. _benchguide-meta:
 
 Metadata

@@ -216,3 +216,7 @@ Metadata keys
    * - ``load_timer_kind``, ``load_timer_ms``, ``load_timer_expiries``
      - load
      - Kind of the load timers, period limits, number of expiries
+   * - ``systick_prio``
+     - load
+     - SysTick priority in the NVIC, in the numbers of ``IRQ_CONNECT()``
+       (only with ``CONFIG_CORTEX_M_SYSTICK``)
