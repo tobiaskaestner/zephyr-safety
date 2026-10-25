@@ -1,0 +1,32 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Validation of the code placement, part 2: the points of
+# code-place-q4.yaml that the tree comparison (criterion C2) needs, on
+# ws-up. The design and the criteria are in code-place-q4.yaml.
+
+name: code-place-q4-up
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 300
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 50000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  place:
+    f0:
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 0}
+    f4:
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 4}
+    r0:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 0}
+    r4:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 4}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

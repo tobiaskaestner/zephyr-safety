@@ -1,0 +1,80 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Validation of the code placement (question Q4 of review-2026-10-25,
+# later.md L2 and L17). Decision to check: comparisons use
+# LATBENCH_CODE_RAM (hot code in RAM, on nucleo_g474re the CCM SRAM),
+# absolute numbers use LATBENCH_CODE_FLASH_PAD (a range over the pads).
+# This file: ws-safety. code-place-q4-up.yaml: the same points on ws-up.
+#
+#   place:  f<N> = LATBENCH_CODE_FLASH_PAD, pad N bytes (flash control)
+#           r<N> = LATBENCH_CODE_RAM, pad N bytes (the pad moves only the
+#                  relocated code)
+#   anchor: default (time slicing, 20 ms) and noslice (TIMESLICING=n)
+#
+# Reference (flash, results/code-layout/20261025T060257Z, safety 5a7d0a5,
+# 200k samples, pads 0..28): spread over the pads (max - min)
+#   IRQ p50 81..86 = 5; drift 8.06..9.66 = 1.6 cycles per wake (default);
+#   ISR to thread p50 1663..1703 = 40 (default), 763..798 = 35 (noslice).
+#
+# Criteria, written before the run (metric = p50 of the histogram; drift =
+# clock_drift_cyc / samples, default anchor only):
+#
+# C1 RAM removes the address effect. Over r0..r28 (ws-safety):
+#    IRQ p50 spread <= 2 cycles (each anchor); drift spread <= 0.2 cycles
+#    per wake; ISR to thread p50 spread <= 5 cycles (default and noslice).
+# C2 RAM removes the build to build difference. Tree difference
+#    D = ws-up - ws-safety at r0 and at r4: |D(r0) - D(r4)| <= the C1
+#    limit of each metric (2 / 0.2 / 5). The flash points f0 and f4 give
+#    the same difference in flash, for comparison (no criterion).
+# C3 The new revision gives the old flash behaviour. f0 and f4 against the
+#    reference p0 and p4 (same code layout, see the commit of
+#    LATBENCH_CODE_PLACE): IRQ p50 +-1 cycle, ISR to thread p50 +-5
+#    cycles, drift +-0.05 cycles per wake.
+# C4 Cost of RAM: RAM - flash, median over the pads, per metric. Report
+#    only, no criterion.
+# Each log: invalid = 0, stim_late = 0, spurious_edges = 0; with RAM,
+# code_pad_at is the start of code_ram_text.
+#
+# Samples: 50000 per point (about 35 s per point with build and flash).
+# The p50 of these histograms and the drift per wake do not change with
+# the number of samples (clock-drift-layout: 200k against 1M, 0.01
+# cycles per wake).
+
+name: code-place-q4
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 300
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 50000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  place:
+    f0:
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 0}
+    f4:
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 4}
+    r0:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 0}
+    r4:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 4}
+    r8:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 8}
+    r12:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 12}
+    r16:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 16}
+    r20:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 20}
+    r24:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 24}
+    r28:
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 28}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
