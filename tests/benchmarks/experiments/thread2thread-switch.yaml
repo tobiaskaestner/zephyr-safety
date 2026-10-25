@@ -1,0 +1,37 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Thread to thread wake latency (M3) with the new arch interface, on both
+# trees. With USE_SWITCH=y a thread switch on Cortex-M is arch_switch()
+# inline in z_swap(), in thread mode, without PendSV. The legacy points
+# use the same settings as thread2thread-1m (sem, mutex) and are a
+# reference from the same session.
+#
+# Expectation: the same two modes as with PendSV (about 20 % without a
+# SysTick reprogram, about 80 % with two), because the slice reset is in
+# update_cache() and does not depend on the arch interface. The switch
+# itself costs more than with PendSV, as in wake-anchors-1m (about +280
+# cycles per ISR wake).
+
+name: thread2thread-switch
+app: thread_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+  arch:
+    legacy: {}
+    switch:
+      conf_files: [common/conf/use_switch.conf]
