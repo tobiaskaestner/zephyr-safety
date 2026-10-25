@@ -1,0 +1,35 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: why does the same wake (sem, time slicing, no load timers)
+# lose 8.0 cycles per wake in clock-drift, but 9.7 cycles per wake in
+# wake-timers-1m (t0-default)? The safety revision of both runs has the
+# same SysTick code. The two runs differ in the histogram size (and thus
+# in the code and data layout) and in the number of samples.
+#
+#   bins:    hdefault = the default bins of the app;
+#            hcoarse  = 2048 fine bins plus 2048 coarse bins (as wake-timers-1m)
+#   samples: s200k, s1m
+#
+# Output: LAT META clock_drift_cyc and clock_elapsed_cyc.
+
+name: clock-drift-layout
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  bins:
+    hdefault: {}
+    hcoarse:
+      kconfig: {LATBENCH_HIST_BINS: 2048, LATBENCH_HIST_COARSE_BINS: 2048}
+  samples:
+    s200k:
+      kconfig: {LATBENCH_SAMPLES: 200000}
+    s1m:
+      kconfig: {LATBENCH_SAMPLES: 1000000}
