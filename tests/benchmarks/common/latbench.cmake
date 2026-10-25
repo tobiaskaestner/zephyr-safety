@@ -4,7 +4,9 @@
 # Adds the common latency benchmark code to the app target.
 
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
+# pad.c is first: its code comes before all other app and kernel code.
 target_sources(app PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/src/pad.c
   ${CMAKE_CURRENT_LIST_DIR}/src/hist.c
   ${CMAKE_CURRENT_LIST_DIR}/src/meta.c
 )

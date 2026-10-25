@@ -1,0 +1,50 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: how much does the place of the code in flash change the
+# latency? In wake-threads-1m the same code with different array sizes
+# gave two groups: IRQ p50 86 or 82 cycles, clock drift 9.7 or 8.0
+# cycles per wake. The difference between the trees in ISR to thread
+# p50 changed from 0 to 190 cycles from build to build. The code of these
+# builds starts at different addresses (_isr_wrapper at 0x...1870,
+# 0x...1910, 0x...1904).
+#
+#   pad:    LATBENCH_CODE_PAD_BYTES. common/src/pad.c moves all app and
+#           kernel code by this number of bytes. Nothing else changes.
+#   anchor: default (time slicing) and noslice.
+#
+# Expectation: the latency and the drift change with the pad, with a
+# period of the flash line or of the cache line.
+
+name: code-layout
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  pad:
+    p0: {}
+    p4:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 4}
+    p8:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 8}
+    p12:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 12}
+    p16:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 16}
+    p20:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 20}
+    p24:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 24}
+    p28:
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 28}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

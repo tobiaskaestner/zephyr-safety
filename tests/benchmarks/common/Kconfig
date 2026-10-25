@@ -14,6 +14,16 @@ config LATBENCH_WARMUP
 	int "Number of samples to discard at the start"
 	default 16
 
+config LATBENCH_CODE_PAD_BYTES
+	int "Bytes of code padding before the app and kernel code"
+	range 0 1024
+	default 0
+	help
+	  common/src/pad.c puts a function of this size before all other
+	  code of the app and the kernel, so that all that code moves by
+	  this number of bytes. Use a multiple of 4. An experiment uses it to
+	  measure the effect of the place of the code on the latency.
+
 config LATBENCH_HIST_BINS
 	int "Number of 1-cycle histogram bins"
 	range 1 65536

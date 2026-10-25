@@ -10,6 +10,8 @@
 #include <zephyr/toolchain.h>
 #include <latbench/meta.h>
 
+void lat_code_pad(void);
+
 #ifdef BUILD_VERSION
 #define LAT_ZEPHYR_VERSION STRINGIFY(BUILD_VERSION)
 #else
@@ -45,6 +47,9 @@ void lat_meta_print(const char *app, const char *variant)
 	printk("LAT META core_hz=%u\n", port_core_hz());
 	printk("LAT META ticks_per_sec=%u\n", CONFIG_SYS_CLOCK_TICKS_PER_SEC);
 	printk("LAT META samples=%u\n", CONFIG_LATBENCH_SAMPLES);
+	printk("LAT META code_pad=%u\n", CONFIG_LATBENCH_CODE_PAD_BYTES);
+	/* The reference also keeps the pad from the linker garbage collection. */
+	printk("LAT META code_pad_at=%p\n", (void *)lat_code_pad);
 
 	printk("LAT CFG");
 	LAT_CFG(USE_SWITCH);
