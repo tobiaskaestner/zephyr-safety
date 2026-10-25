@@ -23,6 +23,11 @@
 # (10000..20000 cycles). Wrong if the wake keeps two modes, or if the
 # IRQ max with 64 timers is not above the max of baseline-t64.
 #
+# no-mpu-guard also sets HW_STACK_PROTECTION=n: the board defconfig sets
+# it to y, and ARM_STACK_PROTECTION then selects MPU_STACK_GUARD
+# (arch/arm/core/Kconfig:244-246). On this board the stack guard is the
+# only effect of HW_STACK_PROTECTION, so the factor is the same.
+#
 # Predictions for the ISR to thread wake (sem from the wrapped ISR):
 #
 #   scalable: +50..200, a constant (red-black tree against a list). With
@@ -89,7 +94,7 @@ axes:
     assert-spin:
       kconfig: {ASSERT: y, SPIN_VALIDATE: y}
     no-mpu-guard:
-      kconfig: {MPU_STACK_GUARD: n}
+      kconfig: {HW_STACK_PROTECTION: n, MPU_STACK_GUARD: n}
 
 points:
   - id: baseline-busy16
