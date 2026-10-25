@@ -24,11 +24,16 @@ starts with ``/``. An ``include`` statement in the TDL file looks for the
 context file next to the TDL file, then in each directory of the config
 value ``timeline_viz_include_path``, then in ``scripts/timeline-viz/contexts``.
 
+A schematic diagram is as wide as its content (1 pixel per unit). The
+config value ``timeline_viz_width`` makes each schematic diagram at least
+that wide, so that all diagrams of a document have the same scale.
+
 The output is HTML only. Other builders get the caption and a note.
 """
 
 import importlib.util
 import json
+import re
 import shutil
 import subprocess
 from pathlib import Path
@@ -49,13 +54,13 @@ tdl = importlib.util.module_from_spec(_spec)
 _spec.loader.exec_module(tdl)
 
 
-def render(card, lanes):
+def render(card, lanes, width=0):
     """The inline SVG of one compiled card (tdl-svg.cjs --fragments)."""
     node = shutil.which("node")
     if not node:
         raise RuntimeError("node is not on PATH (timeline-viz renders the SVG with Node)")
     data = json.dumps({"lanes": lanes, "laneKeys": list(lanes), "cards": [card]})
-    run = subprocess.run([node, str(TOOL / "tdl-svg.cjs"), "--fragments"], input=data,
+    run = subprocess.run([node, str(TOOL / "tdl-svg.cjs"), "--fragments", "--width", str(width)], input=data,
                          capture_output=True, text=True)
     if run.returncode:
         raise RuntimeError(f"tdl-svg.cjs failed: {run.stderr.strip()}")
@@ -66,13 +71,15 @@ def page_svg(svg, width):
     """Change the size style of the renderer for a documentation page.
 
     The renderer gives the SVG a fixed minimum width. Here the SVG shrinks
-    to the width of the text column, but not below ``width`` pixels. The
-    ``.timeline-viz`` box scrolls if the column is narrower.
+    to the width of the text column, but not below ``width`` pixels, and
+    it does not grow above its own width. The ``.timeline-viz`` box
+    scrolls if the column is narrower.
     """
     head, rest = svg.split(">", 1)
     start = head.index(' style="')
     end = head.index('"', start + 8)
-    style = f' style="width:100%;min-width:{width}px;height:auto"'
+    own = int(re.search(r' width="(\d+)"', head).group(1))
+    style = f' style="width:100%;max-width:{own}px;min-width:{min(own, width)}px;height:auto"'
     return head[:start] + style + head[end + 1:] + ">" + rest
 
 
@@ -94,7 +101,7 @@ class TimelineViz(SphinxDirective):
         try:
             lanes = {}
             card = tdl.compile_file(path, lanes, include_path, includes)
-            svg = render(card, lanes)
+            svg = render(card, lanes, self.config.timeline_viz_width)
         except (OSError, tdl.TdlError, RuntimeError) as e:
             return [self.state.document.reporter.error(f"timeline-viz: {e}", line=self.lineno)]
         for inc in includes:
@@ -128,7 +135,9 @@ def add_static(app, config):
 def setup(app):
     app.add_config_value("timeline_viz_include_path", [], "env")
     app.add_config_value("timeline_viz_min_width", 760, "env")
+    app.add_config_value("timeline_viz_width", 0, "env")
     app.add_directive("timeline-viz", TimelineViz)
     app.connect("config-inited", add_static)
     app.add_css_file("timeline-viz.css")
+    app.add_js_file("timeline-viz.js")
     return {"version": "1", "parallel_read_safe": True, "parallel_write_safe": True}

@@ -20,3 +20,10 @@
 .timeline-viz svg text { font-family: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace; }
 .timeline-viz-figure { margin: 0 0 24px; }
 .timeline-viz-figure .caption { text-align: left; }
+.timeline-viz .hit { cursor: default; }
+.timeline-viz-tip {
+  position: fixed; pointer-events: none; z-index: 300; max-width: 340px;
+  background: #15171a; color: #fcfcfb; padding: 7px 9px; border-radius: 5px;
+  font-size: 0.8rem; line-height: 1.4; white-space: pre-line;
+}
+.timeline-viz-tip[hidden] { display: none; }

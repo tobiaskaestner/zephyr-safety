@@ -69,8 +69,9 @@ See :ref:`fig-demo`.
     assert "<em>caption</em>" in html
     assert 'id="fig-demo"' in html
     assert "min-width:760px" in html and "min-width:980px" not in html
-    assert "timeline-viz.css" in html
+    assert "timeline-viz.css" in html and "timeline-viz.js" in html
     assert (out / "_static" / "timeline-viz.css").is_file()
+    assert (out / "_static" / "timeline-viz.js").is_file()
 
 
 def test_default_caption_is_the_diagram_title(tmp_path):
@@ -94,3 +95,17 @@ def test_text_builder_gets_a_note(tmp_path):
     text = (out / "index.txt").read_text()
     assert "HTML output only" in text
     assert "<svg" not in text
+
+
+def test_common_width_for_schematic_diagrams(tmp_path):
+    diagram = 'include g474.tdc\ndiagram s "S"\nschematic\naxis "t" 0..300\ndev 100 "isr"\n'
+    src = tmp_path / "src"
+    run, out = build(tmp_path, "T\n=\n\n.. timeline-viz:: s.tdl\n", {"s.tdl": diagram})
+    assert run.returncode == 0, run.stderr
+    assert 'width="500"' in (out / "index.html").read_text()
+    (src / "conf.py").write_text(CONF + "timeline_viz_width = 900\n")
+    run = subprocess.run([sys.executable, "-m", "sphinx", "-b", "html", "-q", "-E", str(src), str(out)],
+                         capture_output=True, text=True)
+    assert run.returncode == 0, run.stderr
+    html = (out / "index.html").read_text()
+    assert 'width="900"' in html and "max-width:900px" in html
