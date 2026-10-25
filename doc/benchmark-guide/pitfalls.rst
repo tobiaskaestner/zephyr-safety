@@ -81,6 +81,20 @@ Use the choice ``LATBENCH_CODE_PLACE`` (see
 - ``LATBENCH_CODE_FLASH`` gives the number of one build. Use it only
   together with a range from a pad set, or for a smoke test.
 
+The experiments ``code-place-q4`` and ``code-place-q4-up`` checked this
+rule on ``nucleo_g474re`` (50000 samples for each point). With
+``LATBENCH_CODE_RAM`` the 8 pads gave the same IRQ p50 (48), the same
+ISR to thread p50 (1145 with time slicing, 523 without) and the same
+drift (8.04 cycles per wake). The difference between the trees
+(ws-up - ws-safety) was -40 and -42 cycles at the pads 0 and 4. In flash
+the same difference was -121 and -10 cycles (time slicing).
+
+Any change of the code size before the hot code also moves it. An
+example: ``LATBENCH_SAMPLES`` = 50000 fits in one instruction (``movw``),
+200000 needs a literal word. Thus two flash builds that differ only in
+the number of samples have a different code layout, and their ISR to
+thread p50 without time slicing differs by up to 17 cycles.
+
 The pad set must cover each position of the code in the line of the
 cache or of the flash read, in steps of 4 bytes:
 
