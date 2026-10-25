@@ -1,0 +1,28 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/*
+ * LATBENCH_CODE_RAM on nucleo_g474re: the memory region "CCM" for the
+ * relocated code (common/latbench.cmake).
+ *
+ * The CCM SRAM (32 KB) is at 0x10000000, on the I-code and D-code buses.
+ * It is also at 0x20018000 (alias), the last 32 KB of zephyr,sram (128 KB
+ * = SRAM1 80 KB + SRAM2 16 KB + CCM SRAM 32 KB). Thus zephyr,sram becomes
+ * 96 KB, so that no data goes to the alias of the code. The MPU region
+ * "SRAM_0" keeps its size (a power of two, 128 KB).
+ */
+
+/ {
+	latbench_ccm: memory@10000000 {
+		compatible = "zephyr,memory-region", "mmio-sram";
+		reg = <0x10000000 DT_SIZE_K(32)>;
+		zephyr,memory-region = "CCM";
+	};
+};
+
+&sram0 {
+	reg = <0x20000000 DT_SIZE_K(96)>;
+};

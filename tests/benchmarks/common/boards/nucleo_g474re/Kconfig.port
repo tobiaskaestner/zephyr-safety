@@ -1,0 +1,13 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Defaults of the board port nucleo_g474re for common/Kconfig.
+
+# Hot code in the CCM SRAM (32 KB at 0x10000000). The core fetches it over
+# the I-code bus, and no MPU region covers it, so it can execute when the
+# MPU is on. port.cmake adds the memory region "CCM" (code_ram_ccm.overlay).
+# "RAM" (zephyr,sram, fetch over the system bus) also builds.
+config LATBENCH_CODE_RAM_REGION
+	string
+	depends on LATBENCH_CODE_RAM
+	default "CCM"

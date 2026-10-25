@@ -14,15 +14,106 @@ config LATBENCH_WARMUP
 	int "Number of samples to discard at the start"
 	default 16
 
+# The board port can give defaults for the symbols below (for example
+# LATBENCH_CODE_RAM_REGION). The port file comes first, so that its
+# defaults have priority.
+orsource "boards/$(BOARD)/Kconfig.port"
+
+choice LATBENCH_CODE_PLACE
+	prompt "Place of the code"
+	default LATBENCH_CODE_FLASH
+	help
+	  The latency of code in flash depends on the address of the code
+	  (flash wait states, prefetch and cache). Select how the build
+	  places the code. The guide (pitfalls, code placement) tells which
+	  option to use for which result.
+
+config LATBENCH_CODE_FLASH
+	bool "Flash (XIP), one build"
+	help
+	  All code runs from flash, at the address that the linker gives it.
+	  This is the layout of a normal application. The result is valid
+	  only for this one build.
+
+config LATBENCH_CODE_FLASH_PAD
+	bool "Flash (XIP), moved by a code pad"
+	help
+	  As LATBENCH_CODE_FLASH, but common/src/pad.c moves all app and
+	  kernel code by LATBENCH_CODE_PAD_BYTES. With a pad of 0 the code
+	  layout is the layout of LATBENCH_CODE_FLASH. Report an absolute
+	  number as the range over a set of pads (an experiment axis).
+
+config LATBENCH_CODE_RAM
+	bool "Hot code in RAM"
+	select CODE_DATA_RELOCATION
+	select CODE_DATA_RELOCATION_SRAM if LATBENCH_CODE_RAM_REGION = "RAM"
+	help
+	  common/latbench.cmake relocates the code of the hot paths to the
+	  RAM region LATBENCH_CODE_RAM_REGION (zephyr_code_relocate()). The
+	  startup code copies it from flash. The code of the hot paths then
+	  has no flash wait states, and its address has no effect on the
+	  latency. Use this option to compare two builds. The board port
+	  must give the region.
+
+endchoice
+
 config LATBENCH_CODE_PAD_BYTES
 	int "Bytes of code padding before the app and kernel code"
+	depends on LATBENCH_CODE_FLASH_PAD || LATBENCH_CODE_RAM
 	range 0 1024
 	default 0
 	help
 	  common/src/pad.c puts a function of this size before all other
 	  code of the app and the kernel, so that all that code moves by
-	  this number of bytes. Use a multiple of 4. An experiment uses it to
-	  measure the effect of the place of the code on the latency.
+	  this number of bytes. Use a multiple of 4. With LATBENCH_CODE_RAM
+	  the pad is the first function of the relocated code, and it moves
+	  only that code.
+
+config LATBENCH_CODE_RAM_REGION
+	string "Memory region of the hot code"
+	depends on LATBENCH_CODE_RAM
+	default ""
+	help
+	  The LOCATION argument of zephyr_code_relocate(). "RAM" is the
+	  region of the zephyr,sram node. Then Zephyr gives the relocated
+	  code an MPU region that allows execution
+	  (CODE_DATA_RELOCATION_SRAM). Another value must be the name of a
+	  devicetree memory region (zephyr,memory-region) that the port adds,
+	  and the MPU must allow execution there. This is not tested.
+	  The default comes from common/boards/<board>/Kconfig.port. If it is
+	  empty, the port has no RAM placement, and the build stops.
+
+config LATBENCH_CODE_RAM_KERNEL
+	bool "Relocate the kernel"
+	depends on LATBENCH_CODE_RAM
+	default y
+	help
+	  All files of the library "kernel".
+
+config LATBENCH_CODE_RAM_ARCH
+	bool "Relocate the arch code"
+	depends on LATBENCH_CODE_RAM
+	default y
+	help
+	  The files of the libraries arch__arm__core__cortex_m and
+	  arch__arm__core__mpu, without the code that runs before the startup
+	  code copies the relocated code (reset.S, prep_c.c, vector_table.S).
+
+config LATBENCH_CODE_RAM_DRIVERS
+	bool "Relocate the timer, GPIO and interrupt controller drivers"
+	depends on LATBENCH_CODE_RAM
+	default y
+	help
+	  All files of the libraries drivers__timer, drivers__gpio and
+	  drivers__interrupt_controller that the build has.
+
+config LATBENCH_CODE_RAM_APP
+	bool "Relocate the app and the common benchmark code"
+	depends on LATBENCH_CODE_RAM
+	default y
+	help
+	  All files of the library "app": the app, common/src and the board
+	  port. The code pad is always relocated.
 
 config LATBENCH_HIST_BINS
 	int "Number of 1-cycle histogram bins"

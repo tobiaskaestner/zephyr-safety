@@ -12,6 +12,22 @@
 
 void lat_code_pad(void);
 
+/* The pad exists only with LATBENCH_CODE_FLASH_PAD and LATBENCH_CODE_RAM. */
+#ifndef CONFIG_LATBENCH_CODE_PAD_BYTES
+#define CONFIG_LATBENCH_CODE_PAD_BYTES 0
+#endif
+
+#if defined(CONFIG_LATBENCH_CODE_RAM)
+#define LAT_CODE_PLACE "ram"
+/* latbench.cmake gives the symbols of the relocated text. */
+extern char LATBENCH_CODE_RAM_TEXT_START[];
+extern char LATBENCH_CODE_RAM_TEXT_END[];
+#elif defined(CONFIG_LATBENCH_CODE_FLASH_PAD)
+#define LAT_CODE_PLACE "flash-pad"
+#else
+#define LAT_CODE_PLACE "flash"
+#endif
+
 #ifdef BUILD_VERSION
 #define LAT_ZEPHYR_VERSION STRINGIFY(BUILD_VERSION)
 #else
@@ -47,7 +63,17 @@ void lat_meta_print(const char *app, const char *variant)
 	printk("LAT META core_hz=%u\n", port_core_hz());
 	printk("LAT META ticks_per_sec=%u\n", CONFIG_SYS_CLOCK_TICKS_PER_SEC);
 	printk("LAT META samples=%u\n", CONFIG_LATBENCH_SAMPLES);
-	printk("LAT META code_pad=%u\n", CONFIG_LATBENCH_CODE_PAD_BYTES);
+	/*
+	 * One printk() for the place and the pad: the code of the default
+	 * build keeps its size, so the code layout in flash does not change.
+	 */
+	printk("LAT META code_place=" LAT_CODE_PLACE "\nLAT META code_pad=%u\n",
+	       CONFIG_LATBENCH_CODE_PAD_BYTES);
+#if defined(CONFIG_LATBENCH_CODE_RAM)
+	lat_meta_kv("code_ram_region", CONFIG_LATBENCH_CODE_RAM_REGION);
+	printk("LAT META code_ram_text=%p..%p\n", (void *)LATBENCH_CODE_RAM_TEXT_START,
+	       (void *)LATBENCH_CODE_RAM_TEXT_END);
+#endif
 	/* The reference also keeps the pad from the linker garbage collection. */
 	printk("LAT META code_pad_at=%p\n", (void *)lat_code_pad);
 

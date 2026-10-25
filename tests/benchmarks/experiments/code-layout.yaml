@@ -11,6 +11,9 @@
 #
 #   pad:    LATBENCH_CODE_PAD_BYTES. common/src/pad.c moves all app and
 #           kernel code by this number of bytes. Nothing else changes.
+#           Since the choice LATBENCH_CODE_PLACE, the pad needs
+#           LATBENCH_CODE_FLASH_PAD (the run 20261025T060257Z had no choice;
+#           the code layout of each point is the same).
 #   anchor: default (time slicing) and noslice.
 #
 # Expectation: the latency and the drift change with the pad, with a
@@ -26,6 +29,7 @@ common:
   kconfig:
     LATBENCH_SAMPLES: 200000
     LATBENCH_WAKE_SEM: y
+    LATBENCH_CODE_FLASH_PAD: y
 
 axes:
   pad:
