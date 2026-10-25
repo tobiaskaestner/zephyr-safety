@@ -1,0 +1,42 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# later.md L15: with time slicing about 20 % of the wakes are 300 cycles
+# (M2, ISR to thread) or 700 cycles (M3, thread to thread) faster. The
+# share is 20..21 % for all primitives, both trees, and both stimulus
+# ranges (100..500 us in M2, 50..150 us in M3). The mean per tick phase
+# is flat. Without time slicing there is no such mode.
+#
+# Question: does the fast mode depend on the stimulus delay, or on other
+# state?
+#
+#   r100-500  the default range (the baseline)
+#   r100-200, r400-500  other ranges
+#   fixed300  fixed period of 300 us (plus 1 cycle per edge)
+#   poll1000  default range, main thread polls every 1000 ms (not 100)
+#
+# If the share follows the range (for example 0 % or 100 % with a fixed
+# period), the cause depends on the delay. If it stays at 20 %, the
+# cause is other state.
+
+name: fast-mode
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+
+points:
+  - id: r100-500
+  - id: r100-200
+    kconfig: {LATBENCH_STIM_MIN_US: 100, LATBENCH_STIM_MAX_US: 200}
+  - id: r400-500
+    kconfig: {LATBENCH_STIM_MIN_US: 400, LATBENCH_STIM_MAX_US: 500}
+  - id: fixed300
+    kconfig: {LATBENCH_STIM_FIXED: y, LATBENCH_STIM_PERIOD_US: 300}
+  - id: poll1000
+    kconfig: {LATBENCH_POLL_MS: 1000}
