@@ -5,8 +5,9 @@
  * Timing diagram renderer (latency-modes/template.html, tdl-svg.cjs and the
  * Sphinx extension timeline_viz). timeline(sc, env) returns one SVG string.
  *   sc   one scenario (see README.md; tdl.py writes it)
- *   env  {lanes, laneKeys, titles}: the context table of tdl.py, and
- *        titles = true to add <title> tooltips for stand-alone SVG files.
+ *   env  {lanes, laneKeys, titles, width}: the context table of tdl.py,
+ *        titles = true to add <title> tooltips for stand-alone SVG files,
+ *        width = the smallest width of a schematic diagram (optional).
  * The SVG uses the colour tokens of the page (--c-dev, --panel, ...).
  */
 (function (root) {
@@ -45,6 +46,8 @@ function patterns(id) {
   return `<defs>
     <pattern id="${id}-mask" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
       <rect width="6" height="6" fill="var(--panel)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-mask)" stroke-width="2"/></pattern>
+    <pattern id="${id}-mask-p" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
+      <rect width="6" height="6" fill="var(--panel)"/><line x1="0" y1="0" x2="0" y2="6" stroke="var(--c-mask)" stroke-width="2"/></pattern>
     <pattern id="${id}-miss" width="5" height="5" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)">
       <rect width="5" height="5" fill="var(--panel)"/><line x1="0" y1="0" x2="0" y2="5" stroke="var(--c-dev)" stroke-width="2"/></pattern>
     <pattern id="${id}-unk" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(45)">
@@ -69,10 +72,18 @@ function orderedLanes(sc, env) {
 
 /* ---------- swimlane diagram ---------- */
 function timeline(sc, env) {
-  const W = 980, LBL = 140, CHIP_X = 146, CHIP_W = 30, X0 = 186, X1 = W - 14;
+  const LBL = 140, CHIP_X = 146, CHIP_W = 30, X0 = 186;
   const LANE_H = 26, LANE_GAP = 6, HEAD_H = 15, GROUP_GAP = 10, TOP = 34;
-  const pieces = sc.pieces || [{ from: sc.from, to: sc.to, frac: 1, axis: sc.axis }];
+  let pieces = sc.pieces || [{ from: sc.from, to: sc.to, frac: 1, axis: sc.axis }];
   const GAP = pieces.length > 1 ? 40 : 0;
+  // A schematic diagram has 1 pixel per unit: its width follows the axis,
+  // so a box that is wide enough for its label in units is wide enough on
+  // the screen. env.width makes it wider (more pixels per unit), so that
+  // the diagrams of one document have the same scale. Other diagrams are
+  // 980 pixels wide.
+  const span = pieces.reduce((a, p) => a + p.to - p.from, 0);
+  if (sc.schematic) pieces = pieces.map((p) => ({ ...p, frac: (p.to - p.from) / span }));
+  const W = sc.schematic ? Math.max(X0 + span + GAP * (pieces.length - 1) + 14, env.width || 0) : 980, X1 = W - 14;
   const usable = X1 - X0 - GAP * (pieces.length - 1);
   let acc = X0;
   const px = pieces.map((p) => { const w = usable * p.frac; const r = { x: acc, w }; acc += w + GAP; return r; });
@@ -153,7 +164,8 @@ function timeline(sc, env) {
     let fill = kind.color, op = 0.28, stroke = kind.color, dash = s.m || sc.schematic ? "" : "4 3", sw = 1.4;
     if (s.s === "wfi") { op = 0.10; dash = "1 3"; }
     if (s.s === "pending") { fill = "none"; op = 1; dash = "5 3"; sw = 1.6; }
-    if (s.s === "mask") { fill = `url(#${id}-mask)`; op = 0.55; stroke = "var(--c-mask)"; dash = ""; sw = 1; }
+    // a PRIMASK lock (from {primask}) has the other hatch direction
+    if (s.s === "mask") { fill = `url(#${id}-mask${s.lock === "primask" ? "-p" : ""})`; op = 0.55; stroke = "var(--c-mask)"; dash = ""; sw = 1; }
     if (s.s === "miss") { fill = `url(#${id}-miss)`; op = 1; stroke = "var(--c-dev)"; }
     if (s.s === "unk") { fill = `url(#${id}-unk)`; op = 1; stroke = "var(--fg2)"; dash = "3 3"; }
     o += hit(tip);

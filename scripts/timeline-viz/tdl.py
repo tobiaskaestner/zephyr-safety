@@ -68,6 +68,17 @@ def split_tip(text):
     return text, None
 
 
+def join_braces(tok):
+    """Join "{basepri", "16..40}" into one token "{basepri 16..40}"."""
+    out = []
+    for t in tok:
+        if out and out[-1].startswith("{") and not out[-1].endswith("}"):
+            out[-1] += " " + t
+        else:
+            out.append(t)
+    return out
+
+
 def parse_contexts(path, lanes):
     for no, text in logical_lines(path):
         tok = shlex.split(text)
@@ -129,7 +140,7 @@ class Diagram:
 
     def statement(self, no, text):
         text, tip = split_tip(text)
-        tok = shlex.split(text)
+        tok = join_braces(shlex.split(text))
         head = tok[0]
         sc = self.sc
         if head == "include":
@@ -213,12 +224,17 @@ class Diagram:
         if not args:
             self.err(no, "a step needs a duration or a time range")
         when, rest = args[0], args[1:]
-        label, lock = "", None
+        label, lock, lock_range = "", None, None
         for a in rest:
             if a.startswith("{") and a.endswith("}"):
-                lock = a[1:-1]
+                lock, *sub = a[1:-1].split()
                 if lock not in ("basepri", "primask"):
                     self.err(no, f"unknown lock '{lock}'")
+                if sub:
+                    m = re.fullmatch(r"(\d+)\.\.(\d+)", sub[0])
+                    if len(sub) > 1 or not m:
+                        self.err(no, f"expected '{{{lock} <from>..<to>}}' (cycles after the step start)")
+                    lock_range = (int(m.group(1)), int(m.group(2)))
             else:
                 label = a
         m = RE_DUR.fullmatch(when)
@@ -248,7 +264,12 @@ class Diagram:
         self.sc["segs"].append(seg)
         if open_end:
             self.open_ends.append((no, seg))
-        if lock:
+        if lock and lock_range:
+            a, b = lock_range
+            if open_end or not 0 <= a < b <= t1 - t0:
+                self.err(no, f"the lock range {a}..{b} is not inside the step")
+            self.locks.append((self.piece, lock, {"t0": t0 + a, "t1": t0 + b}))
+        elif lock:
             self.locks.append((self.piece, lock, seg))
 
     def finish(self):
@@ -271,7 +292,8 @@ class Diagram:
             else:
                 merged.append({"p": p, "lock": lock, "t0": seg["t0"], "t1": seg["t1"]})
         for mk in merged:
-            seg = {"lane": "mask", "t0": mk["t0"], "t1": mk["t1"], "s": "mask", "label": mk["lock"].upper()}
+            seg = {"lane": "mask", "t0": mk["t0"], "t1": mk["t1"], "s": "mask", "label": mk["lock"].upper(),
+                   "lock": mk["lock"]}
             if mk["p"]:
                 seg["p"] = mk["p"]
             sc["segs"].append(seg)

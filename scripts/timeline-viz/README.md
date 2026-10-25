@@ -45,9 +45,14 @@ The document `conf.py` loads the extension `timeline_viz` (see
   relative to the source folder. zdocs copies the document folder into
   the build folder, so put the TDL files in the document folder.
 - `:name:` gives a label for `:ref:`.
-- `:width:` is the smallest width in pixels (default 760, config value
-  `timeline_viz_min_width`). In a narrower column, the diagram scrolls
-  in its box.
+- `:width:` is the smallest display width in pixels (default 760,
+  config value `timeline_viz_min_width`). In a narrower column, the
+  diagram scrolls in its box.
+- A schematic diagram is as wide as its content. The config value
+  `timeline_viz_width` makes each schematic diagram at least that wide,
+  so that all diagrams of a document have the same scale.
+- In the HTML page, `timeline-viz.js` shows the tooltip of a box in a
+  hover box, as on the latency-modes page.
 - An `include` looks for the context file next to the TDL file, then in
   each folder of the config value `timeline_viz_include_path` (relative
   to the source folder), then in `contexts/` of this tool.
@@ -116,6 +121,9 @@ pytest scripts/timeline-viz/tests
    ends them at the next step of that context.
 4. **Locks as attributes.** A step with `{basepri}` or `{primask}` runs
    with that mask. The compiler merges such steps into the mask lane.
+   `{basepri 16..40}` locks only a part of the step (cycles after its
+   start), for example the middle of PendSV. BASEPRI and PRIMASK have
+   opposite hatch directions.
 5. **Measured or not.** A duration with `!` is measured (solid
    outline). A duration with `?` is a cost whose place in the path is
    not known (hatched). All other durations are estimates (dashed).

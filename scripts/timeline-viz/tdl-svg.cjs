@@ -6,7 +6,7 @@
  * Render the cards of a tdl.py output as SVG.
  *
  * Usage: node tdl-svg.cjs <cards.json> <out-dir> [--dark]
- *        node tdl-svg.cjs --fragments < cards.json > svgs.json
+ *        node tdl-svg.cjs --fragments [--width <px>] < cards.json > svgs.json
  *
  * The first form writes one stand-alone SVG file per card. The files carry
  * the colour tokens of the page (light, and dark under prefers-color-scheme),
@@ -14,6 +14,7 @@
  *
  * --fragments writes {"<card id>": "<svg ...>"} for SVG inline in an HTML
  * page (the Sphinx extension timeline_viz). The page sets the colour tokens.
+ * --width gives the smallest width of a schematic diagram.
  */
 "use strict";
 const fs = require("fs");
@@ -39,16 +40,18 @@ function standalone(sc, env, dark) {
   return fixed + style(dark) + `<rect width="100%" height="100%" fill="var(--panel)"/>` + svg.slice(open.length);
 }
 
-function fragments() {
+function fragments(args) {
   const data = JSON.parse(fs.readFileSync(0, "utf8"));
-  const env = { lanes: data.lanes, laneKeys: data.laneKeys, titles: true };
+  const i = args.indexOf("--width");
+  const width = i >= 0 ? Number(args[i + 1]) : 0;
+  const env = { lanes: data.lanes, laneKeys: data.laneKeys, titles: true, width };
   const out = {};
   for (const sc of data.cards) out[sc.id] = R.timeline(sc, env);
   process.stdout.write(JSON.stringify(out));
 }
 
 function main() {
-  if (process.argv[2] === "--fragments") return fragments();
+  if (process.argv[2] === "--fragments") return fragments(process.argv.slice(3));
   const [, , input, outDir, ...flags] = process.argv;
   if (!input || !outDir) {
     console.error("usage: node tdl-svg.cjs <cards.json> <out-dir> [--dark]");

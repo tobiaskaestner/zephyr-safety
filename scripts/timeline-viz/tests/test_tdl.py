@@ -103,6 +103,28 @@ waker 20 "d" {basepri}
     assert segs(card, "mask") == [(0, 150, "mask", "BASEPRI"), (180, 200, "mask", "BASEPRI")]
 
 
+def test_lock_range_inside_a_step(tmp_path):
+    card = compile_text(tmp_path, """\
+diagram x "x"
+axis "cycles" 0..1000
+waker 100 "take" {basepri}
+dev 60 "switch" {basepri 20..40}
+waker 30 "idle" {primask}
+""")
+    assert segs(card, "mask") == [(0, 100, "mask", "BASEPRI"), (120, 140, "mask", "BASEPRI"),
+                                  (160, 190, "mask", "PRIMASK")]
+    assert [s["lock"] for s in card["segs"] if s["lane"] == "mask"] == ["basepri", "basepri", "primask"]
+
+
+@pytest.mark.parametrize("lock, msg", [
+    ("{basepri 20..80}", "the lock range 20..80 is not inside the step"),
+    ("{basepri 20}", "expected '{basepri <from>..<to>}'"),
+])
+def test_lock_range_errors(tmp_path, lock, msg):
+    with pytest.raises(tdl.TdlError, match=msg.replace("{", r"\{").replace("}", r"\}")):
+        compile_text(tmp_path, f'diagram x "x"\naxis "c" 0..100\ndev 60 "s" {lock}\n')
+
+
 def test_flags(tmp_path):
     card = compile_text(tmp_path, """\
 diagram x "x"
@@ -188,3 +210,19 @@ def test_fragments_render_every_card():
     for svg in svgs.values():
         assert svg.startswith("<svg ") and svg.endswith("</svg>")
         assert "<title>" in svg
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node is not on PATH")
+def test_schematic_width(tmp_path):
+    card = compile_text(tmp_path, 'diagram x "x"\nschematic\naxis "t" 0..500\ndev 100 "isr"\n')
+    data = {"lanes": {"dev": {"label": "Device ISR", "kind": "dev", "group": "isr", "prio": 0}},
+            "laneKeys": ["dev"], "cards": [card]}
+
+    def width(*args):
+        run = subprocess.run(["node", str(TOOL / "tdl-svg.cjs"), "--fragments", *args], input=json.dumps(data),
+                             capture_output=True, text=True, check=True)
+        return int(json.loads(run.stdout)["x"].split(' width="')[1].split('"')[0])
+
+    assert width() == 186 + 500 + 14  # 1 pixel per unit
+    assert width("--width", "1000") == 1000
+    assert width("--width", "300") == 700  # never narrower than the content
