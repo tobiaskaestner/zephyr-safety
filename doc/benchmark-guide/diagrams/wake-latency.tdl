@@ -1,0 +1,30 @@
+# apps.rst, wake_latency (M2): wrapped ISR, k_sem (the default).
+# Schematic: the box widths fit the labels, they are not durations.
+include apps.tdc
+diagram wake-latency "wake_latency, wrapped-sem: the ISR wakes a thread, three histograms"
+schematic
+axis "time after the edge (schematic)" -40..740
+
+waker pending -40.. "blocked in k_sem_take()"
+idle sleep -40..0 "WFI"
+@edge
+hw 82 "pin, entry" : Edge, EXTI, NVIC, wake-up from WFI and exception entry.
+dev 63 "wrapper" : _isr_wrapper. With LATBENCH_WAKE_ISR_DIRECT, this step is not there.
+dev 36 "now" : The first action of the ISR: t_isr = stim_now().
+@t_isr
+dev 96 "k_sem_give()" : The kernel makes the woken thread ready.
+dev 43 "exit" : The ISR exit pends PendSV, because a thread with a higher priority than the idle thread is ready.
+pendsv 56 "switch" : The context switch from the idle thread to the woken thread.
+waker 36 "now" : The first action after k_sem_take() returns: t_thr = stim_now().
+@t_thr
+waker 82 "histograms" : irq, isr2thr and irq2thr, and the two phase histograms.
+waker 82 "stim_arm()" {basepri} : Programs the next edge.
+waker 96 "k_sem_take()" : Blocks again.
+@waker_blocks anchor
+waker pending waker_blocks..740 "blocked"
+pendsv 56 "switch" : Back to the idle thread.
+@idle_runs anchor
+idle sleep idle_runs..740 "WFI"
+span edge..t_isr "irq" !
+span t_isr..t_thr "isr2thr" !
+span edge..t_thr "irq2thr" !

@@ -122,6 +122,46 @@ that this occurred (see :doc:`pitfalls`).
 The wire takes the rising edge to the response pin, and its interrupt
 starts. The measurement point reads ``stim_now()`` as its first action.
 
+The diagram below shows one edge of ``irq_latency``. In this app, the ISR
+of the previous edge arms the edge. In ``wake_latency`` and
+``thread_latency``, a thread arms it. After the random delay, the hardware
+makes the edge, and the ISR reads the counter. :ref:`benchguide-diagrams`
+tells you how to read the diagram.
+
+.. timeline-viz:: diagrams/stim-method.tdl
+   :name: benchguide-fig-stim-method
+
+   One edge. Left: ``stim_arm()`` in the ISR of the previous edge. Right:
+   the edge, the hardware path to the ISR, and the time stamp. The
+   bracket is the latency that the app records.
+
+.. _benchguide-diagrams:
+
+How to read the timing diagrams
+-------------------------------
+
+The timing diagrams in this guide show the sequence of one edge. They are
+schematic: the width of a box does not show a duration. For measured
+durations, see the histograms of a run.
+
+- Each lane is one run context. The lanes are in three groups: the core
+  (hardware and the interrupt mask), the ISRs, and the threads.
+- In each group, the lane with the highest priority is at the top. The
+  box next to the name gives the priority: the ``IRQ_CONNECT()`` priority
+  for an ISR (``low`` for PendSV), the thread priority for a thread. Two
+  lanes with the same priority have one joined box with ``=``.
+- A filled box is code that runs. A dotted box is the CPU in WFI. A
+  dashed box without a fill is a thread that waits: blocked, or ready
+  but preempted.
+- A hatched box on the ``BASEPRI`` lane is a section with interrupts
+  locked (``irq_lock()``).
+- The orange vertical line is the edge. A black vertical line is a time
+  stamp. Its name is the name of the variable in the code.
+- A bracket below the lanes is a histogram of the app. Its label is the
+  name of the histogram in the output (see :doc:`output`).
+- In the HTML output, move the pointer onto a box to see what the code
+  does at that step.
+
 .. _benchguide-stim-modes:
 
 Random and fixed stimulus

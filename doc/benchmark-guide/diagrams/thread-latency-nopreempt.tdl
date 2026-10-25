@@ -1,0 +1,32 @@
+# apps.rst, thread_latency (M3): sem, nopreempt mode.
+# Schematic: the box widths fit the labels, they are not durations.
+include apps.tdc
+diagram thread-latency-nopreempt "thread_latency, sem-nopreempt: the taker runs only when the giver blocks"
+schematic
+prio taker 3
+axis "time after the giver wakes (schematic)" -30..750
+
+taker pending -30.. "blocked in k_sem_take()"
+giver -30..0 : The ISR of the edge woke the giver. The giver took t_thr.
+at 0
+giver 36 "now" : t0 = stim_now(), just before the wake call.
+@t0
+giver 96 "k_sem_give()" : The wake call makes the taker ready. The taker has the lower priority, so there is no switch.
+giver 36 "now" : t2 = stim_now(): the wake call has returned.
+@t2
+giver 115 "record previous" : The giver records t2t and t2t_ret of the previous edge, then calls giver_prepare().
+giver 82 "stim_arm()" {basepri} : Programs the next edge.
+giver 96 "k_sem_take()" : Blocks for the next edge.
+@giver_blocks anchor
+giver pending giver_blocks..750 "blocked in k_sem_take(isr_sem)"
+pendsv 56 "switch" : Giver to taker.
+taker 36 "now" : t1 = stim_now(), the first action after k_sem_take() returns.
+@t1
+taker 96 "k_sem_take()" : The taker counts the wake and blocks again.
+@taker_blocks anchor
+taker pending taker_blocks..750 "blocked"
+pendsv 56 "switch" : Taker to the idle thread.
+@idle_runs anchor
+idle sleep idle_runs..750 "WFI"
+span t0..t2 "t2t_ret" !
+span t0..t1 "t2t" !

@@ -78,6 +78,14 @@ interrupt path. The time stamp then arms the next edge. The Kconfig choice
        BASEPRI does not mask this IRQ, so kernel critical sections do not
        delay it.
 
+.. timeline-viz:: diagrams/irq-latency.tdl
+   :name: benchguide-fig-irq-latency
+
+   ``irq_latency`` with the ``stock`` path. The ``wrapped`` path starts its
+   ISR after the exception entry, with ``_isr_wrapper``. The ``direct``
+   and ``zli`` paths start their ISR after the exception entry, without
+   ``_isr_wrapper``. Thus the ISR reads the counter earlier.
+
 The paths ``wrapped``, ``direct`` and ``zli`` connect an ISR of the app.
 For these paths, the port must take the response IRQ away from the GPIO
 driver. The steps are:
@@ -124,6 +132,14 @@ The ISR of the response pin takes a time stamp and wakes a thread
 through a kernel object. The app always connects its own ISR
 (``LATBENCH_RESP_IRQ_OWN`` in its ``CMakeLists.txt``). The woken thread takes a time stamp when its wait call returns.
 Then it arms the next edge.
+
+.. timeline-viz:: diagrams/wake-latency.tdl
+   :name: benchguide-fig-wake-latency
+
+   ``wake_latency`` with the variant ``wrapped-sem``. The ISR wakes the
+   thread. The ISR exit pends PendSV, and PendSV switches from the idle
+   thread to the woken thread. The three brackets are the histograms
+   ``irq``, ``isr2thr`` and ``irq2thr``.
 
 The Kconfig choice ``LATBENCH_WAKE_ISR`` selects how the ISR is connected:
 
@@ -196,6 +212,14 @@ call returns. The giver takes the time stamp ``t2`` when its wake call
 returns. The edge comes at a random time, so the wake call meets the
 timer ISR and the kernel state at random points.
 
+.. timeline-viz:: diagrams/thread-latency-preempt.tdl
+   :name: benchguide-fig-thread-latency-preempt
+
+   ``thread_latency`` with the variant ``sem-preempt``. The taker has a
+   higher priority than the giver, so the wake call switches to the
+   taker. ``t2t`` stops in the taker. ``t2t_ret`` stops when the wake call
+   returns, after the taker blocked again.
+
 The Kconfig choice ``LATBENCH_T2T_PRIMITIVE`` selects the primitive:
 
 .. list-table::
@@ -249,6 +273,15 @@ The Kconfig choice ``LATBENCH_T2T_PRIMITIVE`` selects the primitive:
 - ``n`` (``nopreempt``): the taker has priority 3. It runs when the giver
   blocks again. The giver records the sample one edge later, so the run
   has one sample less.
+
+.. timeline-viz:: diagrams/thread-latency-nopreempt.tdl
+   :name: benchguide-fig-thread-latency-nopreempt
+
+   ``thread_latency`` with the variant ``sem-nopreempt``, from the time
+   when the giver wakes. The wake call does not switch. The taker runs
+   when the giver blocks for the next edge. ``t2t`` thus includes the rest
+   of the giver loop. The giver records ``t2t`` and ``t2t_ret`` after the
+   next edge.
 
 The variant name is ``<primitive>-<mode>``, for example ``sem-preempt``.
 

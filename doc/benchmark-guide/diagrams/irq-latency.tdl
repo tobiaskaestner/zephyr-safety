@@ -1,0 +1,21 @@
+# apps.rst, irq_latency (M1): the stock path (the default).
+# Schematic: the box widths fit the labels, they are not durations.
+include apps.tdc
+diagram irq-latency "irq_latency, stock path: edge to the time stamp in the GPIO callback"
+schematic
+axis "time after the edge (schematic)" -40..740
+
+idle sleep -40..0 "WFI"
+@edge
+hw 76 "pin, NVIC" : The edge comes on the response pin. EXTI detects it, and the interrupt becomes pending.
+hw 115 "exception entry" : Wake-up from WFI, register stacking, vector fetch. The direct and zli paths start their ISR after this step.
+dev 96 "_isr_wrapper" : The wrapped path starts its ISR after this step.
+dev 89 "GPIO driver" : The GPIO driver of Zephyr finds the pin and calls the user callback.
+dev 36 "now" : The first action of the callback reads the stimulus timer: now = stim_now().
+@stamp "now"
+dev 76 "histogram" : lat_hist_add() and lat_phase_add(), after the warm-up.
+dev 82 "stim_arm()" {basepri} : Programs the next edge.
+dev 43 "exit"
+@isr_done anchor
+idle sleep isr_done..740 "WFI"
+span edge..stamp "irq = now - stim_edge()" !

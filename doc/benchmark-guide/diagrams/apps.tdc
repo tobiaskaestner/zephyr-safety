@@ -1,0 +1,14 @@
+# Run contexts of the benchmark apps, for the diagrams of this guide.
+# ISR priorities are IRQ_CONNECT() numbers (0 is the highest kernel
+# priority). Thread priorities are those of the default configuration.
+
+core   hw     "Hardware"
+core   mask   "BASEPRI"
+
+isr    dev    0    "Response ISR"
+isr    pendsv low  "PendSV"        as switch
+
+thread waker  0    "Woken thread"
+thread taker  1    "Taker thread"
+thread giver  2    "Giver thread"
+thread idle   15   "Idle thread"

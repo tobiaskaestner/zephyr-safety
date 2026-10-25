@@ -1,0 +1,28 @@
+# hardware.rst: how an edge is made and measured (irq_latency, wrapped ISR).
+# Schematic: the box widths fit the labels, they are not durations.
+include apps.tdc
+diagram stim-method "One edge: stim_arm() programs the compare value, the hardware makes the edge, the ISR reads the counter"
+schematic
+
+piece "stim_arm(now) in the ISR of the previous edge" 0..384 0.519
+break "random delay"
+dev 36 "now" : The ISR read the counter (now = stim_now()) as its first action. stim_arm() adds a random delay to it: the time of the next edge.
+dev 56 "counts" {basepri} : With interrupts locked: a fresh count of the stimulus timer and of the system timer.
+dev 49 "late?" {basepri} : If the edge is less than 1000 counts after the fresh count, it moves to 1000 counts after it (stim_late).
+dev 49 "phase" {basepri} : The tick phase of the edge (see "Tick phase").
+dev 115 "port_stim_set()" {basepri} : Pin low (forced inactive), the edge time into the compare register, clear the compare flag, then "active on match".
+dev 43 "exit"
+@isr_done anchor
+idle sleep isr_done..384 "WFI"
+
+piece "after the edge" -30..326
+idle sleep -30..0 "WFI" : The idle thread sleeps in WFI. The stimulus timer counts on.
+@edge "edge: CNT = compare value"
+hw 36 "pin" : The timer drives the stimulus pin high. The wire takes the edge to the response pin.
+hw 82 "EXTI, NVIC" : Edge detection. The interrupt becomes pending.
+hw 49 "entry" : Wake-up from WFI, register stacking, vector fetch.
+dev 63 "wrapper" : _isr_wrapper (the wrapped path only).
+dev 36 "now" : The first action of the ISR reads the counter: now = stim_now().
+@stamp "stim_now()"
+dev 90 "on_edge()" : The histogram, then stim_arm(now) for the next edge.
+span edge..stamp "stim_now() - stim_edge()" !
