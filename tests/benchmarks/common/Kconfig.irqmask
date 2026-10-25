@@ -1,0 +1,49 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Options of the M4 measurement (common/src/irqmask.c). The measurement is
+# on only if the Zephyr tree has CONFIG_ARM_IRQ_MASK_HOOKS (tree
+# ws-up-irqoff) and the build sets it. In other builds these options have
+# no effect.
+
+menu "M4: interrupt mask time per call site (common/src/irqmask.c)"
+
+config LATBENCH_IRQMASK_SITES_LOG2
+	int "log2 of the number of entries in the site table"
+	range 4 8
+	default 6
+	help
+	  The table has 2^LATBENCH_IRQMASK_SITES_LOG2 entries. Each entry is
+	  one call site, one exception number (0 for a thread) and one kind
+	  (mask section or ISR body). If the table is full, a value of a new
+	  site counts only in "dropped".
+
+config LATBENCH_IRQMASK_SUB_BITS
+	int "log2 of the number of histogram bins in each octave"
+	range 2 5
+	default 3
+	help
+	  Values below 2^(LATBENCH_IRQMASK_SUB_BITS + 1) have a bin of 1 cycle
+	  each. Each octave above has 2^LATBENCH_IRQMASK_SUB_BITS bins, up to
+	  65535 cycles. With 3: 112 bins, 12.5 % of the value or less per
+	  bin, 488 bytes per site.
+
+config LATBENCH_IRQMASK_PROBE_CYC
+	int "Length of the probe mask section in cycles (0: no probe)"
+	default 0
+	help
+	  A value above 0 starts a probe thread. It masks the interrupts for
+	  this number of DWT cycles every LATBENCH_IRQMASK_PROBE_MS. Its site
+	  must show this length plus the floor of the calibration. The IRQ
+	  tail of the same run must also show it. Use it only to check the
+	  method.
+
+config LATBENCH_IRQMASK_PROBE_MS
+	int "Period of the probe (ms)"
+	default 10
+
+config LATBENCH_IRQMASK_PROBE_PRIO
+	int "Priority of the probe thread"
+	default 5
+
+endmenu

@@ -67,5 +67,6 @@ config LATBENCH_POLL_MS
 	default 100
 
 rsource "../common/Kconfig"
+rsource "../common/Kconfig.irqmask"
 
 source "Kconfig.zephyr"

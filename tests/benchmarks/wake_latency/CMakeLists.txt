@@ -11,4 +11,5 @@ project(wake_latency)
 
 set(LATBENCH_STIM ON)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../common/latbench.cmake)
+include(${CMAKE_CURRENT_SOURCE_DIR}/../common/irqmask.cmake)
 target_sources(app PRIVATE src/main.c)

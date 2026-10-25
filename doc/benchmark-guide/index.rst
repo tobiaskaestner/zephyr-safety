@@ -24,6 +24,7 @@ path starts with ``tests/``.
    output
    host-tools
    unit-tests
+   m4
    extending
    boards
    pitfalls

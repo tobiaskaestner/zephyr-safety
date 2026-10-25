@@ -1,0 +1,306 @@
+*** Booting Zephyr OS build v4.5.0-rc3-8-g3b42ac0d24bd ***
+RunID started: 50ed4356d8d6b724565272d91c741d20
+Running TESTSUITE irqmask_bins
+===================================================================
+START - test_contiguous
+ PASS - test_contiguous in 0.000 seconds
+===================================================================
+START - test_every_value
+ PASS - test_every_value in 0.000 seconds
+===================================================================
+START - test_layout_literals
+ PASS - test_layout_literals in 0.000 seconds
+===================================================================
+START - test_over
+ PASS - test_over in 0.000 seconds
+===================================================================
+START - test_resolution
+ PASS - test_resolution in 0.000 seconds
+===================================================================
+TESTSUITE irqmask_bins succeeded
+Running TESTSUITE irqmask_print
+===================================================================
+START - test_empty
+ PASS - test_empty in 0.000 seconds
+===================================================================
+START - test_isr_name
+ PASS - test_isr_name in 0.000 seconds
+===================================================================
+START - test_one_site
+ PASS - test_one_site in 0.000 seconds
+===================================================================
+TESTSUITE irqmask_print succeeded
+Running TESTSUITE irqmask_table
+===================================================================
+START - test_full
+ PASS - test_full in 0.000 seconds
+===================================================================
+START - test_key_parts
+ PASS - test_key_parts in 0.000 seconds
+===================================================================
+START - test_new_site
+ PASS - test_new_site in 0.000 seconds
+===================================================================
+START - test_reset
+ PASS - test_reset in 0.000 seconds
+===================================================================
+START - test_stats
+ PASS - test_stats in 0.000 seconds
+===================================================================
+TESTSUITE irqmask_table succeeded
+Running TESTSUITE irqmask_zfixture
+===================================================================
+START - test_emit_fixture
+LAT BEGIN
+LAT META test=irqmask_unit
+LAT META seed=2654435769
+LAT META samples=20000
+LAT META m4=1
+LAT META m4_floor_cyc=12
+LAT META m4_pair_cost_cyc=60
+LAT META m4_isr_floor_cyc=12
+LAT META m4_window_cyc=170000000
+LAT M4 BEGIN sites=64 used=4 dropped=0 bins=112 sub_bits=3
+LAT M4SITE m4.mask.t.08001001 kind=mask ipsr=0 pc=0x08001001 end_pc=0x08001041 n=5023 sum=562534 min=12 max=211
+LAT HIST m4.mask.t.08001001 n=5023 min=12 max=211 mean=111.99 overflow=0 invalid=0
+LAT BIN 12 22
+LAT BIN 13 27
+LAT BIN 14 25
+LAT BIN 15 24
+LAT CBIN 16 47 2
+LAT CBIN 18 54 2
+LAT CBIN 20 52 2
+LAT CBIN 22 55 2
+LAT CBIN 24 48 2
+LAT CBIN 26 47 2
+LAT CBIN 28 40 2
+LAT CBIN 30 58 2
+LAT CBIN 32 94 4
+LAT CBIN 36 113 4
+LAT CBIN 40 112 4
+LAT CBIN 44 94 4
+LAT CBIN 48 83 4
+LAT CBIN 52 101 4
+LAT CBIN 56 111 4
+LAT CBIN 60 98 4
+LAT CBIN 64 190 8
+LAT CBIN 72 207 8
+LAT CBIN 80 196 8
+LAT CBIN 88 227 8
+LAT CBIN 96 178 8
+LAT CBIN 104 205 8
+LAT CBIN 112 199 8
+LAT CBIN 120 177 8
+LAT CBIN 128 406 16
+LAT CBIN 144 400 16
+LAT CBIN 160 389 16
+LAT CBIN 176 430 16
+LAT CBIN 192 410 16
+LAT CBIN 208 104 16
+LAT END m4.mask.t.08001001
+LAT M4SITE m4.isr.e15.08003301 kind=isr ipsr=15 pc=0x08003301 end_pc=0x08003341 n=5022 sum=198268386 min=18 max=79990
+LAT HIST m4.isr.e15.08003301 n=5022 min=18 max=79990 mean=39479.96 overflow=910 invalid=0
+LAT CBIN 18 1 2
+LAT CBIN 26 1 2
+LAT CBIN 32 1 4
+LAT CBIN 64 2 8
+LAT CBIN 112 1 8
+LAT CBIN 128 1 16
+LAT CBIN 176 2 16
+LAT CBIN 192 2 16
+LAT CBIN 208 2 16
+LAT CBIN 240 1 16
+LAT CBIN 256 7 32
+LAT CBIN 288 5 32
+LAT CBIN 320 3 32
+LAT CBIN 352 1 32
+LAT CBIN 384 2 32
+LAT CBIN 448 1 32
+LAT CBIN 480 1 32
+LAT CBIN 576 3 64
+LAT CBIN 640 7 64
+LAT CBIN 704 4 64
+LAT CBIN 768 4 64
+LAT CBIN 832 5 64
+LAT CBIN 896 6 64
+LAT CBIN 960 4 64
+LAT CBIN 1024 3 128
+LAT CBIN 1152 8 128
+LAT CBIN 1280 5 128
+LAT CBIN 1408 9 128
+LAT CBIN 1536 10 128
+LAT CBIN 1664 4 128
+LAT CBIN 1792 7 128
+LAT CBIN 1920 9 128
+LAT CBIN 2048 13 256
+LAT CBIN 2304 25 256
+LAT CBIN 2560 17 256
+LAT CBIN 2816 19 256
+LAT CBIN 3072 20 256
+LAT CBIN 3328 18 256
+LAT CBIN 3584 15 256
+LAT CBIN 3840 20 256
+LAT CBIN 4096 34 512
+LAT CBIN 4608 31 512
+LAT CBIN 5120 29 512
+LAT CBIN 5632 36 512
+LAT CBIN 6144 32 512
+LAT CBIN 6656 31 512
+LAT CBIN 7168 47 512
+LAT CBIN 7680 32 512
+LAT CBIN 8192 61 1024
+LAT CBIN 9216 68 1024
+LAT CBIN 10240 63 1024
+LAT CBIN 11264 68 1024
+LAT CBIN 12288 74 1024
+LAT CBIN 13312 63 1024
+LAT CBIN 14336 69 1024
+LAT CBIN 15360 68 1024
+LAT CBIN 16384 136 2048
+LAT CBIN 18432 143 2048
+LAT CBIN 20480 137 2048
+LAT CBIN 22528 131 2048
+LAT CBIN 24576 109 2048
+LAT CBIN 26624 155 2048
+LAT CBIN 28672 120 2048
+LAT CBIN 30720 131 2048
+LAT CBIN 32768 241 4096
+LAT CBIN 36864 225 4096
+LAT CBIN 40960 271 4096
+LAT CBIN 45056 253 4096
+LAT CBIN 49152 235 4096
+LAT CBIN 53248 254 4096
+LAT CBIN 57344 240 4096
+LAT CBIN 61440 256 4096
+LAT OVF 16 910
+LAT END m4.isr.e15.08003301
+LAT M4SITE m4.mask.e15.08001101 kind=mask ipsr=15 pc=0x08001101 end_pc=0x08001141 n=4919 sum=19483925 min=13 max=8008
+LAT HIST m4.mask.e15.08001101 n=4919 min=13 max=8008 mean=3960.95 overflow=0 invalid=0
+LAT BIN 13 2
+LAT CBIN 16 1 2
+LAT CBIN 18 3 2
+LAT CBIN 20 1 2
+LAT CBIN 22 1 2
+LAT CBIN 24 1 2
+LAT CBIN 26 1 2
+LAT CBIN 28 2 2
+LAT CBIN 30 5 2
+LAT CBIN 32 1 4
+LAT CBIN 36 1 4
+LAT CBIN 40 4 4
+LAT CBIN 44 3 4
+LAT CBIN 48 5 4
+LAT CBIN 52 4 4
+LAT CBIN 60 3 4
+LAT CBIN 64 3 8
+LAT CBIN 72 1 8
+LAT CBIN 80 8 8
+LAT CBIN 88 7 8
+LAT CBIN 96 8 8
+LAT CBIN 104 3 8
+LAT CBIN 112 11 8
+LAT CBIN 120 6 8
+LAT CBIN 128 8 16
+LAT CBIN 144 11 16
+LAT CBIN 160 9 16
+LAT CBIN 176 13 16
+LAT CBIN 192 11 16
+LAT CBIN 208 9 16
+LAT CBIN 224 7 16
+LAT CBIN 240 14 16
+LAT CBIN 256 17 32
+LAT CBIN 288 14 32
+LAT CBIN 320 18 32
+LAT CBIN 352 21 32
+LAT CBIN 384 25 32
+LAT CBIN 416 16 32
+LAT CBIN 448 19 32
+LAT CBIN 480 12 32
+LAT CBIN 512 39 64
+LAT CBIN 576 52 64
+LAT CBIN 640 32 64
+LAT CBIN 704 39 64
+LAT CBIN 768 44 64
+LAT CBIN 832 39 64
+LAT CBIN 896 39 64
+LAT CBIN 960 39 64
+LAT CBIN 1024 80 128
+LAT CBIN 1152 86 128
+LAT CBIN 1280 65 128
+LAT CBIN 1408 81 128
+LAT CBIN 1536 86 128
+LAT CBIN 1664 71 128
+LAT CBIN 1792 83 128
+LAT CBIN 1920 87 128
+LAT CBIN 2048 159 256
+LAT CBIN 2304 143 256
+LAT CBIN 2560 182 256
+LAT CBIN 2816 157 256
+LAT CBIN 3072 142 256
+LAT CBIN 3328 152 256
+LAT CBIN 3584 178 256
+LAT CBIN 3840 174 256
+LAT CBIN 4096 309 512
+LAT CBIN 4608 327 512
+LAT CBIN 5120 320 512
+LAT CBIN 5632 334 512
+LAT CBIN 6144 314 512
+LAT CBIN 6656 274 512
+LAT CBIN 7168 316 512
+LAT CBIN 7680 167 512
+LAT END m4.mask.e15.08001101
+LAT M4SITE m4.mask.e14.08002201 kind=mask ipsr=14 pc=0x08002201 end_pc=0x08002241 n=5036 sum=158692 min=12 max=51
+LAT HIST m4.mask.e14.08002201 n=5036 min=12 max=51 mean=31.51 overflow=0 invalid=0
+LAT BIN 12 130
+LAT BIN 13 139
+LAT BIN 14 116
+LAT BIN 15 126
+LAT CBIN 16 251 2
+LAT CBIN 18 260 2
+LAT CBIN 20 259 2
+LAT CBIN 22 243 2
+LAT CBIN 24 239 2
+LAT CBIN 26 258 2
+LAT CBIN 28 256 2
+LAT CBIN 30 252 2
+LAT CBIN 32 478 4
+LAT CBIN 36 487 4
+LAT CBIN 40 524 4
+LAT CBIN 44 497 4
+LAT CBIN 48 521 4
+LAT END m4.mask.e14.08002201
+LAT M4 END
+LAT DONE
+ PASS - test_emit_fixture in 0.000 seconds
+===================================================================
+TESTSUITE irqmask_zfixture succeeded
+
+------ TESTSUITE SUMMARY START ------
+
+SUITE PASS - 100.00% [irqmask_bins]: pass = 5, fail = 0, skip = 0, total = 5 duration = 0.000 seconds
+ - PASS - [irqmask_bins.test_contiguous] duration = 0.000 seconds
+ - PASS - [irqmask_bins.test_every_value] duration = 0.000 seconds
+ - PASS - [irqmask_bins.test_layout_literals] duration = 0.000 seconds
+ - PASS - [irqmask_bins.test_over] duration = 0.000 seconds
+ - PASS - [irqmask_bins.test_resolution] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [irqmask_print]: pass = 3, fail = 0, skip = 0, total = 3 duration = 0.000 seconds
+ - PASS - [irqmask_print.test_empty] duration = 0.000 seconds
+ - PASS - [irqmask_print.test_isr_name] duration = 0.000 seconds
+ - PASS - [irqmask_print.test_one_site] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [irqmask_table]: pass = 5, fail = 0, skip = 0, total = 5 duration = 0.000 seconds
+ - PASS - [irqmask_table.test_full] duration = 0.000 seconds
+ - PASS - [irqmask_table.test_key_parts] duration = 0.000 seconds
+ - PASS - [irqmask_table.test_new_site] duration = 0.000 seconds
+ - PASS - [irqmask_table.test_reset] duration = 0.000 seconds
+ - PASS - [irqmask_table.test_stats] duration = 0.000 seconds
+
+SUITE PASS - 100.00% [irqmask_zfixture]: pass = 1, fail = 0, skip = 0, total = 1 duration = 0.000 seconds
+ - PASS - [irqmask_zfixture.test_emit_fixture] duration = 0.000 seconds
+
+------ TESTSUITE SUMMARY END ------
+
+===================================================================
+RunID: 50ed4356d8d6b724565272d91c741d20
+PROJECT EXECUTION SUCCESSFUL

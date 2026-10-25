@@ -1,0 +1,50 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# M4 in the thread to thread app (claude/latency-benchmarks/m4-design.md
+# §5.3), tree ws-up-irqoff only. App thread_latency: the ISR wakes the
+# giver, the giver wakes the taker (priority 1, preempts the giver)
+# through sem or mutex. Stimulus 50..150 us as in thread2thread-1m. Time
+# slicing on, DLIST backend.
+#
+# The latency histograms of these runs are not data (LAT META m4=1).
+#
+# Expectations (written before any run; cycles at 170 MHz):
+#
+# 1. Thread context has more sites than in wake_latency: the wake call of
+#    the giver, the switch (arch_swap ends the section of the lock in the
+#    wake call), the slice abort and add.
+# 2. sem: no thread site has a max above 1000 at t0. mutex: the lock and
+#    unlock sites (priority inheritance under the lock) have a max below
+#    1500 at t0.
+# 3. t64: the longest mask section is z_add_timeout, as in m4-sweep t64
+#    (1800..2600). The SysTick ISR body max is as in m4-validate t64-same.
+#
+# Board time: 4 points x (30 s + 200000 x 100 us = 20 s + 10 s) = about
+# 4 min.
+
+name: m4-thread
+app: thread_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+  timers:
+    t0: {}
+    t64:
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}

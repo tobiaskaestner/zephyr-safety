@@ -1,0 +1,18 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+common:
+  tags: latbench
+  platform_allow:
+    - native_sim/native/64
+    - mps2/an385
+  integration_platforms:
+    - native_sim/native/64
+tests:
+  # The sizes of the M4 experiments: 64 sites, 8 bins per octave.
+  latbench.unit.irqmask.default: {}
+  # A small table and 4 bins per octave, so that the tests fill the table.
+  latbench.unit.irqmask.small:
+    extra_configs:
+      - CONFIG_LATBENCH_IRQMASK_SITES_LOG2=4
+      - CONFIG_LATBENCH_IRQMASK_SUB_BITS=2

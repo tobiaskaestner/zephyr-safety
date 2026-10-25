@@ -1,0 +1,81 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# M4 sweep (claude/latency-benchmarks/m4-design.md §5.2): interrupt mask
+# time and ISR body time per call site over the load axes, tree
+# ws-up-irqoff only. App wake_latency (sem, wrapped ISR, idle
+# background), DLIST backend, SysTick at the driver priority.
+#
+#   timers   tN: N periodic k_timers (10..100 ms, random start)
+#   sleepers sN: N sleeper threads (1..20 ms sleeps, priority 5)
+#   slice    slice: TIMESLICING=y (default, 20 ms); noslice: TIMESLICING=n
+#
+# The latency histograms of these runs are not data (LAT META m4=1).
+#
+# Expectations (written before any run; cycles at 170 MHz; "walk" is the
+# DLIST insert walk at about 25 cycles per timeout that expires before
+# the new one, with the timeout lock held):
+#
+# 1. The longest mask section is z_add_timeout (one site: the lock is
+#    inlined there, so all callers share it; the context splits them:
+#    SysTick = timer restarts and sleeper wakes, irq6 = slice reset in the
+#    give of the EXTI0 ISR, thread = slice reset at a switch and k_sleep).
+#    Its max grows about linearly with the number of timeouts in the
+#    queue: about 300 + 25 x (timers + sleepers): t0-s0 below 1000, t16
+#    about 700, t64 1800..2600, t256 6300..7500, s64 about 1900.
+# 2. Without slicing, the irq6 and thread entries of z_add_timeout for
+#    the slice reset are absent; the SysTick entries and the max of point
+#    1 stay (the restart walk does not depend on slicing).
+# 3. With slicing, the irq6 entry of z_add_timeout has a max of about
+#    300 + 25 x (timeouts that expire in the next 20 ms): t256 about
+#    3000..3800, about half of the max of point 1.
+# 4. The SysTick ISR body max grows faster than the longest mask
+#    section (callbacks and restarts of several expiries in one tick):
+#    t256 33000..42000 (ws-up IRQ max 33005..36140 in wake-timers-1m).
+#    It is the largest blocking time for EXTI0 at the same priority.
+# 5. Sites with a fixed cost do not change over the axes (within 10 %):
+#    PendSV middle part, arch_cpu_idle wake window, k_sem_give,
+#    k_sem_take.
+# 6. The masked share of the window (m4_masked_cyc / m4_window_cyc) is
+#    below 2 % at t0-s0 and grows with the load.
+# 7. m4_unmatched_end = 0 and m4_begin_open = 0 in all logs (apart from
+#    start-up), dropped = 0 (fewer than 64 sites).
+#
+# Board time: 24 points x (30 s + 200000 x 300 us = 60 s + 10 s) = about
+# 40 min.
+
+name: m4-sweep
+app: wake_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+axes:
+  timers:
+    t0: {}
+    t16:
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+    t64:
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  sleepers:
+    s0: {}
+    s8:
+      kconfig: {LATBENCH_LOAD_THREADS: 8, LATBENCH_LOAD_THREAD_SLEEPER: y}
+    s64:
+      kconfig: {LATBENCH_LOAD_THREADS: 64, LATBENCH_LOAD_THREAD_SLEEPER: y}
+  slice:
+    slice: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

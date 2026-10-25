@@ -454,16 +454,21 @@ def main():
     if args.build_only:
         import tempfile
 
-        with tempfile.TemporaryDirectory(prefix="latbench-build-") as tmp:
-            src_bench = export_snapshot(repo_root, repo_rev, Path(tmp) / "src")
-            for tree in exp["trees"]:
-                for pt in points:
-                    bdir = Path(tmp) / tree / pt["id"]
-                    bdir.mkdir(parents=True)
-                    print(f"[{tree}/{pt['id']}] build", flush=True)
-                    build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
-                                bdir / "build", bdir / "build.log")
+        # With --keep-build the folder stays, for example to compare the images of two trees.
+        tmp = tempfile.mkdtemp(prefix="latbench-build-")
+        src_bench = export_snapshot(repo_root, repo_rev, Path(tmp) / "src")
+        for tree in exp["trees"]:
+            for pt in points:
+                bdir = Path(tmp) / tree / pt["id"]
+                bdir.mkdir(parents=True)
+                print(f"[{tree}/{pt['id']}] build", flush=True)
+                build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
+                            bdir / "build", bdir / "build.log")
         print("all points build")
+        if args.keep_build:
+            print(f"builds in {tmp}")
+        else:
+            shutil.rmtree(tmp)
         return
 
     # 2. Output folder and manifest.
