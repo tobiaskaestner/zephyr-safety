@@ -60,9 +60,41 @@ threads gave an IRQ p50 of 82 or 86 cycles, and a clock drift of 8.0 or
 9.7 cycles per wake. The difference between the two trees in the ISR to
 thread p50 was from 0 to 190 cycles, by build.
 
-Thus do not compare single builds when the difference is small. Use
-``LATBENCH_CODE_PAD_BYTES`` to move the code by a known amount, and
-compare the range over some pad values.
+The experiment ``code-layout`` moved all code with a code pad of 0 to 28
+bytes. The IRQ p50, the drift and the ISR to thread p50 with time slicing
+change with a period of 8 bytes, the width of a flash read. The ISR to
+thread p50 without time slicing changes by up to 35 cycles. A pad moves
+all code by the same amount, but two builds also have a different order
+of functions. Thus a pad explains only a part of the difference between
+two builds.
+
+Thus do not compare single builds in flash when the difference is small.
+Use the choice ``LATBENCH_CODE_PLACE`` (see
+:ref:`benchguide-code-placement`) as follows:
+
+- To compare two builds (two trees, two Kconfig values), use
+  ``LATBENCH_CODE_RAM``. The hot code then runs from RAM with no wait
+  states, and its address has no effect on the latency.
+- To give an absolute number for an application in flash, use
+  ``LATBENCH_CODE_FLASH_PAD`` with a set of pads, and give the range over
+  the pads. The pad set is an axis of the experiment, not a Kconfig value.
+- ``LATBENCH_CODE_FLASH`` gives the number of one build. Use it only
+  together with a range from a pad set, or for a smoke test.
+
+The pad set must cover each position of the code in the line of the
+cache or of the flash read, in steps of 4 bytes:
+
+- ``nucleo_g474re``: 0, 4, 8, ..., 28 (8 pads). This covers both phases
+  of the 8-byte period and the 16-byte part. The pads 0 and 4 are the
+  smallest set that covers both phases of the 8-byte period.
+- A board with a larger line, for example a Cortex-M7 with 32-byte cache
+  lines: 0, 4, ..., L - 4 for a line of L bytes (8 pads for 32 bytes).
+
+With ``LATBENCH_CODE_RAM`` the result is not the latency of an
+application in flash. On ``nucleo_g474re`` it is faster, because the
+code has no flash wait states. Give the
+cost of the code placement with the result: the flash range and the RAM
+number of the same build.
 
 Late edges
 ----------

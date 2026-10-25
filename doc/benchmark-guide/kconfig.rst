@@ -23,10 +23,31 @@ Common options
    * - ``LATBENCH_WARMUP``
      - 16
      - Number of samples that the app discards at the start
+   * - ``LATBENCH_CODE_FLASH``
+     - y
+     - Choice ``LATBENCH_CODE_PLACE``: all code in flash, one build (see
+       :ref:`benchguide-code-placement`)
+   * - ``LATBENCH_CODE_FLASH_PAD``
+     - n
+     - Choice ``LATBENCH_CODE_PLACE``: all code in flash, moved by the code
+       pad
+   * - ``LATBENCH_CODE_RAM``
+     - n
+     - Choice ``LATBENCH_CODE_PLACE``: the hot code in RAM. Set it on the
+       command line (an experiment does this), because the board port adds
+       its overlay before Kconfig runs.
    * - ``LATBENCH_CODE_PAD_BYTES``
      - 0
-     - Bytes of code padding before the app and kernel code (a multiple
-       of 4, see :doc:`common`)
+     - Bytes of the code pad (a multiple of 4, range 0 to 1024). Only with
+       ``LATBENCH_CODE_FLASH_PAD`` or ``LATBENCH_CODE_RAM``.
+   * - ``LATBENCH_CODE_RAM_REGION``
+     - from the port
+     - The memory region of the hot code (the ``LOCATION`` of
+       ``zephyr_code_relocate()``). ``nucleo_g474re``: ``CCM``. Other
+       ports: empty, and the build stops.
+   * - ``LATBENCH_CODE_RAM_KERNEL``, ``_ARCH``, ``_DRIVERS``, ``_APP``
+     - y
+     - The groups of files that ``LATBENCH_CODE_RAM`` relocates
    * - ``LATBENCH_HIST_BINS``
      - 4096
      - Number of 1-cycle bins (range 1 to 65536)

@@ -1,11 +1,14 @@
 # Unit tests for the histogram code
 
-These tests find errors in the histogram code of the benchmarks. They do
-not use the board.
+These tests find errors in the histogram code and in the code placement
+of the benchmarks, and in the experiment files. They do not use the
+board.
 
 | Path | Content |
 |---|---|
 | `hist/` | Zephyr ztest app for `common/include/latbench/hist.h` and `common/src/hist.c` |
+| `code_place/` | Zephyr ztest app for the code placement (`LATBENCH_CODE_PLACE`), on `mps2/an385` |
+| `../scripts/tests/test_experiments.py` | pytest module that checks `experiments/*.yaml` |
 | `../scripts/tests/test_latbench.py` | pytest module for `scripts/latbench.py` and `scripts/plot.py` |
 | `../scripts/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
 
@@ -61,6 +64,15 @@ These gaps are open:
 The result is 25 passed and 2 skipped test cases for each scenario. The 2
 skipped test cases are the known gaps.
 
+3. Run twister for the code placement app (3 scenarios, 3 test cases
+   each, all pass):
+
+   ```sh
+   $ZEPHYR_BASE/scripts/twister -T tests/benchmarks/unit/code_place \
+     -p mps2/an385 -x ZEPHYR_MODULES=$ZEPHYR_BASE/../modules/hal/cmsis_6 \
+     -O /wrk/z/ws-safety/build-hist-tests/twister-out-code-place
+   ```
+
 ## Run the pytest module
 
 Run pytest from the `scripts` folder:
@@ -70,7 +82,7 @@ cd tests/benchmarks/scripts
 python3 -m pytest tests
 ```
 
-The result is 88 passed test cases and no failures. The packages in
+The result is 125 passed test cases and no failures. The packages in
 `scripts/requirements.txt` and `pytest` are necessary.
 
 ## Make the fixtures again

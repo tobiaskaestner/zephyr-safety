@@ -51,6 +51,11 @@ target without qualifiers and revision (see
        ``latbench_board.cmake`` includes it before ``find_package(Zephyr)``.
    * - ``port.conf``
      - Optional. A Kconfig fragment of the port.
+   * - ``Kconfig.port``
+     - Optional. Defaults of the port for the options of ``common/Kconfig``.
+       ``common/Kconfig`` sources it first, so its defaults have priority.
+       Today it gives only ``LATBENCH_CODE_RAM_REGION``. A port without it
+       does not support ``LATBENCH_CODE_RAM``.
    * - ``stim.overlay``
      - The ``zephyr,user`` node with ``resp-gpios`` (the response pin), and
        the stimulus pin (a pin function, or ``stim-gpios``). It also
@@ -202,6 +207,18 @@ Board ``nucleo_g474re``
        because SysTick has the 64-bit counter by default only above 60 MHz.
    * - ``debug_reg_at_boot``
      - ``DBGMCU->CR``. ``port_debug_reset()`` clears it.
+   * - Hot code in RAM
+     - ``Kconfig.port`` sets ``LATBENCH_CODE_RAM_REGION`` to ``CCM``. If
+       ``CONFIG_LATBENCH_CODE_RAM=y`` is on the command line,
+       ``port.cmake`` adds ``code_ram_ccm.overlay``. The overlay adds the
+       memory region ``CCM`` (32 KB at ``0x10000000``) and makes
+       ``zephyr,sram`` 96 KB. The CCM SRAM is also at ``0x20018000``, in
+       the last 32 KB of ``zephyr,sram`` (a test with OpenOCD: a word
+       written at ``0x10000000`` reads back at ``0x20018000``). Thus no
+       data can go to the alias of the code. The core fetches code from
+       the CCM SRAM over the I-code bus, not over the system bus as from
+       SRAM1. No MPU region covers ``0x10000000``, so the code can execute
+       when the MPU is on. See :ref:`benchguide-code-placement`.
    * - Other files
      - ``clocks/`` (85 MHz and 16 MHz, see :doc:`hardware`), ``systick/``
        (see :ref:`benchguide-systick-wrap`).
@@ -412,6 +429,12 @@ Add a board
    ``port_stim_hz()`` and ``port_core_hz()`` return the correct clocks.
 #. If the system timer has no 64-bit counter, make sure that the tick
    period is a power of two cycles.
+#. Optional: to support ``LATBENCH_CODE_RAM``, write ``Kconfig.port`` with
+   the default of ``LATBENCH_CODE_RAM_REGION``. Use a region with no wait
+   states that the MPU lets the core execute (for example an ITCM). If
+   the region needs a devicetree node, add it with an overlay in
+   ``port.cmake``, as ``nucleo_g474re`` does. Run the unit tests of the
+   code placement and a smoke run with ``LATBENCH_CODE_RAM``.
 #. Add the board target to ``boards.yaml``: ``port``, ``modules``,
    ``flash``, ``console`` and ``status: untested``. Write the wire and the
    untested parts in a comment.

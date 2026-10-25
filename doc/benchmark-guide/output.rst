@@ -145,9 +145,19 @@ Metadata keys
    * - ``samples``
      - all
      - ``LATBENCH_SAMPLES``
+   * - ``code_place``
+     - all
+     - ``flash``, ``flash-pad`` or ``ram`` (choice ``LATBENCH_CODE_PLACE``).
+       A log without this line comes from a build before the choice: its
+       code is in flash.
    * - ``code_pad``, ``code_pad_at``
      - all
      - ``LATBENCH_CODE_PAD_BYTES`` and the address of the pad function
+   * - ``code_ram_region``, ``code_ram_text``
+     - all, with ``LATBENCH_CODE_RAM``
+     - ``LATBENCH_CODE_RAM_REGION``, and the start and the end of the
+       relocated code (``0x10000000..0x10002dd8``). ``code_pad_at`` is the
+       start, plus 1 (the Thumb bit).
    * - ``timeslice_ms``
      - all
      - ``CONFIG_TIMESLICE_SIZE``, if it exists
