@@ -201,6 +201,20 @@ Time points, cursors and spans:
 span stamp1..stamp2 "1676, measured" !
 ```
 
+A schematic diagram shows a sequence, not durations:
+
+```
+schematic
+```
+
+The axis then has no tick numbers, the tooltips give no cycle counts,
+and all boxes have a solid outline. Make each box wide enough for its
+label: at the full width of 980 pixels, the plot is about 780 pixels
+wide. An axis of 780 units thus gives about 1 pixel per unit, and a
+label of n characters needs a box of about 6.6 n + 16 units. The
+diagrams of the benchmark guide (`doc/benchmark-guide/diagrams/`) are
+schematic.
+
 Card text (used by the page, ignored by the SVG tool):
 
 ```

@@ -144,6 +144,8 @@ class Diagram:
             sc["letter"] = tok[1]
         elif head == "new":
             sc["isNew"] = True
+        elif head == "schematic":
+            sc["schematic"] = True
         elif head == "num":
             sc.setdefault("nums", []).append([tok[1], tok[2]])
         elif head == "what":

@@ -20,6 +20,8 @@ sys.path.insert(0, str(TOOL))
 import tdl  # noqa: E402
 
 CARDS = sorted((TOOL / "latency-modes" / "cards").glob("*.tdl"))
+# The diagrams of the documentation (timeline-viz directive).
+DOC_DIAGRAMS = sorted((TOOL.parents[1] / "doc").glob("**/diagrams/*.tdl"))
 
 CONTEXTS = """\
 core   hw     "Hardware"
@@ -46,6 +48,20 @@ def test_all_cards_compile():
     cards = [tdl.compile_file(f, lanes) for f in CARDS]
     assert len(cards) == len(CARDS) == 18
     assert len({c["id"] for c in cards}) == len(cards)
+
+
+@pytest.mark.parametrize("path", DOC_DIAGRAMS, ids=lambda p: p.name)
+def test_doc_diagrams_compile_without_overlap(path):
+    card = tdl.compile_file(path, {})
+    pieces = card.get("pieces") or [{"from": card["from"], "to": card["to"]}]
+    lanes = {}
+    for s in card["segs"]:
+        pc = pieces[s.get("p", 0)]
+        assert pc["from"] <= s["t0"] < s["t1"] <= pc["to"], s
+        lanes.setdefault((s["lane"], s.get("p", 0)), []).append((s["t0"], s["t1"]))
+    for steps in lanes.values():
+        steps.sort()
+        assert all(b[0] >= a[1] for a, b in zip(steps, steps[1:])), steps
 
 
 def test_sequence_moves_the_cursor(tmp_path):
@@ -138,6 +154,26 @@ def test_default_contexts_folder():
 def test_errors_name_file_and_line(tmp_path, text, msg):
     with pytest.raises(tdl.TdlError, match=msg.replace("(", r"\(")):
         compile_text(tmp_path, text)
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node is not on PATH")
+def test_schematic_has_no_cycle_counts(tmp_path):
+    card = compile_text(tmp_path, """\
+diagram x "x"
+schematic
+axis "time" 0..1000
+dev 100 "isr" : The ISR.
+""")
+    assert card["schematic"] is True
+    data = json.dumps({"lanes": {"dev": {"label": "Device ISR", "kind": "dev", "group": "isr", "prio": 0}},
+                       "laneKeys": ["dev"], "cards": [card]})
+    run = subprocess.run(["node", str(TOOL / "tdl-svg.cjs"), "--fragments"], input=data,
+                         capture_output=True, text=True, check=True)
+    svg = json.loads(run.stdout)["x"]
+    assert "<title>Device ISR: isr. The ISR.</title>" in svg
+    assert "cycles" not in svg
+    assert ">500<" not in svg  # no tick labels
+    assert 'stroke-dasharray="4 3"' not in svg  # solid outlines
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="node is not on PATH")

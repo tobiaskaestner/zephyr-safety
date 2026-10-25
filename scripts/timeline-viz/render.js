@@ -147,8 +147,10 @@ function timeline(sc, env) {
   for (const s of sc.segs) {
     const p = s.p || 0, lane = env.lanes[s.lane], kind = KINDS[lane.kind];
     const x0 = X(p, s.t0), x1 = X(p, s.t1), w = Math.max(1.5, x1 - x0), y0 = laneY[s.lane];
-    const tip = `${lane.label}: ${s.label || s.s}. ${fmt(s.t1 - s.t0)} cycles (${s.m ? "measured" : "estimate"}).${s.tip ? " " + s.tip : ""}`;
-    let fill = kind.color, op = 0.28, stroke = kind.color, dash = s.m ? "" : "4 3", sw = 1.4;
+    // a schematic diagram has no durations: no cycle count, solid outlines
+    const cost = sc.schematic ? "" : ` ${fmt(s.t1 - s.t0)} cycles (${s.m ? "measured" : "estimate"}).`;
+    const tip = `${lane.label}: ${s.label || s.s}.${cost}${s.tip ? " " + s.tip : ""}`;
+    let fill = kind.color, op = 0.28, stroke = kind.color, dash = s.m || sc.schematic ? "" : "4 3", sw = 1.4;
     if (s.s === "wfi") { op = 0.10; dash = "1 3"; }
     if (s.s === "pending") { fill = "none"; op = 1; dash = "5 3"; sw = 1.6; }
     if (s.s === "mask") { fill = `url(#${id}-mask)`; op = 0.55; stroke = "var(--c-mask)"; dash = ""; sw = 1; }
@@ -204,7 +206,7 @@ function timeline(sc, env) {
   pieces.forEach((pc, i) => {
     const step = niceStep(pc.to - pc.from, Math.max(3, Math.round(8 * pc.frac)));
     o += `<line x1="${px[i].x}" y1="${axisY}" x2="${px[i].x + px[i].w}" y2="${axisY}" stroke="var(--rule)"/>`;
-    for (let t = Math.ceil(pc.from / step) * step; t <= pc.to; t += step) {
+    if (!sc.schematic) for (let t = Math.ceil(pc.from / step) * step; t <= pc.to; t += step) {
       const x = X(i, t);
       o += `<line x1="${x}" y1="${axisY}" x2="${x}" y2="${axisY + 4}" stroke="var(--fg2)"/>`;
       o += `<text x="${x}" y="${axisY + 15}" text-anchor="middle" font-size="10.5" fill="var(--fg2)">${t}</text>`;
