@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Build check only (run.py --build-only --keep-build), no board run. The
+# same points on ws-up and on ws-up-irqoff with the hooks off must give
+# the same image: CONFIG_ARM_IRQ_MASK_HOOKS=n must not change the code.
+# Only the version strings (BUILD_VERSION: the git describe of each
+# Zephyr tree) can differ (claude/latency-benchmarks/m4-design.md §4).
+#
+# Points: two old points of wake-timers-1m (t0-default and t256-default),
+# with the same settings.
+
+name: m4-image-check
+app: wake_latency
+trees: [ws-up, ws-up-irqoff]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+points:
+  - id: t0-default
+  - id: t256-default
+    kconfig: {LATBENCH_LOAD_TIMERS: 256}

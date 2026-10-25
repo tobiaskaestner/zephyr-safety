@@ -1,0 +1,93 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# M4 validation (claude/latency-benchmarks/m4-design.md §5.1). Direct
+# measurement of the interrupt mask time per call site with the hooks of
+# tree ws-up-irqoff (CONFIG_ARM_IRQ_MASK_HOOKS, ..._ISR). App
+# wake_latency (sem, wrapped ISR, idle background), time slicing on.
+#
+# The latency histograms of these runs are not data: the hooks make each
+# mask section longer and add to the wake path. Each log says so
+# (LAT META m4=1, m4_note). Use the M4 tables (scripts/m4.py) only; the
+# IRQ tail of the same run is used only as the cross check below.
+#
+# Points and expectations (written before any run; cycles at 170 MHz):
+#
+#   cal-t0      no load. Calibration in every run: m4_floor_cyc (empty
+#               section) 15..30, m4_pair_cost_cyc (extra CPU time of the
+#               hooks per section) 60..150. The IRQ p50 rises from 81
+#               (ws-up, wake-timers-1m t0-default) by about one pair cost:
+#               the wake from WFI runs a begin and an end hook before
+#               "cpsie i", and the ISR enter hook runs before the ISR. The
+#               ISR to thread p50 rises from 1575 by about 2 pair costs
+#               plus one ISR exit hook (about +200..+400). The site of
+#               arch_cpu_idle (wake window) has max - floor < 20. No site
+#               has a max above 2000. m4_unmatched_end and m4_begin_open
+#               are 0 after the start.
+#   probe-t0    as cal-t0, plus a probe thread that masks for exactly
+#               5000 DWT cycles every 10 ms. The probe site
+#               (probe_fn) has min and max in 5000 + floor .. 5000 +
+#               floor + 10. About 0.3 % of the edges fall into a probe
+#               section, so the IRQ tail of the same run reaches
+#               5000..5400 (IRQ max - IRQ floor = probe length + the end
+#               hook). This checks the direct and the indirect method
+#               against a known value.
+#   t64-same    64 periodic load timers, SysTick at the driver priority.
+#               ws-up systick-prio-1m t64-same: IRQ p99.99 5312, max
+#               7775. Expected: SysTick ISR body (m4.isr.e15) max
+#               7500..9500 (the body plus the hooks of its sections), the
+#               longest mask section 1800..2600 (z_add_timeout, DLIST walk
+#               over about 64 timeouts at about 25 cycles each).
+#   t64-lower   as t64-same, SysTick one level lower. ws-up t64-lower: IRQ
+#               max 2330. Expected: longest mask section as in t64-same;
+#               IRQ max of this run = that section + 100..300.
+#   t256-same   256 timers. ws-up t256-same: IRQ p99.99 24704, max 34762.
+#               Expected: SysTick ISR body max 33000..42000; longest mask
+#               section 6300..7500, site z_add_timeout in SysTick context
+#               (the restart of a periodic timer).
+#   t256-lower  ws-up t256-lower: IRQ p99.99 6592, max 6898 (the "sharp
+#               stop at about 7000" of review-2026-10-25 §4 finding 8).
+#               Expected: longest mask section as in t256-same, and the IRQ
+#               max of this run = that section + 100..300. If the IRQ max is
+#               clearly larger than the longest mask section, a mask path
+#               is not covered (see m4-design.md §2).
+#   t256-wheel  256 timers, WHEEL backend, SysTick at the driver priority.
+#               ws-up timeout-backends-1m wheel: IRQ p99.99 5056, max 7160.
+#               Expected: no z_add_timeout walk, longest mask section below
+#               1500; SysTick ISR body max 6500..9000.
+#
+# Board time: 7 points x (30 s build and flash + 200000 x 300 us = 60 s
+# + about 10 s output) = about 12 min.
+
+name: m4-validate
+app: wake_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+    # Smaller latency histograms than in the 1M runs, for the RAM of the
+    # site table (64 sites x 488 bytes): 0..66559 cycles.
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+points:
+  - id: cal-t0
+  - id: probe-t0
+    kconfig: {LATBENCH_IRQMASK_PROBE_CYC: 5000, LATBENCH_IRQMASK_PROBE_MS: 10}
+  - id: t64-same
+    kconfig: {LATBENCH_LOAD_TIMERS: 64}
+  - id: t64-lower
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, LATBENCH_SYSTICK_PRIO: 1}
+  - id: t256-same
+    kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  - id: t256-lower
+    kconfig: {LATBENCH_LOAD_TIMERS: 256, LATBENCH_SYSTICK_PRIO: 1}
+  - id: t256-wheel
+    kconfig: {LATBENCH_LOAD_TIMERS: 256, TIMEOUT_BACKEND_WHEEL: y}
