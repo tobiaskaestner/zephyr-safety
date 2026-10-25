@@ -191,6 +191,11 @@ Options:
      - Build each point in a temporary folder. Do not flash.
    * - ``--keep-build``
      - Keep the build folder of each point.
+   * - ``--rebuild <run>``
+     - Build the points of an old run again and compare them with the
+       stored files (see :ref:`benchguide-rebuild`). ``<run>`` is a run
+       folder or one ``<run>/<tree>/<point>`` folder. Use it without an
+       experiment and without ``--out``. ``--only`` selects points.
    * - ``--port <dev>``
      - The serial port (default: ``console`` of the board in
        ``boards.yaml``).
@@ -223,7 +228,9 @@ Options:
      only, so that no module of a west workspace goes into the build. The
      snapshot is one more module: the safety repository is the Zephyr
      module ``safety`` (``zephyr/module.yml``), so an app finds it as
-     ``ZEPHYR_SAFETY_MODULE_DIR``.
+     ``ZEPHYR_SAFETY_MODULE_DIR``. The module has no code, so the image
+     does not change. The ``.config`` gets one more line,
+     ``CONFIG_ZEPHYR_SAFETY_MODULE=y``.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
    - ``-DLATBENCH_SRC_REV`` set to the safety revision.
@@ -399,23 +406,63 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
   the settings, the CMake command, the SHA-256 of the ELF and the logs.
   If the point failed, it also has an ``error``.
 
-To reproduce a point, do these steps:
+.. _benchguide-rebuild:
 
-#. Check out the safety repository at ``safety.rev`` of the manifest.
-#. Create the pinned trees, if they do not exist:
+Reproduce a point
+~~~~~~~~~~~~~~~~~
 
-   .. code-block:: console
+A point has two parts that you can reproduce: the image, and the
+measurement.
 
-      tests/benchmarks/scripts/trees.py setup
+To make sure that the image is the same, build the points of the run
+again:
 
-#. Run the experiment again:
+.. code-block:: console
 
-   .. code-block:: console
+   tests/benchmarks/scripts/run.py --rebuild <run>
+   tests/benchmarks/scripts/run.py --rebuild <run>/<tree>/<point>
 
-      tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir>
+``--rebuild`` does these steps:
 
-#. Compare the summaries of the old and the new logs (see the next
-   section).
+#. It reads the manifest. It makes sure that the trees are at the
+   revisions of the manifest and clean, and that the SDK has the version
+   of the manifest. The current ``trees.yaml`` is not used, so the check
+   also works after a change of ``trees.yaml``. ``--trees-root`` overrides
+   ``trees_root`` of the manifest.
+#. It runs the CMake command of the manifest again, with the same sources:
+   the snapshot in ``src/``. A run without a snapshot built from the
+   worktree, and its build took the revision string from ``git
+   describe``. For such a run, ``--rebuild`` makes a temporary git
+   worktree at ``safety.rev``, so that ``git describe`` gives the same
+   string. It stops if the revision is not in the safety repository.
+#. It builds into the original build folder, if that folder is free and
+   the run folder did not move. Then the ELF has the same debug
+   information, and its SHA-256 can be the same as in the manifest. Else
+   it builds into a temporary folder.
+#. It compares ``zephyr.elf`` (SHA-256), ``zephyr.hex``, ``.config`` and
+   ``zephyr.dts`` with the stored files. If the SHA-256 of the ELF is not
+   the same, it also compares the loadable sections of the two ELFs
+   (``objcopy -O ihex``, without the debug information). A point is the
+   same if the flashed image and the ``.config`` are the same. The
+   flashed image is ``zephyr.hex``. If the run has no HEX file, it is the
+   ELF or its loadable sections.
+
+``--rebuild`` does not flash. At the end, the result folder is as it was
+before (with ``--keep-build``, the ``build/`` folders stay). It prints
+one line for each point and exits with 1 if a point is not the same. Then
+the logs and the builds of the points that are not the same stay in a
+temporary folder, and the last line gives the folder.
+
+To reproduce the measurement, run the experiment again, from the safety
+repository at ``safety.rev`` of the manifest:
+
+.. code-block:: console
+
+   tests/benchmarks/scripts/trees.py setup
+   tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir>
+
+Then compare the summaries of the old and the new logs (see the next
+section).
 
 Summary and parse (``latbench.py``)
 -----------------------------------

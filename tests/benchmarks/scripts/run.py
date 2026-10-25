@@ -44,6 +44,7 @@ Experiment file:
 """
 
 import argparse
+import atexit
 import datetime
 import hashlib
 import itertools
@@ -138,6 +139,15 @@ def flash_command(board_cfg, zephyr, pdir):
     return ["sh", "-c", " && ".join(shlex.join(c) for c in cmds)]
 
 
+def export_rev(repo_root, rev, dest):
+    """Export the whole repo at rev to dest (git archive exports only the subfolder it runs in)."""
+    dest.mkdir(parents=True, exist_ok=True)
+    archive = subprocess.Popen(["git", "archive", "--format=tar", rev], cwd=repo_root, stdout=subprocess.PIPE)
+    subprocess.run(["tar", "-x", "-C", str(dest)], stdin=archive.stdout, check=True)
+    if archive.wait() != 0:
+        fail(f"git archive {rev} failed")
+
+
 def export_snapshot(repo_root, rev, dest):
     """Export the safety repo at rev to dest; return the bench folder in dest.
 
@@ -146,11 +156,7 @@ def export_snapshot(repo_root, rev, dest):
     snapshot is also the Zephyr module "safety" of each build (see
     build_point()).
     """
-    dest.mkdir(parents=True, exist_ok=True)
-    archive = subprocess.Popen(["git", "archive", "--format=tar", rev], cwd=repo_root, stdout=subprocess.PIPE)
-    subprocess.run(["tar", "-x", "-C", str(dest)], stdin=archive.stdout, check=True)
-    if archive.wait() != 0:
-        fail(f"git archive {rev} failed")
+    export_rev(repo_root, rev, dest)
     if not (dest / "zephyr" / "module.yml").is_file():
         fail(f"the safety repo at {rev} has no zephyr/module.yml")
     return dest / BENCH_DIR.relative_to(repo_root)
@@ -234,10 +240,163 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     return args
 
 
+def find_points(path, only=None):
+    """Return (run folder, manifest, entries) for a run folder or a point folder <run>/<tree>/<point>."""
+    path = Path(path).resolve()
+    if (path / "manifest.json").is_file():
+        run_dir, want = path, None
+    elif len(path.parents) > 1 and (path.parents[1] / "manifest.json").is_file():
+        run_dir, want = path.parents[1], (path.parent.name, path.name)
+    else:
+        fail(f"{path} is not a run folder or a point folder of a run")
+    manifest = json.loads((run_dir / "manifest.json").read_text())
+    entries = [
+        e for e in manifest["points"]
+        if (want is None or (e["tree"], e["id"]) == want) and (not only or e["id"] in only)
+    ]
+    if not entries:
+        fail(f"no points to rebuild in {path}")
+    return run_dir, manifest, entries
+
+
+def move_paths(cmake, moves, bdir):
+    """Return the CMake command of a point with the build folder bdir and each old folder of moves replaced."""
+    out = []
+    for i, arg in enumerate(cmake):
+        if i > 0 and cmake[i - 1] == "-B":
+            out.append(str(bdir))
+            continue
+        for old, new in moves.items():
+            arg = new if arg == old else arg.replace(old + "/", new + "/")
+        out.append(arg)
+    return out
+
+
+def cmake_cache_value(bdir, key):
+    """Return the value of key in the CMakeCache.txt of a build, or None."""
+    cache = bdir / "CMakeCache.txt"
+    if cache.exists():
+        for line in cache.read_text().splitlines():
+            if line.startswith(key + ":"):
+                return line.partition("=")[2]
+    return None
+
+
+def elf_image(elf, objcopy, tmp):
+    """Return the loadable sections of an ELF as Intel HEX: the flashed image, without debug information."""
+    out = tmp / "image.hex"
+    subprocess.run([objcopy, "-O", "ihex", str(elf), str(out)], check=True)
+    image = out.read_bytes()
+    out.unlink()
+    return image
+
+
+def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
+    """Return (same, different) file names of the stored files of a point and a new build.
+
+    If the ELF hashes differ (the debug information has the build folder) and
+    objcopy is given, "ELF image" compares the loadable sections of the two ELFs.
+    """
+    same, diff = [], []
+    elf = bdir / "zephyr" / "zephyr.elf"
+    sha = hashlib.sha256(elf.read_bytes()).hexdigest() if elf.exists() else None
+    (same if sha == elf_sha256 else diff).append("zephyr.elf")
+    if sha and sha != elf_sha256 and objcopy and (pdir / "zephyr.elf").exists():
+        old = elf_image(pdir / "zephyr.elf", objcopy, tmp)
+        (same if old == elf_image(elf, objcopy, tmp) else diff).append("ELF image")
+    for name in ("zephyr.hex", ".config", "zephyr.dts"):
+        old, new = pdir / name, bdir / "zephyr" / name
+        if old.exists():
+            (same if new.exists() and new.read_bytes() == old.read_bytes() else diff).append(name)
+    return same, diff
+
+
+def rebuild(args):
+    """Build the points of an old run again, from its snapshot and manifest, and compare the images.
+
+    The flashed image (zephyr.hex, or zephyr.elf if the run has no hex) and
+    the .config must be the same. The ELF has the build folder in its debug
+    information, so the build goes to the original build folder if it is free.
+    """
+    run_dir, manifest, entries = find_points(args.rebuild, args.only)
+    old_run = Path(entries[0]["cmake"][entries[0]["cmake"].index("-B") + 1]).parents[2]
+    moves = {str(old_run): str(run_dir)}
+    cfg = {
+        "root": Path(args.trees_root or manifest["trees_root"]).expanduser(),
+        "trees": manifest["trees"],
+        "toolchain": {"zephyr_sdk": {"path": manifest["toolchain"]["path"],
+                                     "version": manifest["toolchain"]["zephyr_sdk"]}},
+    }
+    try:
+        sdk = trees.check_toolchain(cfg)
+        for t in sorted({e["tree"] for e in entries}):
+            trees.check_tree(cfg, t)
+    except trees.TreeError as e:
+        fail(str(e))
+
+    import tempfile
+
+    # The logs and the builds that cannot go to the original folder. Kept if a point fails.
+    tmp = Path(tempfile.mkdtemp(prefix="latbench-rebuild-"))
+    if "snapshot" not in manifest["safety"]:
+        # An old run that built from the worktree. Its build took the revision
+        # string from "git describe" and had no -DLATBENCH_SRC_REV, so an export
+        # without .git gives another image: use a temporary worktree instead.
+        safety = manifest["safety"]
+        repo_root, _, _ = safety_repo_state()
+        if trees.git("cat-file", "-t", safety["rev"], cwd=repo_root, check=False) != "commit":
+            fail(f"the run has no snapshot, and the safety revision {safety['rev']} is not in {repo_root}")
+        src = tmp / "src"
+        trees.git("worktree", "add", "--detach", str(src), safety["rev"], cwd=repo_root)
+        atexit.register(trees.git, "worktree", "remove", "--force", str(src), cwd=repo_root, check=False)
+        moves[safety["path"]] = str(src)
+    print(f"rebuild {run_dir}  {len(entries)} points")
+    failed = 0
+    for e in entries:
+        name = f"{e['tree']}/{e['id']}"
+        pdir = run_dir / e["tree"] / e["id"]
+        bdir = pdir / "build"
+        if bdir.exists() or run_dir != old_run:
+            bdir = tmp / e["tree"] / e["id"]
+        bdir.mkdir(parents=True)
+        bad = True
+        try:
+            cmake = move_paths(e["cmake"], moves, bdir)
+            run_build(cmake, build_env(trees.repo_dir(cfg, e["tree"], "zephyr"), sdk), bdir,
+                      tmp / f"{e['tree']}-{e['id']}.log", name)
+            same, diff = compare_point(pdir, bdir, e["elf_sha256"], cmake_cache_value(bdir, "CMAKE_OBJCOPY"), tmp)
+            if (pdir / "zephyr.hex").exists():
+                image_same = "zephyr.hex" in same
+            else:
+                image_same = "zephyr.elf" in same or "ELF image" in same
+            bad = not image_same or ".config" in diff
+        finally:
+            # The result folder stays as it was; a build that failed or is different goes to tmp.
+            if not args.keep_build and bdir.is_relative_to(pdir):
+                if bad:
+                    (tmp / e["tree"]).mkdir(exist_ok=True)
+                    shutil.move(bdir, tmp / e["tree"] / e["id"])
+                else:
+                    shutil.rmtree(bdir)
+        failed += bad
+        print(f"[{name}] {'DIFFERENT' if bad else 'same'}: same {', '.join(same) or '-'}"
+              + (f"; different {', '.join(diff)}" if diff else ""), flush=True)
+    print(f"{len(entries) - failed} of {len(entries)} points give the same image and .config")
+    if failed or args.keep_build:
+        print(f"logs and builds in {tmp}")
+    else:
+        shutil.rmtree(tmp)
+    if failed:
+        sys.exit(1)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("experiment")
-    p.add_argument("--out", required=True)
+    p.add_argument("experiment", nargs="?")
+    p.add_argument("--out")
+    p.add_argument("--rebuild", metavar="RUN",
+                   help="build the points of a run folder (or of one <run>/<tree>/<point> folder) again"
+                        " and compare them with the stored images; does not flash")
     p.add_argument("--trees-root")
     p.add_argument("--port", help="serial port of the console (default: console of the board in boards.yaml)")
     p.add_argument("--only", nargs="*", help="run only these point ids")
@@ -245,6 +404,13 @@ def main():
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
     args = p.parse_args()
+    if args.rebuild:
+        if args.experiment or args.out:
+            p.error("--rebuild takes no experiment and no --out")
+        rebuild(args)
+        return
+    if not args.experiment or not args.out:
+        p.error("an experiment and --out are necessary")
 
     exp_path = Path(args.experiment).resolve()
     exp_text = exp_path.read_text()
