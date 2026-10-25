@@ -1,21 +1,25 @@
 # apps.rst, irq_latency (M1): the stock path (the default).
-# Schematic: the box widths fit the labels, they are not durations.
+# Schematic: 1 unit is 1 pixel; the box widths fit the labels, they are
+# not durations. The masks are those of the pinned trees (both the same).
 include apps.tdc
 diagram irq-latency "irq_latency, stock path: edge to the time stamp in the GPIO callback"
 schematic
-axis "time after the edge (schematic)" -40..740
+axis "time after the edge (schematic)" -40..653
 
-idle sleep -40..0 "WFI"
 @edge
-hw 76 "pin, NVIC" : The edge comes on the response pin. EXTI detects it, and the interrupt becomes pending.
-hw 115 "exception entry" : Wake-up from WFI, register stacking, vector fetch. The direct and zli paths start their ISR after this step.
-dev 96 "_isr_wrapper" : The wrapped path starts its ISR after this step.
-dev 89 "GPIO driver" : The GPIO driver of Zephyr finds the pin and calls the user callback.
+hw 76 "pin, NVIC" : The edge comes on the response pin. EXTI detects it, and the NVIC makes the interrupt pending. The pending interrupt wakes the core.
+@pending anchor
+idle sleep -40..pending "WFI" {primask} : The idle thread sleeps in WFI with PRIMASK set.
+idle 49 "cpsie" {primask} : The idle thread clears PRIMASK (cpsie i, in k_cpu_idle()). Only then can the interrupt start.
+hw 49 "entry" : Exception entry: register stacking and vector fetch. The direct and zli paths start their ISR after this step.
+dev 92 "_isr_wrapper" : The wrapped path starts its ISR after this step. It does not lock interrupts.
+dev 86 "GPIO driver" : The EXTI and GPIO drivers find the pin and call the user callback. They do not lock interrupts.
 dev 36 "now" : The first action of the callback reads the stimulus timer: now = stim_now().
 @stamp "now"
-dev 76 "histogram" : lat_hist_add() and lat_phase_add(), after the warm-up.
-dev 82 "stim_arm()" {basepri} : Programs the next edge.
-dev 43 "exit"
-@isr_done anchor
-idle sleep isr_done..740 "WFI"
+dev 43 "hist" : lat_hist_add() and lat_phase_add(), after the warm-up.
+dev 82 "stim_arm()" {basepri} : Programs the next edge. The fresh counts and the compare register are written with irq_lock() (BASEPRI).
+dev 43 "exit" : The ISR exit. No thread is ready, so there is no PendSV.
+idle 49 "idle" {basepri} : The idle thread continues after cpsie. The idle loop: arch_irq_lock() sets BASEPRI. Then k_cpu_idle() sets PRIMASK and clears BASEPRI.
+@sleeps anchor
+idle sleep sleeps..653 "WFI" {primask}
 span edge..stamp "irq = now - stim_edge()" !

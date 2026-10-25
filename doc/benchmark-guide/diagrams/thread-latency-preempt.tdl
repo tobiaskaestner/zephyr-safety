@@ -1,39 +1,40 @@
 # apps.rst, thread_latency (M3): sem, preempt mode (the default).
-# Schematic: the box widths fit the labels, they are not durations.
+# Schematic: 1 unit is 1 pixel; the box widths fit the labels, they are
+# not durations. The masks are those of the pinned trees (both the same).
 include apps.tdc
 diagram thread-latency-preempt "thread_latency, sem-preempt: the giver wakes a taker with a higher priority"
 schematic
-axis "time after the edge (schematic)" -20..760
+axis "time after the edge (schematic)" -20..812
 
 giver pending -20.. "blocked in k_sem_take(isr_sem)"
 taker pending -20.. "blocked in k_sem_take()"
-idle sleep -20..0 "WFI"
 @edge
-hw 82 "pin, entry" : Edge, EXTI, NVIC, wake-up from WFI and exception entry.
-dev 36 "now" : _isr_wrapper, then t_isr = stim_now().
+hw 76 "pin, NVIC" : Edge, EXTI, NVIC. The pending interrupt wakes the core.
+@pending anchor
+idle sleep -20..pending "WFI" {primask} : The idle thread sleeps in WFI with PRIMASK set.
+idle 49 "cpsie" {primask} : The idle thread clears PRIMASK. Only then can the interrupt start.
+hw 49 "entry" : Exception entry.
+dev 60 "wrapper" : _isr_wrapper.
+dev 36 "now" : t_isr = stim_now().
 @t_isr
-dev 43 "give" : k_sem_give(&isr_sem) makes the giver ready. The ISR exit pends PendSV.
-pendsv 56 "switch" : Idle thread to giver.
+dev 43 "give" {basepri} : k_sem_give(&isr_sem) makes the giver ready, with the semaphore spinlock (BASEPRI).
+dev 43 "exit" : The ISR exit pends PendSV.
+pendsv 56 "switch" {basepri 16..40} : PendSV, idle thread to giver. BASEPRI while it takes the next thread from the ready queue cache.
 giver 36 "now" : t_thr = stim_now(), for isr2thr.
 @t_thr
 giver 36 "now" : t0 = stim_now(), just before the wake call.
 @t0
-giver 43 "give" : The wake call. It makes the taker ready. The taker has the higher priority, so the giver is preempted in the call.
-pendsv 56 "switch" : Giver to taker.
+giver 43 "give" {basepri} : k_sem_give() makes the taker ready. The taker has the higher priority, so the call switches: it holds BASEPRI until arch_swap() pends PendSV and unlocks.
+pendsv 56 "switch" {basepri 16..40} : PendSV, giver to taker.
 taker 36 "now" : t1 = stim_now(), the first action after k_sem_take() returns.
 @t1
-taker 43 "take" : The taker counts the wake and blocks again.
+taker 43 "take" {basepri} : The taker counts the wake. k_sem_take() blocks again, with BASEPRI until arch_swap().
 @taker_blocks anchor
-taker pending taker_blocks..760 "blocked"
-pendsv 56 "switch" : Taker back to giver.
+taker pending taker_blocks..812 "blocked"
+pendsv 56 "switch" {basepri 16..40} : PendSV, taker back to giver.
 giver 36 "now" : t2 = stim_now(): the wake call has returned.
 @t2
-giver 76 "next edge" : The histograms t2t and t2t_ret, giver_prepare(), stim_arm(), then k_sem_take(&isr_sem) blocks.
-@giver_blocks anchor
-giver pending giver_blocks..760 "blocked"
-pendsv 56 "switch" : Giver to the idle thread.
-@idle_runs anchor
-idle sleep idle_runs..760 "WFI"
+giver 43 "hist" : t2t and t2t_ret. Then the giver arms the next edge and blocks in k_sem_take(&isr_sem), as in wake_latency.
 span t_isr..t_thr "isr2thr" !
 span t0..t1 "t2t" !
 span t0..t2 "t2t_ret" !

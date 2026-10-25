@@ -3,7 +3,7 @@
 # priority). Thread priorities are those of the default configuration.
 
 core   hw     "Hardware"
-core   mask   "BASEPRI"
+core   mask   "PRIMASK, BASEPRI"
 
 isr    dev    0    "Response ISR"
 isr    pendsv low  "PendSV"        as switch

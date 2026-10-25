@@ -153,14 +153,24 @@ durations, see the histograms of a run.
 - A filled box is code that runs. A dotted box is the CPU in WFI. A
   dashed box without a fill is a thread that waits: blocked, or ready
   but preempted.
-- A hatched box on the ``BASEPRI`` lane is a section with interrupts
-  locked (``irq_lock()``).
+- The lane ``PRIMASK, BASEPRI`` shows when the CPU masks interrupts. A
+  box hatched from the lower left to the upper right is BASEPRI: kernel
+  code holds ``irq_lock()`` or a spinlock. A box hatched the other way
+  is PRIMASK: the idle thread sleeps in WFI with PRIMASK set, so an
+  interrupt starts only after the idle thread clears it. A ZLI is not
+  masked by BASEPRI, but it is masked by PRIMASK.
 - The orange vertical line is the edge. A black vertical line is a time
   stamp. Its name is the name of the variable in the code.
 - A bracket below the lanes is a histogram of the app. Its label is the
   name of the histogram in the output (see :doc:`output`).
 - In the HTML output, move the pointer onto a box to see what the code
-  does at that step.
+  does at that step, and which lock it holds.
+
+The masked sections are those of the code of the pinned trees (see
+:doc:`host-tools`): the spinlocks of the kernel objects, ``stim_arm()``,
+the middle part of PendSV, and the idle loop. ``_isr_wrapper``, the
+STM32 EXTI and GPIO drivers and the ISR exit do not lock interrupts (with
+``CONFIG_PM=n``, the default of the apps).
 
 .. _benchguide-stim-modes:
 

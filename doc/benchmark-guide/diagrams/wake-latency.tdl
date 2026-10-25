@@ -1,30 +1,35 @@
 # apps.rst, wake_latency (M2): wrapped ISR, k_sem (the default).
-# Schematic: the box widths fit the labels, they are not durations.
+# Schematic: 1 unit is 1 pixel; the box widths fit the labels, they are
+# not durations. The masks are those of the pinned trees (both the same).
 include apps.tdc
 diagram wake-latency "wake_latency, wrapped-sem: the ISR wakes a thread, three histograms"
 schematic
-axis "time after the edge (schematic)" -40..740
+axis "time after the edge (schematic)" -30..791
 
-waker pending -40.. "blocked in k_sem_take()"
-idle sleep -40..0 "WFI"
+waker pending -30.. "blocked in k_sem_take()"
 @edge
-hw 82 "pin, entry" : Edge, EXTI, NVIC, wake-up from WFI and exception entry.
-dev 63 "wrapper" : _isr_wrapper. With LATBENCH_WAKE_ISR_DIRECT, this step is not there.
+hw 76 "pin, NVIC" : Edge, EXTI, NVIC. The pending interrupt wakes the core.
+@pending anchor
+idle sleep -30..pending "WFI" {primask} : The idle thread sleeps in WFI with PRIMASK set.
+idle 49 "cpsie" {primask} : The idle thread clears PRIMASK. Only then can the interrupt start.
+hw 49 "entry" : Exception entry.
+dev 60 "wrapper" : _isr_wrapper. With LATBENCH_WAKE_ISR_DIRECT, this step is not there.
 dev 36 "now" : The first action of the ISR: t_isr = stim_now().
 @t_isr
-dev 96 "k_sem_give()" : The kernel makes the woken thread ready.
-dev 43 "exit" : The ISR exit pends PendSV, because a thread with a higher priority than the idle thread is ready.
-pendsv 56 "switch" : The context switch from the idle thread to the woken thread.
+dev 43 "give" {basepri} : k_sem_give() makes the woken thread ready. It holds the semaphore spinlock (BASEPRI) for the whole call. In an ISR, it does not switch.
+dev 43 "exit" : The ISR exit pends PendSV, because the ready thread is not the current thread.
+pendsv 56 "switch" {basepri 16..40} : PendSV saves the registers of the idle thread. With BASEPRI, it takes the woken thread from the ready queue cache. Then it restores the BASEPRI of the woken thread (0) and its registers.
 waker 36 "now" : The first action after k_sem_take() returns: t_thr = stim_now().
 @t_thr
-waker 82 "histograms" : irq, isr2thr and irq2thr, and the two phase histograms.
-waker 82 "stim_arm()" {basepri} : Programs the next edge.
-waker 96 "k_sem_take()" : Blocks again.
+waker 43 "hist" : irq, isr2thr and irq2thr, and the two phase histograms.
+waker 82 "stim_arm()" {basepri} : Programs the next edge, with irq_lock() (BASEPRI).
+waker 43 "take" {basepri} : k_sem_take() blocks again. It holds BASEPRI from k_spin_lock() until arch_swap() pends PendSV and unlocks.
 @waker_blocks anchor
-waker pending waker_blocks..740 "blocked"
-pendsv 56 "switch" : Back to the idle thread.
-@idle_runs anchor
-idle sleep idle_runs..740 "WFI"
+waker pending waker_blocks..791 "blocked"
+pendsv 56 "switch" {basepri 16..40} : PendSV switches back to the idle thread.
+idle 49 "idle" {basepri} : The idle loop: arch_irq_lock() sets BASEPRI. Then k_cpu_idle() sets PRIMASK and clears BASEPRI.
+@sleeps anchor
+idle sleep sleeps..791 "WFI" {primask}
 span edge..t_isr "irq" !
 span t_isr..t_thr "isr2thr" !
 span edge..t_thr "irq2thr" !

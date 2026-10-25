@@ -1,32 +1,34 @@
 # apps.rst, thread_latency (M3): sem, nopreempt mode.
-# Schematic: the box widths fit the labels, they are not durations.
+# Schematic: 1 unit is 1 pixel; the box widths fit the labels, they are
+# not durations. The masks are those of the pinned trees (both the same).
 include apps.tdc
 diagram thread-latency-nopreempt "thread_latency, sem-nopreempt: the taker runs only when the giver blocks"
 schematic
 prio taker 3
-axis "time after the giver wakes (schematic)" -30..750
+axis "time after the giver wakes (schematic)" -30..607
 
 taker pending -30.. "blocked in k_sem_take()"
 giver -30..0 : The ISR of the edge woke the giver. The giver took t_thr.
 at 0
 giver 36 "now" : t0 = stim_now(), just before the wake call.
 @t0
-giver 96 "k_sem_give()" : The wake call makes the taker ready. The taker has the lower priority, so there is no switch.
+giver 43 "give" {basepri} : k_sem_give() makes the taker ready, with the semaphore spinlock (BASEPRI). The taker has the lower priority, so there is no switch.
 giver 36 "now" : t2 = stim_now(): the wake call has returned.
 @t2
-giver 115 "record previous" : The giver records t2t and t2t_ret of the previous edge, then calls giver_prepare().
-giver 82 "stim_arm()" {basepri} : Programs the next edge.
-giver 96 "k_sem_take()" : Blocks for the next edge.
+giver 56 "record" : The giver records t2t and t2t_ret of the previous edge, then calls giver_prepare().
+giver 82 "stim_arm()" {basepri} : Programs the next edge, with irq_lock() (BASEPRI).
+giver 43 "take" {basepri} : k_sem_take(&isr_sem) blocks, with BASEPRI until arch_swap() pends PendSV and unlocks.
 @giver_blocks anchor
-giver pending giver_blocks..750 "blocked in k_sem_take(isr_sem)"
-pendsv 56 "switch" : Giver to taker.
+giver pending giver_blocks..607 "blocked in k_sem_take(isr_sem)"
+pendsv 56 "switch" {basepri 16..40} : PendSV, giver to taker. BASEPRI while it takes the next thread from the ready queue cache.
 taker 36 "now" : t1 = stim_now(), the first action after k_sem_take() returns.
 @t1
-taker 96 "k_sem_take()" : The taker counts the wake and blocks again.
+taker 43 "take" {basepri} : The taker counts the wake. k_sem_take() blocks again, with BASEPRI until arch_swap().
 @taker_blocks anchor
-taker pending taker_blocks..750 "blocked"
-pendsv 56 "switch" : Taker to the idle thread.
-@idle_runs anchor
-idle sleep idle_runs..750 "WFI"
+taker pending taker_blocks..607 "blocked"
+pendsv 56 "switch" {basepri 16..40} : PendSV, taker to the idle thread.
+idle 49 "idle" {basepri} : The idle thread continues after cpsie, in the idle loop: arch_irq_lock() sets BASEPRI. Then k_cpu_idle() sets PRIMASK and clears BASEPRI.
+@sleeps anchor
+idle sleep sleeps..607 "WFI" {primask}
 span t0..t2 "t2t_ret" !
 span t0..t1 "t2t" !

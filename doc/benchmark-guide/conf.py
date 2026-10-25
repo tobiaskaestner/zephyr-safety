@@ -22,3 +22,7 @@ configure(
     copyright_holder="Zephyr Project Contributors",
     extensions=["timeline_viz"],
 )
+
+# All timing diagrams of the guide get the same width, so they have the
+# same scale. It is the width of the widest diagram (thread-latency-preempt).
+timeline_viz_width = 1032
