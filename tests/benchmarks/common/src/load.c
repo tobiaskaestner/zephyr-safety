@@ -6,6 +6,9 @@
 
 #include <zephyr/kernel.h>
 #include <zephyr/sys/printk.h>
+#if defined(CONFIG_CORTEX_M_SYSTICK)
+#include <cmsis_core.h>
+#endif
 
 #include <latbench/hist.h>
 #include <latbench/load.h>
@@ -149,6 +152,10 @@ static void timers_start(void)
 
 void load_start(void)
 {
+#if defined(CONFIG_CORTEX_M_SYSTICK) && (CONFIG_LATBENCH_SYSTICK_PRIO >= 0)
+	/* Same offset as IRQ_CONNECT() gives an IRQ priority. */
+	NVIC_SetPriority(SysTick_IRQn, CONFIG_LATBENCH_SYSTICK_PRIO + _IRQ_PRIO_OFFSET);
+#endif
 #if N_TIMERS > 0
 	timers_start();
 #endif
@@ -164,6 +171,11 @@ void load_print(void)
 	for (uint32_t i = 0; i < N_TIMERS; i++) {
 		k_timer_stop(&load_timers[i]);
 	}
+#endif
+#if defined(CONFIG_CORTEX_M_SYSTICK)
+	/* In the numbers of IRQ_CONNECT(). The driver default is 0. */
+	printk("LAT META systick_prio=%d\n",
+	       (int)NVIC_GetPriority(SysTick_IRQn) - (int)_IRQ_PRIO_OFFSET);
 #endif
 	printk("LAT META load_threads=%u\n", N_THREADS);
 	printk("LAT META load_timers=%u\n", N_TIMERS);

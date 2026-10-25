@@ -1,0 +1,43 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# later.md L1: SysTick at a lower priority than the device IRQ.
+#
+# In wake-timers-1m the SysTick ISR (load timer callbacks and restarts)
+# makes the IRQ tail: p99.99 5600 cycles at 64 timers, 25600 at 256. The
+# driver gives SysTick the same priority as the stimulus IRQ, and SysTick
+# goes first if both are pending.
+#
+#   prio:   same  = driver default (SysTick and EXTI0 at priority 0);
+#           lower = SysTick at priority 1, so EXTI0 can preempt the
+#                   SysTick ISR outside its locked sections.
+#   timers: t64, t256 periodic load timers (10..100 ms).
+#
+# Expectation: the IRQ tail gets smaller by the unlocked part of the
+# SysTick ISR. The locked sections (timeout lock, clock lock) still mask
+# EXTI0 through BASEPRI, so the max stays about the same. ISR to thread
+# does not change much: PendSV still waits for the SysTick ISR.
+
+name: systick-prio-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  timers:
+    t64:
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  prio:
+    same: {}
+    lower:
+      kconfig: {LATBENCH_SYSTICK_PRIO: 1}

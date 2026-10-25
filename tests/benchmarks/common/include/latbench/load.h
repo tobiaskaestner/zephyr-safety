@@ -16,6 +16,9 @@
  * the phase histogram "tmr" (the value is the phase itself). The expiry
  * function runs in the system timer ISR, so this shows where in the tick
  * the timer ISR runs.
+ *
+ * On a SysTick system, load_start() also sets the SysTick priority if
+ * LATBENCH_SYSTICK_PRIO is 0 or more.
  */
 
 #ifndef LATBENCH_LOAD_H_

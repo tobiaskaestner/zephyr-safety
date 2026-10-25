@@ -172,4 +172,17 @@ config LATBENCH_LOAD_TIMER_MAX_MS
 	depends on LATBENCH_LOAD_TIMER_PERIODIC
 	default 100
 
+config LATBENCH_SYSTICK_PRIO
+	int "IRQ priority of SysTick (-1: the driver default)"
+	depends on CORTEX_M_SYSTICK
+	default -1
+	help
+	  A value of 0 or more sets the priority of SysTick at the start of
+	  the load, in the numbers of IRQ_CONNECT() (0 is the highest).
+	  The driver gives SysTick the same priority as an IRQ with
+	  priority 0, and SysTick then goes first. With a value of 1, an
+	  IRQ with priority 0 can preempt the SysTick ISR, except in its
+	  locked sections. load_print() prints the value that the NVIC
+	  has as "systick_prio".
+
 endmenu
