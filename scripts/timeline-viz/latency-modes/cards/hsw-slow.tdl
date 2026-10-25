@@ -1,0 +1,42 @@
+include g474.tdc
+diagram hsw-slow "Thread → thread with USE_SWITCH=y, slow mode (78 %): four SysTick reprograms in one switch"
+letter "H-sw slow"
+new
+num value "3168 cycles"
+num share "77.8 %"
+num path "k_sem, giver (prio 2) → taker (prio 1)"
+num arch "USE_SWITCH=y (no PendSV)"
+what "The same path as card H-sw fast, but here the giver's slice timeout is the first timeout. Each of the two slice resets aborts it (a reprogram for the next timeout) and adds a new one (a reprogram again). So one switch programs SysTick four times, against two with PendSV. The second reset is for the same thread and the same slice. The dashed cursor shows where the fast mode ends (card H-sw fast)."
+evidence "The four reprograms together: 1289 cycles, measured as the mode distance; the split into four is an estimate. Mode distance 1289 cycles on ws-safety (1879 / 3168) and 1333 on ws-up (1803 / 3136), against 662 and 637 with PendSV: two reprograms more."
+evidence "Prediction written before the run (later.md L18): about 1300 cycles. Mutex: 1312 (ws-safety) and 1327 (ws-up)."
+evidence "An ISR wake does not reach do_swap(), so it keeps one reprogram with USE_SWITCH=y (card E-sw slow)."
+evidence "Kernel clock drift: 1175 → 1563 ppm (sem, ws-safety): more reprograms lose more cycles (card I)."
+src "thread2thread-switch/20261025T100427Z"
+
+axis "cycles after the give call" -100..3300
+
+taker pending -100.. "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
+
+at -100
+giver 100 : The giver was woken by the stimulus ISR.
+@give
+@fast ref "fast mode" at give+1879
+giver 300 "give" {basepri} : The giver gives the semaphore. The taker has a higher priority, so update_cache() selects it as the next thread.
+giver 411? "reset 1" {basepri} : update_cache() resets the slice for the taker.
+@r0 anchor
+giver 322 "reprogram" {basepri} : Abort of the giver's slice timeout. It was the first timeout, so the driver programs SysTick for the next one.
+giver 322 "reprogram" {basepri} : Add of the taker's slice timeout. It is the first timeout again, so the driver programs SysTick again.
+@r1 anchor
+giver 411? "reset 2" {basepri} : do_swap() calls z_time_slice_reset(new_thread) again (kernel/include/kswap.h:130).
+@r2 anchor
+giver 322 "reprogram" {basepri} : Abort of the taker's slice timeout, which reset 1 just added. It is the first timeout, so SysTick is programmed again.
+giver 323 "reprogram" {basepri} : Add of the taker's slice timeout again: the fourth reprogram of this switch.
+@r3 anchor
+giver 670 "arch_switch()" {basepri} : Inline in z_swap(), in thread mode: save the giver, restore the taker. No exception.
+taker 87 : The taker returns from k_sem_take() and reads TIM2->CNT.
+@runs "taker runs"
+giver pending runs..3300 "preempted" : The giver is ready, but the taker has the higher priority.
+
+span give..runs "3168, measured" !
+span r0..r1 "2 reprograms"
+span r2..r3 "2 reprograms"

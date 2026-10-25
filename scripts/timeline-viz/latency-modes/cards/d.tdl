@@ -1,0 +1,25 @@
+include g474.tdc
+diagram d "ZLI: the edge preempts a masked SysTick ISR"
+letter "D"
+num value "41, 61 to 67 cycles"
+num share "no tail in 2M"
+num path "zero-latency ISR, idle"
+what "A zero-latency IRQ has a priority above the BASEPRI threshold. It preempts the SysTick ISR and any locked section at once. In exchange it must not call the kernel, so it cannot wake a thread."
+evidence "ZLI max 67 cycles in 2 million samples (both trees). The other paths reach about 1660."
+evidence "Its second mode (61, 0.62 %) is the same cache effect as on the other paths."
+src "irq-baseline-1m/20261024T155016Z"
+
+axis "cycles after the edge" -300..300
+
+mask -300..300 "BASEPRI: masks kernel IRQs, not the ZLI"
+at -300
+tick 300 "SysTick ISR" : The SysTick ISR runs and holds BASEPRI.
+hw 30 "stacking" : The ZLI priority is above the BASEPRI threshold, so the exception entry starts at once.
+zli miss 25 "miss" : Cold cache: the SysTick code just ran.
+zli 6 : The ISR reads TIM2->CNT.
+at 80
+tick 220 "SysTick ISR continues" : The SysTick ISR continues after the ZLI returns.
+
+@t0_1 edge "edge" at 0
+@t0_2 stamp "CNT read" at 61
+span 0..61 "61 cycles; max 67, measured" !

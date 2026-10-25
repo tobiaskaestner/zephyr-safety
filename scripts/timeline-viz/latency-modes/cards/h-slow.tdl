@@ -1,0 +1,40 @@
+include g474.tdc
+diagram h-slow "Thread → thread, slow mode (79 %): two SysTick reprograms in the switch"
+letter "H slow"
+new
+num value "2047 cycles"
+num share "79 %"
+num path "k_sem, giver (prio 2) → taker (prio 1)"
+num arch "PendSV (USE_SWITCH=n)"
+what "The same path as the fast mode, but here the giver's slice timeout is the first timeout. Its abort programs SysTick for the next timeout, and the add of the taker's slice timeout programs it again. About a third of the thread to thread time is these two reprograms. They move the next interrupt by some microseconds out of 20 ms. The dashed cursor shows where the fast mode ends (card H fast)."
+evidence "ISR → giver has one reprogram: 1361 against 1665 cycles (304). Giver → taker has two: 668 cycles."
+evidence "Mean t2t: sem 1905, wakeup 1923, fifo 1960, msgq 2005, mutex 2177, event 2203, poll 2228 cycles. ws-up sem: 1880."
+evidence "The driver core skips a reprogram to the same deadline tick (timer_core_arm()), but the abort between the two adds moves the deadline first."
+src "thread2thread-1m/20261025T030402Z"
+
+axis "cycles after the give call" -100..2150
+
+taker pending -100.. "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
+
+at -100
+giver  100 : The giver was woken by the stimulus ISR.
+@give
+@fast ref "fast mode" at give+1378
+giver  300 "k_sem_give()" : The giver gives the semaphore. The taker has a higher priority, so update_cache() selects it as the next thread.
+giver  411? "slice reset" : The same slice reset as in the fast mode (card H fast). The split is not measured.
+@r0 anchor
+giver  334 "reprogram 1" : z_try_abort_timeout() of the giver's slice timeout. It was the first timeout, so the driver programs SysTick for the next one (kernel/timeout.c:237-248).
+giver  334 "reprogram 2" : z_add_timeout() of the taker's slice timeout. It is the first timeout again, so the driver programs SysTick again.
+@r1 anchor
+giver  121 "z_swap()" : The giver pends PendSV and unlocks.
+hw     12 : Exception entry into PendSV.
+pendsv 448 "switch giver → taker" : z_arm_pendsv: save the giver, restore the taker.
+taker  87 : The taker returns from k_sem_take() and reads TIM2->CNT.
+@runs "taker runs"
+giver  pending runs..2150 "preempted" : The giver is ready, but the taker has the higher priority.
+
+mask 40..1500 "BASEPRI" : Scheduler lock and timeout lock.
+mask 1520..1950 "BASEPRI"
+
+span give..runs "2047, measured" !
+span r0..r1 "668, measured as the distance of the modes" !

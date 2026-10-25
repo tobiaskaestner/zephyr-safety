@@ -1,0 +1,34 @@
+include g474.tdc
+diagram b "Second mode: the first edge after a SysTick interrupt"
+letter "B"
+num value "61 cycles"
+num share "0.59 %"
+num path "direct ISR, idle"
+what "Some time after a SysTick interrupt, the next edge finds the ISR code no longer in the flash cache. The fetches wait for the flash. Only the first edge after each timer interrupt pays the cost. The SysTick ISR alone is enough; no thread needs to run."
+evidence "Share = SysTick IRQs per second / stimuli per second. Measured 3.01 / 0.59 / 0.33 % for 100 / 20 / 11 IRQs per second; the model gives 3.0 / 0.60 / 0.33 %."
+evidence "The 24-bit SysTick forces an IRQ at least every 98.7 ms at 170 MHz, even with no timeout."
+evidence "+20 cycles at 4 wait states, +8 at 2, none at 0 (16 MHz)."
+evidence "Longer paths miss more: +35 on the wrapped path, +80 on the GPIO driver path."
+src "irq-baseline-1m/20261024T155016Z, irq-checks-1m/20261024T163216Z"
+
+# Two pieces of the time axis: the SysTick interrupt, then the next edge.
+piece "cycles after the SysTick IRQ" -100..1000
+break "0 to 98.7 ms later"
+idle sleep -100..0 "WFI"
+@tick0 "SysTick IRQ" at 0
+tick 0..900 "elapsed(), announce" : sys_clock_isr(): the timer driver counts the elapsed cycles and announces the ticks (drivers/timer/cortex_m_systick.c:296). Its code replaces lines of the ISR path in the flash cache. About 900 cycles (estimate from the tail share).
+idle sleep 905..1000 "WFI"
+mask 20..840 "BASEPRI" : sys_clock_lock() holds BASEPRI for most of the ISR.
+
+piece "cycles after the edge" -30..80
+idle sleep -30..4 "WFI"
+mask -30..9 "PRIMASK"
+at 0
+@edge
+hw   4 : Pin input, EXTI, NVIC.
+idle 5 : Wake-up and cpsie i.
+hw   26 "stacking" : Exception entry.
+dev  miss 20! "+20 miss" : Flash cache (ART) misses: the fetches wait for the flash. +20 cycles at 4 wait states (measured as the distance of the mode). Where in the path the misses fall is not measured.
+dev  6 : The ISR reads TIM2->CNT.
+@cnt "CNT read"
+span edge..cnt "61 cycles, measured" !

@@ -1,0 +1,37 @@
+include g474.tdc
+diagram esw-slow "ISR → thread with USE_SWITCH=y, slow mode (80 %): one SysTick reprogram, then the switch at the end of the ISR"
+letter "E-sw slow"
+new
+num value "1922 cycles"
+num share "79.7 %"
+num path "wrapped ISR, k_sem, defaults"
+num arch "USE_SWITCH=y (no PendSV)"
+what "The same path as card E-sw fast, with one more step: the new slice timeout is the first timeout, so the driver programs SysTick again inside the ISR. Then the switch runs at the ISR exit. The dashed cursor shows where the fast mode ends (card E-sw fast)."
+evidence "Mode distance 301 cycles on ws-safety, 328 on ws-up: one reprogram, as with PendSV (310)."
+evidence "USE_SWITCH=y costs about 250 cycles more per wake than PendSV in this mode (1922 against 1676)."
+evidence "The slice reset and the reprogram are in update_cache(), before the arch switch. So the arch interface does not change them."
+src "wake-anchors-1m/20261024T174308Z"
+
+axis "cycles after the edge" -100..2100
+
+idle sleep -100..4 "WFI"
+mask -100..9 "PRIMASK"
+mask 150..1207 "BASEPRI" : The give, the slice reset and the reprogram run with the scheduler lock and the timeout lock held.
+mask 1212..1932 "BASEPRI until the switch ends"
+at 0
+hw 60 "entry" : Pin, EXTI, NVIC, wake-up, exception entry, _isr_wrapper. Cold cache.
+dev 21 : The ISR reads TIM2->CNT: time stamp 1.
+dev 250 "give" : k_sem_give(): the waiting thread becomes ready, and update_cache() selects it.
+dev 575? "slice reset" : The same slice reset as in the fast mode (card E-sw fast).
+dev 301! "reprogram" : The new slice timeout is the first timeout, so the driver programs SysTick again. 301 cycles: the distance of the two modes, measured (ws-up: 328).
+dev 725 "exc exit: pick thread, switch" : arm_m_exc_exit, arm_m_must_switch(), z_get_next_switch_handle(), arm_m_do_switch(), in handler mode. No PendSV, and no second slice reset.
+hw 15 : Exception return directly into the woken thread.
+waker 56 : The thread returns from k_sem_take() and reads TIM2->CNT: time stamp 2.
+
+@t0_1 edge "edge" at 0
+@t0_2 stamp "stamp 1" at 81
+@t0_3 ref "fast mode" at 1702
+@t0_4 stamp "stamp 2" at 2003
+span 0..81 "81" !
+span 81..2003 "1922, measured" !
+span 906..1207 "301" !

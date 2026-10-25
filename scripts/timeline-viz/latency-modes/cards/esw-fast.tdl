@@ -1,0 +1,36 @@
+include g474.tdc
+diagram esw-fast "ISR → thread with USE_SWITCH=y, fast mode (20 %): the switch runs at the end of the ISR"
+letter "E-sw fast"
+new
+num value "1621 cycles"
+num share "19.8 %"
+num path "wrapped ISR, k_sem, defaults"
+num arch "USE_SWITCH=y (no PendSV)"
+what "The same wake as card E fast, but with the new arch interface. There is no PendSV. The ISR return goes to arm_m_exc_exit, which selects the woken thread and switches to it in handler mode, with BASEPRI set until the switch ends. Then the exception return goes directly into the woken thread. The dashed cursor shows where the slow mode ends (card E-sw slow)."
+evidence "wake-anchors-1m, ws-safety: two modes, 1621 (19.8 %) and 1922/1923 (79.7 %). ws-up: 1572 (19.9 %) and 1900 (79.7 %)."
+evidence "Without time slicing: 1046 against 769 with PendSV (+277). ws-up: 980 against 716 (+264). So the switch at the ISR exit costs more than the PendSV switch."
+evidence "IRQ p99.99 1333 against 827, max 2345 against 1690: the BASEPRI section of the switch is longer."
+evidence "A uniprocessor z_get_next_switch_handle() does not reset the slice. So an ISR wake has one slice reset, as with PendSV."
+src "wake-anchors-1m/20261024T174308Z"
+
+axis "cycles after the edge" -100..2100
+
+idle sleep -100..4 "WFI"
+mask -100..9 "PRIMASK"
+mask 150..906 "BASEPRI" : The give and the slice reset run with the scheduler lock and the timeout lock held.
+mask 911..1631 "BASEPRI until the switch ends" : arm_m_must_switch() sets BASEPRI and keeps it until the end of the context switch (arm-m-switch.c:512-518). This section is longer than the PendSV section: the IRQ max is 2345 against 1690 cycles.
+at 0
+hw 60 "entry" : Pin, EXTI, NVIC, wake-up, exception entry, _isr_wrapper. Cold cache.
+dev 21 : The ISR reads TIM2->CNT: time stamp 1 (IRQ p50 81, as with PendSV).
+dev 250 "give" : k_sem_give(): the same give as with PendSV: the waiting thread becomes ready, and update_cache() selects it.
+dev 575? "slice reset, no reprogram" : The same slice reset as in card E fast. With USE_SWITCH=y it costs about 575 cycles (fast 1621 against 1046 without slicing). The main thread's poll timeout is the first timeout, so SysTick keeps its value.
+dev 725 "exc exit: pick thread, switch" : The ISR returns into arm_m_exc_exit (arm_m_exc_tail() replaced the return address). arm_m_must_switch() sets BASEPRI, z_get_next_switch_handle() gives the woken thread, and arm_m_do_switch() saves the idle thread and restores the woken one, in handler mode. No PendSV. The length is an estimate: 1046 (no slicing) minus the give and the thread return.
+hw 15 : Exception return directly into the woken thread.
+waker 56 : The thread returns from k_sem_take() and reads TIM2->CNT: time stamp 2.
+
+@t0_1 edge "edge" at 0
+@t0_2 stamp "stamp 1" at 81
+@t0_3 stamp "stamp 2" at 1702
+@t0_4 ref "slow mode" at 2003
+span 0..81 "81" !
+span 81..1702 "1621, measured" !

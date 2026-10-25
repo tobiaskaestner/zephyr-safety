@@ -1,0 +1,29 @@
+include g474.tdc
+diagram c "Tail: the edge comes during the SysTick ISR"
+letter "C"
+num value "71 to about 1000 cycles"
+num share "part of 0.024 %"
+num path "direct ISR, idle"
+what "The edge comes while the SysTick ISR runs. Both interrupts have the same priority, so the EXTI0 IRQ waits in the NVIC until the SysTick ISR returns. Then the core tail-chains into the EXTI0 ISR. The latency is the rest of the SysTick ISR plus the ISR entry."
+evidence "The tail share follows the timer events: 0.0058 / 0.024 / 0.186 % at 11 / 20 / 100 events per second."
+evidence "About 900 masked cycles per bare SysTick event (tail share × core clock / events per second)."
+evidence "The ZLI path has no tail, so the tail is masked time and not hardware."
+src "irq-baseline-1m/20261024T155016Z"
+
+axis "cycles after the edge" -500..700
+
+idle sleep -500..-420 "WFI"
+dev pending 0..500 "pending in the NVIC" : Same priority: the EXTI0 IRQ waits until the SysTick ISR returns.
+idle sleep 560..700 "WFI"
+mask -380..470 "BASEPRI" : sys_clock_lock() and the timeout lock hold BASEPRI for most of the ISR. Here the mask does not matter: the same priority already blocks the EXTI0 IRQ for the full ISR (see card G2 for a lower SysTick priority).
+at -420
+hw 20 : Exception entry into the SysTick ISR.
+tick 900 "SysTick ISR" : About 900 cycles (estimate). SysTick and the EXTI0 IRQ have the same priority (_IRQ_PRIO_OFFSET, cortex_m_systick.c:566), so the EXTI0 IRQ cannot preempt it.
+hw 6 : Tail-chaining: the core goes from one exception to the next without unstacking.
+dev miss 20 "miss" : The SysTick ISR just ran, so the ISR code is probably not in the cache.
+dev 6 : The ISR reads TIM2->CNT.
+
+@t0_1 tick "SysTick IRQ" at -400
+@t0_2 edge "edge" at 0
+@t0_3 stamp "CNT read" at 532
+span 0..532 "example: 532 cycles"

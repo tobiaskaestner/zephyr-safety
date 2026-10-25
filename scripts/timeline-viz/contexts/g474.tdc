@@ -1,0 +1,18 @@
+# Run contexts of the latency apps on the NUCLEO-G474RE.
+# ISR priorities are IRQ_CONNECT() numbers (0 is the highest kernel
+# priority). The order here is the lane order for the same priority.
+
+core   hw     "Hardware"
+core   mask   "PRIMASK, BASEPRI"
+
+isr    zli    ZLI  "EXTI0 ISR (ZLI)"
+isr    dev    0    "EXTI0 ISR"
+isr    tick   0    "SysTick ISR"   as tick
+isr    pendsv low  "PendSV"        as switch
+
+thread waker  0    "Woken thread"
+thread taker  1    "Taker thread"
+thread giver  2    "Giver thread"
+thread main   10   "Main thread"
+thread busy   14   "Busy thread"
+thread idle   15   "Idle thread"

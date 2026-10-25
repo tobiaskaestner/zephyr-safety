@@ -1,0 +1,31 @@
+include g474.tdc
+diagram hsw-fast "Thread → thread with USE_SWITCH=y, fast mode (20 %): two slice resets, no reprogram"
+letter "H-sw fast"
+new
+num value "1879 cycles"
+num share "20.4 %"
+num path "k_sem, giver (prio 2) → taker (prio 1)"
+num arch "USE_SWITCH=y (no PendSV)"
+what "With USE_SWITCH=y a thread switch has no exception at all: z_swap() calls arch_switch() inline, in thread mode. But do_swap() resets the slice for the new thread again, after update_cache() already did it. In this mode neither reset programs SysTick, because the main thread's poll timeout is the first timeout. The dashed cursor shows where the slow mode ends (card H-sw slow)."
+evidence "thread2thread-switch, ws-safety: two modes, 1879 (20.4 %) and 3168 (77.8 %). ws-up: 1803 (22.1 %) and 3136 (77.8 %)."
+evidence "The same session with PendSV: 1379 and 2042 (ws-safety). So USE_SWITCH=y costs about 500 cycles more in the fast mode."
+evidence "Mutex: 2176 and 3488 with USE_SWITCH=y, 1648 and 2272 with PendSV."
+src "thread2thread-switch/20261025T100427Z"
+
+axis "cycles after the give call" -100..3300
+
+taker pending -100.. "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
+
+at -100
+giver 100 : The giver was woken by the stimulus ISR.
+@give
+@slow ref "slow mode" at give+3168
+giver 300 "give" {basepri} : The giver gives the semaphore. The taker has a higher priority, so update_cache() selects it as the next thread.
+giver 411? "reset 1" {basepri} : update_cache() resets the slice for the taker: abort and add of the slice timeout. No reprogram in this mode. Length as with PendSV (card H fast).
+giver 411? "reset 2" {basepri} : do_swap() calls z_time_slice_reset(new_thread) again (kernel/include/kswap.h:130), the same code in both trees. Length: an estimate, the same as reset 1.
+giver 670 "arch_switch()" {basepri} : Inline in z_swap(), in thread mode: save the giver, restore the taker. No exception. Length: the rest of the measured total (an estimate).
+taker 87 : The taker returns from k_sem_take() and reads TIM2->CNT.
+@runs "taker runs"
+giver pending runs..3300 "preempted" : The giver is ready, but the taker has the higher priority.
+
+span give..runs "1879, measured" !

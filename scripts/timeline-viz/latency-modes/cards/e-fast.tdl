@@ -1,0 +1,35 @@
+include g474.tdc
+diagram e-fast "ISR → thread, fast mode (20 %): the slice reset does not reprogram SysTick"
+letter "E fast"
+new
+num value "1366 cycles"
+num share "20 %"
+num path "wrapped ISR, k_sem, defaults"
+num arch "PendSV (USE_SWITCH=n)"
+what "The ISR gives a semaphore, and the woken thread runs after PendSV switches to it. With time slicing, the give also resets the slice timeout for the woken thread, inside the ISR. In this mode the main thread's poll timeout (every 100 ms) expires before the new slice timeout (20 ms). This is true for 20 % of the poll period. So the slice timeout is not the first timeout, and SysTick keeps its value. The dashed cursor shows where the slow mode ends (card E slow)."
+evidence "Prediction test (fast-mode, written before the run): fast share 20.15 % (stimulus 100..500 µs), 20.20 % (100..200 µs), 20.11 % (400..500 µs), 20.05 % (fixed 300 µs), 1.99 % with a 1000 ms poll. Only the poll period changes the share."
+evidence "With 16 load timers the slice timeout is almost never the first timeout: almost all wakes are fast (slow share 0.3 %), p50 1529."
+evidence "TIMESLICING=n: one mode at 769 cycles (wake-anchors-1m). So time slicing costs about 600 cycles also without the reprogram."
+src "wake-isr-1m/20261024T170705Z, wake-anchors-1m/20261024T174308Z, fast-mode/20261025T051025Z"
+
+axis "cycles after the edge" -100..1850
+
+idle sleep -100..4 "WFI"
+mask -100..9 "PRIMASK"
+mask 150..931 "BASEPRI" : The give and the slice reset run with the scheduler lock and the timeout lock held.
+mask 950..1380 "BASEPRI"
+at 0
+hw 60 "entry" : Pin, EXTI, NVIC, wake-up, exception entry, _isr_wrapper. Cold cache.
+dev 21 : The ISR reads TIM2->CNT: time stamp 1.
+dev 250 "k_sem_give()" : The ISR gives the semaphore. The kernel makes the waiting thread ready. update_cache() selects it as the next thread (ws-safety kernel/sched.c:166-170).
+dev 600? "slice reset, no reprogram" : update_cache() calls z_time_slice_reset() for the next thread: z_try_abort_timeout() and z_add_timeout() of the slice timeout. The main thread's poll timeout expires first, so the slice timeout is not the first timeout, and the driver does not program SysTick. Time slicing costs about 600 cycles also here (1366 against 769 without slicing). The split between this code and the switch path is not measured.
+hw 10 : Tail-chaining into PendSV.
+pendsv 450 "switch idle → thread" : z_arm_pendsv: save the idle thread, program the MPU stack guard, restore the woken thread.
+waker 56 : The thread returns from z_swap() and k_sem_take() and reads TIM2->CNT: time stamp 2.
+
+@t0_1 edge "edge" at 0
+@t0_2 stamp "stamp 1" at 81
+@t0_3 stamp "stamp 2" at 1447
+@t0_4 ref "slow mode" at 1757
+span 0..81 "81" !
+span 81..1447 "1366, measured" !

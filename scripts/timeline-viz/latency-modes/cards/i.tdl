@@ -1,0 +1,32 @@
+include g474.tdc
+diagram i "Side effect: each SysTick reprogram loses kernel-clock cycles"
+letter "I"
+new
+num loss "8.0 or 9.7 cycles per wake"
+num drift "152 to 182 ppm"
+num "256 timers" "4661 ppm"
+what "When the driver programs SysTick again, it counts the elapsed cycles up to its last read of the counter. Then it writes LOAD and restarts the counter. The cycles between the read and the restart are lost. Each reprogram makes the kernel clock a few cycles slower than the hardware clock. Every timeout and k_uptime_get() then fall behind real time by an amount that depends on the load."
+evidence "Drift with time slicing: 151.8 ppm (ws-safety) and 151.4 ppm (ws-up). Without time slicing: 1.1 ppm. So the reprograms of the slice reset cause it."
+evidence "A test patch that adds the gap back (branch tkaestner/latency-systick-drift) changes the sign: +151.7 → −121.0 ppm. The patch adds about 6 cycles too many, so a real fix needs a calibrated value."
+evidence "The place of the code changes the loss: 8.05 or 9.66 cycles per wake (code pad, 8-byte period)."
+evidence "Second cause: the driver sees at most one counter wrap between two reads. With 256 timers, masked sections are longer than the shortest reload (10 µs), so whole reloads get lost: 4661 ppm (6.7 min per day). A 50 µs shortest reload removes this (−102 ppm with the patch)."
+evidence "Busy thread: 300 ppm. Thread to thread: 954 to 1427 ppm (more switches per edge)."
+src "clock-drift/20261024T210905Z, clock-drift-fix/20261024T223910Z, code-layout/20261025T060257Z, clock-drift-layout/20261025T062259Z"
+
+axis "cycles after the read of SysTick->VAL" -60..60
+
+mask -60..60 "BASEPRI (timeout lock, clock lock)"
+at -60
+hw 60 "VAL counts down: counted" : The driver adds these cycles to the kernel time.
+at -50
+dev 50 "elapsed(): read VAL" : timer_driver_set_reload() counts the elapsed cycles up to its last read of SysTick->VAL (val2) (ws-safety drivers/timer/cortex_m_systick.c:237-240).
+hw 4? : The counter runs on, but no term adds these cycles to the kernel time. About 4 cycles per reprogram if a wake has two reprograms (from code reading; not counted).
+at 0
+dev 4 : Writes LOAD, then VAL = 0.
+hw 56 "VAL counts from the new LOAD" : The counter starts again from LOAD.
+at 4
+dev 46 "return to the kernel" : Back in the slice reset (card E slow).
+
+@t0_1 stamp "val2 = VAL" at 0
+@t0_2 tick "VAL = 0" at 4
+span 0..4 "lost: about 4 per reprogram (estimate); 8.0 or 9.7 per wake (measured)"

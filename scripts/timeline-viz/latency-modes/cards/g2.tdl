@@ -1,0 +1,38 @@
+include g474.tdc
+diagram g2 "SysTick one level lower: the edge waits only for the locked section"
+letter "G2"
+new
+num p99 "5696 cycles"
+num p99.99 "6912"
+num max "7183 (42 µs)"
+num path "wrapped ISR, LATBENCH_SYSTICK_PRIO=1"
+what "With SysTick one priority level below the device IRQ, the edge preempts the SysTick ISR outside its locked sections. The edge waits only if it comes during a locked section. The longest one is the DLIST insert walk over all timeouts, about 7000 cycles."
+evidence "IRQ p99.99 at 64 timers: 5664 → 2112. At 256 timers: 25888 → 6912; max 36577 → 7183 (ws-up: 24704 → 6592)."
+evidence "The CCDF at 256 timers stops sharply at about 7000 cycles (41 µs): the longest locked section."
+evidence "ISR → thread does not change: PendSV still waits for the SysTick ISR."
+evidence "Risk: the SysTick ISR now waits for device ISRs. The kernel clock loses more reloads: 4750 → 6366 ppm at 256 timers. Late edges 6 → 9..12."
+evidence "ws-up has CONFIG_CORTEX_M_SYSTICK_INTERRUPT_PRIORITY for this. ws-safety has a fixed priority; the app sets it with NVIC_SetPriority()."
+src "systick-prio-1m/20261025T051643Z"
+
+axis "cycles after the edge" -3000..9000
+prio tick 1
+
+idle pending -3000..9000 "preempted" : The idle thread waits until the ISRs return.
+
+at -3000
+tick 2500 "cb, other work" : SysTick ISR parts without a lock. Here an edge preempts the SysTick ISR at once.
+tick 6900 "restart: insert walk over all timeouts" : The longest locked section: the DLIST insert walk over about 256 timeouts at about 25 cycles each, with the timeout lock held. Estimate from the sharp end of the curve at about 7000 cycles.
+@unlock anchor
+@edge at 0
+dev  pending edge..unlock "pending: masked by BASEPRI" : The EXTI0 IRQ has the higher priority, but BASEPRI masks it until the lock is released.
+hw   26 : Exception entry: the EXTI0 IRQ preempts the SysTick ISR.
+dev  54 : Wrapper, cache misses, read of TIM2->CNT.
+@cnt "CNT read"
+tick pending unlock.. : The SysTick ISR is preempted.
+at 6500
+tick 2500 "SysTick ISR continues" : The SysTick ISR continues after the EXTI0 ISR. The thread wake (PendSV) still waits for it, so ISR → thread does not change (p50 4256 against 4192).
+
+mask -500..6400 "BASEPRI (timeout lock)"
+mask 6700..8800 "BASEPRI"
+
+span edge..cnt "example: 6480 cycles, near the max of the lock"

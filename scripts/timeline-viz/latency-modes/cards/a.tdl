@@ -1,0 +1,26 @@
+include g474.tdc
+diagram a "Floor: the CPU sleeps in WFI"
+letter "A"
+num value "41 cycles"
+num share "99.4 %"
+num path "direct ISR, idle"
+what "The CPU sleeps in the idle thread with PRIMASK set. The edge wakes the core. The idle thread clears PRIMASK, and only then the exception entry starts. The ISR code is in the flash cache."
+evidence "Floor 41 with an idle CPU and 36 with a busy CPU, so the wake-up and cpsie take about 5 cycles."
+evidence "Floor 41 / 39 / 37 at 170 / 85 / 16 MHz (4 / 2 / 0 flash wait states)."
+evidence "Same floor on ws-safety and ws-up, and on the ZLI path."
+src "irq-baseline-1m/20261024T155016Z"
+
+axis "cycles after the edge" -40..60
+
+idle sleep -40..4 "WFI" : The idle thread sleeps in WFI. k_cpu_idle() set PRIMASK and cleared BASEPRI before WFI (arch/arm/core/cortex_m/cpu_idle.c:81-99).
+mask -40..9 "PRIMASK" : PRIMASK is set during WFI. The ISR can start only after the idle thread clears it.
+
+at 0
+@edge
+hw   4 "pin" : Pin input, EXTI edge detection, NVIC pending. Split not measured.
+idle 5! : Wake-up from WFI, then cpsie i (cpu_idle.c:104). About 5 cycles: idle floor 41 minus busy floor 36.
+hw   26 "stacking, vector" : Exception entry: the core stacks 8 registers and fetches the vector. Split not measured.
+dev  6 "ldr" : The first instructions of the direct ISR read TIM2->CNT.
+@cnt "CNT read"
+
+span edge..cnt "41 cycles, measured" !

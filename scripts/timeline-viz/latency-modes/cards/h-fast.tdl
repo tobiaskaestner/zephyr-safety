@@ -1,0 +1,33 @@
+include g474.tdc
+diagram h-fast "Thread → thread, fast mode (21 %): no SysTick reprogram"
+letter "H fast"
+new
+num value "1378 cycles"
+num share "21 %"
+num path "k_sem, giver (prio 2) → taker (prio 1)"
+num arch "PendSV (USE_SWITCH=n)"
+what "The giver wakes a taker of a higher priority. The switch resets the slice timeout twice: it aborts the giver's slice timeout and adds one for the taker. In this mode the main thread's poll timeout is the first timeout, so neither step programs SysTick. The dashed cursor shows where the slow mode ends (card H slow)."
+evidence "Two exact modes for all 11 primitives and both trees; the fast share is 20 to 22 %, as in card E fast (the same poll-period cause)."
+evidence "The fast edges are the same in ISR → giver and in giver → taker: one cause for both."
+evidence "Without preemption, the give call costs 327 cycles (sem) and 442 (mutex)."
+src "thread2thread-1m/20261025T030402Z"
+
+axis "cycles after the give call" -100..2150
+
+taker pending -100..1291 "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
+giver pending 1378..2150 "preempted" : The giver is ready, but the taker has the higher priority.
+mask 40..832 "BASEPRI" : Scheduler lock and timeout lock.
+mask 852..1282 "BASEPRI"
+at -100
+giver 100 : The giver was woken by the stimulus ISR.
+giver 300 "k_sem_give()" : The giver gives the semaphore. The taker has a higher priority, so update_cache() selects it as the next thread.
+giver 411? "slice reset" : Abort of the giver's slice timeout, add of the taker's slice timeout. Neither is the first timeout (the main thread's poll timeout comes first), so the driver does not program SysTick. The split is not measured.
+giver 121 "z_swap()" : The giver pends PendSV and unlocks.
+hw 12 : Exception entry into PendSV.
+pendsv 447 "switch giver → taker" : z_arm_pendsv: save the giver, restore the taker.
+taker 87 : The taker returns from k_sem_take() and reads TIM2->CNT.
+
+@t0_1 stamp "give" at 0
+@t0_2 stamp "taker runs" at 1378
+@t0_3 ref "slow mode" at 2047
+span 0..1378 "1378, measured" !

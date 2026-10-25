@@ -1,0 +1,25 @@
+include g474.tdc
+diagram a2 "Floor: the CPU is busy"
+letter "A2"
+num value "36 cycles"
+num share "98.5 %"
+num path "direct ISR, busy thread"
+what "A busy thread runs instead of WFI. The exception entry starts at once, so the floor is 5 cycles shorter than with an idle CPU."
+evidence "Floor 36 in both busy points of irq-checks-1m (with and without time slicing)."
+evidence "The ZLI minimum (34 to 36) has the same cause: the few edges that come while the CPU is awake."
+src "irq-checks-1m/20261024T163216Z"
+
+axis "cycles after the edge" -40..60
+
+at -40
+busy 44 "nop loop" : A thread at the lowest application priority runs a nop loop instead of WFI.
+at 0
+hw 4 "pin" : Pin input, EXTI edge detection, NVIC pending. Split not measured.
+hw 26 "stacking, vector" : Exception entry starts at once: no sleep, no PRIMASK.
+dev 6 "ldr" : The first instructions of the direct ISR read TIM2->CNT.
+at 44
+busy 16 : The busy thread continues after the ISR.
+
+@t0_1 edge "edge" at 0
+@t0_2 stamp "CNT read" at 36
+span 0..36 "36 cycles, measured" !

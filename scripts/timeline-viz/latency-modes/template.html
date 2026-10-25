@@ -1,0 +1,428 @@
+<title>G474 Latency Modes</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans+Condensed:wght@500;600&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&display=swap">
+<style>
+/* Layout: one reading column; each mode is a card with a logic-analyser style
+   swimlane capture (contexts as lanes, edge and time stamp as cursors).
+   Lanes come in three groups: core (hardware, IRQ mask), ISRs by priority,
+   threads by priority. */
+:root {
+  --bg: #f4f5f6;
+  --panel: #fcfcfb;
+  --fg: #15171a;
+  --fg2: #52565c;
+  --rule: #dcdfe3;
+  --faint: #eceef0;
+  --c-dev: #eb6834;
+  --c-tick: #6250d6;
+  --c-sw: #1baf7a;
+  --c-thr: #2a78d6;
+  --c-hw: #8a8f96;
+  --c-mask: #3a3d42;
+  --c-zli: #6d7178;
+  --s1: #2a78d6; --s2: #eb6834; --s3: #1baf7a; --s4: #eda100;
+  --font-display: "IBM Plex Sans Condensed", "Arial Narrow", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #111213; --panel: #1a1a19; --fg: #f0efec; --fg2: #c3c2b7; --rule: #34373b; --faint: #232527;
+    --c-dev: #d95926; --c-tick: #9085e9; --c-sw: #199e70; --c-thr: #3987e5; --c-hw: #8d9198; --c-mask: #c9ccd1; --c-zli: #a3a7ad;
+    --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #111213; --panel: #1a1a19; --fg: #f0efec; --fg2: #c3c2b7; --rule: #34373b; --faint: #232527;
+  --c-dev: #d95926; --c-tick: #9085e9; --c-sw: #199e70; --c-thr: #3987e5; --c-hw: #8d9198; --c-mask: #c9ccd1; --c-zli: #a3a7ad;
+  --s1: #3987e5; --s2: #d95926; --s3: #199e70; --s4: #c98500;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--fg); font-family: var(--font-body); font-size: 15px; line-height: 1.55;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 64px;
+}
+.wrap { max-width: 1080px; margin: 0 auto; display: grid; gap: 36px; }
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; text-wrap: balance; margin: 0; letter-spacing: 0.005em; }
+h1 { font-size: 2.1rem; line-height: 1.15; }
+h2 { font-size: 1.35rem; }
+h3 { font-size: 1.12rem; }
+p { margin: 0; max-width: 68ch; }
+.mono, code { font-family: var(--font-mono); font-size: 0.86em; }
+.meta { color: var(--fg2); font-family: var(--font-mono); font-size: 0.8rem; display: flex; flex-wrap: wrap; gap: 4px 18px; }
+header { display: grid; gap: 12px; }
+.eyebrow { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg2); }
+section { display: grid; gap: 16px; }
+.panel { background: var(--panel); border: 1px solid var(--rule); border-radius: 6px; padding: 18px; min-width: 0; }
+.legend { display: flex; flex-wrap: wrap; gap: 10px 22px; font-size: 0.85rem; color: var(--fg2); align-items: center; }
+.legend span { display: inline-flex; align-items: center; gap: 7px; }
+.legend svg { flex: none; }
+.hists { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 440px), 1fr)); gap: 16px; }
+.hist h3 { margin-bottom: 2px; }
+.hist .src { color: var(--fg2); font-family: var(--font-mono); font-size: 0.72rem; overflow-wrap: anywhere; }
+.subhead { font-family: var(--font-mono); font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg2); margin-top: 6px; }
+.scroll { overflow-x: auto; }
+.scroll svg { display: block; }
+.index { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip { display: inline-flex; align-items: center; gap: 8px; padding: 5px 11px 5px 6px; border: 1px solid var(--rule); border-radius: 999px;
+  background: var(--panel); color: var(--fg); text-decoration: none; font-size: 0.86rem; }
+.chip:hover, .chip:focus-visible { border-color: var(--c-dev); outline: none; }
+.badge { display: inline-grid; place-items: center; min-width: 26px; height: 22px; padding: 0 6px; border-radius: 4px; background: var(--fg); color: var(--panel);
+  font-family: var(--font-mono); font-size: 0.78rem; font-weight: 500; white-space: nowrap; flex: none; }
+.badge.new { background: var(--c-dev); color: #fff; }
+.card { display: grid; gap: 14px; scroll-margin-top: 16px; }
+.card-head { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 14px; }
+.card-head h3 { flex: 1 1 320px; display: flex; gap: 10px; align-items: baseline; }
+.nums { display: flex; flex-wrap: wrap; gap: 8px; }
+.num { font-family: var(--font-mono); font-size: 0.82rem; padding: 2px 8px; border-radius: 4px; background: var(--faint); font-variant-numeric: tabular-nums; }
+.num b { font-weight: 500; }
+.cols { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 320px), 1fr)); gap: 14px 28px; }
+.cols > div { min-width: 0; display: grid; gap: 6px; align-content: start; }
+.cols h4 { margin: 0; font-family: var(--font-mono); font-size: 0.72rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg2); font-weight: 500; }
+.src-line { color: var(--fg2); font-family: var(--font-mono); font-size: 0.72rem; overflow-wrap: anywhere; }
+ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+li { max-width: 68ch; overflow-wrap: anywhere; }
+.changes li { max-width: 86ch; }
+.changes a { font-weight: 500; }
+.note { color: var(--fg2); font-size: 0.88rem; }
+.qt { border-collapse: collapse; margin-top: 10px; font-family: var(--font-mono); font-size: 0.74rem; font-variant-numeric: tabular-nums; width: 100%; }
+.qt th, .qt td { padding: 3px 6px; text-align: right; border-bottom: 1px solid var(--rule); white-space: nowrap; }
+.qt th:first-child, .qt td:first-child { text-align: left; white-space: normal; }
+.qt th { color: var(--fg2); font-weight: 500; }
+#tip { position: fixed; pointer-events: none; z-index: 20; max-width: 320px; background: var(--fg); color: var(--panel); padding: 7px 9px; border-radius: 5px;
+  font-size: 0.8rem; line-height: 1.4; white-space: pre-line; }
+svg text { font-family: var(--font-mono); }
+a { color: inherit; }
+@media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="eyebrow">Latency study · results of 2026-10-24 and 2026-10-25</div>
+    <h1>G474 Latency Modes</h1>
+    <p>Each mode in the measured distributions has its own cause. Each card below shows one sample of that mode as a timing diagram. The lanes are the run contexts, and the vertical cursors are the stimulus edge and the time stamps.</p>
+    <div class="meta">
+      <span>NUCLEO-G474RE · Cortex-M4F</span><span>170 MHz · 1 cycle = 5.88 ns</span><span>Zephyr ws-safety 770fdef15673 · ws-up 3b42ac0d24bd</span><span>SysTick, tickless, 10 kHz ticks</span><span>board defaults: time slicing on (20 ms), DLIST timeouts</span>
+    </div>
+  </header>
+
+  <section aria-labelledby="new">
+    <h2 id="new">New on 2026-10-25</h2>
+    <div class="panel">
+      <ul class="changes">
+        <li><a href="#mode-e-fast">E fast</a> and <a href="#mode-e-slow">E slow</a>: the cause of the two ISR → thread modes is known. The slow mode has one SysTick reprogram (about 310 cycles) in the slice reset. A test confirmed the prediction: the share of the fast mode follows only the poll period of the main thread (20 % at 100 ms, 2 % at 1000 ms).</li>
+        <li><a href="#mode-f">F</a>: with timers, each slice reset walks the timeout list with interrupts masked. ISR → thread p50 goes from 1686 to 4192 cycles with 256 timers. WHEEL gives 1429.</li>
+        <li><a href="#mode-g">G</a> and <a href="#mode-g2">G2</a>: with 256 timers, most of the IRQ tail is the SysTick ISR body, because SysTick has the same priority as the device IRQ. With SysTick one level lower, the p99.99 falls from 25888 to 6912 cycles.</li>
+        <li><a href="#mode-h-fast">H fast</a> and <a href="#mode-h-slow">H slow</a>: thread → thread has two SysTick reprograms per switch in the slow mode: 668 of the 2047 cycles of the slow mode.</li>
+        <li><a href="#mode-i">I</a>: each reprogram loses some cycles of the kernel clock: 8.0 or 9.7 cycles per wake. With 256 timers, the clock also loses whole reloads (4661 ppm).</li>
+        <li><a href="#mode-esw-fast">E-sw fast</a> and <a href="#mode-esw-slow">E-sw slow</a>: with USE_SWITCH=y there is no PendSV on Cortex-M. The switch runs at the end of the ISR in handler mode. The two modes stay (one reprogram), but each wake costs about 250 to 280 cycles more, and the masked section of the switch is longer.</li>
+        <li><a href="#mode-hsw-fast">H-sw fast</a> and <a href="#mode-hsw-slow">H-sw slow</a>: with USE_SWITCH=y a thread switch resets the slice twice (kswap.h:130 after update_cache()). The slow mode then programs SysTick four times per switch: the mode distance grows from about 650 to about 1300 cycles on both trees. We predicted this from the code before the run.</li>
+        <li>Method: the place of the code in flash changes the results. Single builds of the same code differ by up to about 190 cycles. Do not compare single builds when the difference is small.</li>
+      </ul>
+    </div>
+  </section>
+
+  <section aria-labelledby="read">
+    <h2 id="read">How to read the diagrams</h2>
+    <div class="panel legend" id="legend"></div>
+    <p class="note">The lanes come in three groups. <b>Core</b>: the hardware, then the interrupt mask (PRIMASK, BASEPRI). <b>ISRs</b>: from the highest to the lowest priority. <b>Threads</b>: from the highest to the lowest priority. The chip next to a lane name gives the priority. ISR numbers are IRQ_CONNECT() numbers (0 is the highest kernel priority); ZLI is above all kernel IRQs, and PendSV has the lowest priority. Thread numbers are Zephyr thread priorities (a lower number runs first). Joined chips mark lanes with the same priority: these contexts cannot preempt each other.</p>
+    <p class="note">The "arch" tag of a card gives the arch interface. With the default <code>USE_SWITCH=n</code>, a thread switch runs in PendSV. With <code>USE_SWITCH=y</code> there is no PendSV: a switch from an ISR runs at the end of the ISR, and a switch from a thread is inline code in <code>z_swap()</code>.</p>
+    <p class="note">The order of the steps comes from the Zephyr code (paths in the cards). The total between the edge and the time stamp is measured. The split inside a total is an estimate, unless the step has a solid outline. The distributions do not record what ran at each sample, so a diagram is one typical sample of its mode.</p>
+  </section>
+
+  <section aria-labelledby="where">
+    <h2 id="where">Where the modes sit</h2>
+    <div class="subhead">2026-10-24 · idle CPU, no load</div>
+    <div class="hists">
+      <div class="panel hist" id="hist-irq"></div>
+      <div class="panel hist" id="hist-thr"></div>
+    </div>
+    <div class="subhead">2026-10-25 · load timers, time slicing, thread to thread (share of samples at or above a value)</div>
+    <div class="hists">
+      <div class="panel hist" id="ccdf-irq"></div>
+      <div class="panel hist" id="ccdf-thr"></div>
+      <div class="panel hist" id="ccdf-arch"></div>
+      <div class="panel hist" id="ccdf-t2t"></div>
+    </div>
+  </section>
+
+  <section aria-labelledby="modes">
+    <h2 id="modes">Mode by mode</h2>
+    <nav class="index" id="index" aria-label="Modes"></nav>
+    <div id="cards" style="display:grid;gap:22px"></div>
+  </section>
+</div>
+<div id="tip" hidden></div>
+
+<script>
+const DATA = /*DATA*/null;
+
+/* Timing diagrams: renderer (timing/render.js) and the cards, compiled
+   from timing/cards/*.tdl by build.py. */
+/*RENDER*/
+const { KINDS, esc, fmt, patterns } = TimingRender;
+const TDL = /*TDL*/null;
+const LANE_ENV = { lanes: TDL.lanes, laneKeys: TDL.laneKeys };
+const timeline = (sc) => TimingRender.timeline(sc, LANE_ENV);
+const card = (id) => {
+  const sc = TDL.cards.find((c) => c.id === id);
+  if (!sc) throw new Error("no TDL card " + id);
+  return sc;
+};
+
+/* Card order on the page. */
+const SCENARIOS = ["a", "a2", "b", "c", "c2", "d", "e-fast", "e-slow", "esw-fast", "esw-slow", "f", "g", "g2", "h-fast", "h-slow", "hsw-fast", "hsw-slow", "i"].map(card);
+
+/* Where each mode sits in the distributions (links to the cards). */
+const MARKS = {
+  irq: [{ v: 41, id: "a" }, { v: 61, id: "b" }, { v0: 71, v1: 1662, id: "c", label: "C, C2" }, { v: 67, id: "d", zli: true }],
+  thr: [{ v: 1366, id: "e-fast", label: "E fast" }, { v: 1676, id: "e-slow", label: "E slow" }],
+  irq256: [{ v: 12704, id: "g", label: "G p99", dy: -13 }, { v: 6912, id: "g2", label: "G2 p99.99" }],
+  thr256: [{ v: 1686, id: "e-slow", label: "E slow" }, { v: 4192, id: "f", label: "F p50" }],
+  arch: [{ v: 1621, id: "esw-fast", label: "E-sw fast", dy: -13 }, { v: 1922, id: "esw-slow", label: "E-sw slow" }],
+  t2t: [{ v: 1378, id: "h-fast", label: "H fast" }, { v: 2047, id: "h-slow", label: "H slow" }, { v: 1879, id: "hsw-fast", label: "H-sw fast", dy: -13 }, { v: 3168, id: "hsw-slow", label: "H-sw slow" }],
+};
+
+/* ---------- histogram (1-cycle bins) ---------- */
+function histogram(el, opts) {
+  const W = 520, H = 250, L = 52, R = 12, T = 34, B = 40;
+  const lx = (v) => L + ((Math.log10(v) - Math.log10(opts.x0)) / (Math.log10(opts.x1) - Math.log10(opts.x0))) * (W - L - R);
+  const ly = (c) => T + (1 - Math.log10(c / 0.7) / Math.log10(2e6 / 0.7)) * (H - T - B);
+  let o = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(opts.title)}" style="max-width:${W}px;display:block">`;
+  for (const c of [1, 10, 100, 1e3, 1e4, 1e5, 1e6]) {
+    o += `<line x1="${L}" x2="${W - R}" y1="${ly(c)}" y2="${ly(c)}" stroke="var(--rule)" stroke-width="0.7"/>`;
+    o += `<text x="${L - 6}" y="${ly(c) + 3.5}" text-anchor="end" font-size="10" fill="var(--fg2)">${c >= 1e3 ? "1e" + Math.log10(c) : c}</text>`;
+  }
+  for (const v of opts.ticks) {
+    o += `<line x1="${lx(v)}" x2="${lx(v)}" y1="${H - B}" y2="${H - B + 4}" stroke="var(--fg2)"/>`;
+    o += `<text x="${lx(v)}" y="${H - B + 15}" text-anchor="middle" font-size="10" fill="var(--fg2)">${v}</text>`;
+  }
+  o += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle" font-size="10.5" fill="var(--fg2)">latency (core cycles, log scale)</text>`;
+  o += `<text x="12" y="${(T + H - B) / 2}" text-anchor="middle" font-size="10.5" fill="var(--fg2)" transform="rotate(-90 12 ${(T + H - B) / 2})">samples per 1-cycle bin</text>`;
+  o += markLayer(opts.marks, lx, T, H - B);
+  for (const sr of opts.series) {
+    for (const [v, c] of sr.bins) {
+      if (v < opts.x0 || v > opts.x1) continue;
+      const x = lx(v);
+      o += `<line x1="${x}" x2="${x}" y1="${ly(0.7)}" y2="${ly(c)}" stroke="${sr.color}" stroke-width="${sr.width}" stroke-linecap="butt"/>`;
+      if (c <= 2) o += `<circle cx="${x}" cy="${ly(c)}" r="2" fill="${sr.color}"/>`;
+      o += `<rect class="hit" x="${x - 3}" y="${T}" width="6" height="${H - B - T}" fill="transparent" data-tip="${esc(`${sr.name}: ${fmt(v)} cycles, ${fmt(c)} samples (${(100 * c / sr.n).toPrecision(3)} %)`)}"/>`;
+    }
+  }
+  o += `</svg>`;
+  el.innerHTML = `<h3>${esc(opts.title)}</h3><div class="src">${esc(opts.src)}</div>${o}${seriesLegend(opts.series, false)}`;
+}
+
+function markLayer(marks, lx, top, bottom) {
+  let o = "";
+  for (const m of marks) {
+    const sc = SCENARIOS.find((s) => s.id === m.id);
+    const label = m.label || sc.letter;
+    if (m.v0) {
+      o += `<rect x="${lx(m.v0)}" y="${top - 4}" width="${lx(m.v1) - lx(m.v0)}" height="${bottom - top + 4}" fill="var(--c-dev)" opacity="0.07"/>`;
+      o += `<a href="#mode-${m.id}"><text x="${(lx(m.v0) + lx(m.v1)) / 2}" y="${top - 10}" text-anchor="middle" font-size="11" font-weight="500" fill="var(--fg)" text-decoration="underline">${esc(label)}</text></a>`;
+    } else {
+      const x = lx(m.v);
+      o += `<line x1="${x}" x2="${x}" y1="${top - 4}" y2="${bottom}" stroke="var(--fg2)" stroke-dasharray="2 3" stroke-width="0.8"/>`;
+      const dy = m.zli ? -13 : m.dy || 0;
+      o += `<a href="#mode-${m.id}"><text x="${x + (m.zli ? 4 : 0)}" y="${top - 10 + dy}" text-anchor="${m.zli ? "start" : "middle"}" font-size="11" font-weight="500" fill="var(--fg)" text-decoration="underline">${esc(label)}</text></a>`;
+    }
+  }
+  return o;
+}
+
+function seriesLegend(series, line) {
+  if (series.length < 2) return "";
+  const sw = (c) => line
+    ? `<svg width="18" height="10" aria-hidden="true"><line x1="1" y1="5" x2="17" y2="5" stroke="${c}" stroke-width="2.4" stroke-linecap="round"/></svg>`
+    : `<svg width="14" height="10" aria-hidden="true"><rect width="14" height="10" rx="2" fill="${c}"/></svg>`;
+  return `<div class="legend" style="margin-top:6px">${series.map((s) => `<span>${sw(s.color)}${esc(s.name)}</span>`).join("")}</div>`;
+}
+
+/* ---------- CCDF: share of samples at or above a value ---------- */
+const YDEC = 6;
+const pct = (s) => (s >= 1e-2 ? (100 * s).toFixed(1) + " %" : s > 0 ? (100 * s).toPrecision(2) + " %" : "0");
+function ccdfAt(d, x) {
+  // first point at or above x; its share is P(latency >= that value)
+  let lo = 0, hi = d.pts.length - 1;
+  if (x > d.pts[hi][0]) return 0;
+  while (lo < hi) { const mid = (lo + hi) >> 1; if (d.pts[mid][0] < x) lo = mid + 1; else hi = mid; }
+  return d.pts[lo][1];
+}
+function ccdf(el, opts) {
+  const W = 520, H = 260, L = 58, R = 14, T = 34, B = 40;
+  const cl = (v) => Math.min(opts.x1, Math.max(opts.x0, v));
+  const lx = (v) => L + (Math.log10(cl(v) / opts.x0) / Math.log10(opts.x1 / opts.x0)) * (W - L - R);
+  const ly = (s) => T + (-Math.log10(Math.max(s, Math.pow(10, -YDEC))) / YDEC) * (H - T - B);
+  let o = `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="${esc(opts.title)}" style="max-width:${W}px;display:block;touch-action:pan-y">`;
+  const ylab = ["100 %", "10 %", "1 %", "0.1 %", "0.01 %", "10⁻⁵", "10⁻⁶"];
+  for (let k = 0; k <= YDEC; k++) {
+    const yy = ly(Math.pow(10, -k));
+    o += `<line x1="${L}" x2="${W - R}" y1="${yy}" y2="${yy}" stroke="var(--rule)" stroke-width="0.7"/>`;
+    o += `<text x="${L - 6}" y="${yy + 3.5}" text-anchor="end" font-size="10" fill="var(--fg2)">${ylab[k]}</text>`;
+  }
+  for (const v of opts.ticks) {
+    o += `<line x1="${lx(v)}" x2="${lx(v)}" y1="${H - B}" y2="${H - B + 4}" stroke="var(--fg2)"/>`;
+    o += `<text x="${lx(v)}" y="${H - B + 15}" text-anchor="middle" font-size="10" fill="var(--fg2)">${fmt(v)}</text>`;
+  }
+  o += `<text x="${(L + W - R) / 2}" y="${H - 6}" text-anchor="middle" font-size="10.5" fill="var(--fg2)">latency (core cycles, log scale)</text>`;
+  o += `<text x="12" y="${(T + H - B) / 2}" text-anchor="middle" font-size="10.5" fill="var(--fg2)" transform="rotate(-90 12 ${(T + H - B) / 2})">share ≥ value</text>`;
+  o += markLayer(opts.marks, lx, T, H - B);
+  for (const sr of opts.series) {
+    const pts = sr.d.pts;
+    let d = `M${lx(opts.x0)} ${ly(1)} H${lx(pts[0][0])}`;
+    for (let i = 1; i < pts.length; i++) d += ` V${ly(pts[i][1])} H${lx(pts[i][0])}`;
+    o += `<path d="${d}" fill="none" stroke="${sr.color}" stroke-width="2" stroke-linejoin="round"/>`;
+    const last = pts[pts.length - 1];
+    o += `<circle cx="${lx(last[0])}" cy="${ly(last[1])}" r="4" fill="${sr.color}" stroke="var(--panel)" stroke-width="2"/>`;
+  }
+  o += `<line class="xh" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="var(--fg2)" stroke-width="1" visibility="hidden"/>`;
+  o += `<rect class="hit ov" x="${L}" y="${T}" width="${W - L - R}" height="${H - B - T}" fill="transparent" data-tip=""/>`;
+  o += `</svg>`;
+  const table = `<table class="qt"><thead><tr><th>series</th><th>p50</th><th>p99</th><th>p99.99</th><th>max</th></tr></thead><tbody>${
+    opts.series.map((s) => `<tr><td><svg width="14" height="8" aria-hidden="true"><line x1="1" y1="4" x2="13" y2="4" stroke="${s.color}" stroke-width="2.4" stroke-linecap="round"/></svg> ${esc(s.name)}</td>${
+      ["p50", "p99", "p99.99"].map((k) => `<td>${fmt(s.d.q[k])}</td>`).join("")}<td>${fmt(s.d.max)}</td></tr>`).join("")}</tbody></table>`;
+  el.innerHTML = `<h3>${esc(opts.title)}</h3><div class="src">${esc(opts.src)}</div>${o}${seriesLegend(opts.series, true)}${table}`;
+  const svg = el.querySelector("svg"), ov = el.querySelector(".ov"), xh = el.querySelector(".xh");
+  svg.addEventListener("pointermove", (ev) => {
+    const pt = svg.createSVGPoint(); pt.x = ev.clientX; pt.y = ev.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    if (p.x < L || p.x > W - R) { xh.setAttribute("visibility", "hidden"); return; }
+    const v = Math.round(opts.x0 * Math.pow(opts.x1 / opts.x0, (p.x - L) / (W - L - R)));
+    xh.setAttribute("x1", p.x); xh.setAttribute("x2", p.x); xh.setAttribute("visibility", "visible");
+    ov.setAttribute("data-tip", `≥ ${fmt(v)} cycles\n` + opts.series.map((s) => `${s.name}: ${pct(ccdfAt(s.d, v))} (max ${fmt(s.d.max)})`).join("\n"));
+  });
+  svg.addEventListener("pointerleave", () => xh.setAttribute("visibility", "hidden"));
+}
+
+/* ---------- legend ---------- */
+function legend() {
+  const sw = (fill, stroke, dash, op = 0.28) =>
+    `<svg width="34" height="16" aria-hidden="true">${patterns("lg")}<rect x="1" y="2" width="32" height="12" rx="2" fill="${fill}" fill-opacity="${op}" stroke="${stroke}" stroke-width="1.4" ${dash ? `stroke-dasharray="${dash}"` : ""}/></svg>`;
+  const items = [
+    ...["hw", "dev", "tick", "sw", "thr"].map((k) => sw(KINDS[k].color, KINDS[k].color, "4 3") + esc(KINDS[k].name)),
+    sw("var(--c-thr)", "var(--c-thr)", "1 3", 0.1) + "Core sleeps (WFI)",
+    sw("none", "var(--c-dev)", "5 3", 1) + "Pending or blocked",
+    sw("url(#lg-miss)", "var(--c-dev)", "", 1) + "Flash cache miss",
+    sw("url(#lg-unk)", "var(--fg2)", "3 3", 1) + "Cost whose place is not split",
+    sw("url(#lg-mask)", "var(--c-mask)", "", 0.55) + "Interrupts masked (BASEPRI or PRIMASK)",
+    sw("var(--c-hw)", "var(--c-hw)", "", 0.28) + "Solid outline: length measured",
+    `<svg width="34" height="16" aria-hidden="true"><path d="M2 4 V10 H32 V4" fill="none" stroke="var(--fg)" stroke-width="1.3"/></svg>Measured total`,
+    `<svg width="34" height="16" aria-hidden="true"><line x1="17" y1="0" x2="17" y2="16" stroke="var(--c-dev)" stroke-width="2"/></svg>Stimulus edge (TIM2 CCR4)`,
+    `<svg width="26" height="18" aria-hidden="true"><rect x="2" y="2" width="22" height="14" rx="4" fill="var(--panel)" stroke="var(--fg2)"/><text x="13" y="13" text-anchor="middle" font-size="10" fill="var(--fg)">0</text></svg>Priority`,
+    `<svg width="26" height="30" aria-hidden="true"><rect x="2" y="1" width="22" height="28" rx="4" fill="var(--fg)" fill-opacity="0.1" stroke="var(--fg2)" stroke-width="1.4"/><text x="13" y="11" text-anchor="middle" font-size="9" fill="var(--fg)">0</text><text x="13" y="18" text-anchor="middle" font-size="8" fill="var(--fg2)">=</text><text x="13" y="26" text-anchor="middle" font-size="9" fill="var(--fg)">0</text></svg>Same priority: no preemption between these lanes`,
+  ];
+  document.getElementById("legend").innerHTML = items.map((i) => `<span>${i}</span>`).join("");
+}
+
+/* ---------- cards ---------- */
+function cards() {
+  const badge = (s) => `<span class="badge${s.isNew ? " new" : ""}">${s.letter}</span>`;
+  document.getElementById("index").innerHTML = SCENARIOS.map((s) =>
+    `<a class="chip" href="#mode-${s.id}">${badge(s)}${esc(s.title)}</a>`).join("");
+  document.getElementById("cards").innerHTML = SCENARIOS.map((s) => `
+    <article class="panel card" id="mode-${s.id}">
+      <div class="card-head">
+        <h3>${badge(s)}<span>${esc(s.title)}</span></h3>
+        <div class="nums">${s.nums.map(([k, v]) => `<span class="num">${esc(k)} <b>${esc(v)}</b></span>`).join("")}</div>
+      </div>
+      <div class="scroll">${timeline(s)}</div>
+      <div class="cols">
+        <div><h4>What happens</h4><p>${esc(s.what)}</p></div>
+        <div><h4>Evidence</h4><ul>${s.evidence.map((e) => `<li>${esc(e)}</li>`).join("")}</ul></div>
+      </div>
+      <div class="src-line">data: results/${esc(s.src)}</div>
+    </article>`).join("");
+}
+
+/* ---------- tooltip ---------- */
+function tooltips() {
+  const tip = document.getElementById("tip");
+  document.addEventListener("pointermove", (ev) => {
+    const t = ev.target.closest && ev.target.closest("[data-tip]");
+    if (!t || !t.getAttribute("data-tip")) { tip.hidden = true; return; }
+    tip.textContent = t.getAttribute("data-tip");
+    tip.hidden = false;
+    const r = tip.getBoundingClientRect();
+    let x = ev.clientX + 14, y = ev.clientY + 14;
+    if (x + r.width > window.innerWidth - 8) x = ev.clientX - r.width - 14;
+    if (y + r.height > window.innerHeight - 8) y = ev.clientY - r.height - 14;
+    tip.style.left = x + "px";
+    tip.style.top = y + "px";
+  });
+}
+
+legend();
+histogram(document.getElementById("hist-irq"), {
+  title: "IRQ → ISR, direct path and ZLI, idle",
+  src: "results/" + DATA.irq_direct.source + " · zli-idle",
+  x0: 30, x1: 2500, ticks: [50, 100, 200, 500, 1000, 2000],
+  marks: MARKS.irq,
+  series: [
+    { name: "direct ISR", bins: DATA.irq_direct.bins, n: DATA.irq_direct.n, color: "var(--c-dev)", width: 1.6 },
+    { name: "zero-latency ISR", bins: DATA.irq_zli.bins, n: DATA.irq_zli.n, color: "var(--c-zli)", width: 1.1 },
+  ],
+});
+histogram(document.getElementById("hist-thr"), {
+  title: "ISR → thread, k_sem, wrapped ISR",
+  src: "results/" + DATA.isr2thr_sem.source,
+  x0: 1200, x1: 4500, ticks: [1366, 1676, 2000, 3000, 4000],
+  marks: MARKS.thr,
+  series: [{ name: "isr2thr", bins: DATA.isr2thr_sem.bins, n: DATA.isr2thr_sem.n, color: "var(--c-sw)", width: 1.6 }],
+});
+ccdf(document.getElementById("ccdf-irq"), {
+  title: "IRQ → ISR with load timers, SysTick priority",
+  src: "results/systick-prio-1m/20261025T051643Z/ws-safety/t256-{same,lower} · wake-timers-1m/20261024T225125Z/ws-safety/t0-default",
+  x0: 60, x1: 50000, ticks: [100, 300, 1000, 3000, 10000, 30000],
+  marks: MARKS.irq256,
+  series: [
+    { name: "no timers", d: DATA.irq_t0, color: "var(--s1)" },
+    { name: "256 timers, SysTick same prio", d: DATA.irq_t256_same, color: "var(--s2)" },
+    { name: "256 timers, SysTick one lower", d: DATA.irq_t256_lower, color: "var(--s3)" },
+  ],
+});
+ccdf(document.getElementById("ccdf-thr"), {
+  title: "ISR → thread, k_sem: time slicing and timers",
+  src: "results/wake-timers-1m/20261024T225125Z/ws-safety/t0-{noslice,default} · timeout-backends-1m/20261025T040826Z/ws-safety/{wheel,dlist}",
+  x0: 600, x1: 60000, ticks: [1000, 2000, 5000, 10000, 20000, 50000],
+  marks: MARKS.thr256,
+  series: [
+    { name: "no slicing, no timers", d: DATA.thr_t0_noslice, color: "var(--s1)" },
+    { name: "slicing, no timers", d: DATA.thr_t0, color: "var(--s2)" },
+    { name: "slicing, 256 timers, WHEEL", d: DATA.thr_t256_wheel, color: "var(--s3)" },
+    { name: "slicing, 256 timers, DLIST", d: DATA.thr_t256_dlist, color: "var(--s4)" },
+  ],
+});
+ccdf(document.getElementById("ccdf-arch"), {
+  title: "ISR → thread, k_sem: PendSV against USE_SWITCH=y",
+  src: "results/wake-anchors-1m/20261024T174308Z/ws-safety/{default,noslice}-{legacy,switch}",
+  x0: 600, x1: 5000, ticks: [700, 1000, 1500, 2000, 3000, 4000],
+  marks: MARKS.arch,
+  series: [
+    { name: "PendSV, no slicing", d: DATA.anc_noslice_legacy, color: "var(--s1)" },
+    { name: "USE_SWITCH, no slicing", d: DATA.anc_noslice_switch, color: "var(--s2)" },
+    { name: "PendSV, slicing", d: DATA.anc_legacy, color: "var(--s3)" },
+    { name: "USE_SWITCH, slicing", d: DATA.anc_switch, color: "var(--s4)" },
+  ],
+});
+ccdf(document.getElementById("ccdf-t2t"), {
+  title: "Thread → thread, k_sem, giver → taker: PendSV against USE_SWITCH=y",
+  src: "results/thread2thread-switch/20261025T100427Z/{ws-safety,ws-up}/sem-{legacy,switch}",
+  x0: 1200, x1: 6000, ticks: [1500, 2000, 3000, 4000, 5000],
+  marks: MARKS.t2t,
+  series: [
+    { name: "ws-safety, PendSV", d: DATA.t2t_sem, color: "var(--s1)" },
+    { name: "ws-up, PendSV", d: DATA.t2t_sem_up, color: "var(--s2)" },
+    { name: "ws-safety, USE_SWITCH", d: DATA.t2t_sem_sw, color: "var(--s3)" },
+    { name: "ws-up, USE_SWITCH", d: DATA.t2t_sem_sw_up, color: "var(--s4)" },
+  ],
+});
+cards();
+tooltips();
+if (location.hash) { const t = document.querySelector(location.hash); if (t) t.scrollIntoView(); }
+</script>

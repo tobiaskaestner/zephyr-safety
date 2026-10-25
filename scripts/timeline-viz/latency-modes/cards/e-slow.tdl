@@ -1,0 +1,42 @@
+include g474.tdc
+diagram e-slow "ISR → thread, slow mode (80 %): the slice reset reprograms SysTick"
+letter "E slow"
+new
+num value "1676 cycles"
+num share "80 %"
+num path "wrapped ISR, k_sem, defaults"
+num arch "PendSV (USE_SWITCH=n)"
+what "The same path as the fast mode, with one more step. The new slice timeout of the woken thread is the first timeout, so the driver programs SysTick again, inside the ISR and with interrupts masked. This adds 310 cycles. The dashed cursor shows where the fast mode ends (card E fast)."
+evidence "Two exact modes, 310 cycles apart, with the same split for all five kernel objects."
+evidence "TIMESLICING=n: one mode at 769 cycles. So time slicing costs about 900 cycles in this mode."
+evidence "USE_SWITCH=y adds 250 to 280 cycles per wake and 380 to 655 cycles to the longest masked section."
+evidence "Object cost against sem (p50): fifo +101, msgq +163, event +235, poll +371 cycles."
+src "wake-isr-1m/20261024T170705Z, wake-anchors-1m/20261024T174308Z, fast-mode/20261025T051025Z"
+
+axis "cycles after the edge" -100..1850
+
+idle sleep -100..4 "WFI"
+mask -100..9 "PRIMASK"
+
+at 0
+@edge
+hw     60 "entry" : Pin, EXTI, NVIC, wake-up, exception entry, _isr_wrapper. Cold cache.
+dev    21 : The ISR reads TIM2->CNT: time stamp 1.
+@stamp1 "stamp 1"
+@fast ref "fast mode" at stamp1+1366
+dev    250 "k_sem_give()" : The ISR gives the semaphore. The kernel makes the waiting thread ready. update_cache() selects it as the next thread (ws-safety kernel/sched.c:166-170).
+dev    600? "slice reset" : The same slice reset as in the fast mode (card E fast). The split between this code and the switch path is not measured.
+@r0 anchor
+dev    310! "SysTick reprogram" : The new slice timeout is the first timeout, so z_add_timeout() calls sys_clock_set_timeout(), and the driver programs SysTick again. 310 cycles: the distance of the two modes, measured.
+@r1 anchor
+hw     10 : Tail-chaining into PendSV.
+pendsv 450 "switch idle → thread" : z_arm_pendsv: save the idle thread, program the MPU stack guard, restore the woken thread.
+waker  56 : The thread returns from z_swap() and k_sem_take() and reads TIM2->CNT: time stamp 2.
+@stamp2 "stamp 2"
+
+mask 150..1241 "BASEPRI" : The give, the slice reset and the reprogram run with the scheduler lock and the timeout lock held.
+mask 1260..1690 "BASEPRI"
+
+span edge..stamp1 "81" !
+span stamp1..stamp2 "1676, measured" !
+span r0..r1 !
