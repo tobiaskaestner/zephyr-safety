@@ -2,6 +2,7 @@
 \* @foo bar
 \* @kind wrong
 \* @expected maybe
+\* @level 3
 Ok == TRUE
 
 Prop == TRUE

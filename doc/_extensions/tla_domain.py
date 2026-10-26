@@ -104,9 +104,11 @@ KINDS = ("definition", "action", "action-property", "invariant", "liveness", "pr
 NEED_KINDS = ("invariant", "action-property", "liveness", "probe")
 #: The values of the ``@expected`` tag.
 EXPECTED = ("hold", "violation")
+#: The values of the ``@level`` tag (the two grains of the design note).
+LEVELS = ("1", "2")
 #: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
 #: annotations of Apalache: they are not prose, and the extension does not show them.
-TAGS = ("expresses", "kind", "c-function", "expected", "type", "typeAlias")
+TAGS = ("expresses", "kind", "c-function", "expected", "level", "type", "typeAlias")
 
 CSS_NAME = "tla_domain.css"
 #: The start of the rawsource of a rendered block (see code_nodes()).
@@ -576,6 +578,9 @@ class TLADirective(SphinxDirective):
         expected = (unit.tags.get("expected") or [""])[-1]
         if expected == "violation":
             items.append(("Expected", "violation (TLC reports a counterexample)", False))
+        level = (unit.tags.get("level") or [""])[-1]
+        if level == "2":
+            items.append(("Level", "2 (lock grain)", False))
         if not items:
             return []
         field_list = nodes.field_list(classes=["tla-tags"])
@@ -618,6 +623,15 @@ class TLADirective(SphinxDirective):
                     "unknown @expected %r (known: %s)",
                     value,
                     ", ".join(EXPECTED),
+                    location=loc,
+                    type="tla",
+                    subtype="tag",
+                )
+            elif tag == "level" and value not in LEVELS:
+                logger.warning(
+                    "unknown @level %r (known: %s)",
+                    value,
+                    ", ".join(LEVELS),
                     location=loc,
                     type="tla",
                     subtype="tag",
