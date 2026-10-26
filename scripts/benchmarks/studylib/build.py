@@ -173,14 +173,17 @@ class Tree:
         manual = {(m.get("hypothesis"), m.get("check")): m for m in data.get("manual_verdicts", []) if m.get("hypothesis")}
 
         # experiments of the instance
-        experiments = []
+        experiments, notes = [], []
         for exp in sorted({r["id"].split("/")[0] for r in data.get("runs", [])}):
             runs = [r for r in data["runs"] if r["id"].split("/")[0] == exp and (folder, r["id"]) in self.loaded]
             if not runs:
                 continue
-            sha = self.writer.write(folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "experiment.json",
-                                    self.experiment_json(folder, exp, runs))
+            ej = self.experiment_json(folder, exp, runs)
+            sha = self.writer.write(folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "experiment.json", ej)
             experiments.append({"name": exp, "file": f"{layout.EXPERIMENT_PREFIX}{exp}/experiment.json", "sha256": sha})
+            if ej.get("code_differs"):
+                notes.append(f"{exp}: the evidence runs have different code at {len(ej['code_differs'])} points "
+                             f"({', '.join(ej['code_differs'][:4])}); a check over these runs mixes two code versions")
 
         # hypotheses
         hyps = []
@@ -249,6 +252,7 @@ class Tree:
               "rebuild_checks": rebuilds,
               "hypotheses": hyps,
               "central_results": results,
+              "notes": notes,
               "substudies": [{"instance": self.data[c]["instance"],
                               "study_json": str((c / "study.json").relative_to(folder))}
                              for c in self.folders if c.parent == folder]}
@@ -284,13 +288,24 @@ class Tree:
                         rows.append([r["id"], r["role"], p["tree"], p["point"], rep["rep"],
                                      *[p["axes"].get(a) for a in axes_all], metric, *vals, *coarse,
                                      p["image_sha256"], p.get("code_sha256")])
+        # points whose code differs between the evidence runs (other app or kernel code)
+        codes = {}
+        for r in runs:
+            if r["role"] != "evidence":
+                continue
+            for p in self.loaded[(folder, r["id"])][0]["points"]:
+                codes.setdefault((p["tree"], p["point"]), set()).add(p.get("code_sha256"))
+        differ = sorted(f"{t}/{pt}" for (t, pt), c in codes.items() if len(c) > 1)
         efile = self.design.experiments.get(exp)
-        return {"format": "latbench-experiment/2", "made_by": self.made_by, "experiment": exp,
-                "design": efile.file_ref() if efile else None,
-                "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
-                "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
-                            "coarse_from", "coarse_width", "image_sha256", "code_sha256"],
-                "rows": rows}
+        out = {"format": "latbench-experiment/2", "made_by": self.made_by, "experiment": exp,
+               "design": efile.file_ref() if efile else None,
+               "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
+               "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
+                           "coarse_from", "coarse_width", "image_sha256", "code_sha256"],
+               "rows": rows}
+        if differ:
+            out["code_differs"] = differ
+        return out
 
 
 def hypothesis_entry(h, out_checks):

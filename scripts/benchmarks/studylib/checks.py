@@ -164,9 +164,9 @@ class Result:
             self.values.append(value)
 
 
-def label(series, metric, stat):
+def label(series, metric, stat, with_run=False):
     run, tree = series
-    parts = [tree]
+    parts = [f"{run.split('/')[-1]} {tree}" if with_run else tree]
     if metric:
         parts.append(metric)
     if stat:
@@ -197,14 +197,16 @@ def evaluate(check, src):
             for o in pts:
                 for m in metrics:
                     same = stats.hist_identical(o.rep["hists"][m], ref_obs[0].rep["hists"][m])
-                    res.add(same, f"{o.tree}/{o.point} {m}: {'same' if same else 'differs'}",
+                    res.add(same, f"{label(o.series, None, None, len(series) > 1)}/{o.point} {m}: "
+                                  f"{'same' if same else 'differs'}",
                             {"point": o.point, "metric": m, "identical": same})
         return finish(res, "the same histogram, bin for bin as " + f"{ref['run']} {ref['point']}")
 
+    with_run = len({o.run for o in obs}) > 1
     for s, pts in series.items():
         for m in metrics:
             for st in stat_list:
-                lab = label(s, m, st)
+                lab = label(s, m, st, with_run)
                 if "range" in expect and not ({"ratio_to"} & set(expect)):
                     for name, v in series_values(pts, m, st):
                         res.add(in_range(v, expect["range"]), f"{lab} {name}: {fmt(v)}",

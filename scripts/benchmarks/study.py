@@ -107,6 +107,8 @@ def show(results, root, brief=False):
         if brief and not hyps and not any(c.get("texts") for c in crs):
             continue
         print(f"\n== {sj['instance']}")
+        for n in sj.get("notes", []):
+            print(f"   NOTE {n}")
         for a in sj.get("acceptance", []):
             bad = [c for c in a["checks"] if c["verdict"] != "confirmed"]
             if bad:
