@@ -314,6 +314,37 @@ check lists them:
 Level 2 comes in roadmap step 5. Until then, each level-1 action of these
 operations has a comment that names the gap.
 
+**Grain and data are two different axes.** The level is the grain: what
+one step of the model is in the code. A model can also leave out data or
+keep a free choice that the code does not have (for example, a give that
+wakes any waiter, in place of the head of the wait queue). Such a model
+is a coarser view on the same level, not a different level. Both kinds
+of model relate by refinement (``Fine => Coarse`` with a refinement
+mapping). In a refinement from level 2 to level 1, the extra steps
+are stuttering steps of level 1. Only one step of each critical section,
+usually the lock release, is the level-1 step.
+
+Marking the level (decided on 2026-10-26):
+
+- Level 1 is the default. A module of level 2 has the suffix ``_L2`` (for
+  example ``objects/KCondVar.tla`` and ``objects/KCondVar_L2.tla``). Its
+  header comment states the level. A level-2 model is a separate module,
+  because a refinement check needs two specs.
+- The tag ``@level 2`` marks an action whose step is finer than the level
+  of its module, for example the two-step form of the expiry in
+  ``Timeout``. An action with the level of its module has no tag.
+- Each level-2 module has a refinement model
+  ``mc/MC<Object>Refinement.tla``. It defines the refinement mapping and
+  the properties ``Refines`` (the level-1 spec) and ``RefinesFair`` (the
+  level-1 spec with its fairness). Its line in ``mc/expected.txt`` is
+  ``pass``. The level-2 module has its own probes, because a model
+  without steps also refines the level-1 spec. The suffix is
+  ``Refinement`` and not ``Ref``, because ``Ref`` can be read as
+  "reference".
+- Each object has one reference model at level 1. The requirements
+  connect to it. Coarser views of an object, for example a model of the
+  count only, are not part of the library.
+
 The wait queue
 **************
 
@@ -445,6 +476,7 @@ Comments
       \* @kind invariant
       \* @c-function z_impl_k_sem_give
       \* @expected violation
+      \* @level 2
 
    ``@expresses`` names a requirement that the definition expresses (one
    UID on each line). ``@kind`` is one of:
@@ -465,10 +497,15 @@ Comments
    ``@expected violation`` marks a property that TLC must find false (a
    documented limit, or a probe that shows a state is reachable).
 
+   ``@level 2`` marks an action whose step is finer than the level of its
+   module (see `Two grains`_). The values are ``1`` and ``2``.
+
 Model configurations
    ``mc/MC<Object>_<scenario>.tla`` and ``.cfg``, one for each twister
    scenario of the unit test app of the object, with the same Kconfig
-   options as constants.
+   options as constants. ``mc/MC<Object>Refinement.tla`` and
+   ``mc/MC<Object>Refinement_<scenario>.cfg`` check that the level-2
+   module of the object refines its level-1 module (see `Two grains`_).
 
 Expected results
    ``mc/expected.txt`` lists each model with its expected result (pass, or
