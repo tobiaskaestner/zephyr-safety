@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: default-latencies
+question: >
+  What are the three latencies with the board and kernel defaults and
+  an idle CPU: IRQ entry (M1), ISR to thread (M2), thread to thread (M3)?
+
+substudies:
+  - use: irq-entry
+  - use: isr-to-thread
+  - use: thread-to-thread
+
+central_results:
+  - {name: irq_entry_p99_direct, from: irq-entry}
+  - {name: isr2thr_p99_sem, from: isr-to-thread}
+  - {name: t2t_p99_sem, from: thread-to-thread}
+
+report: report/

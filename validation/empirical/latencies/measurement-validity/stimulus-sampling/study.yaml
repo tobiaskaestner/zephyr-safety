@@ -1,0 +1,54 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: stimulus-sampling
+question: >
+  Does the random stimulus sample the latency distribution evenly over
+  the kernel tick, and how many samples, stimulus seeds and load seeds
+  does a value from p50 to the max need?
+
+experiments:
+  - irq-phase-1m
+  - wake-phase-1m
+  - stim-seed-1m
+  - load-seed-tail
+
+central_results:
+  - name: phase_coverage
+    text: The random stimulus covers each tick phase bin evenly.
+    from: {experiment: irq-phase-1m, point: random}
+    stat: phase_share_range        # min..max share of the 64 phase bins
+  - name: percentile_spread_seeds
+    from: {experiment: stim-seed-1m}
+    metric: [irq, isr2thr]
+    stat: spread(p99.99)           # (max - min) / min over the points
+  - name: max_spread_seeds
+    from: {experiment: stim-seed-1m}
+    metric: [irq, isr2thr]
+    stat: spread(max)
+  - name: tail_needs_seeds
+    text: >
+      A value up to p99.99 needs one run; a max needs several stimulus
+      seeds and states its load seed.
+    from: {predictions: [stim-seed-1m/P4, load-seed-tail/P1, load-seed-tail/P2]}
+    stat: verdict
+
+plots:
+  - id: irq-ccdf-stim-seeds
+    kind: ccdf
+    from: {experiment: stim-seed-1m}
+    metric: irq
+    series: point
+  - id: irq-ccdf-load-seeds
+    kind: ccdf
+    from: {experiment: load-seed-tail}
+    metric: irq
+    series: point
+  - id: irq-count-vs-ticks
+    kind: stat-vs-axis
+    from: {experiment: load-seed-tail, points: [lseed-90befffa, lseed-78a5636f, lseed-c67178f2]}
+    metric: irq
+    stat: count_ge(4288)
+    x: {model: loadmodel, field: ticks_ge_3}
+
+report: report/

@@ -1,0 +1,27 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: measurement-validity
+question: >
+  Do the benchmark apps measure the latency of the kernel, and not an
+  effect of the measurement method, the code layout or the host?
+
+substudies:
+  - use: stimulus-sampling
+  - use: clock-drift
+  - use: code-placement
+  - use: mask-instrumentation
+  - use: reproducibility
+  # One instance for each board port. The instance of the parent decides
+  # the board of the other sub-studies; these three have their own.
+  - {use: board-ports, as: board-ports-nrf54l15dk, board: nrf54l15dk/nrf54l15/cpuapp}
+  - {use: board-ports, as: board-ports-nrf52840dk, board: nrf52840dk/nrf52840}
+  - {use: board-ports, as: board-ports-mimxrt1060, board: mimxrt1060_evk@C/mimxrt1062/qspi}
+
+central_results:
+  - {name: tail_needs_seeds, from: stimulus-sampling}
+  - {name: same_image_same_data, from: reproducibility}
+  - {name: drift_cause, from: clock-drift}
+  - {name: comparison_placement, from: code-placement}
+
+report: report/

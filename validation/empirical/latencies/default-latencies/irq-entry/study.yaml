@@ -1,0 +1,21 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: irq-entry
+question: >
+  How long is the IRQ entry latency (edge to the first instruction of the
+  ISR) for each interrupt path (stock, wrapped, direct, zero latency), and
+  where do its modes come from?
+
+experiments:
+  - irq-smoke                      # first check of the method
+  - irq-baseline-1m
+  - irq-checks-1m
+
+central_results:
+  - name: irq_entry_p99_direct
+    from: {experiment: irq-baseline-1m, point: direct-idle, tree: ws-up}
+    metric: irq
+    stat: p99
+
+report: report/

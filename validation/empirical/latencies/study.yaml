@@ -1,0 +1,32 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Study design (top level). The folders below with a study.yaml are its
+# sub-studies. Experiments are named by their file stem; the files are
+# in experiments/ until the tooling can find them in the folder of their
+# home (sub-)study.
+
+name: kernel-latency
+question: >
+  How long does the Zephyr kernel delay the response to an interrupt on a
+  Cortex-M MCU (IRQ entry, ISR to thread, thread to thread), which kernel
+  settings and loads change the delay, and by how much?
+board: null                      # the instance selects the board
+
+substudies:
+  - use: measurement-validity
+  - use: default-latencies
+  - use: load-scaling
+  - use: kconfig-factors
+  - use: mask-time
+
+central_results:
+  # The answer of the study: the central results of its sub-studies.
+  - {name: irq_entry_p99_direct, from: default-latencies}
+  - {name: isr2thr_p99_sem, from: default-latencies}
+  - {name: t2t_p99_sem, from: default-latencies}
+  - {name: timer_scaling_isr2thr, from: load-scaling}
+  - {name: kconfig_ranking, from: kconfig-factors}
+  - {name: longest_mask_site, from: mask-time}
+
+report: report/

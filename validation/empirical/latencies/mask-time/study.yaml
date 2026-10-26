@@ -1,0 +1,21 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: mask-time
+question: >
+  Which call sites of the kernel mask the interrupts, for how long, and
+  how does the longest mask section grow with the load?
+
+experiments:
+  - m4-sweep
+  - m4-thread
+
+imports:
+  - {study: measurement-validity/mask-instrumentation, experiment: m4-validate, mode: reuse}
+
+central_results:
+  - name: longest_mask_site
+    from: {experiment: m4-sweep}
+    stat: max(m4.mask.max_net)
+
+report: report/

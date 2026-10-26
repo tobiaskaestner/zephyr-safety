@@ -1,0 +1,21 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: isr-to-thread
+question: >
+  How long does it take from the ISR to the first instruction of the
+  thread that the ISR wakes, for each kernel object, and which setting
+  makes the two modes?
+
+experiments:
+  - wake-isr-1m
+  - wake-anchors-1m
+  - fast-mode
+
+central_results:
+  - name: isr2thr_p99_sem
+    from: {experiment: wake-isr-1m, point: wrapped-sem}
+    metric: isr2thr
+    stat: p99
+
+report: report/

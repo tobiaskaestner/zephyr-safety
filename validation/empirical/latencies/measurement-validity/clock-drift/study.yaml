@@ -1,0 +1,20 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: clock-drift
+question: >
+  Why does the kernel cycle counter lose cycles against the stimulus
+  timer (same clock), and does the loss change the latency data?
+
+experiments:
+  - clock-drift
+  - clock-drift-fix
+  - clock-drift-layout
+
+central_results:
+  - name: drift_cause
+    text: Each SysTick reprogram loses about 8 cycles; the gap compensation removes the drift.
+    from: {experiment: clock-drift-fix, point: gapcomp-default}
+    stat: drift_ppm
+
+report: report/

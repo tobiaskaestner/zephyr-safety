@@ -1,0 +1,39 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: load-scaling
+question: >
+  How do the latencies grow with the number of threads and kernel timers,
+  and which kernel data structure (ready queue, timeout queue backend)
+  and which priority of SysTick set the growth?
+
+experiments:
+  - wake-threads-1m
+  - wake-timers-1m
+  - t2t-load-1m
+  - timeout-backends-1m
+  - timeout-skiplist-1m
+  - systick-prio-1m
+
+imports:
+  # The tail of the t64 point over 8 stimulus seeds and 4 load seeds.
+  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
+  - {study: measurement-validity/stimulus-sampling, experiment: load-seed-tail, mode: reuse}
+
+central_results:
+  - name: timer_scaling_isr2thr
+    text: Growth of the isr2thr p99 per load timer (DLIST backend).
+    from: {experiment: wake-timers-1m, axes: {anchor: default}, exclude: [t256far-default]}
+    metric: isr2thr
+    stat: slope(p99, kconfig.LATBENCH_LOAD_TIMERS)
+
+plots:
+  - id: isr2thr-p99-vs-timers
+    kind: stat-vs-axis
+    from: {experiment: wake-timers-1m, exclude: [t256far-default, t256far-noslice]}
+    metric: isr2thr
+    stat: p99
+    x: kconfig.LATBENCH_LOAD_TIMERS   # the axis values (t0, t16, ...) are names
+    series: [tree, axis.anchor]
+
+report: report/

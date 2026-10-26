@@ -1,0 +1,21 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: code-placement
+question: >
+  How much does the address of the code change the latency, and which
+  placement gives numbers that a comparison between trees and options
+  can use?
+
+experiments:
+  - code-layout
+  - code-place-q4
+  - code-place-q4-up
+
+central_results:
+  - name: comparison_placement
+    text: Comparisons use LATBENCH_CODE_RAM; absolute numbers use a range over LATBENCH_CODE_FLASH_PAD.
+    from: {experiment: code-place-q4}
+    stat: verdict
+
+report: report/

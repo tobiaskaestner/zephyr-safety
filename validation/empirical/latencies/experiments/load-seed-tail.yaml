@@ -90,3 +90,74 @@ points:
     kconfig: {LATBENCH_LOAD_TIMER_SEED: "0x78a5636f"}
   - id: lseed-c67178f2
     kconfig: {LATBENCH_LOAD_TIMER_SEED: "0xc67178f2"}
+
+# The predictions of the header as data (study design, 2026-10-26).
+predictions:
+  - id: P1a
+    text: default-4m, count >= 4288 is 4 x the seed mean times the model ratio.
+    select: {point: default-4m}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [365, 450]}
+  - id: P1b
+    select: {point: default-4m}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [17, 37]}
+  - id: P1c
+    text: p99..p99.99 are in the range of the 8 seeds (+-1 coarse bin).
+    select: {point: default-4m}
+    metric: [irq, isr2thr]
+    stat: [p99, p99.9, p99.99]
+    expect: {within: {experiment: stim-seed-1m, stat: range}, tolerance_bins: 1}
+  - id: P1d
+    select: {point: default-4m}
+    metric: irq
+    stat: max
+    expect: {range: [7000, 8000]}
+  - id: P2a
+    text: The count >= 4288 changes with the ticks with >= 3 expiries.
+    select: {point: lseed-90befffa}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [45, 85]}
+  - id: P2b
+    select: {point: lseed-78a5636f}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [145, 210]}
+  - id: P2c
+    select: {point: lseed-c67178f2}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [200, 280]}
+  - id: P2d
+    text: The count >= 5952 changes with the ticks with >= 4 expiries.
+    select: {point: lseed-90befffa}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [0, 10]}
+  - id: P2e
+    select: {point: lseed-78a5636f}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [9, 27]}
+  - id: P2f
+    select: {point: lseed-c67178f2}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [17, 40]}
+  - id: P3
+    text: The mean of irq has the order of the expiries.
+    metric: irq
+    stat: mean
+    expect: {order: [lseed-90befffa, default-4m, lseed-78a5636f, lseed-c67178f2]}
+  - id: P4
+    text: The max is not a sharp test (about 25 % for a value above 8000).
+    manual: true
+
+plots:
+  - id: irq-ccdf
+    kind: ccdf
+    metric: irq
+    series: point

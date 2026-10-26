@@ -1,0 +1,24 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: reproducibility
+question: >
+  Does the same image give the same histograms on another host, and does
+  a rebuild from the run snapshot give the same image?
+
+# No experiment of its own: it runs points of other experiments again
+# (mode rerun: its own runs of these experiments, not their data).
+imports:
+  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: rerun}
+  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: rerun}
+  - {study: load-scaling, experiment: t2t-load-1m, mode: rerun}
+
+central_results:
+  - name: same_image_same_data
+    text: The same image gives the same histograms bin for bin on two hosts.
+    stat: verdict
+  - name: rebuild_same_image
+    text: A rebuild from the snapshot gives the same image on two hosts.
+    stat: verdict
+
+report: report/

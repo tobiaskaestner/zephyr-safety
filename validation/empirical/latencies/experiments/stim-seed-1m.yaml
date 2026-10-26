@@ -69,3 +69,47 @@ axes:
     seed-510e527f: {kconfig: {LATBENCH_STIM_SEED: "0x510e527f"}}
     seed-9b05688c: {kconfig: {LATBENCH_STIM_SEED: "0x9b05688c"}}
     seed-1f83d9ab: {kconfig: {LATBENCH_STIM_SEED: "0x1f83d9ab"}}
+
+# The predictions of the header as data (study design, 2026-10-26).
+# Selections and statistics: claude/latency-benchmarks/study-design.md §6.2.
+predictions:
+  - id: P1
+    text: seed-default gives the histograms of the night data bin for bin.
+    select: {point: seed-default}
+    metric: [irq, isr2thr, irq2thr]
+    expect: {hist_identical_to: {run: wp3-wake-1m/20261025T205806Z, point: baseline-t64}}
+  - id: P2
+    text: The p50 of irq and isr2thr is the same for all seeds (+-2 cycles).
+    metric: [irq, isr2thr]
+    stat: p50
+    expect: {spread_abs_le: 2}
+  - id: P3
+    text: The mean and the p99 change by less than 3 % between the seeds.
+    metric: [irq, isr2thr]
+    stat: [mean, p99]
+    expect: {spread_le: 0.03}
+  - id: P4a
+    text: The p99.99 changes by up to 15 % between the seeds.
+    metric: [irq, isr2thr]
+    stat: p99.99
+    expect: {spread_le: 0.15}
+  - id: P4b
+    text: The max changes by up to 30 % between the seeds.
+    metric: [irq, isr2thr]
+    stat: max
+    expect: {spread_le: 0.30}
+  - id: P4c
+    text: The max of the 8 seeds is above the night max by 0..20 %.
+    metric: [irq, isr2thr]
+    stat: max(max)
+    expect: {ratio_to: {run: wp3-wake-1m/20261025T205806Z, point: baseline-t64, stat: max}, range: [1.0, 1.2]}
+
+plots:
+  - id: irq-ccdf
+    kind: ccdf
+    metric: irq
+    series: point
+  - id: isr2thr-ccdf
+    kind: ccdf
+    metric: isr2thr
+    series: point

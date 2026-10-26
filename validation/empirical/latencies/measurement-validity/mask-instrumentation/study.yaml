@@ -1,0 +1,22 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: mask-instrumentation
+question: >
+  Do the interrupt mask hooks of the tree ws-up-irqoff (M4) measure the
+  mask time of each call site, and do they leave the image unchanged
+  when they are off?
+
+experiments:
+  - m4-image-check                 # build only, no run
+  - m4-validate                    # its latency histograms are not data
+
+central_results:
+  - name: hooks_off_same_image
+    from: {experiment: m4-image-check}
+    stat: verdict
+  - name: hook_overhead
+    from: {experiment: m4-validate}
+    stat: m4_pair_cost_cyc
+
+report: report/

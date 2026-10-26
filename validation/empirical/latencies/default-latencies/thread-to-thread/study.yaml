@@ -1,0 +1,20 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: thread-to-thread
+question: >
+  How long does it take from a wake call in one thread to the first
+  instruction of the woken thread, for each kernel object, with the
+  legacy and the new (USE_SWITCH) context switch?
+
+experiments:
+  - thread2thread-1m
+  - thread2thread-switch
+
+central_results:
+  - name: t2t_p99_sem
+    from: {experiment: thread2thread-1m, point: sem}
+    metric: t2t
+    stat: p99
+
+report: report/

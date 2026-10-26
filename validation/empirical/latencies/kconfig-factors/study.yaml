@@ -1,0 +1,20 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: kconfig-factors
+question: >
+  Which Kconfig options of the WP3 ranking change the three latencies,
+  against a baseline of the same run, and by how much?
+
+experiments:
+  - wp3-irq-1m
+  - wp3-wake-1m
+  - wp3-t2t-1m
+
+central_results:
+  - name: kconfig_ranking
+    text: The options sorted by their change of the p99 against the baseline.
+    from: {experiment: [wp3-irq-1m, wp3-wake-1m, wp3-t2t-1m]}
+    stat: rank(delta(p99, baseline))
+
+report: report/
