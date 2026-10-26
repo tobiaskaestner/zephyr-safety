@@ -96,6 +96,15 @@ needs are in ``boards.yaml``.
    ``branch`` first. If the ``source`` clone does not exist, it clones the
    ``url``. Then it does the same examination as ``check``.
 
+   With ``--clone-source``, ``setup`` clones the ``source`` clone instead
+   of adding a worktree to it. The local clone uses hard links to the
+   objects and needs no network access. Nothing is written into the
+   ``source``: a worktree writes ``.git/worktrees/<name>`` there, and a
+   fetch writes objects there. If the revision is not in the ``source``,
+   the new clone fetches the ``branch`` from the ``url``. Use it on a host
+   where a ``source`` path is a repository of a different workspace that
+   must not change.
+
 ``check``
    Makes sure that the SDK has the pinned version. Then it makes sure
    that each repository exists, is at its pinned revision and is clean

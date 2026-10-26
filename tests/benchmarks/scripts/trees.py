@@ -5,6 +5,11 @@
 """Create and check the pinned source trees of trees.yaml.
 
     trees.py setup [TREE ...]   create the missing worktrees at their pinned rev
+    trees.py setup --clone-source [TREE ...]
+                                clone each "source" repo instead of adding a
+                                worktree to it: nothing is written into the
+                                source (on a host where "source" is a repo of
+                                another workspace that must stay as it is)
     trees.py check [TREE ...]   check that each worktree is at its rev and clean
     trees.py show               print the trees and their worktree paths
 """
@@ -101,7 +106,7 @@ def check_toolchain(cfg):
     return path
 
 
-def setup_tree(cfg, tree):
+def setup_tree(cfg, tree, clone_source=False):
     for name, spec in cfg["trees"][tree]["repos"].items():
         path = repo_dir(cfg, tree, name)
         if path.exists():
@@ -109,7 +114,15 @@ def setup_tree(cfg, tree):
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
         source = Path(spec.get("source", "")).expanduser()
-        if spec.get("source") and source.is_dir():
+        if clone_source and spec.get("source") and source.is_dir():
+            # A local clone hardlinks the objects and writes nothing into the source.
+            git("clone", "--no-checkout", str(source), str(path))
+            git("remote", "set-url", "origin", spec["url"], cwd=path)
+            if git("cat-file", "-t", spec["rev"], cwd=path, check=False) != "commit":
+                git("fetch", spec["url"], spec.get("branch", spec["rev"]), cwd=path)
+            git("checkout", "--detach", spec["rev"], cwd=path)
+            print(f"{tree}/{name}: clone of {source} at {spec['rev'][:12]}")
+        elif spec.get("source") and source.is_dir():
             if git("cat-file", "-t", spec["rev"], cwd=source, check=False) != "commit":
                 git("fetch", spec["url"], spec.get("branch", spec["rev"]), cwd=source)
             git("worktree", "add", "--detach", str(path), spec["rev"], cwd=source)
@@ -124,6 +137,8 @@ def setup_tree(cfg, tree):
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("--trees-root")
+    p.add_argument("--clone-source", action="store_true",
+                   help="setup: clone each source repo instead of adding a worktree to it")
     p.add_argument("cmd", choices=["setup", "check", "show"])
     p.add_argument("trees", nargs="*")
     args = p.parse_args()
@@ -133,7 +148,7 @@ def main():
     try:
         if args.cmd == "setup":
             for t in trees:
-                setup_tree(cfg, t)
+                setup_tree(cfg, t, clone_source=args.clone_source)
         elif args.cmd == "check":
             check_toolchain(cfg)
             for t in trees:
