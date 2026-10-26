@@ -93,6 +93,10 @@ while read -r module config expected rest; do
 		esac
 	elif [ -n "$violated" ]; then
 		result="fail:${violated// /,}"
+	elif grep -q 'The first argument of Assert evaluated to FALSE' "$log"; then
+		# A failed example test (mc/<Module>Test.tla). The log has the name
+		# of the test, the value got and the value wanted.
+		result=fail:Assert
 	else
 		result=error
 	fi

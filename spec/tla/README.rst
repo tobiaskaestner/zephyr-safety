@@ -12,7 +12,8 @@ with TLC.
 
 Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``
 and ``lib/Timeout`` exist and are checked alone (``mc/MCWaitQueue``,
-``mc/MCTimeout``). ``Platform``, ``Scheduler`` and ``Waitable`` do not
+``mc/MCTimeout``) and by example tests (``mc/WaitQueueTest``,
+``mc/TimeoutTest``). ``Platform``, ``Scheduler`` and ``Waitable`` do not
 exist yet. The k_sem proof of concept is still in the workspace notes
 (``claude/kernel-unit/tla/``). It moves here when it is expressed on the
 library.
@@ -507,6 +508,33 @@ Model configurations
    ``mc/MC<Object>Refinement_<scenario>.cfg`` check that the level-2
    module of the object refines its level-1 module (see `Two grains`_).
 
+Example tests (decided on 2026-10-26)
+   Each module ``lib/<Module>.tla`` and ``objects/<Module>.tla`` has a test
+   module ``mc/<Module>Test.tla`` with the configuration
+   ``mc/<Module>Test_default.cfg`` and the line ``<Module>Test default
+   pass`` in ``mc/expected.txt``. The test module evaluates the queries and
+   the helpers of the module on chosen states and compares each value with
+   the expected value: ``Check(name, got, want) == Assert(got = want,
+   <<name, "got", got, "want", want>>)``. It covers at least the empty
+   case, one element, the order or priority rule in both directions, and
+   each helper that computes a cost.
+
+   The models and the tests check different things. An invariant checks a
+   rule in each reachable state. A test fixes single values that a rule
+   alone does not fix. Example: ``Before`` with the wrong direction of the
+   priority is still a total order. ``MCWaitQueue`` passes with this
+   defect, and ``WaitQueueTest`` fails ("prio: Best", got ``t1``, want
+   ``t2``).
+
+   The tests are invariants of a spec with one state (``Init == unused =
+   0``, ``Next == UNCHANGED unused``), not ``ASSUME`` statements. SANY gives an
+   expression of an instance of a module with variables the level 1, also
+   if each variable is replaced by a constant, and it rejects such an
+   ``ASSUME``. TLC sees the same invariants as constant formulas and warns
+   that an ``ASSUME`` is better. The warning has no effect on the result.
+   An action (with primes) cannot be evaluated on fixed states. The models
+   check the actions.
+
 Expected results
    ``mc/expected.txt`` lists each model with its expected result (pass, or
    the name of the property that fails). The run script compares the
@@ -522,7 +550,7 @@ Layout
      README.rst        this design note
      lib/              Platform, Scheduler, WaitQueue, Timeout, Waitable
      objects/          one module for each kernel object
-     mc/               model configurations, expected.txt
+     mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
      tools/            run_tlc.sh, tla2tools.sha256, apalache.sha256
 

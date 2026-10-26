@@ -1,0 +1,65 @@
+---------------------------- MODULE TimeoutTest ----------------------------
+(***************************************************************************)
+(* Example tests of lib/Timeout.tla. Each test evaluates a query or a      *)
+(* helper on a chosen queue and compares the value with the expected       *)
+(* value (see WaitQueueTest for the method). The cost tests fix the        *)
+(* numbers that the invariant CostBounded of MCTimeout compares.           *)
+(***************************************************************************)
+EXTENDS Naturals, Sequences, TLC
+
+NoCostRec == [op |-> "none", n |-> 0, cost |-> 0]
+
+\* Timeout with the backend b, the heap capacity cap and the queue q.
+At(b, cap, q) == INSTANCE Timeout WITH Entries <- {"e1", "e2", "e3"}, Backend <- b,
+                    HeapCapacity <- cap, tq <- q, tqCost <- NoCostRec
+
+\* The helpers and the costs do not depend on the queue.
+D == INSTANCE Timeout WITH Entries <- {"e1", "e2", "e3"}, Backend <- "DLIST",
+        HeapCapacity <- 0, tq <- <<>>, tqCost <- NoCostRec
+H == INSTANCE Timeout WITH Entries <- {"e1", "e2", "e3"}, Backend <- "MINHEAP",
+        HeapCapacity <- 2, tq <- <<>>, tqCost <- NoCostRec
+
+\* A test: the value got must be the value want.
+Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
+
+-----------------------------------------------------------------------------
+(* The tests *)
+
+\* The helpers. Log2Ceil(n) is the smallest k with 2^k >= n + 1.
+TestHelpers ==
+    /\ Check("Log2Ceil 0..8",  [i \in 1..9 |-> D!Log2Ceil(i - 1)], <<0, 1, 2, 2, 3, 3, 3, 3, 4>>)
+    /\ Check("InsertAt first", D!InsertAt(<<"b", "c">>, 1, "a"), <<"a", "b", "c">>)
+    /\ Check("InsertAt mid",   D!InsertAt(<<"a", "c">>, 2, "b"), <<"a", "b", "c">>)
+    /\ Check("InsertAt last",  D!InsertAt(<<"a", "b">>, 3, "c"), <<"a", "b", "c">>)
+    /\ Check("RemoveElem",     D!RemoveElem(<<"a", "b", "c">>, "b"), <<"a", "c">>)
+
+\* The queries. Only a MINHEAP can be full.
+TestQueries ==
+    /\ Check("First",            At("DLIST", 0, <<"e2", "e1">>)!First, "e2")
+    /\ Check("Armed",            At("DLIST", 0, <<"e2", "e1">>)!Armed, {"e1", "e2"})
+    /\ Check("Full minheap",     At("MINHEAP", 2, <<"e1", "e2">>)!Full, TRUE)
+    /\ Check("not Full minheap", At("MINHEAP", 2, <<"e1">>)!Full, FALSE)
+    /\ Check("not Full dlist",   At("DLIST", 0, <<"e1", "e2">>)!Full, FALSE)
+
+\* The costs. DLIST: the insert loop passes i entries, or all n entries for
+\* an append. MINHEAP: the heap height, for each operation.
+TestCosts ==
+    /\ Check("dlist insert empty", D!InsertCost(1, 0), 0)
+    /\ Check("dlist insert first", D!InsertCost(1, 3), 1)
+    /\ Check("dlist insert last",  D!InsertCost(3, 3), 3)
+    /\ Check("dlist append",       D!InsertCost(4, 3), 3)
+    /\ Check("dlist remove",       D!RemoveCost(3), 1)
+    /\ Check("dlist bound insert", D!CostBound("insert", 3), 4)
+    /\ Check("dlist bound remove", D!CostBound("remove", 3), 1)
+    /\ Check("heap insert",        H!InsertCost(1, 3), 2)
+    /\ Check("heap remove",        H!RemoveCost(3), 2)
+    /\ Check("heap bound",         H!CostBound("insert", 3), 3)
+
+-----------------------------------------------------------------------------
+(* The spec: one state, no deadlock. Its only purpose is the run of the    *)
+(* invariants above.                                                       *)
+
+VARIABLE unused
+Init == unused = 0
+Next == UNCHANGED unused
+=============================================================================
