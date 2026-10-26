@@ -504,3 +504,26 @@ def test_reference_digest_and_manual_verdict_are_checked(tmp_path, monkeypatch):
     instance.save(res / "top", top)
     with pytest.raises(build.BuildError):
         build.build(res / "top", log=lambda *a: None)
+
+
+def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
+    pytest.importorskip("pandas")
+    import data
+    design = make_design(tmp_path)
+    monkeypatch.setattr(build, "Design", lambda: design)
+    res = tmp_path / "results"
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    rid = instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}),
+                       copy=True)
+    build.build(res / "top", log=lambda *a: None)
+    monkeypatch.setattr(data.trees, "REPO_DIR", Path("/"))
+    d = data.load_instance(inst)
+    assert list(d.hypotheses()["id"]) == ["H1"]
+    assert len(d.checks()) == 2
+    assert list(d.central()["result"]) == ["a p50 100", "b p50 150"]
+    assert len(d.rows("exp1")) == 2
+    assert d.hist("b", "isr2thr", "exp1")["min"] == 150
+    assert d.app_data(rid)["app"] == "wake_latency"
+    x, y = data.ccdf(d.hist("a", "isr2thr", "exp1"))
+    assert x == [100, 200] and y == [1.0, 0.1]
