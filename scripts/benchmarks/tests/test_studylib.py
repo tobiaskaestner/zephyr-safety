@@ -325,6 +325,9 @@ def test_build_small_tree(tmp_path, monkeypatch):
     assert sj["hypotheses"][0]["verdict"] == "confirmed"
     t, w = build.build(res / "top", dry=True, log=lambda *a: None)
     assert w.differ == []
+    from studylib import html
+    page = html.page(res / "top")
+    assert "b is slower" in page and page == html.page(res / "top")
     # a changed raw file breaks the build
     (inst / "ex-exp1" / "20260101T000000Z" / "ws-up" / "a" / "rep1.log").write_text("x")
     with pytest.raises(seal.SealError):

@@ -137,6 +137,7 @@ The tool study.py
    scripts/benchmarks/study.py build <results>/kernel-latency
    scripts/benchmarks/study.py check <results>/kernel-latency
    scripts/benchmarks/study.py show <results>/kernel-latency --brief
+   scripts/benchmarks/study.py html <results>/kernel-latency   # one HTML page: index.html
    # a manual verdict (a person, or a proposal that says so in --by)
    scripts/benchmarks/study.py verdict <instance folder> --hypothesis H3 --check h \
        --verdict wrong --by "<name>" --text "<why>"

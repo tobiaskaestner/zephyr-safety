@@ -25,6 +25,8 @@
                                           experiment.json and study.json
     study.py check ROOT                   check all seals, build again and compare
     study.py show ROOT                    the verdicts and central results
+    study.py html ROOT [--out FILE]       one HTML page with all study.json files
+                                          (default ROOT/index.html)
 
 RESULTS is the results folder (it holds the top instance folder, named
 after the top study). ROOT is any folder of a results tree. A run made
@@ -38,7 +40,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from studylib import build, instance, layout, seal  # noqa: E402
+from studylib import build, html, instance, layout, seal  # noqa: E402
 from studylib.design import Design, DesignError  # noqa: E402
 
 
@@ -144,6 +146,13 @@ def cmd_show(args):
     show(res, root, brief=args.brief)
 
 
+def cmd_html(args):
+    root = layout.find_root(args.root)
+    out = Path(args.out) if args.out else root / "index.html"
+    out.write_text(html.page(root))
+    print(out)
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
@@ -194,6 +203,10 @@ def main():
     s.add_argument("root")
     s.add_argument("--brief", action="store_true")
     s.set_defaults(func=cmd_show)
+    s = sub.add_parser("html")
+    s.add_argument("root")
+    s.add_argument("--out")
+    s.set_defaults(func=cmd_html)
     args = p.parse_args()
     try:
         sys.exit(args.func(args) or 0)
