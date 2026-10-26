@@ -9,8 +9,8 @@ each point, or for each group of points of an aggregate stat. A
 placeholder is a value of the row: a stat name, an axis name, tree, point,
 metric, run, or a name that the stat gives (slope, bound, ...).
 
-from:  experiment (or a list), point (or a list), axes, exclude, metric
-       (or a list); hypotheses: [ids] (stat conclusion); substudy: name
+from:  experiment (or a list), point (or a list), axes, exclude, tree,
+       metric (or a list); hypotheses: [ids] (stat conclusion); substudy: name
 stat:  a stat or a list of stats of stats.py, value (META metrics),
        top_site, conclusion, phase_share_range, hist_identical_count, or
        {spread: [stats]}, {spread_abs: [stats]}, {slope: {stat, axis}},
@@ -120,7 +120,8 @@ def from_obs(cr, src):
         sel["axes"] = f["axes"]
     obs = checks.select(obs, sel)
     excl = set(checks.as_list(f.get("exclude"))) - {None}
-    return [o for o in obs if o.point not in excl]
+    trees_ = set(checks.as_list(f.get("tree"))) - {None}
+    return [o for o in obs if o.point not in excl and (not trees_ or o.tree in trees_)]
 
 
 def evaluate(cr, src, ctx):
@@ -308,10 +309,16 @@ def evaluate(cr, src, ctx):
                     row[s] = stats.value(o.rep, m, s)
                 rows.append(row)
 
+    # name the run and the tree if the rows have more than one and the statement does not name them
+    names = set(placeholders(template))
+    tag_run = len({r.get("run") for r in rows}) > 1 and "run" not in names
+    tag_tree = len({r.get("tree") for r in rows}) > 1 and "tree" not in names
     texts, missing = [], set()
     for row in rows:
         t, miss = fill(template, {**ctx.defaults(), **row})
-        texts.append(t)
+        tags = [x for x in ((row.get("run") or "").split("/")[-1] if tag_run else "",
+                            row.get("tree", "") if tag_tree else "") if x]
+        texts.append(t + (f" [{', '.join(tags)}]" if tags else ""))
         missing |= set(miss)
     out = {"id": cr["id"], "stat": st, "texts": texts, "rows": rows, "by": "auto"}
     if cr.get("unit"):

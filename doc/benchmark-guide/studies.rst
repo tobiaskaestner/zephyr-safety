@@ -261,7 +261,7 @@ A central result is characterisation: measured values in a sentence.
 row of values. A placeholder is a stat name, an axis name, ``tree``,
 ``point``, ``metric``, ``run``, ``board``, or a name that the stat gives.
 ``from`` names the data (``experiment``, ``point``, ``axes``,
-``exclude``, ``metric``), the hypotheses of a ``conclusion``, or a
+``exclude``, ``tree``, ``metric``), the hypotheses of a ``conclusion``, or a
 ``substudy`` whose central result of the same id the parent shows.
 
 ``stat``: a stat (or a list), ``value``, ``top_site``, ``conclusion`` (a
@@ -275,4 +275,6 @@ by their change against ``baseline``), ``{tree_diff: stat}``
 ``{exceedance_bound: {thresholds, confidence}}`` (a one-sided Poisson
 upper bound of P(value >= threshold) per sample). For an aggregate stat,
 the points form one group for each series and each value of the axes
-that the statement names.
+that the statement names. If the sentences come from more than one run or
+tree and the statement does not name them, each sentence ends with
+``[<run>, <tree>]``.
