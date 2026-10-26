@@ -11,10 +11,14 @@
 #                          (for an alias Prop_X == WQ!X, TLC names WQ!X)
 #            probes        TLC finds a violation of each invariant of the
 #                          configuration (run with -continue)
+#            fail:Assert   an example test (<Module>Test) fails. Not an
+#                          expected result: the line of a test is pass.
 #
 # tools/run_tlc.sh runs each line and compares the result. A difference
 # fails the run.
 
+WaitQueueTest default pass
+TimeoutTest   default pass
 MCWaitQueue default pass
 MCWaitQueue reach   probes
 MCTimeout   dlist         pass
