@@ -1,0 +1,63 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml and
+# st-measurement-validity/st-reproducibility/hypotheses.yaml.
+
+name: code-place-q4
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 300
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 50000
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  # f<N>: LATBENCH_CODE_FLASH_PAD. r<N>: LATBENCH_CODE_RAM, hot code in the
+  # CCM SRAM. The pad moves only the relocated code. value: the pad N in bytes.
+  place:
+    f0:
+      value: 0
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 0}
+    f4:
+      value: 4
+      kconfig: {LATBENCH_CODE_FLASH_PAD: y, LATBENCH_CODE_PAD_BYTES: 4}
+    r0:
+      value: 0
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 0}
+    r4:
+      value: 4
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 4}
+    r8:
+      value: 8
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 8}
+    r12:
+      value: 12
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 12}
+    r16:
+      value: 16
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 16}
+    r20:
+      value: 20
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 20}
+    r24:
+      value: 24
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 24}
+    r28:
+      value: 28
+      kconfig: {LATBENCH_CODE_RAM: y, LATBENCH_CODE_PAD_BYTES: 28}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+
+# Checks of each run. A run that fails one gets the role "excluded".
+# Written 2026-10-25, before the run code-place-q4/20261025T184743Z.
+acceptance:
+  - {id: A1, metric: meta.invalid, stat: value, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
+  - {id: A4, manual: true, statement: "With LATBENCH_CODE_RAM (points r*), code_pad_at is the start of code_ram_text."}

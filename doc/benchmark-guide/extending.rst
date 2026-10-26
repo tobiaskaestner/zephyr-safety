@@ -5,11 +5,12 @@ Add an experiment
 -----------------
 
 #. Find the study in ``validation/empirical/latencies/`` that asks your
-   question. Copy an experiment folder of that study that is near to your
-   question, and give the copy a new folder name. The folder name is the
-   name of the experiment. It must be unique in all studies.
-#. In ``experiment.yaml``, set ``name`` to the folder name. Add the name
-   to ``experiments`` in the ``study.yaml`` of the study.
+   question. A study is a folder ``st-<name>/``, an experiment is a folder
+   ``ex-<name>/``. Copy an experiment folder of that study that is near
+   to your question, and give the copy the folder name ``ex-<name>``. The
+   name must be unique in all studies.
+#. In ``experiment.yaml``, set ``name`` to the name without ``ex-``. Add
+   the name to ``experiments`` in the ``study.yaml`` of the study.
 #. Write the description ``experiment.md``: the question, the method
    (each point and why), and the references. Write the predictions in the
    ``hypotheses.yaml`` of the study.
@@ -30,14 +31,14 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir> --dry-run
+      scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir> --dry-run
 
 #. Make sure that all points build. This step also does the Kconfig
    check of each point:
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir> --build-only
+      scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir> --build-only
 
 #. Connect the board and run the experiment without ``--build-only``.
 

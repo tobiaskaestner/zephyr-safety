@@ -1,0 +1,75 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   ex-<experiment>/experiment.yaml   an experiment that it owns
+#   ex-<experiment>/experiment.md     its description
+#   st-<sub-study>/study.yaml         a sub-study
+#   hypotheses.yaml                   the hypotheses, written before the runs
+#   report.ipynb                      the report template (no outputs)
+
+name: clock-drift
+question: >
+  Why does the kernel cycle counter lose cycles against the stimulus
+  timer (same clock), and does the loss change the latency data?
+
+experiments:
+  - clock-drift
+  - clock-drift-fix
+  - clock-drift-layout
+
+# The results that answer the question. For now all are characterisation:
+# measured values, with a confidence bound where the value is a
+# probability. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+#
+# New statistics (from the LAT META line of each run):
+#   drift_per_wake  clock_drift_cyc / samples (one wake per sample)
+#   drift_ppm       clock_drift_cyc / clock_elapsed_cyc x 1e6
+central_results:
+  - id: drift-per-wake
+    statement: >
+      With the anchor {anchor} and {timers}, the kernel cycle counter
+      loses {drift_per_wake:.2f} cycles per wake against TIM2 ({tree}).
+    from: {experiment: clock-drift}
+    stat: drift_per_wake
+    unit: cycles per wake
+
+  - id: gapcomp-drift
+    statement: >
+      With CORTEX_M_SYSTICK_RELOAD_GAP_COMP ({comp}) and the anchor
+      {anchor}, the drift is {drift_ppm:.1f} ppm.
+    from: {experiment: clock-drift-fix, point: [nocomp-default, nocomp-noslice, nocomp-switch,
+                                                 gapcomp-default, gapcomp-noslice, gapcomp-switch]}
+    stat: drift_ppm
+    unit: ppm of the elapsed cycles
+
+  - id: t256-reload-drift
+    statement: >
+      With 256 load timers and the gap compensation, the drift is
+      {drift_ppm:.0f} ppm at the shortest reload {min_reload}.
+    from: {experiment: clock-drift-fix, point: [t256-min10us-gapcomp, t256-min50us-gapcomp, t256-min200us-gapcomp]}
+    stat: drift_ppm
+    unit: ppm of the elapsed cycles
+
+  - id: layout-drift
+    statement: >
+      With the histogram size {bins} and {samples} samples, the drift is
+      {drift_per_wake:.2f} cycles per wake ({tree}).
+    from: {experiment: clock-drift-layout}
+    stat: drift_per_wake
+    unit: cycles per wake
+
+  - id: drift-cause
+    statement: >
+      Each SysTick reprogram loses about 8 cycles, and the gap
+      compensation removes the drift. With many load timers, the driver
+      also loses whole reloads when the shortest reload is too short.
+    from: {hypotheses: [H1, H2]}
+    stat: conclusion               # a person confirms the sentence

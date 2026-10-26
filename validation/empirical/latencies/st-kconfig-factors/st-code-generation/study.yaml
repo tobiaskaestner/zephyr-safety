@@ -1,0 +1,24 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   hypotheses.yaml                   the hypotheses, written before the runs
+#   report.ipynb                      the report template (no outputs)
+#
+# This study owns no experiment. It imports the WP3 experiments from the
+# parent study kconfig-factors. ../wp3-variants.md gives the variants.
+
+name: code-generation
+question: >
+  How much do SPEED_OPTIMIZATIONS, ASSERT (with and without
+  SPIN_VALIDATE) and FPU_SHARING change the IRQ entry, the ISR to thread
+  wake and the thread to thread latency?
+
+imports:
+  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wp3-t2t-1m, mode: reuse}
+
+# This study has no central result of its own. The rankings of the
+# parent study (irq-ranking, wake-ranking, t2t-ranking) give the measured
+# change of each variant. The hypotheses give the mechanisms.

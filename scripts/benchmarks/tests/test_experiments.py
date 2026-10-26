@@ -32,15 +32,30 @@ def is_y(kconfig, sym):
     return run.kconfig_value(kconfig.get(sym, "n")) == "y"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name.removeprefix(trees.EXPERIMENT_PREFIX) for p in EXPERIMENTS])
 def test_names_unique(path):
-    """Studies refer to an experiment by its name: the name of its folder, unique in all studies."""
-    assert trees.experiment_file(path.parent.name) == path
-    assert yaml.safe_load(path.read_text())["name"] == path.parent.name, "name must be the folder name"
+    """Studies refer to an experiment by its name: the folder is ex-<name>, unique in all studies."""
+    name = yaml.safe_load(path.read_text())["name"]
+    assert path.parent.name == trees.EXPERIMENT_PREFIX + name, "the folder must be ex-<name>"
+    assert trees.experiment_file(name) == path
     assert (path.parent / "experiment.md").is_file(), "each experiment has a description experiment.md"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
+def test_folder_prefixes():
+    """Below the studies, a folder is ex-<name> (an experiment) or st-<name> (a sub-study)."""
+    for d in trees.STUDIES_DIR.rglob("*"):
+        if not d.is_dir() or d.name == "__pycache__":
+            continue
+        if (d / trees.EXPERIMENT_FILE).is_file():
+            assert d.name.startswith(trees.EXPERIMENT_PREFIX), d
+        elif (d / "study.yaml").is_file():
+            assert d.name.startswith(trees.STUDY_PREFIX), d
+            assert yaml.safe_load((d / "study.yaml").read_text())["name"] == d.name.removeprefix(trees.STUDY_PREFIX), d
+        else:
+            raise AssertionError(f"{d}: neither experiment.yaml nor study.yaml")
+
+
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name.removeprefix(trees.EXPERIMENT_PREFIX) for p in EXPERIMENTS])
 def test_axes(path):
     """Each point has a value on each axis, so the analysis can group the points."""
     exp = yaml.safe_load(path.read_text())
@@ -54,7 +69,7 @@ def test_axes(path):
                 assert isinstance(v["value"], (int, float)), f"{axis}.{name}: value must be a number"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name.removeprefix(trees.EXPERIMENT_PREFIX) for p in EXPERIMENTS])
 def test_code_place(path):
     """The pad needs LATBENCH_CODE_FLASH_PAD or LATBENCH_CODE_RAM, and a point selects one place."""
     exp = yaml.safe_load(path.read_text())

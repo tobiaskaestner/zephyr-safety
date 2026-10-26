@@ -1,0 +1,44 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   ex-<experiment>/experiment.yaml   an experiment that it owns
+#   ex-<experiment>/experiment.md     its description
+#   st-<sub-study>/study.yaml         a sub-study
+#   hypotheses.yaml                   the hypotheses, written before the runs
+#   report.ipynb                      the report template (no outputs)
+
+name: systick-priority
+question: >
+  How much of the irq tail under timer load comes from the SysTick ISR
+  at the same priority as the device IRQ? Does a lower SysTick priority
+  make the irq tail, the irq max and the ISR to thread wake smaller?
+
+experiments:
+  - systick-prio-1m
+
+imports:
+  # The irq tail with 0..256 periodic load timers and SysTick at the same
+  # priority as EXTI0.
+  - {study: load-scaling/timeout-queue-cost, experiment: wake-timers-1m, mode: reuse}
+  # The tail of the t64 point over 8 stimulus seeds and 4 load seeds.
+  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
+  - {study: measurement-validity/stimulus-sampling, experiment: load-seed-tail, mode: reuse}
+
+# The results that answer the question. For now all are characterisation:
+# measured values. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+central_results:
+  - id: systick-prio-tail
+    statement: >
+      With {timers} load timers and SysTick priority {prio}, the irq
+      p99.99 is {p99.99} cycles and the max is {max} cycles ({tree}).
+    from: {experiment: systick-prio-1m, metric: irq}
+    stat: [p99.99, max]
+    unit: cycles

@@ -96,8 +96,8 @@ Tree
    in ``trees.yaml``.
 
 Experiment
-   A folder in the folder of the study that owns it, below
-   ``validation/empirical/latencies/``, with the file
+   A folder ``ex-<name>/`` in the folder of the study that owns it,
+   below ``validation/empirical/latencies/``, with the file
    ``experiment.yaml``. It
    names an app, one or more trees, and a list of points.
 

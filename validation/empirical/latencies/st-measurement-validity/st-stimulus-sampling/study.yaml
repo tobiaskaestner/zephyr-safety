@@ -1,0 +1,64 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   ex-<experiment>/experiment.yaml   an experiment that it owns
+#   ex-<experiment>/experiment.md     its description
+#   st-<sub-study>/study.yaml         a sub-study
+#   hypotheses.yaml                   the hypotheses, written before the runs
+#   report.ipynb                      the report template (no outputs)
+
+name: stimulus-sampling
+question: >
+  Does the random stimulus sample the latency distribution evenly over
+  the kernel tick, and how many samples, stimulus seeds and load seeds
+  does a value from p50 to the max need?
+
+experiments:
+  - irq-phase-1m
+  - wake-phase-1m
+  - stim-seed-1m
+  - load-seed-tail
+
+# The results that answer the question. For now all are characterisation:
+# measured values, with a confidence bound where the value is a
+# probability. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+central_results:
+  - id: phase-coverage
+    statement: >
+      The random stimulus puts {min:.2f} to {max:.2f} times the uniform
+      share of the edges into each of the 64 phase bins of the tick.
+    from: {experiment: irq-phase-1m, point: random, metric: irq}
+    stat: phase_share_range
+    unit: share of the uniform share (1 = even)
+
+  - id: seed-spread
+    statement: >
+      Over 8 stimulus seeds of 1M samples, the {metric} p99 changes by
+      {p99:.1%}, the p99.99 by {p99.99:.1%} and the max by {max:.1%}.
+    from: {experiment: stim-seed-1m, metric: [irq, isr2thr]}
+    stat: {spread: [p99, p99.99, max]}
+    unit: (max - min) / min over the seeds
+
+  - id: irq-tail-bound
+    statement: >
+      With load seed {load_seed}, P(irq >= {threshold} cycles) <= {bound:.1e}
+      at {confidence:.0%} confidence ({count} of {n} samples).
+    from: {experiment: load-seed-tail, point: default-4m, metric: irq}
+    stat: {exceedance_bound: {thresholds: [4288, 5952, 8000], confidence: 0.95}}
+    unit: probability per sample
+
+  - id: tail-needs-seeds
+    statement: >
+      A value up to the p99.99 needs one run. A value above it needs
+      several stimulus seeds, and it is valid only for the load seed of
+      the run.
+    from: {hypotheses: [H1, H2, H3]}
+    stat: conclusion               # a person confirms the sentence

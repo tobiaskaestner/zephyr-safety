@@ -23,12 +23,16 @@ from pathlib import Path
 import yaml
 
 # The safety repo, the folder of the benchmark apps and the folder of the
-# latency studies. Each experiment is a folder <name>/ with experiment.yaml
-# and experiment.md, in the folder of the study that owns it.
+# latency studies. Each experiment is a folder ex-<name>/ with
+# experiment.yaml and experiment.md, in the folder of the study that owns
+# it. Each sub-study is a folder st-<name>/ with study.yaml. The prefixes
+# are only in the folder names: names and references have none.
 REPO_DIR = Path(__file__).resolve().parents[2]
 BENCH_DIR = REPO_DIR / "tests" / "benchmarks"
 STUDIES_DIR = REPO_DIR / "validation" / "empirical" / "latencies"
 EXPERIMENT_FILE = "experiment.yaml"
+EXPERIMENT_PREFIX = "ex-"
+STUDY_PREFIX = "st-"
 TREES_FILE = BENCH_DIR / "trees.yaml"
 BOARDS_FILE = BENCH_DIR / "boards.yaml"
 
@@ -42,9 +46,14 @@ def experiment_files():
     return sorted(STUDIES_DIR.rglob(EXPERIMENT_FILE))
 
 
+def study_dir(path):
+    """The folder of a study from its path of names, e.g. "load-scaling/t2t-under-load"."""
+    return STUDIES_DIR.joinpath(*(STUDY_PREFIX + n for n in path.split("/") if n))
+
+
 def experiment_file(name):
-    """The experiment file of the experiment folder name. The names are unique over all studies."""
-    found = [p for p in experiment_files() if p.parent.name == name]
+    """The experiment file of the experiment name. The names are unique over all studies."""
+    found = [p for p in experiment_files() if p.parent.name == EXPERIMENT_PREFIX + name]
     if len(found) != 1:
         raise TreeError(f"experiment '{name}': {len(found)} files {[str(p) for p in found]}")
     return found[0]

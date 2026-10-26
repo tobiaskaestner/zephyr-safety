@@ -242,7 +242,7 @@ Run an experiment (``run.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
 Options:
 
@@ -340,8 +340,10 @@ repetitions.
 Experiment file
 ---------------
 
-An experiment is a folder ``<name>/`` in the folder of the study that
-owns it, below ``validation/empirical/latencies/``. The folder holds the
+An experiment is a folder ``ex-<name>/`` in the folder of the study that
+owns it, below ``validation/empirical/latencies/``. A sub-study is a
+folder ``st-<name>/``. The prefixes are only in the folder names; the
+names in the files have no prefix. The experiment folder holds the
 experiment file ``experiment.yaml`` and the description
 ``experiment.md``. The keys of the experiment file are:
 
@@ -353,7 +355,7 @@ experiment file ``experiment.yaml`` and the description
      - Meaning
    * - ``name``
      - Name of the experiment. It is the name of the folder in the output.
-       It must be the name of the experiment folder.
+       The experiment folder must be ``ex-<name>``.
    * - ``app``
      - The app folder in ``tests/benchmarks/``.
    * - ``trees``
@@ -576,7 +578,7 @@ repository at ``safety.rev`` of the manifest:
 .. code-block:: console
 
    scripts/benchmarks/trees.py setup
-   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
 Then compare the summaries of the old and the new logs (see the next
 section).
