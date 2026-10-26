@@ -18,6 +18,9 @@
                      (--hypothesis H --check C | --central-result ID)
                                           set a manual verdict (confirmed, wrong);
                                           a proposal says so in --by
+    study.py merge OTHER ROOT             add the runs of another results tree (for
+                                          example a copy of the tree of the lab host)
+                                          that ROOT does not have, with their roles
     study.py build ROOT                   write run.json, the app data,
                                           experiment.json and study.json
     study.py check ROOT                   check all seals, build again and compare
@@ -77,6 +80,11 @@ def cmd_verdict(args):
     instance.add_verdict(args.instance, args.verdict, args.by, args.text, args.hypothesis, args.check,
                          args.central_result)
     print(f"verdict set in {args.instance}")
+
+
+def cmd_merge(args):
+    added = instance.merge(Design(), layout.find_root(args.other), layout.find_root(args.root))
+    print(f"{len(added)} runs added")
 
 
 def cmd_build(args):
@@ -172,6 +180,10 @@ def main():
     s.add_argument("--check")
     s.add_argument("--central-result")
     s.set_defaults(func=cmd_verdict)
+    s = sub.add_parser("merge")
+    s.add_argument("other")
+    s.add_argument("root")
+    s.set_defaults(func=cmd_merge)
     s = sub.add_parser("build")
     s.add_argument("root")
     s.set_defaults(func=cmd_build)

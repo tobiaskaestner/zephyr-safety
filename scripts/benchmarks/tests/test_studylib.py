@@ -527,3 +527,16 @@ def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     assert d.app_data(rid)["app"] == "wake_latency"
     x, y = data.ccdf(d.hist("a", "isr2thr", "exp1"))
     assert x == [100, 200] and y == [1.0, 0.1]
+
+
+def test_merge_takes_the_new_runs_of_another_tree(tmp_path, monkeypatch):
+    design = make_design(tmp_path)
+    for host in ("lab", "here"):
+        instance.new(design, tmp_path / host, "top", "sub", "nucleo_g474re")
+    lab = tmp_path / "lab" / "top" / "st-sub@nucleo_g474re"
+    instance.add(design, lab, make_run(tmp_path / "flat" / "exp1", {"a": (1, 2)}), copy=True)
+    added = instance.merge(design, tmp_path / "lab" / "top", tmp_path / "here" / "top", log=lambda *a: None)
+    assert added == ["exp1/20260101T000000Z"]
+    here = tmp_path / "here" / "top" / "st-sub@nucleo_g474re"
+    assert instance.load(here)["runs"][0]["digest"] == instance.load(lab)["runs"][0]["digest"]
+    assert instance.merge(design, tmp_path / "lab" / "top", tmp_path / "here" / "top", log=lambda *a: None) == []

@@ -239,3 +239,43 @@ def add_verdict(folder, verdict, by, text=None, hypothesis=None, check=None, cen
         entry["text"] = text
     data["manual_verdicts"] = keep + [entry]
     save(folder, data)
+
+
+def merge(design, other_root, root, log=print):
+    """Add to the tree root the runs that the run lists of the tree other_root have and root does not.
+
+    For each instance of other_root that root also has, each new run is
+    copied (run folder and seal), its seal and its digest are checked, and
+    it is added with the role and the reason of other_root. Return the run ids.
+    """
+    other_root, root = Path(other_root).resolve(), Path(root).resolve()
+    added = []
+    for of in layout.instance_folders(other_root):
+        rel = of.relative_to(other_root)
+        folder = root / rel
+        if not (folder / "instance.json").is_file():
+            log(f"skip {rel}: no such instance in {root}")
+            continue
+        have = {r["id"] for r in load(folder)["runs"]}
+        for r in load(of)["runs"]:
+            if r["id"] in have:
+                continue
+            src = of / layout.run_folder(r["id"])
+            if seal.verify(src) != r["digest"]:
+                raise InstanceError(f"{src}: the seal does not give the digest of the run list")
+            target = folder / layout.run_folder(r["id"])
+            if target.exists():
+                raise InstanceError(f"{target} exists, but it is not in the run list")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            subprocess.run(["cp", "-a", str(src), str(target)], check=True)
+            shutil.copy2(seal.seal_path(src), seal.seal_path(target))
+            if seal.verify(target) != r["digest"]:
+                raise InstanceError(f"{target}: the copy does not agree with its seal")
+            data = load(folder)
+            entry = {k: r[k] for k in ("id", "digest", "role", "reason") if k in r}
+            entry["copied_from"] = str(src)
+            data["runs"].append(entry)
+            save(folder, data)
+            added.append(r["id"])
+            log(f"added {r['id']} to {rel}")
+    return added
