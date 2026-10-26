@@ -225,6 +225,8 @@ def add_verdict(folder, verdict, by, text=None, hypothesis=None, check=None, cen
     import datetime
     if not by:
         raise InstanceError("a manual verdict needs the name of the person (--by)")
+    if verdict not in ("confirmed", "wrong"):
+        raise InstanceError(f"verdict {verdict!r}: use confirmed or wrong")
     if bool(hypothesis and check) == bool(central_result):
         raise InstanceError("give --hypothesis and --check, or --central-result")
     data = load(folder)

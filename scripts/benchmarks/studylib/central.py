@@ -55,6 +55,8 @@ def placeholders(template):
 
 def poisson_upper(k, n, conf):
     """One-sided upper bound of the probability per sample for k events in n samples (exact Poisson)."""
+    if n <= 0:
+        raise NoValue("no samples")
     lo, hi = 0.0, 1.0
     for _ in range(200):
         p = (lo + hi) / 2
@@ -62,6 +64,14 @@ def poisson_upper(k, n, conf):
         cdf = sum(math.exp(-lam + i * math.log(lam) - math.lgamma(i + 1)) for i in range(k + 1))
         lo, hi = (p, hi) if cdf > 1 - conf else (lo, p)
     return hi
+
+
+def round_up(x, digits=3):
+    """x rounded up to `digits` significant digits (a bound must not get smaller)."""
+    if x <= 0:
+        return x
+    e = math.floor(math.log10(x)) - digits + 1
+    return math.ceil(x / 10 ** e) * 10 ** e
 
 
 def lstsq(xs, ys):
@@ -101,6 +111,8 @@ def from_obs(cr, src):
             missing.append(str(err))
     if not obs and missing:
         raise NoValue("; ".join(missing))
+    if missing:
+        src.notes.extend(missing)
     sel = {}
     if "point" in f:
         sel["point"] = f["point"]
@@ -152,7 +164,14 @@ def evaluate(cr, src, ctx):
                     row = {**base_row(g[0], m), "points": len(g)}
                     for s in arg:
                         vals = [stats.value(o.rep, None if s.startswith("drift") else m, s) for o in g]
-                        row[s] = ((max(vals) - min(vals)) / min(vals)) if kind == "spread" else max(vals) - min(vals)
+                        if len(vals) < 2:
+                            raise NoValue(f"{kind}: fewer than two points in a group")
+                        if kind == "spread":
+                            if min(vals) <= 0:
+                                raise NoValue(f"spread of {s}: a value is 0 or less")
+                            row[s] = (max(vals) - min(vals)) / min(vals)
+                        else:
+                            row[s] = max(vals) - min(vals)
                     del row["point"]
                     rows.append(row)
         elif kind == "exceedance_bound":
@@ -165,7 +184,7 @@ def evaluate(cr, src, ctx):
                         k = stats.count_ge(h, x)
                         b = poisson_upper(k, h["n"], arg["confidence"])
                         rows.append({**base_row(o, m), "load_seed": o.rep["meta"].get("load_timer_seed"),
-                                     "threshold": x, "count": k, "n": h["n"], "bound": float(f"{b:.3g}"),
+                                     "threshold": x, "count": k, "n": h["n"], "bound": round_up(b),
                                      "confidence": arg["confidence"]})
         elif kind in ("slope", "fit_linear"):
             stat = arg["stat"]
@@ -213,13 +232,18 @@ def evaluate(cr, src, ctx):
                         rows.append(row)
         elif kind == "tree_diff":
             for m in metrics:
-                ids = sorted({o.point for o in obs})
-                for p in ids:
+                for p in sorted({o.point for o in obs}):
                     up = [o for o in obs if o.point == p and o.tree == "ws-up"]
                     sf = [o for o in obs if o.point == p and o.tree == "ws-safety"]
-                    if up and sf:
-                        rows.append({"point": p, "metric": m, **up[0].axes,
-                                     "tree_diff": stats.value(up[0].rep, m, arg) - stats.value(sf[0].rep, m, arg)})
+                    # the same run if it has both trees, else the one run of each tree
+                    pairs = [(u, x) for u in up for x in sf if u.run == x.run]
+                    if not pairs and len(up) == 1 and len(sf) == 1:
+                        pairs = [(up[0], sf[0])]
+                    if len(pairs) > 1:
+                        raise NoValue(f"tree_diff {p}: {len(pairs)} pairs of runs, the pair is not clear")
+                    for u, x in pairs:
+                        rows.append({"point": p, "metric": m, **u.axes,
+                                     "tree_diff": stats.value(u.rep, m, arg) - stats.value(x.rep, m, arg)})
         elif kind == "ram_cost":
             for m in metrics:
                 for key, g in sorted(groups(obs, template).items()):
@@ -242,8 +266,10 @@ def evaluate(cr, src, ctx):
                 ph = o.rep["phases"].get(m)
                 if not ph:
                     raise NoValue(f"{o.point} has no phase table {m}")
+                # the table lists the non-empty bins only: an absent bin has share 0
+                nbins = ph.get("nbins") or len(ph["bins"])
                 tot = sum(b[1] for b in ph["bins"])
-                shares = [b[1] * len(ph["bins"]) / tot for b in ph["bins"]]
+                shares = [b[1] * nbins / tot for b in ph["bins"]] + [0.0] * (nbins - len(ph["bins"]))
                 rows.append({**base_row(o, m), "min": min(shares), "max": max(shares)})
     elif st == "hist_identical_count":
         n = same = 0
@@ -260,7 +286,7 @@ def evaluate(cr, src, ctx):
                 sites = [s for s in stats.m4_sites(o.rep, m) if s["n"]]
                 if not sites:
                     continue
-                floor = o.rep["meta"].get("m4_floor_cyc", 0)
+                floor = o.rep["meta"].get("m4_isr_floor_cyc" if m.startswith("m4.isr") else "m4_floor_cyc", 0)
                 top = max(sites, key=lambda s: (s["max"] - floor, s["name"]))
                 rows.append({**base_row(o, m), "max_net": max(top["max"] - floor, 0),
                              "place": top.get("function", top["name"]) + (f" (via {top['via']})" if top.get("via") else ""),

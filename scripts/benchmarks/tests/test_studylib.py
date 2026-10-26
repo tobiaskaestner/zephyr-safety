@@ -195,7 +195,10 @@ def test_diff_ratio_and_change():
            obs("base-l", 200, axes={"v": "base", "load": "l"}), obs("opt-l", 150, axes={"v": "opt", "load": "l"})]
     sel = {"select": {"point": "opt"}, "stat": "p50"}
     assert ev({**sel, "expect": {"diff_to": {"point": "base", "range": [-25, -15]}}}, pts)["verdict"] == "confirmed"
-    assert ev({**sel, "expect": {"diff_to": {"axes": {"v": "base"}, "spread_abs_le": 19}}}, pts)["verdict"] == "wrong"
+    # spread_abs_le in diff_to: the differences over the points differ by x or less (-20 and -50: 30)
+    two = {"select": {"v": "opt"}, "stat": "p50"}
+    assert ev({**two, "expect": {"diff_to": {"axes": {"v": "base"}, "spread_abs_le": 30}}}, pts)["verdict"] == "confirmed"
+    assert ev({**two, "expect": {"diff_to": {"axes": {"v": "base"}, "spread_abs_le": 29}}}, pts)["verdict"] == "wrong"
     assert ev({**sel, "expect": {"ratio_to": {"point": "base", "stat": "p50"}, "range": [0.75, 0.85]}},
               pts)["verdict"] == "confirmed"
     r = ev({"select": {"point": "opt-l"}, "stat": "p50",
@@ -360,3 +363,144 @@ def test_image_and_code_digest(tmp_path):
     assert runfiles.image_sha256(tmp_path / "a.elf") != runfiles.image_sha256(tmp_path / "b.elf")
     assert runfiles.code_sha256(tmp_path / "a.elf", rev_a) == runfiles.code_sha256(tmp_path / "b.elf", rev_b)
     assert runfiles.bench_rev({"cmake": ["cmake", f"-DLATBENCH_SRC_REV={rev_a}"]}) == rev_a
+
+
+# ------------------------------------------------------------------ regressions of the review 2026-10-26
+def test_count_ge_inside_an_overflow_bin_is_no_value():
+    h = hist([(100, 90)], ovf=[(12, 10)])  # 10 samples in 4096..8191
+    assert stats.hist_value(h, "count_ge(4096)") == 10
+    with pytest.raises(NoValue):
+        stats.hist_value(h, "count_ge(5000)")
+
+
+def test_empty_histogram_is_no_value():
+    h = {"n": 0, "min": 0, "max": 0, "mean": 0.0, "overflow": 0, "invalid": 0, "bins": [], "coarse": [], "ovf_log2": []}
+    with pytest.raises(NoValue):
+        stats.hist_value(h, "p99")
+    with pytest.raises(NoValue):
+        stats.hist_value(h, "max")
+    assert stats.hist_value(h, "n") == 0
+
+
+def test_point_aggregate_uses_the_reference_of_its_point():
+    pts = [obs("a", 10), obs("b", 100)]
+
+    class S(Src):
+        def observations(self, exp, series=None):
+            return [obs("a", 9, run="e2/1"), obs("b", 99, run="e2/1")] if exp == "E" else pts
+    r = checks.evaluate({"experiment": "e", "metric": "irq", "stat": "max(p50)",
+                         "expect": {"diff_to": {"experiment": "E", "point": "same", "stat": "p50", "range": [1, 1]}}},
+                        S([]))
+    assert r["verdict"] == "confirmed", r["measured"]  # b (100) against E b (99)
+
+
+def test_quantile_in_a_coarse_bin_against_a_limit_in_the_bin():
+    h = hist([(10, 99)], coarse=[(4096, 1, 32)])
+    p = [checks.Obs("e/1", "t", "x", {}, rep({"irq": h}))]
+    with pytest.raises(NoValue):  # p99.95 in 4096..4127, the limit 4100 is in the bin
+        ev({"stat": "p99.95", "expect": {"range": [None, 4100]}}, p)
+    assert ev({"stat": "p99.95", "expect": {"range": [None, 4127]}}, p)["verdict"] == "confirmed"
+    assert ev({"stat": "p99.95", "expect": {"range": [None, 4095]}}, p)["verdict"] == "wrong"
+
+
+def test_silent_passes_are_no_value():
+    with pytest.raises(NoValue):  # one point: no spread
+        ev({"stat": "p50", "expect": {"spread_abs_le": 0}}, [obs("a", 1)])
+    with pytest.raises(NoValue):  # relative spread with a value <= 0
+        ev({"metric": "meta.x", "stat": "value", "expect": {"spread_le": 0.1}},
+           [checks.Obs("e/1", "t", p, {}, rep(meta={"x": v})) for p, v in (("a", -10), ("b", -1))])
+    with pytest.raises(NoValue):  # a point of the order is not there
+        ev({"stat": "p50", "expect": {"order": ["a", "b", "c"]}}, [obs("a", 1), obs("c", 3)])
+    with pytest.raises(NoValue):  # a selected point is not there
+        ev({"select": {"point": ["a", "zz"]}, "stat": "p50", "expect": {"range": [0, 9]}}, [obs("a", 1)])
+    with pytest.raises(NoValue):  # two forms
+        ev({"stat": "p50", "expect": {"range": [0, 9], "order": ["a"]}}, [obs("a", 1)])
+    assert checks.problems({"metric": "irq", "stat": "p50", "expect": {"range": [0, 1], "order": ["a"]}})
+    assert checks.problems({"metric": "irq", "expect": {"range": [0, 1]}})  # no stat
+
+
+def test_m4_function_that_is_not_in_the_data_is_no_value():
+    site = {"name": "m4.mask.t.1", "kind": "mask", "ctx": "thread", "n": 1, "min": 1, "max": 5,
+            "function": "f", "via": ""}
+    p = [checks.Obs("e/1", "t", "x", {}, rep(meta={"m4_floor_cyc": 0},
+                                             m4={"table": {}, "symbols": True, "sites": [site]}))]
+    assert ev({"metric": "m4.mask[f]", "stat": "n", "expect": {"range": [1, 1]}}, p)["verdict"] == "confirmed"
+    with pytest.raises(NoValue):
+        ev({"metric": "m4.mask[g]", "stat": "n", "expect": {"range": [0, 0]}}, p)
+
+
+def test_within_tolerance_uses_the_coarse_width_of_the_metric():
+    pts = [obs("x", 1050)]
+
+    class S(Src):
+        def observations(self, exp, series=None):
+            if exp == "other":
+                return [checks.Obs("o/1", "ws-up", "a", {}, rep({"irq": hist([(1000, 1)], coarse=[(2048, 1, 32)])})),
+                        obs("b", 1020)]
+            return pts
+    r = checks.evaluate({"experiment": "e", "metric": "irq", "stat": "p50",
+                         "expect": {"within": {"experiment": "other", "stat": "range"}, "tolerance_bins": 1}}, S([]))
+    assert r["verdict"] == "confirmed", r["measured"]  # 1050 <= 1020 + 32
+
+
+def test_hist_identical_needs_the_same_tree():
+    runs = {"st/r/1": [obs("p", 90, tree="ws-up", run="r/1")]}
+    with pytest.raises(NoValue):
+        ev({"stat": None, "expect": {"hist_identical_to": {"run": "st/r/1", "point": "p"}}},
+           [obs("q", 90, tree="ws-safety")], runs)
+
+
+def test_phase_share_counts_the_absent_bins():
+    class Ctx:
+        def defaults(self):
+            return {}
+    ph = {"period": 100, "nbins": 4, "bins": [[0, 10, 0, 0, 0], [1, 10, 0, 0, 0]]}
+    o = checks.Obs("e/1", "t", "x", {}, {"meta": {}, "hists": {}, "phases": {"irq": ph}, "m4": None})
+    out = central.evaluate({"id": "c", "statement": "{min} {max}", "stat": "phase_share_range",
+                            "from": {"experiment": "e", "metric": "irq"}}, Src([o]), Ctx())
+    assert out["rows"][0]["min"] == 0 and out["rows"][0]["max"] == 2
+
+
+def test_poisson_bound_without_samples_and_rounding_up():
+    with pytest.raises(NoValue):
+        central.poisson_upper(0, 0, 0.95)
+    assert central.round_up(0.0001081) == pytest.approx(0.000109)
+
+
+def test_rerun_import_does_not_read_the_owner(tmp_path, monkeypatch):
+    design_root = tmp_path / "design"
+    make_design(tmp_path)
+    d = yaml.safe_load((design_root / "study.yaml").read_text())
+    d["substudies"].append({"use": "rr"})
+    (design_root / "study.yaml").write_text(yaml.safe_dump(d))
+    (design_root / "st-rr").mkdir()
+    (design_root / "st-rr" / "study.yaml").write_text(yaml.safe_dump({
+        "name": "rr", "question": "q", "imports": [{"study": "sub", "experiment": "exp1", "mode": "rerun"}],
+        "central_results": [{"id": "same", "statement": "{hist_identical_count} of {n}",
+                             "from": {"experiment": "exp1"}, "stat": "hist_identical_count"}]}))
+    design = Design(design_root)
+    monkeypatch.setattr(build, "Design", lambda: design)
+    res = tmp_path / "results"
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    instance.new(design, res, "top", "rr", "nucleo_g474re")
+    instance.add(design, res / "top" / "st-sub@nucleo_g474re", make_run(tmp_path / "flat" / "exp1", {"a": (1, 2)}),
+                 copy=True)
+    build.build(res / "top", log=lambda *a: None)
+    sj = json.loads((res / "top" / "st-rr@nucleo_g474re" / "study.json").read_text())
+    assert "not_evaluated" in sj["central_results"][0], sj["central_results"][0]
+
+
+def test_reference_digest_and_manual_verdict_are_checked(tmp_path, monkeypatch):
+    design = make_design(tmp_path)
+    monkeypatch.setattr(build, "Design", lambda: design)
+    res = tmp_path / "results"
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    rid = instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (1, 2), "b": (3, 4)}), copy=True)
+    with pytest.raises(instance.InstanceError):
+        instance.add_verdict(inst, "Wrong", "tester", hypothesis="H1", check="b")
+    top = instance.load(res / "top")
+    top["references"] = [{"instance": "top/sub@nucleo_g474re", "id": rid, "digest": "sha256:0", "role": "reference"}]
+    instance.save(res / "top", top)
+    with pytest.raises(build.BuildError):
+        build.build(res / "top", log=lambda *a: None)

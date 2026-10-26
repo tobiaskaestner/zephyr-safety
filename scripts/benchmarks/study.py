@@ -115,8 +115,8 @@ def show(results, root, brief=False):
                 print(f"   acceptance {a['run']}: " + ", ".join(f"{c['id']} {c['verdict']}" for c in bad))
         for h in hyps:
             print(f"   {h['id']} {h['verdict']} ({h['checks_confirmed']})")
-            if not brief:
-                for c in h["checks"]:
+            for c in h["checks"]:
+                if not brief or c["verdict"] in ("tool error", "not evaluated"):
                     print(f"      {c['id']} {c['verdict']}: {c.get('measured', '')[:140]}")
         for c in crs:
             if c.get("not_evaluated"):

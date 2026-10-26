@@ -10,32 +10,40 @@ series, for each metric and each stat.
 
 select:
     {point: id | [ids]}, {axes: {axis: value | [values]}}, {axis: value | [values]}
+    A point that a select names must be in the data.
 stat:
     a stat of stats.py; for a histogram metric, max(<stat>) / min(<stat>) is
     the largest / smallest value over the selected points.
-expect:
-    range: [lo, hi]                each value in lo..hi (null: no limit)
+expect (exactly one form):
+    range: [lo, hi]                each value in lo..hi (null: no limit); a
+                                   quantile in a coarse bin is in the range
+                                   only if the whole bin is
     equals: x                      each value is x (for top_place: x is the
                                    start function or one of its inlined functions)
-    spread_le: x                   (max - min) / min over the points <= x
-    spread_abs_le: x               max - min over the points <= x
-    order: [p1, p2, ...]           the values increase in this point order
+    spread_le: x                   (max - min) / min over the points <= x (2 points or more, min > 0)
+    spread_abs_le: x               max - min over the points <= x (2 points or more)
+    order: [p1, p2, ...]           the values increase in this point order (all points in each series)
     order: {axis: [v1, v2, ...]}   the values increase along these axis values,
                                    for each value of the other axes
-    diff_to: {REF, range | spread_abs_le}
-                                   value - the value of the reference
+    diff_to: {REF, range}          value - the value of the reference is in the range
+    diff_to: {REF, spread_abs_le: x}
+                                   the differences over the selected points
+                                   differ by x or less (max - min of the differences)
     ratio_to: {REF, stat} + range  value / the value of the reference
     diff_change: {point: P, of: [Q, R], range}
                                    (value - P) - (Q - R), in the same series
     within: {experiment: E, stat: range} + tolerance_bins: k
                                    value in min..max of all points of E,
                                    +- k coarse bins
-    hist_identical_to: {run, point}
-                                   the same histogram, bin for bin
+    hist_identical_to: {run, point[, tree]}
+                                   the same histogram, bin for bin, on the same tree
 REF: point: P | axes: {axis: v} (the point with this axis value and the
 same other axes) | run: <study path>/<experiment>/<UTC> with point: P,
 points: {selected: reference} or the same point id, and tree: T |
-experiment: E, point: same | metric: M, stat: S (the same point).
+experiment: E, point: same (one run of E) | metric: M, stat: S (the same point).
+
+A check that the data cannot give raises NoValue: it is "not evaluated",
+never confirmed or wrong.
 """
 
 import re
@@ -44,9 +52,22 @@ from . import stats
 from .stats import NoValue
 
 AGG = re.compile(r"^(max|min)\((.+)\)$")
-EXPECT = {"range", "equals", "spread_le", "spread_abs_le", "order", "diff_to", "ratio_to", "diff_change",
-          "within", "tolerance_bins", "hist_identical_to"}
-SELECT_KEYS = {"point", "axes"}
+FORMS = ("range", "equals", "spread_le", "spread_abs_le", "order", "diff_to", "ratio_to", "diff_change",
+         "within", "hist_identical_to")
+EXPECT = set(FORMS) | {"tolerance_bins"}
+
+
+def form_of(expect):
+    """The one comparison form of an expect (ratio_to takes range, within takes tolerance_bins)."""
+    keys = set(expect)
+    if "ratio_to" in keys:
+        keys -= {"range"}
+    if "within" in keys:
+        keys -= {"tolerance_bins"}
+    forms = [k for k in FORMS if k in keys]
+    if len(forms) != 1 or keys - set(FORMS):
+        raise NoValue(f"expect {sorted(expect)}: give exactly one form of {', '.join(FORMS)}")
+    return forms[0]
 
 
 def problems(check):
@@ -54,11 +75,18 @@ def problems(check):
     if check.get("manual"):
         return [] if check.get("statement") else ["a manual check needs a statement"]
     out = []
-    for k in check.get("expect") or {}:
-        if k not in EXPECT:
-            out.append(f"expect {k!r}")
-    if not check.get("expect"):
+    expect = check.get("expect") or {}
+    if not expect:
         out.append("no expect")
+    else:
+        try:
+            form = form_of(expect)
+        except NoValue as e:
+            out.append(str(e))
+            form = None
+        if check.get("stat") is None and form not in ("hist_identical_to", None) \
+                and not all((m or "").startswith("meta.") for m in as_list(check.get("metric"))):
+            out.append("no stat")
     for m in as_list(check.get("metric")):
         if not stats.known(m, check.get("stat")):
             out.append(f"metric {m!r} with stat {check.get('stat')!r}")
@@ -86,7 +114,7 @@ def as_list(x):
 
 
 def select(obs, sel):
-    """The points of obs that the select of a check names."""
+    """The points of obs that the select of a check names. A named point that is not there raises NoValue."""
     if not sel:
         return list(obs)
     out = []
@@ -101,6 +129,10 @@ def select(obs, sel):
                 ok &= o.axes.get(k) in as_list(v)
         if ok:
             out.append(o)
+    if "point" in sel:
+        missing = sorted(set(as_list(sel["point"])) - {o.point for o in out})
+        if missing:
+            raise NoValue(f"select: the points {missing} are not in the data")
     return out
 
 
@@ -113,7 +145,7 @@ def by_series(obs):
 
 def is_point_agg(metric, stat):
     """max(x) / min(x) of a histogram metric: over the selected points."""
-    return stat is not None and AGG.match(stat) and not (metric or "").startswith("m4.")
+    return isinstance(stat, str) and bool(AGG.match(stat)) and not (metric or "").startswith("m4.")
 
 
 def value(o, metric, stat):
@@ -121,19 +153,35 @@ def value(o, metric, stat):
 
 
 def series_values(points, metric, stat):
-    """[(label, value)] for the points of one series; one value for a point aggregate."""
+    """[(name, value, obs, width)] for the points of one series; one entry for a point aggregate.
+
+    width is the bin width of a quantile value (1 for an exact value).
+    """
     m = AGG.match(stat) if is_point_agg(metric, stat) else None
     if m:
         f, inner = m.groups()
-        vals = [(o.point, value(o, metric, inner)) for o in points]
-        best = (max if f == "max" else min)(vals, key=lambda x: x[1])
-        return [(f"{f} over {len(vals)} points ({best[0]})", best[1])]
-    return [(o.point, value(o, metric, stat)) for o in points]
+        vals = [(o, value(o, metric, inner)) for o in points]
+        o, v = (max if f == "max" else min)(vals, key=lambda x: x[1])
+        return [(f"{f} over {len(vals)} points ({o.point})", v, o, stats.value_width(o.rep, metric, inner))]
+    return [(o.point, value(o, metric, stat), o, stats.value_width(o.rep, metric, stat)) for o in points]
 
 
 def in_range(v, rng):
     lo, hi = rng
     return (lo is None or v >= lo) and (hi is None or v <= hi)
+
+
+def range_verdict(v, width, rng):
+    """True / False, or None if the limit is inside the bin of the value (lower edge v, width)."""
+    if width <= 1:
+        return in_range(v, rng)
+    top = v + width - 1
+    if in_range(v, rng) and in_range(top, rng):
+        return True
+    lo, hi = rng
+    if (hi is not None and v > hi) or (lo is not None and top < lo):
+        return False
+    return None
 
 
 def fmt(v):
@@ -174,26 +222,35 @@ def label(series, metric, stat, with_run=False):
     return " ".join(parts)
 
 
+def check_functions(src, exp, metrics):
+    """An M4 metric with [function]: the function must be in the data (else it is a typo or another build)."""
+    for m in metrics:
+        if m and m.startswith("m4.") and "[" in m:
+            if not any(stats.function_seen(o.rep, m) for o in src.observations(exp)):
+                raise NoValue(f"{m}: no M4 site of this function in any point of {exp}")
+
+
 def evaluate(check, src):
     """Return {verdict, measured, limit, values} for a check that is not manual."""
     exp = check.get("experiment")
+    expect = dict(check.get("expect") or {})
+    form = form_of(expect)
     obs = select(src.observations(exp), check.get("select"))
     if not obs:
         raise NoValue(f"no points of {exp} for select {check.get('select')}")
-    expect = dict(check.get("expect") or {})
     metrics = as_list(check.get("metric"))
     stat_list = as_list(check.get("stat"))
+    check_functions(src, exp, metrics)
     res = Result()
     series = by_series(obs)
 
-    if "hist_identical_to" in expect:
+    if form == "hist_identical_to":
         ref = expect["hist_identical_to"]
         for s, pts in series.items():
-            ref_obs = [r for r in src.run_obs(ref["run"]) if r.point == ref["point"] and r.tree == s[1]]
+            tree = ref.get("tree", s[1])
+            ref_obs = [r for r in src.run_obs(ref["run"]) if r.point == ref["point"] and r.tree == tree]
             if not ref_obs:
-                ref_obs = [r for r in src.run_obs(ref["run"]) if r.point == ref["point"]]
-            if not ref_obs:
-                raise NoValue(f"reference {ref['run']} has no point {ref['point']}")
+                raise NoValue(f"reference {ref['run']} has no point {tree}/{ref['point']}")
             for o in pts:
                 for m in metrics:
                     same = stats.hist_identical(o.rep["hists"][m], ref_obs[0].rep["hists"][m])
@@ -203,44 +260,59 @@ def evaluate(check, src):
         return finish(res, "the same histogram, bin for bin as " + f"{ref['run']} {ref['point']}")
 
     with_run = len({o.run for o in obs}) > 1
+    undecided = []
     for s, pts in series.items():
         for m in metrics:
             for st in stat_list:
                 lab = label(s, m, st, with_run)
-                if "range" in expect and not ({"ratio_to"} & set(expect)):
-                    for name, v in series_values(pts, m, st):
-                        res.add(in_range(v, expect["range"]), f"{lab} {name}: {fmt(v)}",
-                                {"series": lab, "point": name, "value": v})
-                elif "equals" in expect:
+                if form == "range":
+                    for name, v, _, w in series_values(pts, m, st):
+                        ok = range_verdict(v, w, expect["range"])
+                        if ok is None:
+                            undecided.append(f"{lab} {name}: {fmt(v)}..{fmt(v + w - 1)} (coarse bin)")
+                            continue
+                        bin_text = f" (bin {fmt(v)}..{fmt(v + w - 1)})" if w > 1 else ""
+                        res.add(ok, f"{lab} {name}: {fmt(v)}{bin_text}", {"series": lab, "point": name, "value": v})
+                elif form == "equals":
                     want = expect["equals"]
-                    for name, v in series_values(pts, m, st):
+                    for name, v, _, _ in series_values(pts, m, st):
                         ok = v == want or (isinstance(v, str) and st == "top_place"
                                            and want in re.split(r"[ ()<]+|via ", v))
                         res.add(ok, f"{lab} {name}: {fmt(v)}", {"series": lab, "point": name, "value": v})
-                elif "spread_le" in expect or "spread_abs_le" in expect:
-                    vals = series_values(pts, m, st)
-                    nums = [v for _, v in vals]
-                    if "spread_le" in expect:
-                        sp = (max(nums) - min(nums)) / min(nums) if min(nums) else float("inf")
+                elif form in ("spread_le", "spread_abs_le"):
+                    nums = [v for _, v, _, _ in series_values(pts, m, st)]
+                    if len(nums) < 2:
+                        raise NoValue(f"{lab}: a spread needs two points or more, the series has {len(nums)}")
+                    if form == "spread_le":
+                        if min(nums) <= 0:
+                            raise NoValue(f"{lab}: a relative spread needs values above 0 ({fmt(min(nums))})")
+                        sp = (max(nums) - min(nums)) / min(nums)
                         res.add(sp <= expect["spread_le"], f"{lab}: spread {sp:.2%} ({fmt(min(nums))}..{fmt(max(nums))})",
                                 {"series": lab, "spread": sp, "min": min(nums), "max": max(nums)})
                     else:
                         sp = max(nums) - min(nums)
                         res.add(sp <= expect["spread_abs_le"], f"{lab}: {fmt(min(nums))}..{fmt(max(nums))}",
                                 {"series": lab, "spread": sp, "min": min(nums), "max": max(nums)})
-                elif "order" in expect:
+                elif form == "order":
                     order_check(res, lab, pts, m, st, expect["order"])
-                elif "diff_to" in expect or "ratio_to" in expect or "diff_change" in expect:
+                elif form in ("diff_to", "ratio_to", "diff_change"):
                     ref_check(res, lab, pts, m, st, expect, src)
-                elif "within" in expect:
+                elif form == "within":
                     within_check(res, lab, pts, m, st, expect, src, s)
-                else:
-                    raise NoValue(f"expect {sorted(expect)} has no tool")
-    return finish(res, limit_text(expect))
+    if undecided and res.ok:
+        raise NoValue("the limit is inside the coarse bin of the value: " + "; ".join(undecided))
+    out = finish(res, limit_text(expect))
+    if undecided:
+        out["measured"] += "; undecided (coarse bin): " + "; ".join(undecided)
+    return out
 
 
 def order_check(res, lab, pts, m, st, order):
     if isinstance(order, list):
+        present = {o.point for o in pts}
+        missing = [p for p in order if p not in present]
+        if missing:
+            raise NoValue(f"{lab}: order {order}: the points {missing} are not in the series")
         groups = {(): [o for o in pts if o.point in order]}
         key = {p: i for i, p in enumerate(order)}
         rank = lambda o: key[o.point]  # noqa: E731
@@ -253,8 +325,9 @@ def order_check(res, lab, pts, m, st, order):
                 other = tuple(sorted((a, v) for a, v in o.axes.items() if a != axis))
                 groups.setdefault(other, []).append(o)
         rank = lambda o: key[o.axes[axis]]  # noqa: E731
-    if not groups or not any(len(g) > 1 for g in groups.values()):
-        raise NoValue(f"order {order}: fewer than two points")
+        groups = {k: g for k, g in groups.items() if len(g) > 1}
+    if not groups:
+        raise NoValue(f"{lab}: order {order}: no group of two points or more")
     for other, g in sorted(groups.items()):
         g = sorted(g, key=rank)
         vals = [(o.point, value(o, m, st)) for o in g]
@@ -282,6 +355,8 @@ def ref_obs_for(o, spec, src):
             found = cands  # the reference experiment has the point on one other tree only
         if not found:
             raise NoValue(f"reference {spec['experiment']} has no point {o.tree}/{want}")
+        if len(found) > 1:
+            raise NoValue(f"reference {spec['experiment']} {want}: {len(found)} runs, the reference is not clear")
         return found[0]
     if "axes" in spec:
         want = {**o.axes, **spec["axes"]}
@@ -302,9 +377,11 @@ def ref_check(res, lab, pts, m, st, expect, src):
         spec = expect["diff_change"]
         q, r = spec["of"]
         for o in pts:
-            same = src.observations(None, series=o.series)
-            get = lambda p: next(x for x in same if x.point == p)  # noqa: E731
-            v = (value(o, m, st) - value(get(spec["point"]), m, st)) - (value(get(q), m, st) - value(get(r), m, st))
+            same = {x.point: x for x in src.observations(None, series=o.series)}
+            for p in (spec["point"], q, r):
+                if p not in same:
+                    raise NoValue(f"diff_change: no point {p} in {o.series}")
+            v = (value(o, m, st) - value(same[spec["point"]], m, st)) - (value(same[q], m, st) - value(same[r], m, st))
             res.add(in_range(v, spec["range"]), f"{lab} {o.point}: ({o.point} - {spec['point']}) - ({q} - {r}) = {fmt(v)}",
                     {"series": lab, "point": o.point, "value": v})
         return
@@ -312,33 +389,36 @@ def ref_check(res, lab, pts, m, st, expect, src):
     spec = expect["ratio_to" if ratio else "diff_to"]
     ref_metric = spec.get("metric", m)
     ref_stat = spec.get("stat", st)
-    if is_point_agg(m, st):
-        # max(x) over the points against one reference point
-        (name, v), = series_values(pts, m, st)
-        r = ref_obs_for(pts[0], spec, src)
-        rv = value(r, ref_metric, ref_stat)
-        pairs = [(name, v, r, rv)]
-    else:
-        pairs = []
-        for o in pts:
-            r = ref_obs_for(o, spec, src)
-            pairs.append((o.point, value(o, m, st), r, value(r, ref_metric, ref_stat)))
+    pairs = []
+    for name, v, o, _ in series_values(pts, m, st):
+        r = ref_obs_for(o, spec, src)  # for a point aggregate: the reference of the point that gave it
+        pairs.append((name, v, r, value(r, ref_metric, ref_stat)))
+    diffs = []
     for name, v, r, rv in pairs:
         what = f"{r.point}" if r.run == pts[0].run else f"{r.run} {r.tree}/{r.point}"
         if ref_metric != m or ref_stat != st:
             what += f" {ref_metric or ''} {ref_stat or ''}".rstrip()
         if ratio:
-            q = v / rv if rv else float("inf")
+            if not rv:
+                raise NoValue(f"{lab} {name}: the reference value is 0")
+            q = v / rv
             res.add(in_range(q, expect["range"]), f"{lab} {name}: {fmt(v)} / {fmt(rv)} ({what}) = {q:.3f}",
                     {"series": lab, "point": name, "value": v, "reference": rv, "ratio": q})
         else:
             d = v - rv
+            diffs.append(d)
             if "spread_abs_le" in spec:
-                ok = abs(d) <= spec["spread_abs_le"]
+                res.lines.append(f"{lab} {name}: {fmt(v)} - {fmt(rv)} ({what}) = {fmt(d)}")
+                res.values.append({"series": lab, "point": name, "value": v, "reference": rv, "diff": d})
             else:
-                ok = in_range(d, spec["range"])
-            res.add(ok, f"{lab} {name}: {fmt(v)} - {fmt(rv)} ({what}) = {fmt(d)}",
-                    {"series": lab, "point": name, "value": v, "reference": rv, "diff": d})
+                res.add(in_range(d, spec["range"]), f"{lab} {name}: {fmt(v)} - {fmt(rv)} ({what}) = {fmt(d)}",
+                        {"series": lab, "point": name, "value": v, "reference": rv, "diff": d})
+    if not ratio and "spread_abs_le" in spec:
+        if len(diffs) < 2:
+            raise NoValue(f"{lab}: diff_to spread_abs_le needs two points or more")
+        sp = max(diffs) - min(diffs)
+        res.add(sp <= spec["spread_abs_le"], f"{lab}: the differences {fmt(min(diffs))}..{fmt(max(diffs))} "
+                                             f"differ by {fmt(sp)}", {"series": lab, "diff_spread": sp})
 
 
 def within_check(res, lab, pts, m, st, expect, src, series):
@@ -347,9 +427,12 @@ def within_check(res, lab, pts, m, st, expect, src, series):
     if not ref:
         raise NoValue(f"no points of {spec['experiment']} on tree {series[1]}")
     rv = [value(r, m, st) for r in ref]
+    # one coarse bin: the width of the coarse bins of this metric (in the point or in the reference)
+    widths = [stats.coarse_width(x.rep["hists"][m]) for x in [*pts, *ref] if m in x.rep["hists"]]
+    width = max(widths) if widths else 1
     for o in pts:
         v = value(o, m, st)
-        tol = expect.get("tolerance_bins", 0) * stats.coarse_width(o.rep["hists"][m])
+        tol = expect.get("tolerance_bins", 0) * width
         ok = min(rv) - tol <= v <= max(rv) + tol
         res.add(ok, f"{lab} {o.point}: {fmt(v)} ({spec['experiment']} {fmt(min(rv))}..{fmt(max(rv))}, +-{tol})",
                 {"series": lab, "point": o.point, "value": v, "range": [min(rv), max(rv)], "tolerance": tol})
@@ -357,28 +440,30 @@ def within_check(res, lab, pts, m, st, expect, src, series):
 
 def limit_text(expect):
     e = dict(expect)
-    if "range" in e and not ({"ratio_to"} & set(e)):
+    form = form_of(e)
+    if form == "range":
         return rng_text(e["range"])
-    if "equals" in e:
+    if form == "equals":
         return f"= {e['equals']}"
-    if "spread_le" in e:
+    if form == "spread_le":
         return f"spread <= {e['spread_le']:.0%}"
-    if "spread_abs_le" in e:
+    if form == "spread_abs_le":
         return f"max - min <= {fmt(e['spread_abs_le'])}"
-    if "order" in e:
+    if form == "order":
         o = e["order"]
         return ("increasing: " + " < ".join(o)) if isinstance(o, list) else \
             "increasing along " + ", ".join(f"{a}: {' < '.join(v)}" for a, v in o.items())
-    if "ratio_to" in e:
+    if form == "ratio_to":
         return f"ratio {rng_text(e['range'])}"
-    if "diff_to" in e:
+    if form == "diff_to":
         d = e["diff_to"]
-        return f"diff {rng_text(d['range'])}" if "range" in d else f"|diff| <= {fmt(d['spread_abs_le'])}"
-    if "diff_change" in e:
+        return f"diff {rng_text(d['range'])}" if "range" in d else \
+            f"the differences differ by <= {fmt(d['spread_abs_le'])}"
+    if form == "diff_change":
         return f"change {rng_text(e['diff_change']['range'])}"
-    if "within" in e:
+    if form == "within":
         return f"within {e['within']['experiment']} +- {e.get('tolerance_bins', 0)} coarse bins"
-    return str(e)
+    return "the same histogram, bin for bin"
 
 
 def finish(res, limit):

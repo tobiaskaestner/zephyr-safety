@@ -23,6 +23,16 @@ from .design import Design, repo_rel, repo_rev
 from .stats import NoValue
 
 STATS = ["n", "invalid", "min", "p50", "p90", "p99", "p99.9", "p99.99", "max", "mean"]
+# Errors of the tools (not of the data): the check gets the verdict "tool error".
+TOOL_ERRORS = (KeyError, IndexError, TypeError, ZeroDivisionError, StopIteration, ValueError,
+               AttributeError, RuntimeError, FileNotFoundError)
+
+
+def safe_limit(check):
+    try:
+        return checks.limit_text(check.get("expect") or {})
+    except NoValue:
+        return str(check.get("expect"))
 
 
 class BuildError(Exception):
@@ -94,7 +104,9 @@ class Tree:
             return self.obs[key]
         run_dir = folder / layout.run_folder(run_id)
         digest = seal.verify(run_dir)
-        if want_digest and digest != want_digest:
+        if not want_digest:
+            raise BuildError(f"{run_dir}: the run list has no digest for {run_id}")
+        if digest != want_digest:
             raise BuildError(f"{run_dir}: digest {digest}, the run list has {want_digest}")
         exp = run_id.split("/")[0]
         efile = None
@@ -141,9 +153,21 @@ class Tree:
                         raise BuildError(f"{self.ipath[f] or '(top)'}: {r['id']}: {e}") from e
                     self.log(f"  note: excluded run {r['id']} does not parse: {e}")
             self.run_acceptance(f)
+        self.check_references()
         for f in order:
             self.build_instance(f)
         return self.results
+
+    def check_references(self):
+        """The digest that a reference records must be the digest of the run in its owner instance."""
+        for f in self.folders:
+            for ref in self.data[f].get("references", []):
+                owner = self.runs.get(ref["id"])
+                if owner is None:
+                    raise BuildError(f"{self.ipath[f]}: reference {ref['id']} is in no run list")
+                if owner[1].get("digest") != ref.get("digest"):
+                    raise BuildError(f"{self.ipath[f]}: reference {ref['id']} has digest {ref.get('digest')}, "
+                                     f"its owner has {owner[1].get('digest')}")
 
     def run_acceptance(self, folder):
         for r in self.data[folder].get("runs", []):
@@ -162,7 +186,9 @@ class Tree:
                 try:
                     out = checks.evaluate(chk, src)
                 except NoValue as e:
-                    out = {"verdict": "not evaluated", "measured": str(e), "limit": checks.limit_text(a.get("expect", {}))}
+                    out = {"verdict": "not evaluated", "measured": str(e), "limit": safe_limit(a)}
+                except TOOL_ERRORS as e:
+                    out = {"verdict": "tool error", "measured": f"{type(e).__name__}: {e}", "limit": safe_limit(a)}
                 res.append({"id": a["id"], **{k: out[k] for k in ("verdict", "measured", "limit")}})
             self.acceptance[(folder, r["id"])] = res
 
@@ -195,6 +221,9 @@ class Tree:
                     entry["formerly"] = c["formerly"]
                 m = manual.get((h["id"], c["id"]))
                 if c.get("manual"):
+                    if m and m["verdict"] not in ("confirmed", "wrong"):
+                        notes.append(f"{h['id']} {c['id']}: manual verdict {m['verdict']!r} is not confirmed or wrong")
+                        m = None
                     if m:
                         entry.update(verdict=m["verdict"], by=m.get("by"), measured=m.get("text", ""), limit="manual")
                     else:
@@ -205,12 +234,12 @@ class Tree:
                         entry.update(verdict=out["verdict"], by="auto", measured=out["measured"],
                                      limit=out["limit"], values=out["values"])
                     except NoValue as e:
-                        entry.update(verdict="not evaluated", by="auto", measured=str(e),
-                                     limit=checks.limit_text(c.get("expect", {})))
-                    except (KeyError, IndexError, TypeError, ZeroDivisionError, StopIteration) as e:
-                        entry.update(verdict="not evaluated", by="auto",
-                                     measured=f"tool error: {type(e).__name__}: {e}",
-                                     limit=checks.limit_text(c.get("expect", {})))
+                        entry.update(verdict="not evaluated", by="auto", measured=str(e), limit=safe_limit(c))
+                    except TOOL_ERRORS as e:
+                        entry.update(verdict="tool error", by="auto", measured=f"{type(e).__name__}: {e}",
+                                     limit=safe_limit(c))
+                    if m:
+                        notes.append(f"{h['id']} {c['id']}: the manual verdict is not used, the check is automatic")
                 out_checks.append(entry)
             hyps.append(hypothesis_entry(h, out_checks))
         self._hyps = {h["id"]: h["verdict"] for h in hyps}
@@ -224,9 +253,10 @@ class Tree:
             except NoValue as e:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [],
                                 "by": "auto", "not_evaluated": str(e)})
-            except (KeyError, IndexError, TypeError, ZeroDivisionError, StopIteration) as e:
+            except TOOL_ERRORS as e:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [], "by": "auto",
                                 "not_evaluated": f"tool error: {type(e).__name__}: {e}"})
+        notes.extend(dict.fromkeys(src.notes))
 
         acceptance = [{"run": rid, "checks": res} for (f, rid), res in sorted(self.acceptance.items()) if f == folder and res]
         rebuilds = []
@@ -310,6 +340,8 @@ class Tree:
 
 def hypothesis_entry(h, out_checks):
     verdicts = [c["verdict"] for c in out_checks]
+    if not verdicts:
+        verdicts = ["open (no checks)"]
     if any(v.startswith("wrong") for v in verdicts):
         verdict = "wrong"
     elif all(v == "confirmed" for v in verdicts):
@@ -332,6 +364,7 @@ class Source:
 
     def __init__(self, tree, folder, only_run=None):
         self.tree, self.folder, self.only_run = tree, folder, only_run
+        self.notes = []
 
     def observations(self, exp, series=None):
         t = self.tree
@@ -349,7 +382,8 @@ class Source:
         folder = self.folder
         if not runs:
             imp = next((i for i in study.imports if i["experiment"] == exp), None)
-            if imp is None:
+            if imp is None or imp.get("mode") == "rerun":
+                # a re-run study reads its own runs only, never those of the owner
                 raise NoValue(f"no evidence run of {exp} in {t.ipath[self.folder] or '(top)'}")
             folder = t.find_instance(imp["study"], t.board(self.folder))
             runs = t.own_runs(folder, exp)
@@ -366,6 +400,8 @@ class Source:
         entry = next((r for r in t.data[folder].get("runs", []) if r["id"] == run_id), None)
         if entry is None:
             raise NoValue(f"{t.ipath[folder]} has no run {run_id}")
+        if entry["role"] == "excluded" or t.failed_acceptance(folder, run_id):
+            raise NoValue(f"reference run {run_id} is excluded or failed its acceptance checks")
         return t.load_run(folder, run_id, entry.get("digest"))
 
 

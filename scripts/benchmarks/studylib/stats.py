@@ -46,20 +46,28 @@ _AGG = re.compile(r"^(max|min)\((.+)\)$")
 _M4 = re.compile(r"^m4\.(mask|isr)(?:\.(t|e\d+))?(?:\[([\w.]+)\])?$")
 
 
-def quantile(h, q):
-    """The q quantile: the lower edge of the bin that holds it (as latbench.quantile)."""
+def quantile_bin(h, q):
+    """(lower edge, width) of the bin that holds the q quantile (the lower edge is latbench.quantile)."""
+    if h["n"] == 0:
+        raise NoValue("the histogram has no samples")
     target = math.ceil(q * h["n"])
     acc = 0
-    edges = sorted([(v, c) for v, c in h["bins"]] + [(v, c) for v, c, _ in h["coarse"]])
-    for v, c in edges:
+    edges = sorted([(v, c, 1) for v, c in h["bins"]] + [(v, c, w) for v, c, w in h["coarse"]])
+    for v, c, w in edges:
         acc += c
         if acc >= target:
-            return v
+            return v, w
     for e, c in h["ovf_log2"]:
         acc += c
         if acc >= target:
             raise NoValue(f"the quantile {q} is in the overflow bin >= 2^{e}")
-    return h["max"]
+    return h["max"], 1
+
+
+def quantile(h, q):
+    """The q quantile: the lower edge of the bin that holds it. In a coarse bin of width w, the
+    true value is up to w - 1 cycles higher."""
+    return quantile_bin(h, q)[0]
 
 
 def count_ge(h, x):
@@ -73,7 +81,12 @@ def count_ge(h, x):
             total += c
         elif v + w > x:
             raise NoValue(f"count_ge({x}): {x} is inside the coarse bin {v}..{v + w - 1}")
-    total += sum(c for e, c in h["ovf_log2"] if (1 << e) >= x)
+    for e, c in h["ovf_log2"]:
+        # overflow bin e holds samples of 2^e .. 2^(e+1) - 1 (from the end of the histogram on)
+        if (1 << e) >= x:
+            total += c
+        elif c and (1 << (e + 1)) > x:
+            raise NoValue(f"count_ge({x}): {x} is inside the overflow bin 2^{e}..2^{e + 1}-1")
     return total
 
 
@@ -93,6 +106,10 @@ def modes(h):
 
 
 def hist_value(h, stat):
+    if stat in ("n", "invalid"):
+        return h[stat]
+    if h["n"] == 0:
+        raise NoValue("the histogram has no samples")
     if stat in HIST_STATS:
         return h[stat]
     m = _Q.match(stat)
@@ -107,6 +124,27 @@ def hist_value(h, stat):
         found = modes(h)
         return found[k - 1][2] / h["n"] if len(found) >= k else 0
     raise NoValue(f"stat {stat!r} of a histogram has no tool")
+
+
+def value_width(rep, metric, stat):
+    """The width of the bin of a quantile value (1 for an exact value)."""
+    if metric is None or metric.startswith(("meta.", "m4.")) or not isinstance(stat, str):
+        return 1
+    m = _Q.match(stat)
+    h = rep["hists"].get(metric)
+    if not m or h is None:
+        return 1
+    return quantile_bin(h, float(m.group(1)) / 100)[1]
+
+
+def function_seen(rep, metric):
+    """For an M4 metric with [function]: whether a site of this kind has the function (any context)."""
+    m = _M4.match(metric or "")
+    if not m or not m.group(3) or not rep.get("m4"):
+        return True
+    kind, _, func = m.groups()
+    return any(s["kind"] == kind and (func == s.get("function") or func in (s.get("via") or "").split("<"))
+               for s in rep["m4"]["sites"])
 
 
 def m4_sites(rep, metric):
@@ -153,7 +191,9 @@ def m4_value(rep, metric, stat):
         f, x = m.groups()
         vals = [site_value(s, x) for s in sites if s["n"]]
         if not vals:
-            return 0 if f == "max" else None
+            if f == "max":
+                return 0  # no section: the longest section is 0
+            raise NoValue(f"{metric}: no section, so no min({x})")
         return max(vals) if f == "max" else min(vals)
     if stat == "n":
         return sum(s["n"] for s in sites)
