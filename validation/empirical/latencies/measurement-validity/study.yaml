@@ -12,16 +12,14 @@ substudies:
   - use: code-placement
   - use: mask-instrumentation
   - use: reproducibility
-  # One instance for each board port. The instance of the parent decides
-  # the board of the other sub-studies; these three have their own.
-  - {use: board-ports, as: board-ports-nrf54l15dk, board: nrf54l15dk/nrf54l15/cpuapp}
-  - {use: board-ports, as: board-ports-nrf52840dk, board: nrf52840dk/nrf52840}
-  - {use: board-ports, as: board-ports-mimxrt1060, board: mimxrt1060_evk@C/mimxrt1062/qspi}
+  # One instance for each board port (board-ports@<port> in the results).
+  # The board is not fixed at this level: each instance of a sub-study
+  # names its board.
+  - {use: board-ports, instances: per-board}
 
+# The answer of this study: the central results of its sub-studies.
 central_results:
-  - {name: tail_needs_seeds, from: stimulus-sampling}
-  - {name: same_image_same_data, from: reproducibility}
-  - {name: drift_cause, from: clock-drift}
-  - {name: comparison_placement, from: code-placement}
-
-report: report/
+  - {id: tail-needs-seeds, from: {substudy: stimulus-sampling}}
+  - {id: same-image-same-data, from: {substudy: reproducibility}}
+  - {id: drift-cause, from: {substudy: clock-drift}}
+  - {id: placement-choice, from: {substudy: code-placement}}

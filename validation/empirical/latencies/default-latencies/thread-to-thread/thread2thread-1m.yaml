@@ -1,0 +1,44 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: thread2thread-1m.md. Hypotheses: none.
+
+name: thread2thread-1m
+app: thread_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 50
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+    condvar: {kconfig: {LATBENCH_T2T_CONDVAR: y}}
+    event: {kconfig: {LATBENCH_T2T_EVENT: y}}
+    msgq: {kconfig: {LATBENCH_T2T_MSGQ: y}}
+    fifo: {kconfig: {LATBENCH_T2T_FIFO: y}}
+    lifo: {kconfig: {LATBENCH_T2T_LIFO: y}}
+    stack: {kconfig: {LATBENCH_T2T_STACK: y}}
+    poll: {kconfig: {LATBENCH_T2T_POLL: y}}
+    work: {kconfig: {LATBENCH_T2T_WORK: y}}
+    wakeup: {kconfig: {LATBENCH_T2T_WAKEUP: y}}
+
+# The cube points: the taker (priority 1) preempts the giver (priority 2).
+extra_axes: {preemption: preempt}
+
+# The taker has priority 3: no preemption.
+points:
+  - id: sem-nopreempt
+    axes: {primitive: sem, preemption: nopreempt}
+    kconfig: {LATBENCH_T2T_SEM: y, LATBENCH_T2T_PREEMPT: n}
+  - id: mutex-nopreempt
+    axes: {primitive: mutex, preemption: nopreempt}
+    kconfig: {LATBENCH_T2T_MUTEX: y, LATBENCH_T2T_PREEMPT: n}

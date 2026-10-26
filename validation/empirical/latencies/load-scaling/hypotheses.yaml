@@ -1,0 +1,372 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study load-scaling. Each statement and each limit was
+# written before the run of its experiment (in the comments of the
+# experiment files). The basis texts were written on 2026-10-26, after
+# the runs, from these comments. Where a comment gave no basis for a
+# number, the basis text starts with "Reconstruction:" or "Estimate.".
+#
+# Keys:
+#   id         unique in the study
+#   formerly   the id in the earlier experiment files and notes
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   written    date, and the run that came after it
+#   statement  the hypothesis, one or two sentences
+#   basis      where each number comes from
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the check (the comparison forms: study-design.md §14.4)
+#   manual     true: a person gives the verdict
+#   wrong_if   what a wrong hypothesis means for the study
+#
+# Forms that are new in this file:
+#   select: {axes: {<axis>: <value> or [<value>, ...]}}   the points with these axis values
+#   order: {<axis>: [<value>, ...]}         for each value of the other axes, the stat increases in this order of the axis values
+#   diff_to: {axes: {<axis>: <value>}, range: [lo, hi]}   value minus the value of the point that has this axis value and the same values on the other axes
+
+hypotheses:
+  # ------------------------------------------------------- wake-threads-1m
+  - id: H1
+    type: model
+    written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+    statement: Blocked load threads cost nothing.
+    basis: >
+      Reconstruction: each blocked thread waits forever on a semaphore of
+      its own. Thus it is not in the ready queue and it has no timeout in
+      the timeout queue. The comment gives no limit for "nothing".
+    experiment: wake-threads-1m
+    select: {axes: {kind: blocked}}
+    metric: [irq, isr2thr]
+    manual: true
+    wrong_if: The wake path or the SysTick ISR walks over threads that wait without a timeout.
+
+  - id: H2
+    type: model
+    written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+    statement: >
+      With SCHED_SIMPLE the woken thread has the highest priority, so its
+      insert into the ready queue is O(1).
+    basis: >
+      The comment: the woken thread has priority 0, the load threads have
+      priority 5 or the lowest priority. Reconstruction: only the busy
+      threads are ready at a wake, so the busy points show this
+      hypothesis. With time slicing, the busy threads also take turns at
+      each slice expiry (20 ms); this work is not part of the insert.
+    experiment: wake-threads-1m
+    select: {axes: {kind: busy}}
+    metric: isr2thr
+    manual: true
+    wrong_if: The insert into the ready queue walks the ready threads; then the ready queue sets a part of the growth.
+
+  - id: H3
+    type: model
+    written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+    statement: >
+      Sleeper threads add work in the timer ISR and timeouts in the
+      timeout queue. Thus the isr2thr grows with the number of sleepers.
+    basis: >
+      Each sleeper sleeps 1..20 ms in a loop: a timeout and a switch for
+      each sleep. Reconstruction: the comment names no statistic; the
+      check uses the mean, which holds all samples.
+    experiment: wake-threads-1m
+    metric: isr2thr
+    stat: mean
+    expect: {order: [none-n0, sleeper-n2, sleeper-n8, sleeper-n16, sleeper-n64]}
+    wrong_if: Timeouts in the queue and the timer ISR work of the sleepers do not reach the wake path.
+
+  # -------------------------------------------------------- wake-timers-1m
+  - id: H4
+    type: model
+    written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+    statement: >
+      An insert into the DLIST timeout queue walks only the timeouts that
+      expire before the new one. Thus 256 timers one hour away cost
+      nothing: t256far is as t0, with and without time slicing.
+    basis: >
+      The DLIST backend keeps the timeouts in the order of expiry. The far
+      timers expire after all other timeouts. The comment gives no limit
+      for "nothing".
+    experiment: wake-timers-1m
+    select: {axes: {timers: [t0, t256far]}}
+    metric: [irq, isr2thr]
+    manual: true
+    wrong_if: The length of the timeout queue costs time also when the timeouts expire late.
+
+  - id: H5
+    type: model
+    written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+    statement: >
+      Periodic timers cost in the timer ISR (restart) and in the slice
+      reset of each wake. Thus with time slicing the isr2thr grows with
+      the number of timers.
+    basis: >
+      Each restart of a periodic timer and each slice reset inserts a
+      timeout, and the DLIST insert walks the timeouts that expire before
+      it. Reconstruction: the comment names no statistic; the check uses
+      the mean, which holds all samples.
+    experiment: wake-timers-1m
+    select: {axes: {anchor: default}}
+    metric: isr2thr
+    stat: mean
+    expect: {order: {timers: [t0, t16, t64, t256]}}
+    wrong_if: The periodic timers do not reach the wake path; then the timeout queue does not set the growth.
+
+  - id: H6
+    type: model
+    written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+    statement: >
+      The SysTick ISR and the EXTI0 ISR have the same priority, so the
+      whole timer ISR delays the stimulus. Thus the irq tail grows with
+      the number of periodic timers.
+    basis: >
+      The expiry functions of the timers run in the SysTick ISR.
+      Reconstruction: the comment names no statistic; the check uses the
+      p99.99 as the tail.
+    experiment: wake-timers-1m
+    metric: irq
+    stat: p99.99
+    expect: {order: {timers: [t0, t16, t64, t256]}}
+    wrong_if: The SysTick ISR does not delay the stimulus IRQ; then the timers do not set the IRQ tail.
+
+  # ----------------------------------------------------------- t2t-load-1m
+  - id: H7
+    formerly: t2t-load-1m/1
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      Without load, the t2t has two modes: about 20 % of the samples in
+      the fast mode and 80 % in the slow mode. The slow mode is about 640
+      cycles above the fast mode (two SysTick reprograms).
+    basis: >
+      The model of the ISR to thread wake (review 2026-10-25 §4 and §5).
+      Estimate. The comment gives no calculation for 20 %, 80 % and 640
+      cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: none, slicing: default}}
+    metric: t2t
+    manual: true
+    wrong_if: The model of the slice reset does not apply to the thread to thread wake.
+
+  - id: H8
+    formerly: t2t-load-1m/2
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      With each load of this experiment, the t2t has one mode (fast mode
+      > 95 %). A timeout comes before the slice deadline, so the slice
+      abort and add do not reprogram SysTick.
+    basis: >
+      Each load has timeouts that expire before the slice deadline (20 ms
+      after the reset): timers with a period of 10..100 ms, sleepers of
+      1..20 ms. Estimate. The comment gives no basis for 95 %.
+    experiment: t2t-load-1m
+    select: {axes: {slicing: default}}
+    metric: t2t
+    manual: true
+    wrong_if: A loaded point has two modes.
+
+  - id: H9a
+    formerly: t2t-load-1m/3
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      With 16 timers the p50 of t2t is lower than without load, by about
+      475 cycles.
+    basis: >
+      The model: n = 7.5 timeouts, c = 20..25 cycles. The no-load p50 is
+      in the slow mode, 640 cycles above the fast mode (H7). A loaded
+      point is in the fast mode (H8). Reconstruction: c x n - 640 gives
+      -490..-452 cycles. The range does not include an error of the 640
+      cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: t16}}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {axes: {load: none}, range: [-490, -452]}}
+    wrong_if: The model t2t(load) = t2t_fast(no load) + c x n is wrong for few timeouts.
+
+  - id: H9b
+    formerly: t2t-load-1m/3
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      With 8 sleepers the p50 of t2t is lower than without load, by about
+      450 cycles.
+    basis: >
+      As H9a, with n = 8. Reconstruction: c x n - 640 gives -480..-440
+      cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: sl8}}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {axes: {load: none}, range: [-480, -440]}}
+    wrong_if: As H9a.
+
+  - id: H9c
+    formerly: t2t-load-1m/3
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: With 64 timers the p50 of t2t is about 20 cycles above the no-load p50.
+    basis: >
+      As H9a, with n = 30. Reconstruction: c x n - 640 gives -40..110
+      cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: t64}}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {axes: {load: none}, range: [-40, 110]}}
+    wrong_if: As H9a.
+
+  - id: H9d
+    formerly: t2t-load-1m/3
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: With 64 sleepers the p50 of t2t is about 900 cycles above the no-load p50.
+    basis: >
+      As H9a, with n = 64. Reconstruction: c x n - 640 gives 640..960
+      cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: sl64}}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {axes: {load: none}, range: [640, 960]}}
+    wrong_if: As H9a.
+
+  - id: H9e
+    formerly: t2t-load-1m/3
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: With 256 timers the p50 of t2t is about 2000 cycles above the no-load p50.
+    basis: >
+      As H9a, with n = 120. Reconstruction: c x n - 640 gives
+      1760..2360 cycles.
+    experiment: t2t-load-1m
+    select: {axes: {load: t256}}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {axes: {load: none}, range: [1760, 2360]}}
+    wrong_if: As H9a.
+
+  - id: H10
+    formerly: t2t-load-1m/4
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      The p50 of t2t is linear in n, with the same slope c for sem, mutex
+      and msgq. The differences between the primitives stay constant.
+    basis: >
+      The walk over the timeouts is in the scheduler (slice reset), not
+      in the primitive. One slice reset per sample gives one insert.
+    experiment: t2t-load-1m
+    select: {axes: {slicing: default}}
+    metric: t2t
+    stat: p50
+    manual: true
+    wrong_if: >
+      The slope differs between the primitives, or the slope is about
+      2c (two inserts per sample).
+
+  - id: H11a
+    formerly: t2t-load-1m/5
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      Without time slicing, the p50 of t2t (sem) stays flat at 256
+      timers: the change is less than 30 cycles.
+    basis: >
+      Without time slicing, the give inserts no slice timeout. Estimate.
+      The comment gives no basis for 30 cycles.
+    experiment: t2t-load-1m
+    select: {point: sem-t256-noslice}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {point: sem-none-noslice, range: [-30, 30]}}
+    wrong_if: The control without time slicing grows with the load; then the slice reset is not the cause.
+
+  - id: H11b
+    formerly: t2t-load-1m/5
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: As H11a, at 64 sleepers.
+    basis: As H11a.
+    experiment: t2t-load-1m
+    select: {point: sem-sl64-noslice}
+    metric: t2t
+    stat: p50
+    expect: {diff_to: {point: sem-none-noslice, range: [-30, 30]}}
+    wrong_if: As H11a.
+
+  - id: H12a
+    formerly: t2t-load-1m/6
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: >
+      The tail (p99.99) of t2t grows with the number of timers: the
+      SysTick ISR preempts the threads, as in the wake data.
+    basis: The SysTick ISR runs the expiry functions of the timers (wake-timers-1m).
+    experiment: t2t-load-1m
+    select: {axes: {slicing: default}}
+    metric: t2t
+    stat: p99.99
+    expect: {order: {load: [none, t16, t64, t256]}}
+    wrong_if: The SysTick ISR does not set the tail of the thread to thread wake.
+
+  - id: H12b
+    formerly: t2t-load-1m/6
+    type: model
+    written: 2026-10-25, before t2t-load-1m/20261025T193636Z
+    statement: As H12a, with the number of sleepers.
+    basis: As H12a. Each sleep of a sleeper adds a timeout that expires in the SysTick ISR.
+    experiment: t2t-load-1m
+    select: {axes: {slicing: default}}
+    metric: t2t
+    stat: p99.99
+    expect: {order: {load: [none, sl8, sl64]}}
+    wrong_if: As H12a.
+
+  # ------------------------------------------------------- systick-prio-1m
+  - id: H13
+    type: model
+    written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+    statement: >
+      With SysTick at a lower priority than EXTI0, the irq tail gets
+      smaller by the unlocked part of the SysTick ISR.
+    basis: >
+      At priority 1, EXTI0 can preempt the SysTick ISR outside its locked
+      sections. The comment gives the tail as the p99.99 (wake-timers-1m).
+      It gives no number for the unlocked part.
+    experiment: systick-prio-1m
+    metric: irq
+    stat: p99.99
+    expect: {order: {prio: [lower, same]}}
+    wrong_if: The unlocked part of the SysTick ISR does not delay the stimulus IRQ.
+
+  - id: H14
+    type: model
+    written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+    statement: >
+      The irq max stays about the same: the locked sections (timeout
+      lock, clock lock) still mask EXTI0 through BASEPRI.
+    basis: >
+      BASEPRI masks EXTI0 at each priority. Estimate. The comment gives no
+      limit for "about the same".
+    experiment: systick-prio-1m
+    metric: irq
+    stat: max
+    manual: true
+    wrong_if: The longest delay of the stimulus IRQ is not in a locked section of the SysTick ISR.
+
+  - id: H15
+    type: model
+    written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+    statement: >
+      The isr2thr does not change much: PendSV still waits for the
+      SysTick ISR.
+    basis: >
+      PendSV has a lower priority than SysTick at both priorities.
+      Estimate. The comment gives no limit for "not much".
+    experiment: systick-prio-1m
+    metric: isr2thr
+    manual: true
+    wrong_if: The SysTick priority changes the thread switch after the ISR.

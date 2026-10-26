@@ -11,9 +11,8 @@ substudies:
   - use: isr-to-thread
   - use: thread-to-thread
 
+# The answer of this study: the central results of its sub-studies.
 central_results:
-  - {name: irq_entry_p99_direct, from: irq-entry}
-  - {name: isr2thr_p99_sem, from: isr-to-thread}
-  - {name: t2t_p99_sem, from: thread-to-thread}
-
-report: report/
+  - {id: irq-entry-p99-direct, from: {substudy: irq-entry}}
+  - {id: isr2thr-p99-sem, from: {substudy: isr-to-thread}}
+  - {id: t2t-p99-sem, from: {substudy: thread-to-thread}}

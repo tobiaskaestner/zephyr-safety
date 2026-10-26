@@ -1,0 +1,38 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: load-seed-tail.md. Hypotheses: hypotheses.yaml.
+
+name: load-seed-tail
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1800
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM
+    LATBENCH_LOAD_TIMERS: 64
+
+# No cube: each point changes one factor against the default point.
+extra_axes: {load_seed: 6a09e667, samples: 1m}
+
+# Strings: YAML reads 0x... as a number, and Kconfig reads the decimal
+# digits of a hex symbol as hex.
+points:
+  - id: default-4m
+    axes: {load_seed: 6a09e667, samples: 4m}
+    kconfig: {LATBENCH_SAMPLES: 4000000}
+  - id: lseed-90befffa
+    axes: {load_seed: 90befffa, samples: 1m}
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0x90befffa"}
+  - id: lseed-78a5636f
+    axes: {load_seed: 78a5636f, samples: 1m}
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0x78a5636f"}
+  - id: lseed-c67178f2
+    axes: {load_seed: c67178f2, samples: 1m}
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0xc67178f2"}

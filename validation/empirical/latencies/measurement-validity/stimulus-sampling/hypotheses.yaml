@@ -1,0 +1,289 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study stimulus-sampling. Each statement and each
+# limit was written before the run of its experiment (in the comments of
+# the experiment files). The basis texts were written on 2026-10-26,
+# after the runs, from these comments. Where a comment gave no basis for
+# a number, the basis text starts with "Reconstruction:" or "Estimate.".
+#
+# Keys:
+#   id         unique in the study
+#   formerly   the id in the earlier experiment files and notes
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   written    date, and the run that came after it
+#   statement  the hypothesis, one or two sentences
+#   basis      where each number comes from
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the check (the comparison forms: study-design.md §14.4)
+#   manual     true: a person gives the verdict
+#   wrong_if   what a wrong hypothesis means for the study
+
+hypotheses:
+  # ---------------------------------------------------------- stim-seed-1m
+  - id: H1
+    formerly: stim-seed-1m/P1
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: >
+      The default seed gives the histograms of the night run bin for bin,
+      although the CCM code of the image moved by 16 bytes.
+    basis: >
+      The same image gave the same histograms bin for bin on two hosts
+      (reproducibility). Q4 found no change for code shifts of 0..28 bytes
+      in RAM (code-placement).
+    experiment: stim-seed-1m
+    select: {point: seed-default}
+    metric: [irq, isr2thr, irq2thr]
+    expect: {hist_identical_to: {run: kconfig-factors/wp3-wake-1m/20261025T205806Z, point: baseline-t64}}
+    wrong_if: The Q4 result does not cover a code shift of 16 bytes in the CCM SRAM.
+
+  - id: H2
+    formerly: stim-seed-1m/P2
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: The p50 of irq and isr2thr is the same for all seeds (+-2 cycles).
+    basis: >
+      Estimate. The modes come from the code paths, not from the stimulus
+      sequence. The comment gives no basis for the 2 cycles.
+    experiment: stim-seed-1m
+    metric: [irq, isr2thr]
+    stat: p50
+    expect: {spread_abs_le: 2}
+    wrong_if: The stimulus sequence changes the behaviour, not only which edges meet a SysTick ISR.
+
+  - id: H3
+    formerly: stim-seed-1m/P3
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: The mean and the p99 change by less than 3 % between the seeds.
+    basis: >
+      The comment gives "10000 samples above the p99". Reconstruction: the
+      count above the p99 then has a relative standard deviation of 1 %,
+      and the range of 8 seeds is about 3 standard deviations. This
+      assumes that the value moves like the count.
+    experiment: stim-seed-1m
+    metric: [irq, isr2thr]
+    stat: [mean, p99]
+    expect: {spread_le: 0.03}
+    wrong_if: The seeds are not equivalent samples of one distribution.
+
+  - id: H4a
+    formerly: stim-seed-1m/P4a
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: The p99.99 changes by up to 15 % between the seeds.
+    basis: >
+      The comment gives "100 samples above it". Reconstruction: the count
+      has a relative standard deviation of 10 %. The comment gives no
+      basis for 15 %; there is no model of the tail shape.
+    experiment: stim-seed-1m
+    metric: [irq, isr2thr]
+    stat: p99.99
+    expect: {spread_le: 0.15}
+    wrong_if: A single seed is not enough for a value up to the p99.99.
+
+  - id: H4b
+    formerly: stim-seed-1m/P4b
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: The max changes by up to 30 % between the seeds.
+    basis: Estimate. The max is one sample; there is no model of the tail shape.
+    experiment: stim-seed-1m
+    metric: [irq, isr2thr]
+    stat: max
+    expect: {spread_le: 0.30}
+    wrong_if: The max of one run is not a usable value, also not as a rough one.
+
+  - id: H4c
+    formerly: stim-seed-1m/P4c
+    type: method
+    written: 2026-10-26, before stim-seed-1m/20261026T155715Z
+    statement: The max of the 8 seeds is above the night max by 0..20 %.
+    basis: Estimate. 8 seeds give 8 times the samples of the night run.
+    experiment: stim-seed-1m
+    metric: [irq, isr2thr]
+    stat: max(max)
+    expect:
+      ratio_to: {run: kconfig-factors/wp3-wake-1m/20261025T205806Z, point: baseline-t64, stat: max}
+      range: [1.0, 1.2]
+    wrong_if: More samples move the max more than expected; the tail is longer than the night run shows.
+
+  # -------------------------------------------------------- load-seed-tail
+  - id: H5a
+    formerly: load-seed-tail/P1a
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      A run of 4M samples gives the same tail counts as 4 stimulus seeds:
+      406 samples >= 4288 cycles (365..450).
+    basis: >
+      4 x the mean count of the 8 seeds of stim-seed-1m (100.4 per 1M),
+      times the ratio of the ticks with >= 3 expiries in the 4M run to 4 x
+      the 1M run (loadmodel.py: 6142 / (4 x 1518)). Reconstruction: the
+      range is about +-2 Poisson standard deviations.
+    experiment: load-seed-tail
+    select: {point: default-4m}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [365, 450]}
+    wrong_if: A long run is not the same as several seeds, for example because the run is not stationary.
+
+  - id: H5b
+    formerly: load-seed-tail/P1b
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: The 4M run gives 27 samples >= 5952 cycles (17..37).
+    basis: As H5a, from the mean count 5.2 per 1M of the 8 seeds.
+    experiment: load-seed-tail
+    select: {point: default-4m}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [17, 37]}
+    wrong_if: As H5a.
+
+  - id: H5c
+    formerly: load-seed-tail/P1c
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: The p99, p99.9 and p99.99 of the 4M run are in the range of the 8 seeds (+-1 coarse bin).
+    basis: A value up to p99.99 does not depend on the stimulus seed (H4a).
+    experiment: load-seed-tail
+    select: {point: default-4m}
+    metric: [irq, isr2thr]
+    stat: [p99, p99.9, p99.99]
+    expect: {within: {experiment: stim-seed-1m, stat: range}, tolerance_bins: 1}
+    wrong_if: As H5a.
+
+  - id: H5d
+    formerly: load-seed-tail/P1d
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: The max of the 4M run is 7000..8000 cycles.
+    basis: >
+      Estimate from the max of the 8 seeds (6240..7840). An edge early in
+      the one ISR with 5 expiries can give more than 8000, with a
+      probability of about 4 %.
+    experiment: load-seed-tail
+    select: {point: default-4m}
+    metric: irq
+    stat: max
+    expect: {range: [7000, 8000]}
+    wrong_if: The model of the far tail is not correct.
+
+  - id: H6a
+    formerly: load-seed-tail/P2a
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      The count >= 4288 cycles changes with the ticks with >= 3 expiries:
+      63 (45..85) for load seed 90befffa.
+    basis: >
+      The default count per 1M (100.4), times the ratio of the ticks with
+      >= 3 expiries for this load seed to the default (loadmodel.py:
+      948 / 1518). Reconstruction: the range is about +-2.5 Poisson
+      standard deviations.
+    experiment: load-seed-tail
+    select: {point: lseed-90befffa}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [45, 85]}
+    wrong_if: The tail does not come from the ticks with many expiries.
+
+  - id: H6b
+    formerly: load-seed-tail/P2b
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: As H6a, 177 (145..210) for load seed 78a5636f.
+    basis: As H6a, ratio 2674 / 1518.
+    experiment: load-seed-tail
+    select: {point: lseed-78a5636f}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [145, 210]}
+    wrong_if: As H6a.
+
+  - id: H6c
+    formerly: load-seed-tail/P2c
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      As H6a, 239 (200..280) for load seed c67178f2. If the count changed
+      with the ticks with >= 2 expiries instead, it would be 157.
+    basis: As H6a, ratio 3608 / 1518.
+    experiment: load-seed-tail
+    select: {point: lseed-c67178f2}
+    metric: irq
+    stat: count_ge(4288)
+    expect: {range: [200, 280]}
+    wrong_if: As H6a.
+
+  - id: H6d
+    formerly: load-seed-tail/P2d
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      The count >= 5952 cycles changes with the ticks with >= 4 expiries:
+      4 (0..10) for load seed 90befffa.
+    basis: The default count per 1M (5.2), times the ratio of the ticks with >= 4 expiries (33 / 39).
+    experiment: load-seed-tail
+    select: {point: lseed-90befffa}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [0, 10]}
+    wrong_if: As H6a.
+
+  - id: H6e
+    formerly: load-seed-tail/P2e
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: As H6d, 17 (9..27) for load seed 78a5636f.
+    basis: As H6d, ratio 125 / 39.
+    experiment: load-seed-tail
+    select: {point: lseed-78a5636f}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [9, 27]}
+    wrong_if: As H6a.
+
+  - id: H6f
+    formerly: load-seed-tail/P2f
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: As H6d, 28 (17..40) for load seed c67178f2.
+    basis: As H6d, ratio 209 / 39.
+    experiment: load-seed-tail
+    select: {point: lseed-c67178f2}
+    metric: irq
+    stat: count_ge(5952)
+    expect: {range: [17, 40]}
+    wrong_if: As H6a.
+
+  - id: H7
+    formerly: load-seed-tail/P3
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      The mean of irq has the order of the expiries: 90befffa < default
+      < 78a5636f < c67178f2.
+    basis: loadmodel.py, the number of expiries per run for each load seed.
+    experiment: load-seed-tail
+    metric: irq
+    stat: mean
+    expect: {order: [lseed-90befffa, default-4m, lseed-78a5636f, lseed-c67178f2]}
+    wrong_if: The expiries are not the main cost of the SysTick ISR.
+
+  - id: H8
+    formerly: load-seed-tail/P4
+    type: model
+    written: 2026-10-26, before load-seed-tail/20261026T181105Z
+    statement: >
+      The max is not a sharp test: an edge must come in the first
+      1600..3400 cycles of an ISR with 5 or 6 expiries to give more than
+      8000 cycles. The probability is about 25 % for 78a5636f and for
+      c67178f2.
+    basis: loadmodel.py, the ticks with 5 or 6 expiries, and the length of their ISR.
+    experiment: load-seed-tail
+    manual: true
+    wrong_if: The far tail does not come from the ticks with many expiries only.

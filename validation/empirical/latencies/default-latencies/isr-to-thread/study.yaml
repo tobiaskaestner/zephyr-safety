@@ -1,6 +1,11 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
+# The files of this study, by convention (no keys):
+#   <experiment>.yaml, <experiment>.md   the experiments that it owns
+#   hypotheses.yaml                      the hypotheses, written before the runs
+#   report.ipynb                         the report template (no outputs)
+
 name: isr-to-thread
 question: >
   How long does it take from the ISR to the first instruction of the
@@ -12,10 +17,21 @@ experiments:
   - wake-anchors-1m
   - fast-mode
 
+# The results that answer the question. For now all are characterisation:
+# measured values, with a confidence bound where the value is a
+# probability. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
 central_results:
-  - name: isr2thr_p99_sem
-    from: {experiment: wake-isr-1m, point: wrapped-sem}
-    metric: isr2thr
+  - id: isr2thr-p99-sem
+    statement: >
+      With the board defaults and an idle CPU, the wake of a thread by a
+      semaphore from the wrapped ISR has a p99 of {p99:.0f} cycles.
+    from: {experiment: wake-isr-1m, point: wrapped-sem, metric: isr2thr}
     stat: p99
-
-report: report/
+    unit: CPU cycles (170 MHz)

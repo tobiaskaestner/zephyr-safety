@@ -119,8 +119,8 @@ round-trip tests read the fixtures. They make the same pseudo-random
 samples as the ztest app, and compare the parsed log with values from
 these samples.
 
-``test_experiments.py`` reads each file in
-``validation/empirical/latencies/experiments/``. A code pad must have
+``test_experiments.py`` reads each experiment file below
+``validation/empirical/latencies/``. Each name must be in one file only. A code pad must have
 ``LATBENCH_CODE_FLASH_PAD`` or ``LATBENCH_CODE_RAM``, and must be a
 multiple of 4. A point must select at most one code placement.
 ``LATBENCH_CODE_RAM`` needs a port with ``Kconfig.port``. Kconfig only

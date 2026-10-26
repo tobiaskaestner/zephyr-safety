@@ -1,0 +1,49 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: m4-validate.md. Hypotheses: hypotheses.yaml.
+
+# The latency histograms of these runs are not data (LAT META m4=1).
+name: m4-validate
+app: wake_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+    # Smaller latency histograms than in the 1M runs, for the RAM of the
+    # site table (64 sites x 488 bytes): 0..66559 cycles.
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+# No cube: the points change several factors. The axis names are the
+# names of wake-timers-1m, systick-prio-1m and timeout-backends-1m.
+extra_axes: {timers: t0, prio: same, backend: dlist, probe: none}
+
+points:
+  - id: cal-t0
+    axes: {timers: t0, prio: same, backend: dlist, probe: none}
+  - id: probe-t0            # a thread masks for 5000 DWT cycles every 10 ms
+    axes: {timers: t0, prio: same, backend: dlist, probe: 5000cyc}
+    kconfig: {LATBENCH_IRQMASK_PROBE_CYC: 5000, LATBENCH_IRQMASK_PROBE_MS: 10}
+  - id: t64-same
+    axes: {timers: t64, prio: same, backend: dlist, probe: none}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64}
+  - id: t64-lower
+    axes: {timers: t64, prio: lower, backend: dlist, probe: none}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, LATBENCH_SYSTICK_PRIO: 1}
+  - id: t256-same
+    axes: {timers: t256, prio: same, backend: dlist, probe: none}
+    kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  - id: t256-lower
+    axes: {timers: t256, prio: lower, backend: dlist, probe: none}
+    kconfig: {LATBENCH_LOAD_TIMERS: 256, LATBENCH_SYSTICK_PRIO: 1}
+  - id: t256-wheel
+    axes: {timers: t256, prio: same, backend: wheel, probe: none}
+    kconfig: {LATBENCH_LOAD_TIMERS: 256, TIMEOUT_BACKEND_WHEEL: y}

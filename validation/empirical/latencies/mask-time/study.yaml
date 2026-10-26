@@ -1,6 +1,11 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
+# The files of this study, by convention (no keys):
+#   <experiment>.yaml, <experiment>.md   the experiments that it owns
+#   hypotheses.yaml                      the hypotheses, written before the runs
+#   report.ipynb                         the report template (no outputs)
+
 name: mask-time
 question: >
   Which call sites of the kernel mask the interrupts, for how long, and
@@ -13,9 +18,41 @@ experiments:
 imports:
   - {study: measurement-validity/mask-instrumentation, experiment: m4-validate, mode: reuse}
 
+# The results that answer the question. For now all are characterisation:
+# measured values. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+#
+# Forms that are new in this file (metric m4.<kind>...: see hypotheses.yaml):
+#   stat top_site                          for each point, the mask site with the largest max_net: {max_net}, {place} (the function in the m4.py table), {ctx}
+#   {fit_linear: {stat: <stat>, x: [axes]}}  the least-squares line of the stat over the sum of the value: numbers of the axes: {intercept}, {slope}
 central_results:
-  - name: longest_mask_site
-    from: {experiment: m4-sweep}
-    stat: max(m4.mask.max_net)
+  - id: longest-by-load
+    statement: >
+      At {point} (timers, sleepers, slicing), the longest mask section is
+      {max_net} cycles, in {place} ({ctx}).
+    from: {experiment: m4-sweep, metric: m4.mask}
+    stat: top_site
+    unit: cycles at 170 MHz (max - m4_floor_cyc)
 
-report: report/
+  - id: growth-per-timeout
+    statement: >
+      The longest mask section grows by {slope:.0f} cycles for each timeout
+      in the queue (timers + sleepers), from {intercept:.0f} cycles without
+      load ({slice}).
+    from: {experiment: m4-sweep, metric: m4.mask}
+    stat: {fit_linear: {stat: max(max_net), x: [timers, sleepers]}}
+    unit: cycles at 170 MHz
+
+  - id: thread-sites
+    statement: >
+      In thread_latency with {primitive} and {timers}, the longest mask
+      section in thread context is {max_net} cycles, in {place}.
+    from: {experiment: m4-thread, metric: m4.mask.t}
+    stat: top_site
+    unit: cycles at 170 MHz (max - m4_floor_cyc)

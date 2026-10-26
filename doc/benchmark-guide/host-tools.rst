@@ -242,7 +242,7 @@ Run an experiment (``run.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir>
 
 Options:
 
@@ -340,8 +340,8 @@ repetitions.
 Experiment file
 ---------------
 
-An experiment file is a YAML file in
-``validation/empirical/latencies/experiments/``. The keys are:
+An experiment file is a YAML file in the folder of the study that owns
+it, below ``validation/empirical/latencies/``. The keys are:
 
 .. list-table::
    :header-rows: 1
@@ -366,12 +366,18 @@ An experiment file is a YAML file in
    * - ``common``
      - Settings for all points.
    * - ``axes``
-     - Optional. A map of axes. Each axis is a map from a value name to
-       settings. ``run.py`` makes one point for each combination of the
-       values (Cartesian product).
+     - A map of axes. Each axis is a map from a value name to settings.
+       ``run.py`` makes one point for each combination of the values
+       (Cartesian product). An experiment has one axis or more. An
+       experiment that changes one factor at a time has one axis,
+       ``variant``.
+   * - ``extra_axes``
+     - Optional. A map from an axis name to a value name: axes that only
+       the explicit points change. All points of ``axes`` get this value.
    * - ``points``
-     - Optional. A list of explicit points, each with an ``id``. You can use
-       ``axes`` and ``points`` together.
+     - Optional. A list of explicit points, each with an ``id`` and with
+       ``axes``, a map that gives a value on each axis (also on each of
+       ``extra_axes``). You can use ``axes`` and ``points`` together.
 
 Each set of settings (in ``common``, in an axis value or in a point) can
 have these keys:
@@ -387,9 +393,16 @@ have these keys:
    A list of devicetree overlays, relative to ``tests/benchmarks/``. The
    board port adds its own overlays. Do not list them here.
 
+``value``
+   Only in an axis value. The number of the value, for example ``16`` for
+   ``t16`` (16 load timers). A plot uses it as the x value.
+
 The value names of an axis must be text. YAML reads ``on``, ``off``,
 ``yes``, ``no``, ``true`` and ``false`` as Booleans, so ``run.py`` refuses
 these names. Put them in quotes, or use other names.
+
+The axes of each point go into the manifest, so the analysis can group
+and plot the points by axis.
 
 The settings merge in this order: ``common``, then the axis values in the
 order of the axes, or the point. For ``kconfig``, a later value replaces
@@ -432,8 +445,12 @@ Example: four interrupt paths times two anchors give eight points
        lean:
          conf_files: [common/conf/lean.conf]
 
+   extra_axes:
+     clock: 170mhz
+
    points:
      - id: direct-16mhz
+       axes: {path: direct, anchor: default, clock: 16mhz}
        kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
        dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_16mhz.overlay]
 
@@ -441,9 +458,10 @@ The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
 experiment. ``run.py`` puts their Kconfig value on the CMake command line,
 and the port then adds its ``resp_irq_own.overlay`` (see :doc:`apps`).
 
-The files in ``validation/empirical/latencies/experiments/`` are the
-current experiments. Each file starts with a comment that gives the
-question of the experiment.
+The experiment files in the study folders below
+``validation/empirical/latencies/`` are the current experiments. The
+description ``<name>.md`` next to each file gives the question of the
+experiment.
 
 .. _benchguide-result-folder:
 
@@ -556,7 +574,7 @@ repository at ``safety.rev`` of the manifest:
 .. code-block:: console
 
    scripts/benchmarks/trees.py setup
-   scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir>
 
 Then compare the summaries of the old and the new logs (see the next
 section).

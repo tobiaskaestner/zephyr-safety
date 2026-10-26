@@ -2,16 +2,15 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # Study design (top level). The folders below with a study.yaml are its
-# sub-studies. Experiments are named by their file stem; the files are
-# in experiments/ until the tooling can find them in the folder of their
-# home (sub-)study.
+# sub-studies. Each experiment file is in the folder of the (sub-)study
+# that owns it; other studies refer to it by its name, which is unique.
 
 name: kernel-latency
 question: >
   How long does the Zephyr kernel delay the response to an interrupt on a
   Cortex-M MCU (IRQ entry, ISR to thread, thread to thread), which kernel
   settings and loads change the delay, and by how much?
-board: null                      # the instance selects the board
+board: null                      # fixed by the sub-study instances
 
 substudies:
   - use: measurement-validity
@@ -20,13 +19,13 @@ substudies:
   - use: kconfig-factors
   - use: mask-time
 
+# The answer of the study: the central results of its sub-studies.
 central_results:
-  # The answer of the study: the central results of its sub-studies.
-  - {name: irq_entry_p99_direct, from: default-latencies}
-  - {name: isr2thr_p99_sem, from: default-latencies}
-  - {name: t2t_p99_sem, from: default-latencies}
-  - {name: timer_scaling_isr2thr, from: load-scaling}
-  - {name: kconfig_ranking, from: kconfig-factors}
-  - {name: longest_mask_site, from: mask-time}
-
-report: report/
+  - {id: irq-entry-p99-direct, from: {substudy: default-latencies}}
+  - {id: isr2thr-p99-sem, from: {substudy: default-latencies}}
+  - {id: t2t-p99-sem, from: {substudy: default-latencies}}
+  - {id: timer-slope, from: {substudy: load-scaling}}
+  - {id: irq-ranking, from: {substudy: kconfig-factors}}
+  - {id: wake-ranking, from: {substudy: kconfig-factors}}
+  - {id: t2t-ranking, from: {substudy: kconfig-factors}}
+  - {id: longest-by-load, from: {substudy: mask-time}}

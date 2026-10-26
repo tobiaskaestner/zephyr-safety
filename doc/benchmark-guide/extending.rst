@@ -4,12 +4,15 @@ Extend the suite
 Add an experiment
 -----------------
 
-#. Copy an experiment file in
-   ``validation/empirical/latencies/experiments/`` that is near to your
-   question. Give the copy a new file name.
-#. Set ``name`` to the file name without ``.yaml``.
-#. At the top of the file, write a comment with the question, the
-   expectation (if you have one), and the meaning of each point.
+#. Find the study in ``validation/empirical/latencies/`` that asks your
+   question. Copy an experiment file of that study that is near to your
+   question, and give the copy a new file name. The names of the
+   experiments are unique in all studies.
+#. Set ``name`` to the file name without ``.yaml``. Add the name to
+   ``experiments`` in the ``study.yaml`` of the study.
+#. Write the description ``<name>.md`` next to the file: the question,
+   the method (each point and why), and the references. Write the
+   predictions in the ``hypotheses.yaml`` of the study.
 #. Set ``app``, ``trees``, ``repeat`` and ``timeout``. If the experiment is
    not for the default board, set ``board`` to a board target of
    ``boards.yaml``. A point with 1 million
@@ -27,14 +30,14 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> --dry-run
+      scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir> --dry-run
 
 #. Make sure that all points build. This step also does the Kconfig
    check of each point:
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> --build-only
+      scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir> --build-only
 
 #. Connect the board and run the experiment without ``--build-only``.
 

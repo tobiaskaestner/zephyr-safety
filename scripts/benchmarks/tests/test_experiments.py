@@ -20,7 +20,7 @@ sys.path.insert(0, str(SCRIPTS))
 import run  # noqa: E402
 import trees  # noqa: E402
 
-EXPERIMENTS = sorted(trees.EXPERIMENTS_DIR.glob("*.yaml"))
+EXPERIMENTS = trees.experiment_files()
 PLACES = ("LATBENCH_CODE_FLASH", "LATBENCH_CODE_FLASH_PAD", "LATBENCH_CODE_RAM")
 
 
@@ -30,6 +30,26 @@ def points(path):
 
 def is_y(kconfig, sym):
     return run.kconfig_value(kconfig.get(sym, "n")) == "y"
+
+
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
+def test_names_unique(path):
+    """Studies refer to an experiment by its name, so a name is in one file only."""
+    assert trees.experiment_file(path.stem) == path
+
+
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
+def test_axes(path):
+    """Each point has a value on each axis, so the analysis can group the points."""
+    exp = yaml.safe_load(path.read_text())
+    names = [*exp.get("axes", {}), *(exp.get("extra_axes") or {})]
+    assert names, "an experiment has one axis or more"
+    for pt in points(path):
+        assert sorted(pt["axes"]) == sorted(names), (pt["id"], pt["axes"])
+    for axis, values in exp.get("axes", {}).items():
+        for name, v in values.items():
+            if v and "value" in v:
+                assert isinstance(v["value"], (int, float)), f"{axis}.{name}: value must be a number"
 
 
 @pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
@@ -54,5 +74,5 @@ def test_code_place(path):
 
 def test_code_layout_selects_the_pad():
     """code-layout measures the flash pad, as the run 20261025T060257Z."""
-    for pt in points(trees.EXPERIMENTS_DIR / "code-layout.yaml"):
+    for pt in points(trees.experiment_file("code-layout")):
         assert is_y(pt["kconfig"], "LATBENCH_CODE_FLASH_PAD"), pt["id"]

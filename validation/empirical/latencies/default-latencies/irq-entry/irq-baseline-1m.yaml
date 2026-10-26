@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: irq-baseline-1m.md. Hypotheses: none.
+
+name: irq-baseline-1m
+app: irq_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+
+axes:
+  path:
+    stock:
+      kconfig: {LATBENCH_IRQ_PATH_STOCK: y}
+    wrapped:
+      kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
+    direct:
+      kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
+    zli:
+      kconfig: {LATBENCH_IRQ_PATH_ZLI: y}
+  background:
+    idle: {}

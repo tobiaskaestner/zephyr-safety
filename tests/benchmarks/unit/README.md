@@ -9,7 +9,7 @@ the root of the repo.
 |---|---|
 | `hist/` | Zephyr ztest app for `common/include/latbench/hist.h` and `common/src/hist.c` |
 | `code_place/` | Zephyr ztest app for the code placement (`LATBENCH_CODE_PLACE`), on `mps2/an385` |
-| `scripts/benchmarks/tests/test_experiments.py` | pytest module that checks `validation/empirical/latencies/experiments/*.yaml` |
+| `scripts/benchmarks/tests/test_experiments.py` | pytest module that checks the experiment files below `validation/empirical/latencies/` |
 | `scripts/benchmarks/tests/test_latbench.py` | pytest module for `scripts/benchmarks/latbench.py` and `scripts/benchmarks/plot.py` |
 | `scripts/benchmarks/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
 

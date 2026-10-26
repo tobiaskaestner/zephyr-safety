@@ -96,7 +96,8 @@ Tree
    in ``trees.yaml``.
 
 Experiment
-   A YAML file in ``validation/empirical/latencies/experiments/``. It
+   A YAML file in the folder of the study that owns it, below
+   ``validation/empirical/latencies/``. It
    names an app, one or more trees, and a list of points.
 
 Point

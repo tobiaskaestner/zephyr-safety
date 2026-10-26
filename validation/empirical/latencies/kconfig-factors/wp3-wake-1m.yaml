@@ -1,0 +1,69 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: wp3-wake-1m.md. Hypotheses: hypotheses.yaml.
+
+name: wp3-wake-1m
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM
+
+axes:                        # the variants: wp3-variants.md
+  variant:
+    baseline: {}
+    scalable:
+      kconfig: {SCHED_SCALABLE: y}
+    multiq:
+      kconfig: {SCHED_MULTIQ: y}
+    ticks1000:
+      kconfig: {SYS_CLOCK_TICKS_PER_SEC: 1000}
+    tickless-off:              # 10000 explicit: the default without tickless is 100
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+    tickless-off-100:
+      kconfig: {TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}
+    fpu-sharing:
+      kconfig: {FPU: y, FPU_SHARING: y}
+    speed-opt:
+      kconfig: {SPEED_OPTIMIZATIONS: y}
+    assert:
+      kconfig: {ASSERT: y}
+    assert-spin:
+      kconfig: {ASSERT: y, SPIN_VALIDATE: y}
+    no-mpu-guard:              # HW_STACK_PROTECTION=y selects MPU_STACK_GUARD
+      kconfig: {HW_STACK_PROTECTION: n, MPU_STACK_GUARD: n}
+
+# The load of the explicit points: t64 = 64 load timers, busy16 = 16
+# busy threads. The cube points have no load.
+extra_axes: {load: none}
+
+points:
+  - id: baseline-busy16
+    axes: {variant: baseline, load: busy16}
+    kconfig: {LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: scalable-busy16
+    axes: {variant: scalable, load: busy16}
+    kconfig: {SCHED_SCALABLE: y, LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: multiq-busy16
+    axes: {variant: multiq, load: busy16}
+    kconfig: {SCHED_MULTIQ: y, LATBENCH_LOAD_THREAD_BUSY: y, LATBENCH_LOAD_THREADS: 16}
+  - id: baseline-t64
+    axes: {variant: baseline, load: t64}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64}
+  - id: ticks1000-t64
+    axes: {variant: ticks1000, load: t64}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, SYS_CLOCK_TICKS_PER_SEC: 1000}
+  - id: tickless-off-t64
+    axes: {variant: tickless-off, load: t64}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 10000}
+  - id: tickless-off-100-t64
+    axes: {variant: tickless-off-100, load: t64}
+    kconfig: {LATBENCH_LOAD_TIMERS: 64, TICKLESS_KERNEL: n, SYS_CLOCK_TICKS_PER_SEC: 100}

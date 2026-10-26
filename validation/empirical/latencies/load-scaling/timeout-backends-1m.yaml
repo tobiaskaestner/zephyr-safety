@@ -1,0 +1,29 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: timeout-backends-1m.md.
+
+name: timeout-backends-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_LOAD_TIMERS: 256
+
+axes:
+  backend:
+    dlist:                  # the default backend, in the same binary
+      kconfig: {TIMEOUT_BACKEND_DLIST: y}
+    minheap:
+      kconfig: {TIMEOUT_BACKEND_MINHEAP: y, TIMEOUT_HEAP_MAX_ENTRIES: 320}
+    wheel:
+      kconfig: {TIMEOUT_BACKEND_WHEEL: y}
+    bucket:
+      kconfig: {TIMEOUT_BACKEND_BUCKET: y}

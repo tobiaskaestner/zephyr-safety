@@ -1,0 +1,45 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: code-layout.md. Hypotheses: hypotheses.yaml.
+
+name: code-layout
+app: wake_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_CODE_FLASH_PAD: y   # the pad needs it; same layout as the run 20261025T060257Z
+
+axes:
+  pad:                           # value: LATBENCH_CODE_PAD_BYTES
+    p0: {value: 0}
+    p4:
+      value: 4
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 4}
+    p8:
+      value: 8
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 8}
+    p12:
+      value: 12
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 12}
+    p16:
+      value: 16
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 16}
+    p20:
+      value: 20
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 20}
+    p24:
+      value: 24
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 24}
+    p28:
+      value: 28
+      kconfig: {LATBENCH_CODE_PAD_BYTES: 28}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

@@ -4,7 +4,7 @@
 
 """Run a latency experiment from pinned, clean trees and record its provenance.
 
-    run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
+    run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
 
 Rules (a run stops before it builds anything if one is broken):
 
@@ -41,9 +41,16 @@ Experiment file:
         direct: {...}
       anchor:
         default: {}
+        t16: {value: 16, kconfig: {...}}   # value: the number of the value on a plot
+    extra_axes: {load: none}            # axes that only the explicit points change,
+                                        # with the value of all cube points
     points:                             # or explicit points (also allowed together)
       - id: direct-busy
+        axes: {path: direct, anchor: default, load: busy}   # a value on each axis
         kconfig: {...}
+
+Each point has a value on each axis. The axes of a point go into the
+manifest, so that the analysis can group and plot the points.
 """
 
 import argparse
@@ -96,6 +103,7 @@ def expand_points(exp):
     common = exp.get("common", {})
     points = []
     axes = exp.get("axes", {})
+    extra = {n: str(v) for n, v in (exp.get("extra_axes") or {}).items()}
     if axes:
         for axis, values in axes.items():
             bad = [k for k in values if not isinstance(k, str)]
@@ -108,12 +116,15 @@ def expand_points(exp):
             for _, value in combo:
                 spec = merge(spec, value or {})
             spec["id"] = "-".join(k for k, _ in combo)
-            spec["axes"] = {n: k for n, (k, _) in zip(names, combo)}
+            spec["axes"] = {**{n: k for n, (k, _) in zip(names, combo)}, **extra}
             points.append(spec)
     for p in exp.get("points", []):
         spec = merge(common, p)
         spec["id"] = p["id"]
-        spec["axes"] = {}
+        spec["axes"] = dict(p.get("axes", {}))
+        missing = [n for n in [*axes, *extra] if n not in spec["axes"]]
+        if missing:
+            fail(f"point '{p['id']}': no value on the axes {missing}")
         points.append(spec)
     ids = [p["id"] for p in points]
     if len(ids) != len(set(ids)):

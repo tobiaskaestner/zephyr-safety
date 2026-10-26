@@ -1,0 +1,97 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study irq-entry. Each statement and each
+# limit was written before the run of its experiment (in the comments of
+# the experiment files). The basis texts were written on 2026-10-26,
+# after the runs, from these comments. Where a comment gave no basis for
+# a number, the basis text starts with "Reconstruction:" or "Estimate.".
+# The comments have no "Wrong if" text. Each wrong_if says which part of
+# the basis is then wrong.
+#
+# Keys:
+#   id         unique in the study
+#   formerly   the id in the earlier experiment files and notes
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   written    date, and the run that came after it
+#   statement  the hypothesis, one or two sentences
+#   basis      where each number comes from
+#   experiment, select, metric, stat: the data that the check reads
+#              (new stat mode_share(k): the share of the samples in mode k of the histogram, mode 1 is the fastest)
+#   expect     the check (the comparison forms: study-design.md §14.4)
+#   manual     true: a person gives the verdict
+#   wrong_if   what a wrong hypothesis means for the study
+
+hypotheses:
+  # ------------------------------------------------------------- irq-smoke
+  - id: H1
+    type: model
+    written: 2026-10-24, before irq-smoke/20261024T153130Z
+    statement: >
+      The wake-up of the CPU from WFI makes the second mode of the IRQ
+      entry latency. Thus the direct path with a busy CPU has no second
+      mode.
+    basis: >
+      Reconstruction: the comment asks the question only. With a busy
+      CPU the idle thread does not run, so the CPU does not execute WFI.
+      The 0 of the check comes from this.
+    experiment: irq-smoke
+    select: {point: direct-busy}
+    metric: irq
+    stat: mode_share(2)
+    expect: {range: [0, 0]}
+    wrong_if: The WFI wake-up does not make the second mode.
+
+  # --------------------------------------------------------- irq-checks-1m
+  - id: H2a
+    formerly: irq-checks-1m/H1
+    type: model
+    written: 2026-10-24, before irq-checks-1m/20261024T163216Z
+    statement: >
+      Flash or ART cache misses after other code ran make the second
+      mode (+20 cycles, 1.2 % in irq-smoke). Thus the share of the mode
+      follows the poll rate of the main thread: it is larger with a poll
+      every 10 ms than with a poll every 1000 ms.
+    basis: >
+      The comment gives the cause and the dependency on the poll rate.
+      The main thread runs other code at each poll. The +20 cycles and
+      the 1.2 % are the values from irq-smoke.
+    experiment: irq-checks-1m
+    metric: irq
+    stat: mode_share(2)
+    expect: {order: [idle-poll1000, idle-poll10]}
+    wrong_if: The second mode does not come from cache misses after other code ran.
+
+  - id: H2b
+    formerly: irq-checks-1m/H1
+    type: model
+    written: 2026-10-24, before irq-checks-1m/20261024T163216Z
+    statement: As H2a. Thus the second mode is not there at 16 MHz.
+    basis: >
+      The flash has 0 wait states at 16 MHz (the comment, and the clock
+      overlay). Then a cache miss costs no time.
+    experiment: irq-checks-1m
+    select: {point: idle-16mhz}
+    metric: irq
+    stat: mode_share(2)
+    expect: {range: [0, 0]}
+    wrong_if: As H2a.
+
+  - id: H3
+    formerly: irq-checks-1m/H2
+    type: model
+    written: 2026-10-24, before irq-checks-1m/20261024T163216Z
+    statement: >
+      Time slicing makes the larger tail with a busy CPU. Thus the tail
+      goes back to the idle level with TIMESLICING=n.
+    basis: >
+      The busy thread is preemptible, so it has a slice timeout. The
+      idle level is the tail of direct-idle in irq-baseline-1m (same
+      settings: poll 100 ms, 170 MHz, idle CPU). The comment gives no
+      tail statistic and no tolerance for "the idle level".
+    experiment: irq-checks-1m
+    select: {point: [busy, busy-noslice]}
+    metric: irq
+    manual: true
+    wrong_if: The slice timeout of the busy thread does not make the larger tail.

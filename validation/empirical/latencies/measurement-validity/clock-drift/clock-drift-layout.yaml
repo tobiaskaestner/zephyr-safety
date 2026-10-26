@@ -1,0 +1,27 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: clock-drift-layout.md. Hypotheses: none.
+
+name: clock-drift-layout
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_WAKE_SEM: y
+
+axes:
+  bins:
+    hdefault: {}               # the default bins of the app
+    hcoarse:
+      kconfig: {LATBENCH_HIST_BINS: 2048, LATBENCH_HIST_COARSE_BINS: 2048}
+  samples:
+    s200k:
+      value: 200000
+      kconfig: {LATBENCH_SAMPLES: 200000}
+    s1m:
+      value: 1000000
+      kconfig: {LATBENCH_SAMPLES: 1000000}

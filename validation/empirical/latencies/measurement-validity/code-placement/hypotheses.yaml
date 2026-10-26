@@ -1,0 +1,256 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study code-placement. Each statement and each limit
+# was written before the run of its experiment (in the comments of the
+# experiment files). The basis texts were written on 2026-10-26, after
+# the runs, from these comments. Where a comment gave no basis for a
+# number, the basis text starts with "Reconstruction:" or "Estimate.".
+#
+# Keys:
+#   id         unique in the study
+#   formerly   the id in the earlier experiment files and notes
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   written    date, and the run that came after it
+#   statement  the hypothesis, one or two sentences
+#   basis      where each number comes from
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the check (the comparison forms: study-design.md §14.4)
+#   manual     true: a person gives the verdict
+#   wrong_if   what a wrong hypothesis means for the study
+#
+# New statistic: drift_per_wake = LAT META clock_drift_cyc / samples.
+# New forms of diff_to (the value minus the value of another point):
+#   diff_to: {experiment: <name>, point: same}   the same point id in the run of that experiment
+#   diff_to: {run: <run>, points: {<id>: <id there>}}   each selected point against its mapped point
+#   spread_abs_le: x inside diff_to   the differences over the selected points differ by x or less
+
+hypotheses:
+  # ----------------------------------------------------------- code-layout
+  - id: H1
+    type: model
+    written: 2026-10-25, before code-layout/20261025T060257Z
+    statement: >
+      The latency and the drift change with the pad, with a period of the
+      flash line or of the cache line.
+    basis: >
+      In wake-threads-1m, builds with the same code at different addresses
+      gave two groups (IRQ p50 86 or 82 cycles, drift 9.7 or 8.0 cycles
+      per wake). The comment gives no line size and no size of the change.
+    experiment: code-layout
+    manual: true
+
+  # ------------------------------------------- code-place-q4, criterion C1
+  - id: H2a
+    formerly: code-place-q4/C1
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: >
+      RAM removes the address effect: over r0..r28, the IRQ p50 changes by
+      2 cycles or less (anchor default).
+    basis: >
+      Estimate. The comment gives no basis for the limit. For comparison,
+      the spread in flash over the pads 0..28 is 5 cycles
+      (code-layout/20261025T060257Z, IRQ p50 81..86).
+    experiment: code-place-q4
+    select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
+    metric: irq
+    stat: p50
+    expect: {spread_abs_le: 2}
+    wrong_if: Code in RAM does not remove the effect of the code address. A comparison in RAM still depends on the layout.
+
+  - id: H2b
+    formerly: code-place-q4/C1
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: As H2a, for the anchor noslice.
+    basis: As H2a.
+    experiment: code-place-q4
+    select: {point: [r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]}
+    metric: irq
+    stat: p50
+    expect: {spread_abs_le: 2}
+    wrong_if: As H2a.
+
+  - id: H2c
+    formerly: code-place-q4/C1
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: Over r0..r28, the drift changes by 0.2 cycles per wake or less (anchor default).
+    basis: >
+      Estimate. The comment gives no basis for the limit. For comparison,
+      the spread in flash over the pads is 1.6 cycles per wake
+      (code-layout/20261025T060257Z, 8.06..9.66).
+    experiment: code-place-q4
+    select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
+    stat: drift_per_wake
+    expect: {spread_abs_le: 0.2}
+    wrong_if: As H2a.
+
+  - id: H2d
+    formerly: code-place-q4/C1
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: Over r0..r28, the ISR to thread p50 changes by 5 cycles or less (anchor default).
+    basis: >
+      Estimate. The comment gives no basis for the limit. For comparison,
+      the spread in flash over the pads is 40 cycles
+      (code-layout/20261025T060257Z, 1663..1703).
+    experiment: code-place-q4
+    select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
+    metric: isr2thr
+    stat: p50
+    expect: {spread_abs_le: 5}
+    wrong_if: As H2a.
+
+  - id: H2e
+    formerly: code-place-q4/C1
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: As H2d, for the anchor noslice.
+    basis: >
+      Estimate, as H2d. The spread in flash over the pads is 35 cycles
+      (code-layout/20261025T060257Z, 763..798).
+    experiment: code-place-q4
+    select: {point: [r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]}
+    metric: isr2thr
+    stat: p50
+    expect: {spread_abs_le: 5}
+    wrong_if: As H2a.
+
+  # ------------------------------------------- code-place-q4, criterion C2
+  - id: H3a
+    formerly: code-place-q4/C2
+    type: method
+    written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+    statement: >
+      RAM removes the difference from build to build. The tree difference
+      D = ws-up - ws-safety of the IRQ p50 is the same at r0 and at r4
+      (|D(r0) - D(r4)| <= 2 cycles, anchor default).
+    basis: The limit of H2a (the C1 limit of the metric).
+    experiment: code-place-q4-up
+    select: {point: [r0-default, r4-default]}
+    metric: irq
+    stat: p50
+    expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+    wrong_if: A tree difference in RAM still depends on the build.
+
+  - id: H3b
+    formerly: code-place-q4/C2
+    type: method
+    written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+    statement: As H3a, for the anchor noslice.
+    basis: The limit of H2b.
+    experiment: code-place-q4-up
+    select: {point: [r0-noslice, r4-noslice]}
+    metric: irq
+    stat: p50
+    expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+    wrong_if: As H3a.
+
+  - id: H3c
+    formerly: code-place-q4/C2
+    type: method
+    written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+    statement: As H3a, for the drift (<= 0.2 cycles per wake, anchor default).
+    basis: The limit of H2c.
+    experiment: code-place-q4-up
+    select: {point: [r0-default, r4-default]}
+    stat: drift_per_wake
+    expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 0.2}}
+    wrong_if: As H3a.
+
+  - id: H3d
+    formerly: code-place-q4/C2
+    type: method
+    written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+    statement: As H3a, for the ISR to thread p50 (<= 5 cycles, anchor default).
+    basis: The limit of H2d.
+    experiment: code-place-q4-up
+    select: {point: [r0-default, r4-default]}
+    metric: isr2thr
+    stat: p50
+    expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+    wrong_if: As H3a.
+
+  - id: H3e
+    formerly: code-place-q4/C2
+    type: method
+    written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+    statement: As H3d, for the anchor noslice.
+    basis: The limit of H2e.
+    experiment: code-place-q4-up
+    select: {point: [r0-noslice, r4-noslice]}
+    metric: isr2thr
+    stat: p50
+    expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+    wrong_if: As H3a.
+
+  # ------------------------------------------- code-place-q4, criterion C3
+  - id: H4a
+    formerly: code-place-q4/C3
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: >
+      The new revision gives the old flash behaviour: the IRQ p50 of f0
+      and f4 is that of the reference points p0 and p4 (+-1 cycle).
+    basis: >
+      f0 and f4 have the same code layout as p0 and p4 (commit 48f1341 of
+      LATBENCH_CODE_PLACE). Estimate. The comment gives no basis for the
+      tolerance.
+    experiment: code-place-q4
+    select: {point: [f0-default, f4-default, f0-noslice, f4-noslice]}
+    metric: irq
+    stat: p50
+    expect:
+      diff_to:
+        run: code-placement/code-layout/20261025T060257Z
+        points: {f0-default: p0-default, f4-default: p4-default, f0-noslice: p0-noslice, f4-noslice: p4-noslice}
+        range: [-1, 1]
+    wrong_if: The new revision changes the flash behaviour. Flash data from before and after it are not comparable.
+
+  - id: H4b
+    formerly: code-place-q4/C3
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: As H4a, for the ISR to thread p50 (+-5 cycles).
+    basis: As H4a.
+    experiment: code-place-q4
+    select: {point: [f0-default, f4-default, f0-noslice, f4-noslice]}
+    metric: isr2thr
+    stat: p50
+    expect:
+      diff_to:
+        run: code-placement/code-layout/20261025T060257Z
+        points: {f0-default: p0-default, f4-default: p4-default, f0-noslice: p0-noslice, f4-noslice: p4-noslice}
+        range: [-5, 5]
+    wrong_if: As H4a.
+
+  - id: H4c
+    formerly: code-place-q4/C3
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: As H4a, for the drift (+-0.05 cycles per wake, anchor default).
+    basis: As H4a.
+    experiment: code-place-q4
+    select: {point: [f0-default, f4-default]}
+    stat: drift_per_wake
+    expect:
+      diff_to:
+        run: code-placement/code-layout/20261025T060257Z
+        points: {f0-default: p0-default, f4-default: p4-default}
+        range: [-0.05, 0.05]
+    wrong_if: As H4a.
+
+  # ------------------------------------------------ code-place-q4, the logs
+  - id: H5
+    type: method
+    written: 2026-10-25, before code-place-q4/20261025T184743Z
+    statement: >
+      Each log of code-place-q4 and code-place-q4-up has invalid = 0,
+      stim_late = 0 and spurious_edges = 0. With RAM, code_pad_at is the
+      start of code_ram_text.
+    basis: The comment gives the check without a basis.
+    experiment: [code-place-q4, code-place-q4-up]
+    manual: true

@@ -1,0 +1,40 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: irq-checks-1m.md. Hypotheses: hypotheses.yaml.
+
+name: irq-checks-1m
+app: irq_latency
+trees: [ws-safety]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    LATBENCH_IRQ_PATH_DIRECT: y
+
+# No cube: each point changes factors against direct-idle of irq-baseline-1m.
+extra_axes: {poll: 100ms, clock: 170mhz, background: idle, slicing: slice}
+
+points:
+  - id: idle-poll10
+    axes: {poll: 10ms, clock: 170mhz, background: idle, slicing: slice}
+    kconfig: {LATBENCH_POLL_MS: 10}
+  - id: idle-poll1000
+    axes: {poll: 1000ms, clock: 170mhz, background: idle, slicing: slice}
+    kconfig: {LATBENCH_POLL_MS: 1000}
+  - id: idle-85mhz
+    axes: {poll: 100ms, clock: 85mhz, background: idle, slicing: slice}
+    dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_85mhz.overlay]
+  - id: idle-16mhz
+    axes: {poll: 100ms, clock: 16mhz, background: idle, slicing: slice}
+    dtc_overlays: [common/boards/nucleo_g474re/clocks/nucleo_g474re_16mhz.overlay]
+  - id: busy
+    axes: {poll: 100ms, clock: 170mhz, background: busy, slicing: slice}
+    kconfig: {LATBENCH_BG_BUSY: y}
+  - id: busy-noslice
+    axes: {poll: 100ms, clock: 170mhz, background: busy, slicing: noslice}
+    kconfig: {LATBENCH_BG_BUSY: y, TIMESLICING: n}
