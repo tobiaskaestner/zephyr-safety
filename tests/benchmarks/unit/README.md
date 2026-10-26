@@ -83,7 +83,7 @@ cd scripts/benchmarks
 python3 -m pytest tests
 ```
 
-The result is 125 passed test cases and no failures. The packages in
+All test cases pass. The packages in
 `scripts/benchmarks/requirements.txt` and `pytest` are necessary.
 
 ## Make the fixtures again

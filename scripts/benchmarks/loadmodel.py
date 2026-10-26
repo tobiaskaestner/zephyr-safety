@@ -141,7 +141,9 @@ def cmd_scan(args):
     kmax = max(s["kmax"] for _, s in rows)
     print(f"{args.timers} timers, {args.min_ms}..{args.max_ms} ms, {args.seconds} s; ticks with >= k expiries")
     print("seed       " + " ".join(f"{'>=' + str(k):>8}" for k in range(2, kmax + 1)))
-    key = lambda r: tuple(at_least(r[1]["counts"], k) for k in range(kmax, 1, -1))
+    def key(row):
+        return tuple(at_least(row[1]["counts"], k) for k in range(kmax, 1, -1))
+
     for seed, s in sorted(rows, key=key):
         print(f"0x{seed:08x} " + " ".join(f"{at_least(s['counts'], k):8d}" for k in range(2, kmax + 1)))
 
