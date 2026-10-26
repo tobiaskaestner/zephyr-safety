@@ -66,6 +66,10 @@ Common options
    * - ``LATBENCH_STIM_FIXED``
      - n
      - Choice ``LATBENCH_STIM_MODE``: fixed period
+   * - ``LATBENCH_STIM_SEED``
+     - 0x2545f491
+     - Seed of the random stimulus (range 0x1 to 0xffffffff, only with
+       ``LATBENCH_STIM_RANDOM``)
    * - ``LATBENCH_STIM_PERIOD_US``
      - 300
      - Period of the fixed stimulus in microseconds (only with

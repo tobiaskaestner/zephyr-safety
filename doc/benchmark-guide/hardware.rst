@@ -183,9 +183,13 @@ calculates the time of the next edge.
 ``LATBENCH_STIM_RANDOM`` (default)
    The next edge comes a random time after the call of ``stim_arm()``. The
    time is in [``LATBENCH_STIM_MIN_US``, ``LATBENCH_STIM_MAX_US``). The random
-   generator is xorshift32 with a fixed seed. Thus each run uses the same
-   sequence of delays. The random part prevents a lock of the stimulus to
-   the phase of the system timer.
+   generator is xorshift32 with the seed ``LATBENCH_STIM_SEED`` (default
+   ``0x2545f491``, the seed of all runs before the option). Thus each run
+   with the same seed uses the same sequence of delays, and gives the same
+   histogram on the same image (shown on two hosts). The random part
+   prevents a lock of the stimulus to the phase of the system timer. A
+   different seed shows how much a result depends on the sequence. The
+   log has the seed in ``stim_seed``.
 
 ``LATBENCH_STIM_FIXED``
    The next edge comes ``LATBENCH_STIM_PERIOD_US`` microseconds plus

@@ -1,0 +1,71 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: how much does a result depend on the sequence of the random
+# stimulus? Each run so far used the same seed, and the same image gives
+# the same histogram bin for bin (shown on two hosts, run-log
+# 2026-10-26). A repetition thus gives no information about the spread;
+# a different seed does. LATBENCH_STIM_SEED changes only the stimulus;
+# the load timers keep their own seeds.
+#
+# Point: wp3-wake-1m baseline-t64 (wake_latency, sem, wrapped ISR, 64
+# periodic timers, hot code in the CCM SRAM). It has tails from the
+# SysTick ISR. Night data (seed 0x2545f491, cycles at 170 MHz):
+#
+#   irq      p50 48    p99 1314  p99.99 4288  max 5984
+#   isr2thr  p50 1537  p99 3552  p99.99 6560  max 9227
+#
+# Seeds: the default, and seven words of the SHA-256 start values (no
+# choice by hand).
+#
+# Predictions (written before the run):
+#
+#   1. seed-default gives the histograms of the night data bin for bin.
+#      The image is not the same: stim.c is in the CCM SRAM, and the new
+#      META line makes stim_init() 16 bytes longer, so the CCM code after
+#      it moves by 16 bytes. Q4 (q4-validation.md) found no change for
+#      shifts of 0..28 bytes in RAM. If the histograms differ, that
+#      result does not cover this shift.
+#   2. The p50 of irq and isr2thr is the same for all seeds (+-2
+#      cycles): the modes do not depend on the sequence.
+#   3. The mean and the p99 change by less than 3 % between the seeds
+#      (10000 samples above the p99).
+#   4. The p99.99 (100 samples above it) changes by up to 15 %, and the
+#      max (one sample) by up to 30 %. The max of the 8 seeds is above
+#      the night max by 0..20 %.
+#
+# Wrong if: the p50 moves with the seed, or the p99 spread is above
+# 5 %: then the sequence changes the behaviour, not only which edges
+# meet a SysTick ISR. If the p99.99 spread is above 25 %, a single seed
+# is not enough for tail values, and later tail data needs several seeds.
+#
+# Board time: 8 points x (30 s + 1000000 x 300 us = 300 s + 10 s) =
+# about 45 min.
+
+name: stim-seed-1m
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+    LATBENCH_LOAD_TIMERS: 64
+
+axes:
+  seed:
+    # Strings: YAML reads 0x... as a number, and Kconfig reads the
+    # decimal digits of a hex symbol as hex.
+    seed-default: {}
+    seed-6a09e667: {kconfig: {LATBENCH_STIM_SEED: "0x6a09e667"}}
+    seed-bb67ae85: {kconfig: {LATBENCH_STIM_SEED: "0xbb67ae85"}}
+    seed-3c6ef372: {kconfig: {LATBENCH_STIM_SEED: "0x3c6ef372"}}
+    seed-a54ff53a: {kconfig: {LATBENCH_STIM_SEED: "0xa54ff53a"}}
+    seed-510e527f: {kconfig: {LATBENCH_STIM_SEED: "0x510e527f"}}
+    seed-9b05688c: {kconfig: {LATBENCH_STIM_SEED: "0x9b05688c"}}
+    seed-1f83d9ab: {kconfig: {LATBENCH_STIM_SEED: "0x1f83d9ab"}}

@@ -54,7 +54,7 @@ static uint64_t ref_cyc;
 #if defined(CONFIG_LATBENCH_STIM_RANDOM)
 static uint32_t stim_min;
 static uint32_t stim_span;
-static uint32_t rng_state = 0x2545f491U;
+static uint32_t rng_state = CONFIG_LATBENCH_STIM_SEED;
 
 static inline uint32_t rng_next(void)
 {
@@ -207,6 +207,7 @@ int stim_init(void)
 	stim_min = us_to_counts(CONFIG_LATBENCH_STIM_MIN_US);
 	stim_span = us_to_counts(CONFIG_LATBENCH_STIM_MAX_US) - stim_min;
 	printk("LAT META stim_mode=random\n");
+	printk("LAT META stim_seed=0x%08x\n", CONFIG_LATBENCH_STIM_SEED);
 	printk("LAT META stim_us=%u..%u\n", CONFIG_LATBENCH_STIM_MIN_US,
 	       CONFIG_LATBENCH_STIM_MAX_US);
 #else

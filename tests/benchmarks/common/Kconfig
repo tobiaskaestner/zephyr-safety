@@ -156,8 +156,8 @@ config LATBENCH_STIM_RANDOM
 	help
 	  The next edge comes a random time in [LATBENCH_STIM_MIN_US,
 	  LATBENCH_STIM_MAX_US) after the code that handled the previous
-	  edge armed it. The seed is fixed, so each run uses the same
-	  sequence of delays.
+	  edge armed it. The seed is LATBENCH_STIM_SEED, so each run with
+	  the same seed uses the same sequence of delays.
 
 config LATBENCH_STIM_FIXED
 	bool "Fixed period"
@@ -169,6 +169,17 @@ config LATBENCH_STIM_FIXED
 	  new period from the time of arming.
 
 endchoice
+
+config LATBENCH_STIM_SEED
+	hex "Seed of the random stimulus"
+	depends on LATBENCH_STIM_RANDOM
+	range 0x1 0xffffffff
+	default 0x2545f491
+	help
+	  Start value of the xorshift32 generator of the random delays (0 is
+	  not a valid state). The default is the seed of all runs before
+	  this option. The load generators have seeds of their own; they do
+	  not change with this option.
 
 config LATBENCH_STIM_PERIOD_US
 	int "Period of the fixed stimulus (us)"

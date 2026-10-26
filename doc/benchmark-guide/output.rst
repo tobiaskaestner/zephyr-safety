@@ -85,6 +85,7 @@ Example (shortened):
    LAT META sys_timer_hz=170000000
    LAT META stim_mode=random
    LAT META stim_us=200..1000
+   LAT META stim_seed=0x2545f491
    LAT META tick_period_cyc=17000
    LAT META tick_phase_check=...
    LAT META static_check=ok
@@ -194,6 +195,10 @@ Metadata keys
    * - ``stim_us``
      - stimulus
      - Limits of the random stimulus (``<min>..<max>``)
+   * - ``stim_seed``
+     - stimulus
+     - Seed of the random stimulus (``LATBENCH_STIM_SEED``). A log without
+       it is from before the option and has the seed ``0x2545f491``
    * - ``stim_period_cyc``
      - stimulus
      - Period of the fixed stimulus in counts of the stimulus timer
