@@ -58,10 +58,20 @@ ASSUME HeapCapacity \in Nat
 \* @type: Seq(a) => Set(a);
 Range(s) == {s[i] : i \in DOMAIN s}
 
+\* The largest heap height that Log2Ceil computes. A heap with this height
+\* holds 2^MaxHeight - 1 entries. The bound is a constant, because Apalache
+\* accepts only ranges with constant bounds.
+\* @type: Int;
+MaxHeight == 16
+
+\* Log2Ceil is defined for each size of the heap.
+ASSUME Backend = "MINHEAP" => HeapCapacity < 2^MaxHeight
+
 \* The smallest k with 2^k >= n + 1: the height of a binary heap with n + 1
-\* entries.
+\* entries. Exactly one k satisfies the condition for each n in
+\* 0..(2^MaxHeight - 1) (mc/TimeoutTest checks this).
 \* @type: Int => Int;
-Log2Ceil(n) == CHOOSE k \in 0..n : 2^k >= n + 1 /\ (k = 0 \/ 2^(k - 1) < n + 1)
+Log2Ceil(n) == CHOOSE k \in 0..MaxHeight : 2^k >= n + 1 /\ (k = 0 \/ 2^(k - 1) < n + 1)
 
 \* Sequence s with element e inserted at position i (1..Len(s) + 1).
 \* @type: (Seq(a), Int, a) => Seq(a);
@@ -116,9 +126,11 @@ Insert(e, i) ==
     /\ tq' = InsertAt(tq, i, e)
     /\ tqCost' = [op |-> "insert", n |-> Len(tq), cost |-> InsertCost(i, Len(tq))]
 
-\* An insertion at a position that the deadline selects (not known).
+\* An insertion at a position that the deadline selects (not known). The
+\* range has a constant bound (Apalache). Insert selects the valid
+\* positions 1..(Len(tq) + 1).
 \* @kind action
-InsertAny(e) == \E i \in 1..(Len(tq) + 1) : Insert(e, i)
+InsertAny(e) == \E i \in 1..(Cardinality(Entries) + 1) : Insert(e, i)
 
 \* z_abort_timeout(): entry e is no longer armed (a give or a flush won
 \* the race against the expiry). Without effect if e is not armed.

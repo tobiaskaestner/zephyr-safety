@@ -62,6 +62,8 @@ TestOrder ==
     /\ Check("prio: Ordered", At(Wait(Threads), S123, P1)!Ordered("o1"), <<"t2", "t1", "t3">>)
     /\ Check("prio: Rank t3", At(Wait(Threads), S123, P1)!Rank("o1", "t3"), 3)
     /\ Check("strict",        \E t \in Threads : At(Wait(Threads), S123, Equal)!Before(t, t), FALSE)
+    /\ Check("ranks",         [t \in Threads |-> At(Wait(Threads), S123, P1)!Rank("o1", t)],
+                              [t1 |-> 2, t2 |-> 1, t3 |-> 3])
 
 \* Two objects: the queues stay apart, the stamps count all waiters.
 TestTwoObjects ==

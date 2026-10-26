@@ -66,13 +66,15 @@ Before(a, b) ==
 Rank(o, t) == Cardinality({u \in W(o) : Before(u, t)}) + 1
 
 \* The waiter that a wake of o selects first. Defined only if W(o) # {}.
+\* Exactly one waiter has the rank 1 (invariants BestIsHead, RanksDistinct).
 \* @c-function z_priq_simple_best
 \* @c-function z_priq_rb_best
 Best(o) == CHOOSE t \in W(o) : Rank(o, t) = 1
 
 \* The wait queue of o as a sequence, head first. This is the view of the
-\* trace records and of the generated tests. For TLC only: Apalache does
-\* not accept a range with a bound that depends on the state.
+\* trace records and of the generated tests. Exactly one waiter has the
+\* rank i, for each i (invariant RanksDistinct). For TLC only: Apalache
+\* does not accept a range with a bound that depends on the state.
 Ordered(o) == [i \in 1..Cardinality(W(o)) |-> CHOOSE t \in W(o) : Rank(o, t) = i]
 
 -----------------------------------------------------------------------------
@@ -155,6 +157,13 @@ OrderIsTotal ==
         /\ ~Before(a, a)
         /\ a # b => (Before(a, b) \/ Before(b, a))
         /\ Before(a, b) => ~Before(b, a)
+
+\* No two waiters of an object have the same rank. Rank(o, t) is in
+\* 1..Cardinality(W(o)), so each rank has exactly one waiter: the CHOOSE in
+\* Best and in Ordered has exactly one witness.
+\* @kind invariant
+RanksDistinct ==
+    \A o \in Objs : \A a, b \in W(o) : a # b => Rank(o, a) # Rank(o, b)
 
 \* The waiter that a wake selects is the head of the queue: the only
 \* waiter with the rank 1.

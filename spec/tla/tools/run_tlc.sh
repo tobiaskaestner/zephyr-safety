@@ -65,9 +65,11 @@ while read -r module config expected rest; do
 
 	# One worker: TLC with more than one worker can miss states and
 	# violations (tlaplus issue #1445, open at the pinned revision).
+	# -fp 0: a fixed fingerprint function. Without it, TLC selects one at
+	# random, and a reported trace can differ from run to run.
 	start=$(date +%s.%N)
 	(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
-		-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -cleanup -noGenerateSpecTE "${extra[@]}" \
+		-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -fp 0 -cleanup -noGenerateSpecTE "${extra[@]}" \
 		-metadir "$out/states/${module}_${config}" -config "$cfg" "$module.tla") > "$log" 2>&1
 	end=$(date +%s.%N)
 	secs=$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.1f s", b - a }')

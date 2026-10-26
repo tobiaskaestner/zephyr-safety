@@ -5,7 +5,7 @@
 (* value (see WaitQueueTest for the method). The cost tests fix the        *)
 (* numbers that the invariant CostBounded of MCTimeout compares.           *)
 (***************************************************************************)
-EXTENDS Naturals, Sequences, TLC
+EXTENDS Naturals, Sequences, FiniteSets, TLC
 
 NoCostRec == [op |-> "none", n |-> 0, cost |-> 0]
 
@@ -19,6 +19,9 @@ D == INSTANCE Timeout WITH Entries <- {"e1", "e2", "e3"}, Backend <- "DLIST",
 H == INSTANCE Timeout WITH Entries <- {"e1", "e2", "e3"}, Backend <- "MINHEAP",
         HeapCapacity <- 2, tq <- <<>>, tqCost <- NoCostRec
 
+\* The condition of the CHOOSE in Timeout!Log2Ceil.
+Log2Cond(n, k) == 2^k >= n + 1 /\ (k = 0 \/ 2^(k - 1) < n + 1)
+
 \* A test: the value got must be the value want.
 Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
 
@@ -28,6 +31,13 @@ Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
 \* The helpers. Log2Ceil(n) is the smallest k with 2^k >= n + 1.
 TestHelpers ==
     /\ Check("Log2Ceil 0..8",  [i \in 1..9 |-> D!Log2Ceil(i - 1)], <<0, 1, 2, 2, 3, 3, 3, 3, 4>>)
+    /\ Check("Log2Ceil max",   D!Log2Ceil(2^D!MaxHeight - 1), D!MaxHeight)
+    \* The CHOOSE of Log2Ceil has exactly one witness (design note, section
+    \* Apalache). Checked for small n and for the largest n.
+    /\ Check("Log2Ceil one witness",
+             {n \in (0..1023) \cup {2^D!MaxHeight - 2, 2^D!MaxHeight - 1} :
+                 Cardinality({k \in 0..D!MaxHeight : Log2Cond(n, k)}) # 1},
+             {})
     /\ Check("InsertAt first", D!InsertAt(<<"b", "c">>, 1, "a"), <<"a", "b", "c">>)
     /\ Check("InsertAt mid",   D!InsertAt(<<"a", "c">>, 2, "b"), <<"a", "b", "c">>)
     /\ Check("InsertAt last",  D!InsertAt(<<"a", "b">>, 3, "c"), <<"a", "b", "c">>)
