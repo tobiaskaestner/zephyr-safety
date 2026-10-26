@@ -34,3 +34,11 @@ axes:
     default: {}
     noslice:
       kconfig: {TIMESLICING: n}
+
+# Checks of each run. A run that fails one gets the role "excluded".
+# Written 2026-10-25, before the run code-place-q4/20261025T184743Z.
+acceptance:
+  - {id: A1, metric: meta.invalid, stat: value, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
+  - {id: A4, manual: true, statement: "With LATBENCH_CODE_RAM (points r*), code_pad_at is the start of code_ram_text."}

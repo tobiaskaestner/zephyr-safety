@@ -1,0 +1,299 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study tick-mode. A hypothesis is one claim about a
+# mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
+#
+# Each statement and each limit was written before the run of its
+# experiment (in the comments of the experiment files). The basis texts
+# were written on 2026-10-26, after the runs, from these comments. Where
+# a comment gave no basis for a number, the basis text of the check
+# starts with "Reconstruction:" or "Estimate.".
+#
+# The experiments are in the parent study kconfig-factors
+# (../wp3-variants.md gives the variants). The comments did not number
+# the predictions, so no check has the key "formerly". The checks compare
+# a point with the point "baseline" (or "baseline-t64") of the same run.
+# This study is the one home of the mechanism of the two modes (H1).
+#
+# Keys of a hypothesis:
+#   id         unique in the study
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
+#   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
+#
+# New forms of this study:
+#   stat drift_ppm: clock_drift_cyc / clock_elapsed_cyc x 1e6 of the point (LAT META, latbench.py drift_ppm). No metric.
+
+hypotheses:
+  - id: H1
+    type: model
+    statement: >
+      In the tickless kernel, the slice reset of a wake reprograms the
+      SysTick. These reprograms make the slow mode of the ISR to thread
+      wake and of the thread to thread latency, and the clock drift.
+      Without the tickless kernel, there is no reprogram: one mode (the
+      fast mode), a drift of about 0 ppm, and only the slice walk over the
+      timeouts stays.
+    basis: >
+      Without TICKLESS_KERNEL, sys_clock_set_timeout() returns at once
+      (ws-up drivers/timer/system_timer_generic.h:650). Thus the slice
+      reset never reprograms the SysTick, and the kernel resets no SysTick
+      reload. The slice reset also walks the timeout list. The baseline
+      has the same two modes as thread2thread-1m.
+    wrong_if: >
+      Two modes stay without the tickless kernel, or the two modes of the
+      baseline are not about 640 cycles apart. Then the SysTick reprogram
+      is not the cause of the slow mode. The drift without the tickless
+      kernel is more than 20 ppm. Then the reset of the reload is not the
+      cause of the drift. The slice walk does not depend on the number of
+      timeouts.
+    checks:
+      - id: a
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        select: {point: tickless-off}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {point: baseline, range: [-300, -250]}}
+        basis: >
+          Without TICKLESS_KERNEL, sys_clock_set_timeout() returns at once
+          (ws-up drivers/timer/system_timer_generic.h:650). Thus the slice
+          reset never reprograms the SysTick, and the fast mode of the
+          baseline (20 % of the samples) becomes the only mode. Estimate. The
+          comment gives no derivation of 250..300. The comment names no
+          statistic, so the check uses the p50.
+      - id: b
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        manual: true
+        statement: Without the tickless kernel, the isr2thr has one mode, at the fast mode of the baseline.
+        basis: As a.
+      - id: c
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        select: {point: tickless-off}
+        stat: drift_ppm
+        expect: {range: [-20, 20]}
+        basis: >
+          Without the reprograms, the kernel resets no SysTick reload. The
+          limit of 20 ppm is the "Wrong if" limit of the comment.
+      - id: d
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        manual: true
+        statement: >
+          The isr2thr p50 of tickless-off-100 is the same as of tickless-off:
+          no reprogram, one mode, a clock drift of about 0.
+        basis: >
+          Without TICKLESS_KERNEL, the slice reset does not reprogram the
+          SysTick, also at 100 ticks/s (as a). The comment gives no
+          tolerance for "the same".
+      - id: e
+        written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
+        experiment: wp3-t2t-1m
+        manual: true
+        statement: >
+          The t2t of the baseline has two modes: about 20 % fast and 80 %
+          slow. The slow mode is about 640 cycles slower (two SysTick
+          reprograms).
+        basis: The same two modes as in thread2thread-1m.
+      - id: f
+        written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
+        experiment: wp3-t2t-1m
+        manual: true
+        statement: >
+          Without the tickless kernel, the t2t has one mode, at the fast mode
+          of the baseline (640 cycles less than the slow mode).
+        basis: >
+          Without TICKLESS_KERNEL, the slice reset does not reprogram the
+          SysTick (as a). The slice walk stays.
+      - id: g
+        written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
+        experiment: wp3-t2t-1m
+        manual: true
+        statement: >
+          The t2t p50 of tickless-off-100 is the same as of tickless-off: no
+          reprogram, one mode, a clock drift of about 0.
+        basis: As d.
+      - id: h
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        manual: true
+        statement: >
+          With 64 load timers, the slice walk over about 30 timeouts adds
+          600..700 cycles against the fast mode, in baseline-t64,
+          ticks1000-t64 and tickless-off-t64. tickless-off-t64 has no
+          reprograms.
+        basis: >
+          The slice reset walks the timeout list. Estimate. The comment gives
+          no basis for 30 timeouts or for 600..700 cycles.
+
+  - id: H2
+    type: model
+    statement: >
+      The SysTick ISRs make the IRQ tail, and the tick rate trades the
+      share of the tail against its max. A periodic tick or a higher tick
+      rate gives more, shorter ISRs: a larger tail share. A lower tick rate
+      puts the expiries of the timers into fewer, longer ISRs: a smaller
+      tail share, but a higher max.
+    basis: >
+      Without the tickless kernel, a SysTick ISR comes at each tick, also
+      when no timer expires: every 17000 cycles at 10000 ticks/s, every
+      1.7M cycles at 100 ticks/s (../wp3-variants.md). At a lower tick
+      rate, the kernel puts the expiries into fewer ticks.
+    wrong_if: >
+      The periodic tick does not add a tail of about 1..3 %. Then the
+      model of the SysTick ISR as the cause of the IRQ tail is not
+      correct. The tick rate does not group the expiries of the timers,
+      or the model of the expiries in one tick ISR is not correct. The
+      IRQ max with 64 timers at 100 ticks/s is not more than the max of
+      baseline-t64. Then the tick ISR with many expiries is not the cause
+      of the far tail.
+    checks:
+      - id: a
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        manual: true
+        statement: >
+          Without the tickless kernel (10000 ticks/s), about 1..3 % of the
+          edges wait for up to one SysTick ISR. The p99 increases from about
+          81 cycles to some hundred cycles. The p50 does not change.
+        basis: >
+          A SysTick ISR comes every 17000 cycles. Estimate. The comment gives
+          no length of the SysTick ISR for the share of 1..3 %. The p99 of
+          about 81 cycles is from an earlier run.
+      - id: b
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        metric: irq
+        stat: p99
+        expect: {order: [baseline, tickless-off]}
+        basis: As a.
+      - id: c
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        metric: irq
+        stat: p99
+        expect: {order: [ticks1000-t64, baseline-t64]}
+        basis: >
+          At 1000 ticks/s, the kernel puts the expiries into fewer ticks:
+          fewer SysTick ISRs, but longer ones.
+      - id: d
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        metric: irq
+        stat: max
+        expect: {order: [baseline-t64, ticks1000-t64]}
+        basis: As c.
+      - id: e
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        metric: irq
+        stat: p99
+        expect: {order: [baseline-t64, tickless-off-t64]}
+        basis: A SysTick ISR comes every 100 us, also when no timer expires.
+      - id: f
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        manual: true
+        statement: >
+          With no load, the irq tail of tickless-off-100 is about 100 times
+          smaller than the tail of tickless-off.
+        basis: >
+          Reconstruction: 100 ticks/s gives 100 times fewer SysTick ISRs
+          than 10000 ticks/s.
+      - id: g
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        select: {point: tickless-off-100-t64}
+        metric: irq
+        stat: max
+        expect: {range: [10000, 20000]}
+        basis: >
+          The 64 timers have periods of 10..100 ms. Thus each tick ISR (every
+          10 ms) handles about 64 x 10 ms x E[1/period] = 16 expiries.
+          Estimate. The comment gives about 5000..10000 cycles for this ISR
+          and 10000..20000 cycles for the max, with no derivation.
+      - id: h
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        metric: irq
+        stat: max
+        expect: {order: [baseline-t64, tickless-off-100-t64]}
+        basis: As g.
+      - id: i
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        manual: true
+        statement: >
+          With 64 load timers, the irq tail of tickless-off-100 has a share
+          of about 0.5 %.
+        basis: >
+          As g. Reconstruction: an ISR of 5000..10000 cycles every 1.7M
+          cycles covers 0.3..0.6 % of the time.
+
+  - id: H3
+    type: model
+    statement: >
+      With no load, 1000 ticks/s changes nothing: the kernel stays
+      tickless, with the same slice and the same reprogram. The p50 of
+      irq, isr2thr and t2t and the drift for each reprogram stay the same.
+    basis: >
+      At 1000 ticks/s, the kernel stays tickless, with the same slice and
+      the same SysTick reprogram (the comments of wp3-irq-1m and
+      wp3-wake-1m).
+    wrong_if: >
+      The tick rate changes the IRQ entry path of the tickless kernel, the
+      slice or the reprogram, or the drift for each reprogram depends on
+      the tick rate.
+    checks:
+      - id: a
+        written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
+        experiment: wp3-irq-1m
+        select: {point: ticks1000}
+        metric: irq
+        stat: p50
+        expect: {diff_to: {point: baseline, range: [-2, 2]}}
+        basis: >
+          The kernel stays tickless. Reconstruction: the comment gives no
+          tolerance here. The check uses +-2 cycles, the tolerance of "the
+          same" for the other variants in the same list (scheduler H1 a and
+          b, code-generation H3 a, stack-guard H1 a).
+      - id: b
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        select: {point: ticks1000}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {point: baseline, range: [-30, 30]}}
+        basis: >
+          The kernel stays tickless, with the same slice and the same
+          reprogram. Estimate. The comment gives no basis for 30. The
+          comment names no statistic, so the check uses the p50.
+      - id: c
+        written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
+        experiment: wp3-wake-1m
+        manual: true
+        statement: At 1000 ticks/s, the clock drift for each reprogram is the same as in the baseline.
+        basis: As b.
+      - id: d
+        written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
+        experiment: wp3-t2t-1m
+        select: {point: ticks1000}
+        metric: t2t
+        stat: p50
+        expect: {diff_to: {point: baseline, range: [-30, 30]}}
+        basis: As b.

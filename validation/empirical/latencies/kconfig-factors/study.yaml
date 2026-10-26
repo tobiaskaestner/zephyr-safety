@@ -4,9 +4,12 @@
 # The files of this study, by convention (no keys):
 #   <experiment>/experiment.yaml   an experiment that it owns
 #   <experiment>/experiment.md     its description
-#   hypotheses.yaml                the hypotheses, written before the runs
-#   report.ipynb                   the report template (no outputs)
 #   wp3-variants.md                the variants of the three experiments
+#   <sub-study>/                   a sub-study (folder with a study.yaml)
+#
+# This study owns the three experiments. It has no hypotheses. Each
+# sub-study has the hypotheses of one question and imports the
+# experiments from this study.
 
 name: kconfig-factors
 question: >
@@ -18,13 +21,19 @@ experiments:
   - wp3-wake-1m
   - wp3-t2t-1m
 
+substudies:
+  - use: scheduler
+  - use: tick-mode
+  - use: code-generation
+  - use: stack-guard
+
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.
 #
 # Keys:
 #   id         unique in the study
 #   statement  the result as a sentence; {name} is a value of the result
-#   from       the data: experiment, point, metric, or hypotheses
+#   from       the data: experiment, point, metric, or hypotheses, or a sub-study
 #   stat       the statistic (study-design.md §14.3)
 #   unit       the unit of the values
 #
@@ -58,10 +67,4 @@ central_results:
     stat: {diff_rank: [p50, p99]}
     unit: cycles at 170 MHz
 
-  - id: tick-reprogram-modes
-    statement: >
-      Without the tickless kernel, the slice reset does not reprogram the
-      SysTick. Then the ISR to thread wake and the thread to thread
-      latency have one mode, and the clock drift is about 0 ppm.
-    from: {hypotheses: [H12a, H12b, H12c, H19, H20, H21, H29]}
-    stat: conclusion               # a person confirms the sentence
+  - {id: tick-reprogram-modes, from: {substudy: tick-mode}}

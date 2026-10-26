@@ -18,6 +18,11 @@ experiments:
   - code-place-q4
   - code-place-q4-up
 
+# The check of a code shift in the CCM SRAM (H2 k) reads the default seed
+# of stim-seed-1m.
+imports:
+  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
+
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
 # probability. There are no requirement limits yet.
@@ -88,5 +93,7 @@ central_results:
     statement: >
       Comparisons between trees and options use LATBENCH_CODE_RAM.
       Absolute numbers use a range over LATBENCH_CODE_FLASH_PAD.
-    from: {hypotheses: [H2a, H2b, H2c, H2d, H2e, H3a, H3b, H3c, H3d, H3e, H4a, H4b, H4c]}
+    # Also the check of the old flash data: hypothesis H1 of the study
+    # reproducibility (formerly H4a..c of this study).
+    from: {hypotheses: [H2]}
     stat: conclusion               # a person confirms the sentence

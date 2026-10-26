@@ -42,6 +42,6 @@ never reprograms the SysTick in `tickless-off` and `tickless-off-100`.
 - `measurement-validity/code-placement`: the hot code in the CCM SRAM.
 - Review of 2026-10-25, §5 (project notes, not in this repository): the
   cost of a sliced busy thread for each wake, from `wake-threads-1m`.
-- `load-scaling/wake-threads-1m/experiment.md`: the wake with 2..64 busy threads.
+- `load-scaling/timeout-queue-cost/wake-threads-1m/experiment.md`: the wake with 2..64 busy threads.
 - `wp3-kconfig-ranking.md` (project notes, not in this repository): the
   ranked list of the Kconfig factors.

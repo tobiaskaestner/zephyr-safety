@@ -1,0 +1,114 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study systick-priority. A hypothesis is one claim
+# about a mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
+#
+# Each statement and each limit was written before the run of its
+# experiment (in the comments of the experiment files). The basis texts
+# were written on 2026-10-26, after the runs, from these comments. Where
+# a comment gave no basis for a number, the basis text of the check
+# starts with "Reconstruction:" or "Estimate.".
+#
+# The check H1 a reads wake-timers-1m, an experiment of the study
+# load-scaling/timeout-queue-cost (imported with mode reuse).
+#
+# Keys of a hypothesis:
+#   id         unique in the study
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
+#   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
+#
+# Forms that are new in this file:
+#   order: {<axis>: [<value>, ...]}         for each value of the other axes, the stat increases in this order of the axis values
+
+hypotheses:
+  - id: H1
+    type: model
+    statement: >
+      When the SysTick ISR has the same priority as EXTI0, the whole
+      SysTick ISR delays the stimulus IRQ. Thus the irq tail grows with
+      the number of periodic timers, and it gets smaller by the unlocked
+      part of the ISR when SysTick has a lower priority than EXTI0.
+    basis: >
+      The expiry functions of the load timers run in the SysTick ISR. At
+      the same priority, a pending SysTick goes first and EXTI0 cannot
+      preempt it. At priority 1, EXTI0 can preempt the SysTick ISR
+      outside its locked sections.
+    wrong_if: >
+      The SysTick ISR does not delay the stimulus IRQ; then the timers do
+      not set the IRQ tail. Or the unlocked part of the SysTick ISR does
+      not delay the stimulus IRQ.
+    checks:
+      - id: a
+        written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+        experiment: wake-timers-1m
+        metric: irq
+        stat: p99.99
+        expect: {order: {timers: [t0, t16, t64, t256]}}
+        basis: >
+          The expiry functions of the timers run in the SysTick ISR.
+          Reconstruction: the comment names no statistic; the check uses the
+          p99.99 as the tail.
+      - id: b
+        written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+        experiment: systick-prio-1m
+        metric: irq
+        stat: p99.99
+        expect: {order: {prio: [lower, same]}}
+        basis: >
+          At priority 1, EXTI0 can preempt the SysTick ISR outside its locked
+          sections. The comment gives the tail as the p99.99 (wake-timers-1m).
+          It gives no number for the unlocked part.
+
+  - id: H2
+    type: model
+    statement: >
+      A lower SysTick priority does not remove the delays in the locked
+      sections and before PendSV. The locked sections of the SysTick ISR
+      still mask EXTI0, and PendSV still waits for the SysTick ISR. Thus
+      the irq max and the isr2thr stay about the same.
+    basis: >
+      The locked sections (timeout lock, clock lock) mask EXTI0 through
+      BASEPRI at each SysTick priority. PendSV has a lower priority than
+      SysTick at both priorities.
+    wrong_if: >
+      The longest delay of the stimulus IRQ is not in a locked section of
+      the SysTick ISR, or the SysTick priority changes the thread switch
+      after the ISR.
+    checks:
+      - id: a
+        written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+        experiment: systick-prio-1m
+        metric: irq
+        stat: max
+        manual: true
+        statement: >
+          The irq max stays about the same: the locked sections (timeout
+          lock, clock lock) still mask EXTI0 through BASEPRI.
+        basis: >
+          BASEPRI masks EXTI0 at each priority. Estimate. The comment gives no
+          limit for "about the same".
+      - id: b
+        written: 2026-10-25, before systick-prio-1m/20261025T051643Z
+        experiment: systick-prio-1m
+        metric: isr2thr
+        manual: true
+        statement: >
+          The isr2thr does not change much: PendSV still waits for the
+          SysTick ISR.
+        basis: >
+          PendSV has a lower priority than SysTick at both priorities.
+          Estimate. The comment gives no limit for "not much".

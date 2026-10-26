@@ -16,8 +16,11 @@ apps:
 - `MPU_STACK_GUARD=y`
 - `ASSERT=n`
 
-The point `baseline` has these defaults. Each hypothesis compares a
-variant with the point `baseline` of the same run.
+The point `baseline` has these defaults. Each check of a hypothesis
+compares a variant with the point `baseline` of the same run. The
+hypotheses are in the sub-studies `kconfig-factors/scheduler`,
+`kconfig-factors/tick-mode`, `kconfig-factors/code-generation` and
+`kconfig-factors/stack-guard`.
 
 ## Variants
 

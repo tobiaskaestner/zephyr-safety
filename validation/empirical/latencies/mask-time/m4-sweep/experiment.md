@@ -43,5 +43,6 @@ Board time: 24 points x (30 s + 200000 x 300 us = 60 s + 10 s), about
 - `doc/benchmark-guide/m4.rst`: the M4 method and the site names.
 - `measurement-validity/mask-instrumentation/m4-validate/experiment.md`: the check of
   the method, and the points `t64-same` and `t256-same`.
-- `load-scaling/wake-timers-1m/experiment.md`: the `ws-up` IRQ max at 256 timers.
+- `load-scaling/timeout-queue-cost/wake-timers-1m/experiment.md`: the `ws-up`
+  IRQ max at 256 timers.
 - `claude/latency-benchmarks/m4-design.md` §5.2 (outside this repository).

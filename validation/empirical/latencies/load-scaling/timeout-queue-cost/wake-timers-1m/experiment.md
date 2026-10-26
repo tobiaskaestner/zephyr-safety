@@ -29,4 +29,5 @@ The SysTick ISR and the EXTI0 ISR (the stimulus) have the same priority.
 
 - Latency plan §2.4: the load generators.
 - `../wake-threads-1m/experiment.md`: the thread axis with the same app.
-- `../systick-prio-1m/experiment.md`: SysTick at a lower priority.
+- `load-scaling/systick-priority/systick-prio-1m/experiment.md`: SysTick at a lower
+  priority.

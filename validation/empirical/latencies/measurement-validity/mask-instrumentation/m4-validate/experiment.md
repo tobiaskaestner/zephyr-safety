@@ -47,8 +47,10 @@ about 10 s output), about 12 min.
 
 - `doc/benchmark-guide/m4.rst`: the M4 method, the calibration and the
   probe.
-- `load-scaling/wake-timers-1m/experiment.md`, `load-scaling/systick-prio-1m/experiment.md`,
-  `load-scaling/timeout-backends-1m/experiment.md`: the `ws-up` values above.
+- `load-scaling/timeout-queue-cost/wake-timers-1m/experiment.md`,
+  `load-scaling/systick-priority/systick-prio-1m/experiment.md` and
+  `load-scaling/timeout-queue-cost/timeout-backends-1m/experiment.md`: the
+  `ws-up` values above.
 - `claude/latency-benchmarks/m4-design.md` §2, §3 and §5.1 (outside this
   repository): the mask paths, the cost estimates and this experiment.
 - `claude/latency-benchmarks/review-2026-10-25` §4 finding 8 (outside this

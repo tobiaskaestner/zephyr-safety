@@ -7,19 +7,23 @@
 #   hypotheses.yaml                the hypotheses, written before the runs
 #   report.ipynb                   the report template (no outputs)
 #
-# This study has no experiment and no hypotheses of its own.
+# This study has no experiment of its own.
 
 name: reproducibility
 question: >
-  Does the same image give the same histograms on another host, and does
-  a rebuild from the run snapshot give the same image?
+  Does the same image give the same histograms on another host, does a
+  rebuild from the run snapshot give the same image, and does a new
+  safety revision give the old data of the same code placement?
 
 # It runs points of other experiments again (mode rerun: its own runs of
 # these experiments, not their data).
 imports:
   - {study: kconfig-factors, experiment: wp3-irq-1m, mode: rerun}
   - {study: kconfig-factors, experiment: wp3-wake-1m, mode: rerun}
-  - {study: load-scaling, experiment: t2t-load-1m, mode: rerun}
+  - {study: load-scaling/t2t-under-load, experiment: t2t-load-1m, mode: rerun}
+  # H1 reads the data of this experiment (mode reuse: the runs of the
+  # owner study).
+  - {study: measurement-validity/code-placement, experiment: code-place-q4, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

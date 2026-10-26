@@ -44,3 +44,10 @@ axes:
     slice: {}               # TIMESLICING=y (default, 20 ms)
     noslice:
       kconfig: {TIMESLICING: n}
+
+# Checks of each run. A run that fails one gets the role "excluded".
+acceptance:
+  # m4-sweep/7, written 2026-10-25, before m4-sweep/20261026T000640Z: each
+  # start hook has one end hook (m4.rst), apart from the start-up, and the
+  # site table has room for all sites (fewer than 64).
+  - {id: A1, metric: [meta.m4_unmatched_end, meta.m4_begin_open, meta.dropped], stat: value, expect: {range: [0, 0]}}

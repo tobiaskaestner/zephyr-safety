@@ -34,5 +34,5 @@ choice, but the code layout of each point is the same.
 
 ## References
 
-- `wake-threads-1m`: owned by `load-scaling`.
+- `wake-threads-1m`: owned by `load-scaling/timeout-queue-cost`.
 - The check of the placement choice: `../code-place-q4/experiment.md`.

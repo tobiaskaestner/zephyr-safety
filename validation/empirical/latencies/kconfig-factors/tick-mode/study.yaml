@@ -1,0 +1,40 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   hypotheses.yaml                the hypotheses, written before the runs
+#   report.ipynb                   the report template (no outputs)
+#
+# This study owns no experiment. It imports the WP3 experiments from the
+# parent study kconfig-factors. ../wp3-variants.md gives the variants.
+
+name: tick-mode
+question: >
+  How do the tickless kernel and the tick rate change the three
+  latencies? Does the SysTick reprogram of the slice reset make the two
+  modes of the wake and the clock drift, and how does the tick rate set
+  the share and the max of the IRQ tail?
+
+imports:
+  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wp3-t2t-1m, mode: reuse}
+
+# The results that answer the question. For now all are characterisation:
+# measured values. There are no requirement limits yet. The rankings of
+# the parent study give the measured change of each variant.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+central_results:
+  - id: tick-reprogram-modes
+    statement: >
+      Without the tickless kernel, the slice reset does not reprogram the
+      SysTick. Then the ISR to thread wake and the thread to thread
+      latency have one mode, and the clock drift is about 0 ppm.
+    from: {hypotheses: [H1]}
+    stat: conclusion               # a person confirms the sentence

@@ -1,68 +1,83 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Hypotheses of the study thread-to-thread. Each statement and each
-# limit was written before the run of its experiment (in the comments of
-# the experiment files). The basis texts were written on 2026-10-26,
-# after the runs, from these comments. Where a comment gave no basis for
-# a number, the basis text starts with "Reconstruction:" or "Estimate.".
-# The comments have no "Wrong if" text. Each wrong_if says which part of
-# the basis is then wrong.
+# Hypotheses of the study thread-to-thread. A hypothesis is one claim
+# about a mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
 #
-# Keys:
+# Each statement and each limit was written before the run of its
+# experiment (in the comments of the experiment files). The basis texts
+# were written on 2026-10-26, after the runs, from these comments. Where
+# a comment gave no basis for a number, the basis text of the check
+# starts with "Reconstruction:" or "Estimate.".
+#
+# The comments have no "Wrong if" text. Each wrong_if says which part of
+# the basis is then wrong. thread2thread-1m stated no prediction before
+# its run.
+#
+# Keys of a hypothesis:
 #   id         unique in the study
-#   formerly   the id in the earlier experiment files and notes
 #   type       method: a property that the measurement method must have
 #              model:  a prediction from the code or from a model of the kernel
-#   written    date, and the run that came after it
-#   statement  the hypothesis, one or two sentences
-#   basis      where each number comes from
-#   experiment, select, metric, stat: the data that the check reads
-#   expect     the check (the comparison forms: study-design.md §14.4)
-#   manual     true: a person gives the verdict
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
 #   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
 
 hypotheses:
-  # -------------------------------------------------- thread2thread-switch
   - id: H1
     type: model
-    written: 2026-10-25, before thread2thread-switch/20261025T100427Z
     statement: >
       With USE_SWITCH=y the wake has the same two modes as with PendSV:
       about 20 % of the samples without a SysTick reprogram, about 80 %
       with two.
     basis: >
       The slice reset is in update_cache() and does not depend on the
-      arch interface. The 20 % and 80 % are the shares with PendSV in
-      the earlier runs. The comment gives no tolerance for "about".
-    experiment: thread2thread-switch
-    select: {point: [sem-switch, mutex-switch]}
-    metric: t2t
-    manual: true
+      arch interface.
     wrong_if: The slice reset is not the only cause of the two modes, or it depends on the arch interface.
+    checks:
+      - id: a
+        written: 2026-10-25, before thread2thread-switch/20261025T100427Z
+        experiment: thread2thread-switch
+        select: {point: [sem-switch, mutex-switch]}
+        metric: t2t
+        manual: true
+        statement: >
+          sem-switch and mutex-switch have two modes: about 20 % of the
+          samples without a SysTick reprogram, about 80 % with two.
+        basis: >
+          The 20 % and 80 % are the shares with PendSV in the earlier runs.
+          The comment gives no tolerance for "about".
 
-  - id: H2a
+  - id: H2
     type: model
-    written: 2026-10-25, before thread2thread-switch/20261025T100427Z
     statement: >
       The thread switch costs more with USE_SWITCH=y than with PendSV:
-      the mean t2t of sem-switch is larger than the mean of sem-legacy.
+      the mean t2t with USE_SWITCH=y is larger, for the semaphore and for
+      the mutex.
     basis: >
       wake-anchors-1m: USE_SWITCH=y adds about 280 cycles per ISR wake.
-      The comment gives no value for the thread to thread wake.
-    experiment: thread2thread-switch
-    metric: t2t
-    stat: mean
-    expect: {order: [sem-legacy, sem-switch]}
     wrong_if: The cost of USE_SWITCH=y in wake-anchors-1m is not in the switch itself.
-
-  - id: H2b
-    type: model
-    written: 2026-10-25, before thread2thread-switch/20261025T100427Z
-    statement: As H2a, for the mutex.
-    basis: As H2a.
-    experiment: thread2thread-switch
-    metric: t2t
-    stat: mean
-    expect: {order: [mutex-legacy, mutex-switch]}
-    wrong_if: As H2a.
+    checks:
+      - id: a
+        written: 2026-10-25, before thread2thread-switch/20261025T100427Z
+        experiment: thread2thread-switch
+        metric: t2t
+        stat: mean
+        expect: {order: [sem-legacy, sem-switch]}
+        basis: The comment gives no value for the thread to thread wake.
+      - id: b
+        written: 2026-10-25, before thread2thread-switch/20261025T100427Z
+        experiment: thread2thread-switch
+        metric: t2t
+        stat: mean
+        expect: {order: [mutex-legacy, mutex-switch]}
+        basis: As a.

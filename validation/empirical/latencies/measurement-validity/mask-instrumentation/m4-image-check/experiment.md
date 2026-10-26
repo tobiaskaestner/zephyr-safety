@@ -28,6 +28,7 @@ tree) can differ between the two trees.
 ## References
 
 - `doc/benchmark-guide/m4.rst`: the M4 method and the hooks.
-- `load-scaling/wake-timers-1m/experiment.md`: the source of the two points.
+- `load-scaling/timeout-queue-cost/wake-timers-1m/experiment.md`: the source
+  of the two points.
 - `claude/latency-benchmarks/m4-design.md` §4 (outside this repository):
   the build checks.

@@ -1,11 +1,8 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# The files of this study, by convention (no keys):
-#   <experiment>/experiment.yaml   an experiment that it owns
-#   <experiment>/experiment.md     its description
-#   hypotheses.yaml                the hypotheses, written before the runs
-#   report.ipynb                   the report template (no outputs)
+# This study has no experiment and no hypotheses of its own. Its
+# sub-studies own the experiments and the hypotheses.
 
 name: load-scaling
 question: >
@@ -13,70 +10,15 @@ question: >
   and which kernel data structure (ready queue, timeout queue backend)
   and which priority of SysTick set the growth?
 
-experiments:
-  - wake-threads-1m
-  - wake-timers-1m
-  - t2t-load-1m
-  - timeout-backends-1m
-  - timeout-skiplist-1m
-  - systick-prio-1m
+substudies:
+  - use: timeout-queue-cost
+  - use: systick-priority
+  - use: t2t-under-load
 
-imports:
-  # The tail of the t64 point over 8 stimulus seeds and 4 load seeds.
-  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
-  - {study: measurement-validity/stimulus-sampling, experiment: load-seed-tail, mode: reuse}
-
-# The results that answer the question. For now all are characterisation:
-# measured values. There are no requirement limits yet.
-#
-# Keys:
-#   id         unique in the study
-#   statement  the result as a sentence; {name} is a value of the result
-#   from       the data: experiment, point, metric, or hypotheses
-#   stat       the statistic (study-design.md §14.3)
-#   unit       the unit of the values
-#
-# Statistics that are new in this file:
-#   {slope: {stat: <stat>, axis: <axis>}}  the least-squares slope of the stat over the value: numbers of the axis, for each value of the other axes; points without a number are left out
+# The answer of this study: the central results of its sub-studies.
 central_results:
-  - id: timer-slope
-    statement: >
-      With the DLIST backend and time slicing, the isr2thr p99 grows by
-      {slope:.1f} cycles per periodic load timer ({tree}).
-    from: {experiment: wake-timers-1m, axes: {anchor: default}, exclude: [t256far-default], metric: isr2thr}
-    stat: {slope: {stat: p99, axis: timers}}
-    unit: cycles per timer
-
-  - id: thread-slope
-    statement: >
-      With {kind} load threads, the isr2thr p99 grows by {slope:.1f}
-      cycles per thread ({tree}).
-    from: {experiment: wake-threads-1m, metric: isr2thr}
-    stat: {slope: {stat: p99, axis: threads}}
-    unit: cycles per thread
-
-  - id: backend-tail
-    statement: >
-      With 256 periodic load timers and the {backend} timeout backend, the
-      {metric} p99 is {p99} cycles and the p99.99 is {p99.99} cycles
-      ({tree}).
-    from: {experiment: [timeout-backends-1m, timeout-skiplist-1m], metric: [irq, isr2thr]}
-    stat: [p99, p99.99]
-    unit: cycles
-
-  - id: systick-prio-tail
-    statement: >
-      With {timers} load timers and SysTick priority {prio}, the irq
-      p99.99 is {p99.99} cycles and the max is {max} cycles ({tree}).
-    from: {experiment: systick-prio-1m, metric: irq}
-    stat: [p99.99, max]
-    unit: cycles
-
-  - id: t2t-grows-with-n
-    statement: >
-      The p50 of the thread to thread wake grows linearly with n, the
-      number of timeouts that expire before the slice deadline, with the
-      same slope for sem, mutex and msgq. Without time slicing it does not
-      grow with the load.
-    from: {hypotheses: [H9a, H9b, H9c, H9d, H9e, H10, H11a, H11b]}
-    stat: conclusion               # a person confirms the sentence
+  - {id: timer-slope, from: {substudy: timeout-queue-cost}}
+  - {id: thread-slope, from: {substudy: timeout-queue-cost}}
+  - {id: backend-tail, from: {substudy: timeout-queue-cost}}
+  - {id: systick-prio-tail, from: {substudy: systick-priority}}
+  - {id: t2t-grows-with-n, from: {substudy: t2t-under-load}}

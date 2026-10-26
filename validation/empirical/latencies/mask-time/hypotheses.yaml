@@ -1,25 +1,40 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Hypotheses of the study mask-time. Each statement and each limit was
-# written before the run of its experiment (in the comments of the
-# experiment files). The basis texts were written on 2026-10-26, after
-# the runs, from these comments and the notes that they name. Where a
-# comment gave no basis for a number, the basis text starts with
-# "Reconstruction:" or "Estimate.".
+# Hypotheses of the study mask-time. A hypothesis is one claim about a
+# mechanism. Its checks test the claim on points, metrics and statistics.
+# The hypothesis is wrong if one check is wrong.
 #
-# Keys:
+# Each statement and each limit was written before the run of its
+# experiment (in the comments of the experiment files). The basis texts
+# were written on 2026-10-26, after the runs, from these comments and the
+# notes that they name. Where a comment gave no basis for a number, the
+# basis text of the check starts with "Reconstruction:" or "Estimate.".
+#
+# The checks with experiment m4-validate read the runs of the study
+# mask-instrumentation (imports in study.yaml, mode reuse). They are the
+# predictions of m4-validate about the kernel. The pairing counters and
+# the dropped sites of the M4 logs say if a run is usable: they are
+# acceptance checks in the experiment.yaml files. There is no hypothesis
+# for the growth of the masked share with the load: the m4-sweep comment
+# gave no limit for it. The masked share is a central result (study.yaml).
+#
+# Keys of a hypothesis:
 #   id         unique in the study
-#   formerly   the id in the earlier experiment files and notes
 #   type       method: a property that the measurement method must have
 #              model:  a prediction from the code or from a model of the kernel
-#   written    date, and the run that came after it
-#   statement  the hypothesis, one or two sentences
-#   basis      where each number comes from
-#   experiment, select, metric, stat: the data that the check reads
-#   expect     the check (the comparison forms: study-design.md §14.4)
-#   manual     true: a person gives the verdict
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
 #   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
 #
 # Forms that are new in this file:
 #   metric m4.<kind>[.<ctx>][<function>]  the M4 sites of a kind (mask, isr), context (t, e14, e15, e22 = EXTI0) and function (the place in the m4.py table)
@@ -31,317 +46,373 @@
 #   stat top_place                        the function of the mask site with the largest max_net
 #   expect {equals: x}                    the stat is x
 #   select {<axis>: <value>, ...}         the points with these axis values; each point is checked
+#   select {point: [ids]}                 several points; each point is checked
 
 hypotheses:
-  # ---------------------------------------------------------------- m4-sweep
   - id: H1
-    formerly: m4-sweep/1
     type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: The longest mask section is in z_add_timeout.
+    statement: >
+      The DLIST insert walk in z_add_timeout is the longest mask section.
+      It grows about linearly with the timeouts in the queue (about 300 +
+      25 cycles for each timeout that it walks), and the WHEEL backend
+      removes it.
     basis: >
       The DLIST insert walks over each timeout that expires before the new
-      one, with the timeout lock held. The lock is inlined in
-      z_add_timeout, so all callers share one site. The context splits
-      them: SysTick = the timer restarts and the sleeper wakes, irq6
-      (EXTI0, e22) = the slice reset in the give of the EXTI0 ISR, thread
-      = the slice reset at a switch and k_sleep.
-    experiment: m4-sweep
-    metric: m4.mask
-    stat: top_place
-    expect: {equals: z_add_timeout}
-    wrong_if: Another site masks longer than the timeout insert.
+      one, with the timeout lock held. The walk costs about 25 cycles for
+      each timeout: the ISR to thread p50 grows by about 20..25 cycles for
+      each timer or sleeper (review-2026-10-25 §4 and §5). The lock is
+      inlined in z_add_timeout, so all callers share one site. The context
+      splits them: SysTick = the timer restarts and the sleeper wakes,
+      irq6 (EXTI0, e22) = the slice reset in the give of the EXTI0 ISR,
+      thread = the slice reset at a switch and k_sleep. The WHEEL backend
+      has no insert walk over the queue (review-2026-10-25 §4 finding 8).
+    wrong_if: >
+      Another site masks longer than the timeout insert, a long mask
+      section occurs also without timeouts in the queue, the model of the
+      DLIST insert walk is not correct (also in the thread app), or the
+      WHEEL backend also has a long mask section that grows with the
+      timers.
+    checks:
+      - id: a
+        formerly: m4-sweep/1
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        metric: m4.mask
+        stat: top_place
+        expect: {equals: z_add_timeout}
+        basis: No number. The basis of the hypothesis gives the mechanism.
+      - id: b
+        formerly: m4-validate/t64-same, m4-validate/t256-same
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: [t64-same, t64-lower, t256-same, t256-lower]}
+        metric: m4.mask
+        stat: top_place
+        expect: {equals: z_add_timeout}
+        basis: >
+          No number. The restart of a periodic timer walks the DLIST queue in
+          z_add_timeout, with the timeout lock held. The walk grows with the
+          number of timeouts.
+      - id: c
+        formerly: m4-thread/3
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        select: {timers: t64}
+        metric: m4.mask
+        stat: top_place
+        expect: {equals: z_add_timeout}
+        basis: As a.
+      - id: d
+        formerly: m4-sweep/1
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        manual: true
+        statement: >
+          The max of z_add_timeout grows about linearly with the number of
+          timeouts in the queue: about 300 + 25 x (timers + sleepers). Thus
+          t16 gives about 700 and s64 about 1900.
+        basis: >
+          Estimate. The 25 cycles come from the hypothesis basis. The
+          comment gives no basis for the 300 cycles.
+      - id: e
+        formerly: m4-sweep/1
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t0, sleepers: s0}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [0, 999]}
+        basis: >
+          Estimate. The formula of d gives about 300. The comment gives no
+          basis for the limit of 1000.
+      - id: f
+        formerly: m4-sweep/1
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t64, sleepers: s0}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [1800, 2600]}
+        basis: >
+          Reconstruction: the formula of d gives 1900. The comment gives no
+          basis for the width of the range.
+      - id: g
+        formerly: m4-validate/t64-same, m4-validate/t64-lower
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: [t64-same, t64-lower]}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [1800, 2600]}
+        basis: >
+          Reconstruction: 64 x 25 cycles give about 1600 cycles for the walk.
+          m4-sweep expectation 1 gives 300 + 25 x 64 = 1900. The 25 cycles for
+          each timeout come from review-2026-10-25 §4 and §5. The comment
+          gives no basis for the width of the range.
+      - id: h
+        formerly: m4-thread/3
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        select: {timers: t64}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [1800, 2600]}
+        basis: As f. The comment gives the range of m4-sweep t64.
+      - id: i
+        formerly: m4-sweep/1
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t256, sleepers: s0}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [6300, 7500]}
+        basis: >
+          Reconstruction: the formula of d gives 6700. The comment gives no
+          basis for the width of the range.
+      - id: j
+        formerly: m4-validate/t256-same, m4-validate/t256-lower
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: [t256-same, t256-lower]}
+        metric: m4.mask.e15[z_add_timeout]
+        stat: max(max_net)
+        expect: {range: [6300, 7500]}
+        basis: >
+          Reconstruction: m4-sweep expectation 1 gives 300 + 25 x 256 = 6700.
+          review-2026-10-25 §4 finding 8 explains the stop of the IRQ tail at
+          about 7000 cycles with this walk (the restart of a periodic timer,
+          in SysTick context). The comment gives no basis for the width of
+          the range.
+      - id: k
+        formerly: m4-sweep/3
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t256, sleepers: s0, slice: slice}
+        metric: m4.mask.e22[z_add_timeout]
+        stat: max(max_net)
+        expect: {range: [3000, 3800]}
+        basis: >
+          Estimate. The slice reset adds a timeout 20 ms ahead, so the walk
+          stops at the timeouts of the next 20 ms: about 300 + 25 x (these
+          timeouts), about half of the max of i. The comment gives no count
+          of these timeouts. In the formula, the range is 108..140 timeouts.
+      - id: l
+        formerly: m4-validate/t256-wheel
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: t256-wheel}
+        metric: m4.mask
+        stat: max(max_net)
+        expect: {range: [0, 1499]}
+        basis: >
+          Estimate. The WHEEL backend has no insert walk over the queue
+          (review-2026-10-25 §4 finding 8). The comment gives no basis for
+          1500 cycles.
 
   - id: H2
-    formerly: m4-sweep/1
     type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
     statement: >
-      The max of z_add_timeout grows about linearly with the number of
-      timeouts in the queue: about 300 + 25 x (timers + sleepers). Thus
-      t16 gives about 700 and s64 about 1900.
-    basis: >
-      Estimate. The walk costs about 25 cycles for each timeout: the ISR
-      to thread p50 grows by about 20..25 cycles for each timer or
-      sleeper (review-2026-10-25 §4 and §5). The comment gives no basis
-      for the 300 cycles.
-    experiment: m4-sweep
-    manual: true
-    wrong_if: The model of the DLIST insert walk is not correct.
-
-  - id: H3
-    formerly: m4-sweep/1
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: Without timers and sleepers, the longest mask section is below 1000.
-    basis: >
-      Estimate. The formula of H2 gives about 300. The comment gives no
-      basis for the limit of 1000.
-    experiment: m4-sweep
-    select: {timers: t0, sleepers: s0}
-    metric: m4.mask
-    stat: max(max_net)
-    expect: {range: [0, 999]}
-    wrong_if: A long mask section occurs also without timeouts in the queue.
-
-  - id: H4
-    formerly: m4-sweep/1
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: At 64 timers and no sleepers, the longest mask section is 1800..2600.
-    basis: >
-      Reconstruction: the formula of H2 gives 1900. The comment gives no
-      basis for the width of the range.
-    experiment: m4-sweep
-    select: {timers: t64, sleepers: s0}
-    metric: m4.mask
-    stat: max(max_net)
-    expect: {range: [1800, 2600]}
-    wrong_if: The model of the DLIST insert walk is not correct.
-
-  - id: H5
-    formerly: m4-sweep/1
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: At 256 timers and no sleepers, the longest mask section is 6300..7500.
-    basis: >
-      Reconstruction: the formula of H2 gives 6700. The comment gives no
-      basis for the width of the range.
-    experiment: m4-sweep
-    select: {timers: t256, sleepers: s0}
-    metric: m4.mask
-    stat: max(max_net)
-    expect: {range: [6300, 7500]}
-    wrong_if: The model of the DLIST insert walk is not correct.
-
-  - id: H6
-    formerly: m4-sweep/2
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: Without slicing, the irq6 (EXTI0) entry of z_add_timeout is absent.
+      Time slicing adds the EXTI0 and the thread entries of z_add_timeout
+      (the slice reset). The restart walk in the SysTick ISR does not
+      depend on slicing.
     basis: >
       In the EXTI0 ISR, only the slice reset in the give calls
-      z_add_timeout (H1). Without slicing there is no slice reset.
-    experiment: m4-sweep
-    select: {slice: noslice}
-    metric: m4.mask.e22[z_add_timeout]
-    stat: n
-    expect: {range: [0, 0]}
-    wrong_if: The give adds a timeout also without slicing.
+      z_add_timeout (H1). Without slicing there is no slice reset. The
+      timer restarts and the sleeper wakes run in the SysTick ISR, with or
+      without slicing.
+    wrong_if: >
+      The give or a switch adds a timeout also without slicing, or slicing
+      changes the restart walk.
+    checks:
+      - id: a
+        formerly: m4-sweep/2
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {slice: noslice}
+        metric: m4.mask.e22[z_add_timeout]
+        stat: n
+        expect: {range: [0, 0]}
+        basis: No number. Without slicing there is no slice reset.
+      - id: b
+        formerly: m4-sweep/2
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {slice: noslice, sleepers: s0}
+        metric: m4.mask.t[z_add_timeout]
+        stat: n
+        expect: {range: [0, 0]}
+        basis: >
+          As a. Reconstruction: with sleepers, k_sleep also calls
+          z_add_timeout in thread context (H1). Thus the check uses only the
+          points without sleepers.
+      - id: c
+        formerly: m4-sweep/2
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        manual: true
+        statement: >
+          Without slicing, the SysTick entries of z_add_timeout and the max
+          of H1 a stay: the restart walk does not depend on slicing.
+        basis: No number. The timer restarts and the sleeper wakes run in the SysTick ISR, with or without slicing.
 
-  - id: H7
-    formerly: m4-sweep/2
+  - id: H3
     type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: Without slicing, the thread entry of z_add_timeout for the slice reset is absent.
+    statement: >
+      At the same priority, the SysTick ISR body is the largest blocking
+      time for EXTI0. Its max grows faster with the timers than the longest
+      mask section.
     basis: >
-      As H6. Reconstruction: with sleepers, k_sleep also calls
-      z_add_timeout in thread context (H1). Thus the check uses only the
-      points without sleepers.
-    experiment: m4-sweep
-    select: {slice: noslice, sleepers: s0}
-    metric: m4.mask.t[z_add_timeout]
-    stat: n
-    expect: {range: [0, 0]}
-    wrong_if: A switch adds a timeout also without slicing.
+      The SysTick ISR body contains the callbacks and the restarts of
+      several expiries in one tick. At the same priority, EXTI0 waits for
+      the whole body.
+    wrong_if: >
+      The mask sections, not the SysTick ISR body, set the IRQ tail at the
+      same priority, or the app changes the work of the SysTick ISR.
+    checks:
+      - id: a
+        formerly: m4-sweep/4
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        manual: true
+        statement: >
+          The SysTick ISR body max grows faster than the longest mask
+          section. It is the largest blocking time for EXTI0 at the same
+          priority.
+        basis: No number. The SysTick ISR body contains the callbacks and the restarts of several expiries in one tick.
+      - id: b
+        formerly: m4-validate/t64-same
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: t64-same}
+        metric: m4.isr.e15
+        stat: max(max)
+        expect: {range: [7500, 9500]}
+        basis: >
+          Estimate. The body plus the hooks of its sections. ws-up
+          systick-prio-1m t64-same has an IRQ max of 7775 and an IRQ p99.99
+          of 5312. The comment gives no basis for the limits.
+      - id: c
+        formerly: m4-thread/3
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        manual: true
+        statement: At 64 timers, the SysTick ISR body max is as in m4-validate t64-same.
+        basis: No number. Both apps use the same 64 periodic load timers, and the SysTick ISR restarts them.
+      - id: d
+        formerly: m4-validate/t256-same
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: t256-same}
+        metric: m4.isr.e15
+        stat: max(max)
+        expect: {range: [33000, 42000]}
+        basis: >
+          Estimate. ws-up systick-prio-1m t256-same has an IRQ max of 34762
+          and an IRQ p99.99 of 24704. The comment gives no basis for the
+          limits.
+      - id: e
+        formerly: m4-sweep/4
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t256, sleepers: s0}
+        metric: m4.isr.e15
+        stat: max(max)
+        expect: {range: [33000, 42000]}
+        basis: >
+          Estimate. ws-up wake-timers-1m at 256 timers has an IRQ max of
+          33005..36140. The comment gives no basis for the limits.
+      - id: f
+        formerly: m4-validate/t256-wheel
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: t256-wheel}
+        metric: m4.isr.e15
+        stat: max(max)
+        expect: {range: [6500, 9000]}
+        basis: >
+          Estimate. ws-up timeout-backends-1m wheel has an IRQ max of 7160 and
+          an IRQ p99.99 of 5056. The comment gives no basis for the limits.
 
-  - id: H8
-    formerly: m4-sweep/2
+  - id: H4
     type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
     statement: >
-      Without slicing, the SysTick entries of z_add_timeout and the max of
-      H1 stay: the restart walk does not depend on slicing.
-    basis: The timer restarts and the sleeper wakes run in the SysTick ISR, with or without slicing.
-    experiment: m4-sweep
-    manual: true
-    wrong_if: Slicing changes the restart walk.
-
-  - id: H9
-    formerly: m4-sweep/3
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: >
-      With slicing, the irq6 (EXTI0) entry of z_add_timeout has a max of
-      about 300 + 25 x (the timeouts that expire in the next 20 ms). At
-      256 timers this is about 3000..3800, about half of the max of H5.
+      Code that walks no list masks the interrupts only for a short time,
+      and the load does not change this time. This applies to the sites with
+      a fixed cost and to the thread to thread wake with a semaphore or a
+      mutex.
     basis: >
-      Estimate. The slice reset adds a timeout 20 ms ahead, so the walk
-      stops at the timeouts of the next 20 ms. The comment gives no count
-      of these timeouts. In the formula, the range is 108..140 timeouts.
-    experiment: m4-sweep
-    select: {timers: t256, sleepers: s0, slice: slice}
-    metric: m4.mask.e22[z_add_timeout]
-    stat: max(max_net)
-    expect: {range: [3000, 3800]}
-    wrong_if: The slice reset walks more or fewer timeouts than the model says.
-
-  - id: H10
-    formerly: m4-sweep/4
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: At 256 timers, the SysTick ISR body has a max of 33000..42000.
-    basis: >
-      Estimate. ws-up wake-timers-1m at 256 timers has an IRQ max of
-      33005..36140. The comment gives no basis for the limits.
-    experiment: m4-sweep
-    select: {timers: t256, sleepers: s0}
-    metric: m4.isr.e15
-    stat: max(max)
-    expect: {range: [33000, 42000]}
-    wrong_if: The SysTick ISR body is not the source of the IRQ max at the same priority.
-
-  - id: H11
-    formerly: m4-sweep/4
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: >
-      The SysTick ISR body max grows faster than the longest mask section.
-      It is the largest blocking time for EXTI0 at the same priority.
-    basis: The SysTick ISR body contains the callbacks and the restarts of several expiries in one tick.
-    experiment: m4-sweep
-    manual: true
-    wrong_if: The mask sections, not the SysTick ISR body, set the IRQ tail at the same priority.
-
-  - id: H12
-    formerly: m4-sweep/5
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: >
-      The sites with a fixed cost do not change over the axes (within
-      10 %): the middle part of PendSV, the wake window of arch_cpu_idle,
-      k_sem_give and k_sem_take.
-    basis: >
-      Estimate. The comment calls the cost of these sites fixed. It gives
-      no basis for 10 % and does not name the statistic. The check uses
-      max_net, as the other mask checks.
-    experiment: m4-sweep
-    metric:
-      - m4.mask.e14[z_arm_pendsv]
-      - m4.mask[arch_cpu_idle]
-      - m4.mask[z_impl_k_sem_give]
-      - m4.mask[z_impl_k_sem_take]
-    stat: max(max_net)
-    expect: {spread_le: 0.10}
-    wrong_if: The load changes the cost of code that does not walk a list.
-
-  - id: H13
-    formerly: m4-sweep/6
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: Without timers and sleepers, the masked share of the window is below 2 %.
-    basis: Estimate. The comment gives no basis for 2 %.
-    experiment: m4-sweep
-    select: {timers: t0, sleepers: s0}
-    metric: meta.m4_masked_share
-    stat: value
-    expect: {range: [0, 0.02]}
-    wrong_if: The kernel masks the interrupts for a large part of the time also without load.
-
-  - id: H14
-    formerly: m4-sweep/6
-    type: model
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: The masked share of the window grows with the load.
-    basis: More timeouts make the walks longer (H2).
-    experiment: m4-sweep
-    manual: true
-    wrong_if: The load does not change the masked time.
-
-  - id: H15
-    formerly: m4-sweep/7
-    type: method
-    written: 2026-10-25, before m4-sweep/20261026T000640Z
-    statement: >
-      m4_unmatched_end and m4_begin_open are 0 in all logs (apart from the
-      start-up), and dropped is 0 (fewer than 64 sites).
-    basis: >
-      Two sections never overlap, and each start has one end (m4.rst).
-      m4-design.md §7 counts about 39 call sites that start a section. The
-      split by context makes more sites, but the comment expects fewer
-      than 64.
-    experiment: m4-sweep
-    metric: [meta.m4_unmatched_end, meta.m4_begin_open, meta.dropped]
-    stat: value
-    expect: {range: [0, 0]}
-    wrong_if: The site values are not complete or not correct.
-
-  # --------------------------------------------------------------- m4-thread
-  - id: H16
-    formerly: m4-thread/1
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: >
-      The thread context has more sites than in wake_latency: the wake
-      call of the giver, the switch (arch_swap ends the section of the
-      lock in the wake call), the slice abort and the slice add.
-    basis: The giver is a thread, so its wake call and the switch to the taker run in thread context.
-    experiment: m4-thread
-    manual: true
-    wrong_if: The model of the thread wake path is not correct.
-
-  - id: H17
-    formerly: m4-thread/2
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: With the semaphore and no timers, no thread site has a max above 1000.
-    basis: Estimate. The comment gives no basis for 1000 cycles.
-    experiment: m4-thread
-    select: {primitive: sem, timers: t0}
-    metric: m4.mask.t
-    stat: max(max)
-    expect: {range: [0, 1000]}
-    wrong_if: The semaphore wake masks the interrupts longer than expected.
-
-  - id: H18
-    formerly: m4-thread/2
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: >
-      With the mutex and no timers, the lock and the unlock sites
-      (priority inheritance under the lock) have a max below 1500.
-    basis: Estimate. The comment gives no basis for 1500 cycles.
-    experiment: m4-thread
-    select: {primitive: mutex, timers: t0}
-    metric:
-      - m4.mask.t[z_impl_k_mutex_lock]
-      - m4.mask.t[z_impl_k_mutex_unlock]
-    stat: max(max)
-    expect: {range: [0, 1499]}
-    wrong_if: The priority inheritance masks the interrupts longer than expected.
-
-  - id: H19
-    formerly: m4-thread/3
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: At 64 timers, the longest mask section is 1800..2600, as in m4-sweep t64.
-    basis: As H4.
-    experiment: m4-thread
-    select: {timers: t64}
-    metric: m4.mask
-    stat: max(max_net)
-    expect: {range: [1800, 2600]}
-    wrong_if: The app changes the timeout walk.
-
-  - id: H20
-    formerly: m4-thread/3
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: At 64 timers, the longest mask section is in z_add_timeout.
-    basis: As H1.
-    experiment: m4-thread
-    select: {timers: t64}
-    metric: m4.mask
-    stat: top_place
-    expect: {equals: z_add_timeout}
-    wrong_if: A site of the thread wake masks longer than the timeout insert.
-
-  - id: H21
-    formerly: m4-thread/3
-    type: model
-    written: 2026-10-25, before m4-thread/20261026T004002Z
-    statement: At 64 timers, the SysTick ISR body max is as in m4-validate t64-same.
-    basis: Both apps use the same 64 periodic load timers, and the SysTick ISR restarts them.
-    experiment: m4-thread
-    manual: true
-    wrong_if: The app changes the work of the SysTick ISR.
+      The middle part of PendSV, the wake window of arch_cpu_idle,
+      k_sem_give and k_sem_take have a fixed cost. In thread_latency the
+      giver is a thread, so its wake call and the switch to the taker run
+      in thread context. The mutex does the priority inheritance under the
+      lock.
+    wrong_if: >
+      The load changes the cost of code that does not walk a list, the
+      kernel masks the interrupts for a large part of the time also without
+      load, the model of the thread wake path is not correct, or the
+      semaphore wake or the priority inheritance masks the interrupts
+      longer than expected.
+    checks:
+      - id: a
+        formerly: m4-sweep/5
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        metric:
+          - m4.mask.e14[z_arm_pendsv]
+          - m4.mask[arch_cpu_idle]
+          - m4.mask[z_impl_k_sem_give]
+          - m4.mask[z_impl_k_sem_take]
+        stat: max(max_net)
+        expect: {spread_le: 0.10}
+        basis: >
+          Estimate. The comment calls the cost of these sites fixed. It gives
+          no basis for 10 % and does not name the statistic. The check uses
+          max_net, as the other mask checks.
+      - id: b
+        formerly: m4-validate/cal-t0
+        written: 2026-10-25, before m4-validate/20261025T235532Z
+        experiment: m4-validate
+        select: {point: cal-t0}
+        metric: [m4.mask, m4.isr]
+        stat: max(max)
+        expect: {range: [0, 2000]}
+        basis: Estimate. The comment gives no basis for 2000 cycles.
+      - id: c
+        formerly: m4-sweep/6
+        written: 2026-10-25, before m4-sweep/20261026T000640Z
+        experiment: m4-sweep
+        select: {timers: t0, sleepers: s0}
+        metric: meta.m4_masked_share
+        stat: value
+        expect: {range: [0, 0.02]}
+        basis: Estimate. The comment gives no basis for 2 %.
+      - id: d
+        formerly: m4-thread/1
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        manual: true
+        statement: >
+          The thread context has more sites than in wake_latency: the wake
+          call of the giver, the switch (arch_swap ends the section of the
+          lock in the wake call), the slice abort and the slice add.
+        basis: No number. The giver is a thread, so its wake call and the switch to the taker run in thread context.
+      - id: e
+        formerly: m4-thread/2
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        select: {primitive: sem, timers: t0}
+        metric: m4.mask.t
+        stat: max(max)
+        expect: {range: [0, 1000]}
+        basis: Estimate. The comment gives no basis for 1000 cycles.
+      - id: f
+        formerly: m4-thread/2
+        written: 2026-10-25, before m4-thread/20261026T004002Z
+        experiment: m4-thread
+        select: {primitive: mutex, timers: t0}
+        metric:
+          - m4.mask.t[z_impl_k_mutex_lock]
+          - m4.mask.t[z_impl_k_mutex_unlock]
+        stat: max(max)
+        expect: {range: [0, 1499]}
+        basis: Estimate. The comment gives no basis for 1500 cycles.

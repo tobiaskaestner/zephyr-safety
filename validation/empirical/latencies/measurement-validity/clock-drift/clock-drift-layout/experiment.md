@@ -29,4 +29,4 @@ The points are the cube of the axes `bins` and `samples` (point id
 ## References
 
 - `../clock-drift/experiment.md`.
-- `wake-timers-1m`: owned by `load-scaling`.
+- `wake-timers-1m`: owned by `load-scaling/timeout-queue-cost`.

@@ -70,5 +70,5 @@ central_results:
       Each SysTick reprogram loses about 8 cycles, and the gap
       compensation removes the drift. With many load timers, the driver
       also loses whole reloads when the shortest reload is too short.
-    from: {hypotheses: [H1, H2, H3]}
+    from: {hypotheses: [H1, H2]}
     stat: conclusion               # a person confirms the sentence

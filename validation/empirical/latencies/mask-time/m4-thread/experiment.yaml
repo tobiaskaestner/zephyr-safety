@@ -30,3 +30,10 @@ axes:
     t64:
       value: 64
       kconfig: {LATBENCH_LOAD_TIMERS: 64}
+
+# Checks of each run. A run that fails one gets the role "excluded".
+acceptance:
+  # From m4-sweep/7 (written 2026-10-25): the same M4 log keys
+  # (common/src/irqmask.c, irqmask_table.c). The m4-thread comments gave
+  # no such check before the run m4-thread/20261026T004002Z.
+  - {id: A1, metric: [meta.m4_unmatched_end, meta.m4_begin_open, meta.dropped], stat: value, expect: {range: [0, 0]}}

@@ -50,4 +50,5 @@ axis value `slicing: noslice`. All other points have `slicing: default`.
 
 - Review 2026-10-25 §4 (timers) and §5 (threads): the model of the slice
   reset.
-- `../wake-timers-1m/experiment.md`, `../wake-threads-1m/experiment.md`: the wake data for `c`.
+- `load-scaling/timeout-queue-cost/wake-timers-1m/experiment.md`,
+  `load-scaling/timeout-queue-cost/wake-threads-1m/experiment.md`: the wake data for `c`.

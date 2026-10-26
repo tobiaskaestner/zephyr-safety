@@ -29,4 +29,5 @@ EXTI0 through BASEPRI at all priorities.
 ## References
 
 - Open item L1 (`later.md`): SysTick priority lower than the device IRQ.
-- `../wake-timers-1m/experiment.md`: the IRQ tail with load timers.
+- `load-scaling/timeout-queue-cost/wake-timers-1m/experiment.md`: the IRQ tail with
+  load timers.

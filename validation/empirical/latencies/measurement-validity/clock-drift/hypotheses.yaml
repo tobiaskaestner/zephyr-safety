@@ -1,71 +1,91 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Hypotheses of the study clock-drift. Each statement was written before
-# the run of its experiment (in the comments of the experiment files).
-# The basis texts were written on 2026-10-26, after the runs, from these
-# comments. Where a comment gave no basis for a number, the basis text
-# starts with "Reconstruction:" or "Estimate.".
+# Hypotheses of the study clock-drift. A hypothesis is one claim about a
+# mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
 #
-# Keys:
+# Each statement was written before the run of its experiment (in the
+# comments of the experiment files). The basis texts were written on
+# 2026-10-26, after the runs, from these comments. Where a comment gave
+# no basis for a number, the basis text of the check starts with
+# "Reconstruction:" or "Estimate.".
+#
+# All checks are manual: the comments gave no limit for each point.
+# clock-drift-layout stated no prediction before its run. Its drift
+# values are a central result (study.yaml).
+#
+# Keys of a hypothesis:
 #   id         unique in the study
-#   formerly   the id in the earlier experiment files and notes
 #   type       method: a property that the measurement method must have
 #              model:  a prediction from the code or from a model of the kernel
-#   written    date, and the run that came after it
-#   statement  the hypothesis, one or two sentences
-#   basis      where each number comes from
-#   experiment, select, metric, stat: the data that the check reads
-#   expect     the check (the comparison forms: study-design.md §14.4)
-#   manual     true: a person gives the verdict
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
 #   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
 
 hypotheses:
-  # ----------------------------------------------------------- clock-drift
   - id: H1
     type: model
-    written: 2026-10-24, before clock-drift/20261024T210905Z
     statement: >
       Each SysTick reprogram loses about 8 cycles of the kernel cycle
       counter. Thus the drift changes with the number of reprograms per
-      wake: time slicing, the arch interface and 16 load timers change it.
+      wake, and CORTEX_M_SYSTICK_RELOAD_GAP_COMP removes it.
     basis: >
       An unpinned first check gave about 8 lost cycles per reprogram. With
       time slicing, each wake reprograms SysTick for the slice timeout,
       unless an earlier timeout is in the queue. With 16 load timers, the
-      slice timeout is seldom the first one. The comment gives no number
-      of reprograms for each point.
-    experiment: clock-drift
-    manual: true
+      slice timeout is seldom the first one. The option measures the
+      uncounted cycles of each reprogram with the DWT cycle counter and
+      adds them to the software count.
+    wrong_if: The uncounted cycles of the SysTick reprogram are not the cause of the drift.
+    checks:
+      - id: a
+        written: 2026-10-24, before clock-drift/20261024T210905Z
+        experiment: clock-drift
+        manual: true
+        statement: >
+          The drift changes with the number of reprograms per wake: time
+          slicing, the arch interface and 16 load timers change it.
+        basis: The comment gives no number of reprograms for each point.
+      - id: b
+        written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:04 +0200, run at 00:39 +0200
+        experiment: clock-drift-fix
+        manual: true
+        statement: >
+          With CORTEX_M_SYSTICK_RELOAD_GAP_COMP (points gapcomp-*), the
+          drift is close to 0. The control (points nocomp-*) keeps the
+          drift.
+        basis: The comment gives no number for "close to 0".
 
-  # ------------------------------------------------------- clock-drift-fix
   - id: H2
     type: model
-    written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:04 +0200, run at 00:39 +0200
-    statement: >
-      With CORTEX_M_SYSTICK_RELOAD_GAP_COMP (points gapcomp-*), the drift
-      is close to 0. The control (points nocomp-*) keeps the drift.
-    basis: >
-      The cause of H1. The option measures the uncounted cycles of each
-      reprogram with the DWT cycle counter and adds them to the software
-      count. The comment gives no number for "close to 0".
-    experiment: clock-drift-fix
-    manual: true
-    wrong_if: The uncounted cycles of the SysTick reprogram are not the cause of the drift.
-
-  - id: H3
-    type: model
-    written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:33 +0200, run at 00:39 +0200
     statement: >
       A second cause: with 256 periodic timers, the kernel masks the
       SysTick IRQ for longer than the shortest reload (10 us), so the
-      driver loses whole reloads. A longer shortest reload (points
-      t256-min50us-gapcomp, t256-min200us-gapcomp) removes this loss.
+      driver loses whole reloads. A longer shortest reload removes this
+      loss.
     basis: >
       The driver programs a reload of 10 us or more (min_delay) and sees
       one counter wrap or less. Each timeout insert walks the list under
       the lock. An unpinned check gave 4668 ppm with 256 timers.
-      Reconstruction: the comment does not say which shortest reload
-      removes the loss. The points test 50 us and 200 us.
-    experiment: clock-drift-fix
-    manual: true
+    wrong_if: The loss of whole reloads is not the cause of the drift with 256 load timers.
+    checks:
+      - id: a
+        written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:33 +0200, run at 00:39 +0200
+        experiment: clock-drift-fix
+        manual: true
+        statement: >
+          The points t256-min50us-gapcomp and t256-min200us-gapcomp do not
+          have the loss of whole reloads of t256-min10us-gapcomp.
+        basis: >
+          Reconstruction: the comment does not say which shortest reload
+          removes the loss. The points test 50 us and 200 us.

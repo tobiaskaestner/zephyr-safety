@@ -50,5 +50,5 @@ central_results:
       The site table measures a probe of a known length, and the IRQ max
       with SysTick one level lower agrees with the longest mask section.
       M4 sees the mask paths of these points.
-    from: {hypotheses: [H9, H10, H16]}
+    from: {hypotheses: [H3, H4]}
     stat: conclusion

@@ -1,0 +1,37 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The files of this study, by convention (no keys):
+#   <experiment>/experiment.yaml   an experiment that it owns
+#   <experiment>/experiment.md     its description
+#   hypotheses.yaml                the hypotheses, written before the runs
+#   report.ipynb                   the report template (no outputs)
+
+name: t2t-under-load
+question: >
+  How does the thread to thread wake (t2t) of sem, mutex and msgq grow
+  with periodic load timers and sleeper threads? Does its p50 follow the
+  number n of timeouts that expire before the slice deadline, with one
+  slope for all three primitives, and does its tail grow with the load?
+
+experiments:
+  - t2t-load-1m
+
+# The results that answer the question. For now all are characterisation:
+# measured values. There are no requirement limits yet.
+#
+# Keys:
+#   id         unique in the study
+#   statement  the result as a sentence; {name} is a value of the result
+#   from       the data: experiment, point, metric, or hypotheses
+#   stat       the statistic (study-design.md §14.3)
+#   unit       the unit of the values
+central_results:
+  - id: t2t-grows-with-n
+    statement: >
+      The p50 of the thread to thread wake grows linearly with n, the
+      number of timeouts that expire before the slice deadline, with the
+      same slope for sem, mutex and msgq. Without time slicing it does not
+      grow with the load.
+    from: {hypotheses: [H1]}       # the checks c..j of H1
+    stat: conclusion               # a person confirms the sentence

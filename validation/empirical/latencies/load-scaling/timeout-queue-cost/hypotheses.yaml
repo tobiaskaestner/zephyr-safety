@@ -1,0 +1,137 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study timeout-queue-cost. A hypothesis is one claim
+# about a mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
+#
+# Each statement and each limit was written before the run of its
+# experiment (in the comments of the experiment files). The basis texts
+# were written on 2026-10-26, after the runs, from these comments. Where
+# a comment gave no basis for a number, the basis text of the check
+# starts with "Reconstruction:" or "Estimate.".
+#
+# There is no hypothesis for the timeout queue backends: the experiment
+# files timeout-backends-1m and timeout-skiplist-1m stated no prediction
+# before their runs. Their tail is a central result (study.yaml), as the
+# slopes per timer and per thread.
+#
+# Keys of a hypothesis:
+#   id         unique in the study
+#   type       method: a property that the measurement method must have
+#              model:  a prediction from the code or from a model of the kernel
+#   statement  the claim, one or two sentences
+#   basis      the mechanism and its sources
+#   wrong_if   what a wrong hypothesis means for the study
+#   checks     the tests of the claim
+# Keys of a check:
+#   id         unique in the hypothesis (a, b, ...)
+#   formerly   the label in the old experiment comments, if it had one
+#   written    date, and the run that came after it
+#   experiment, select, metric, stat: the data that the check reads
+#   expect     the comparison (forms: study-design.md §14.3)
+#   manual     true: a person gives the verdict
+#   basis      where the number of the check comes from
+#
+# Forms that are new in this file:
+#   select: {axes: {<axis>: <value> or [<value>, ...]}}   the points with these axis values
+#   order: {<axis>: [<value>, ...]}         for each value of the other axes, the stat increases in this order of the axis values
+
+hypotheses:
+  - id: H1
+    type: model
+    statement: >
+      A load makes the wake slower only through the timeouts in the
+      timeout queue that expire before a new timeout. Threads that wait
+      without a timeout and timers one hour away cost nothing. Busy
+      threads at a lower priority do not make the insert into the ready
+      queue longer. Sleeper threads make the isr2thr grow.
+    basis: >
+      The DLIST backend keeps the timeouts in the order of expiry, and an
+      insert walks only the timeouts that expire before the new one. A
+      blocked thread has no timeout, and a far timer expires after all
+      other timeouts. With SCHED_SIMPLE the woken thread has the highest
+      priority, so its insert into the ready queue does not walk the busy
+      threads. Each sleep of a sleeper adds a timeout that expires soon.
+    wrong_if: >
+      The wake path or the SysTick ISR walks over threads that wait
+      without a timeout, the insert into the ready queue walks the ready
+      threads, or the length of the timeout queue costs time also when the
+      timeouts expire late. Or the timeouts of the sleepers do not reach
+      the wake path.
+    checks:
+      - id: a
+        written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+        experiment: wake-threads-1m
+        select: {axes: {kind: blocked}}
+        metric: [irq, isr2thr]
+        manual: true
+        statement: Blocked load threads cost nothing.
+        basis: >
+          Reconstruction: each blocked thread waits forever on a semaphore of
+          its own. Thus it is not in the ready queue and it has no timeout in
+          the timeout queue. The comment gives no limit for "nothing".
+      - id: b
+        written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+        experiment: wake-threads-1m
+        select: {axes: {kind: busy}}
+        metric: isr2thr
+        manual: true
+        statement: >
+          With SCHED_SIMPLE the woken thread has the highest priority, so its
+          insert into the ready queue is O(1).
+        basis: >
+          The comment: the woken thread has priority 0, the load threads have
+          priority 5 or the lowest priority. Reconstruction: only the busy
+          threads are ready at a wake, so the busy points show this
+          hypothesis. With time slicing, the busy threads also take turns at
+          each slice expiry (20 ms); this work is not part of the insert.
+      - id: c
+        written: 2026-10-24, before wake-threads-1m/20261025T004141Z
+        experiment: wake-threads-1m
+        metric: isr2thr
+        stat: mean
+        expect: {order: [none-n0, sleeper-n2, sleeper-n8, sleeper-n16, sleeper-n64]}
+        basis: >
+          Each sleeper sleeps 1..20 ms in a loop: a timeout and a switch for
+          each sleep. Reconstruction: the comment names no statistic; the
+          check uses the mean, which holds all samples.
+      - id: d
+        written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+        experiment: wake-timers-1m
+        select: {axes: {timers: [t0, t256far]}}
+        metric: [irq, isr2thr]
+        manual: true
+        statement: >
+          An insert into the DLIST timeout queue walks only the timeouts that
+          expire before the new one. Thus 256 timers one hour away cost
+          nothing: t256far is as t0, with and without time slicing.
+        basis: >
+          The DLIST backend keeps the timeouts in the order of expiry. The far
+          timers expire after all other timeouts. The comment gives no limit
+          for "nothing".
+
+  - id: H2
+    type: model
+    statement: >
+      Periodic timers cost in the timer ISR (restart) and in the slice
+      reset of each wake. Thus with time slicing the isr2thr grows with
+      the number of timers.
+    basis: >
+      Each restart of a periodic timer and each slice reset inserts a
+      timeout, and the DLIST insert walks the timeouts that expire before
+      it.
+    wrong_if: The periodic timers do not reach the wake path; then the timeout queue does not set the growth.
+    checks:
+      - id: a
+        written: 2026-10-24, before wake-timers-1m/20261024T225125Z
+        experiment: wake-timers-1m
+        select: {axes: {anchor: default}}
+        metric: isr2thr
+        stat: mean
+        expect: {order: {timers: [t0, t16, t64, t256]}}
+        basis: >
+          Each restart of a periodic timer and each slice reset inserts a
+          timeout, and the DLIST insert walks the timeouts that expire before
+          it. Reconstruction: the comment names no statistic; the check uses
+          the mean, which holds all samples.
