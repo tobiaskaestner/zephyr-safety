@@ -144,10 +144,10 @@ Boards (``boards.yaml``)
    ``flash``
       A list of commands that program the board and reset it. ``run.py``
       runs them in order. In each argument, ``{zephyr}`` is the Zephyr of
-      the tree, and ``{elf}`` and ``{hex}`` are the images of the point.
-
-   ``console``
-      The default serial port of the console.
+      the tree, ``{elf}`` and ``{hex}`` are the images of the point, and
+      ``{probe}`` is the probe ID from the hardware map. Each command must
+      select the probe with ``{probe}``: a host can have more than one
+      probe.
 
    ``status``
       ``tested`` if data points exist, ``untested`` if the board only
@@ -162,9 +162,69 @@ Example (the entry of the NUCLEO-G474RE):
      modules: [cmsis_6, hal_stm32]
      flash:
        - [openocd, -f, "{zephyr}/boards/st/nucleo_g474re/support/openocd.cfg",
-          -c, "program {elf} verify reset exit"]
-     console: /dev/ttyACM0
+          -c, "adapter serial {probe}", -c, "program {elf} verify reset exit"]
      status: tested
+
+``boards.yaml`` has no serial port and no probe ID. These belong to the
+host. They are in the hardware map.
+
+.. _benchguide-hw-map:
+
+Hardware map (``hw-map.yml``)
+-----------------------------
+
+The hardware map tells ``run.py`` which probe and which serial port a
+board has on this host. It is a twister hardware map (see the Zephyr
+documentation, "Executing tests on multiple devices"). It is not in the
+repository: ``tests/benchmarks/.gitignore`` lists ``hw-map.yml``.
+
+Make the map with twister, from a Zephyr tree, on the host with the
+boards:
+
+.. code-block:: console
+
+   west twister --generate-hardware-map tests/benchmarks/hw-map.yml --persistent-hardware-map
+
+``--persistent-hardware-map`` writes the serial ports as
+``/dev/serial/by-id/...`` names. These names do not change when the
+boards are connected in a different sequence. Use them, not
+``/dev/ttyACM<n>``. If the file exists, twister updates it and keeps the
+other entries.
+
+Then edit each entry:
+
+- Set ``platform`` to the board target of ``boards.yaml``.
+- Add the fixture ``latbench_loopback`` if the board has the wire. A text
+  after a colon is a note, for example ``latbench_loopback:D2-A3``.
+- If a probe has more than one serial port (the J-Link OB of the Nordic
+  DKs), twister writes one entry for each port. Keep the entry of the
+  console port, and write the reason in ``notes``.
+
+Example:
+
+.. code-block:: yaml
+
+   - connected: true
+     id: 0042003F3433510A37363934
+     platform: nucleo_g474re
+     product: STLINK-V3
+     runner: openocd
+     serial: /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
+     fixtures:
+       - latbench_loopback:D2-A3
+
+``run.py`` reads the map only when it flashes (not with ``--dry-run``,
+``--build-only`` or ``--rebuild``). It checks the map against the twister
+schema of the first tree of the experiment
+(``scripts/schemas/twister/hwmap-schema.yaml``). Then it selects the one
+entry with ``connected: true``, the board target in ``platform`` and the
+fixture ``latbench_loopback``. ``probe_id`` replaces ``id`` as the probe
+ID, as in twister. ``baud`` or ``serial_baud`` sets the baud rate
+(default 115200). The manifest records the entry in ``hardware``.
+
+The map has no data that changes a measurement, so it is not part of the
+provenance of a data point. The manifest records it for the
+investigation of a failed run.
 
 Run an experiment (``run.py``)
 ------------------------------
@@ -196,9 +256,14 @@ Options:
        stored files (see :ref:`benchguide-rebuild`). ``<run>`` is a run
        folder or one ``<run>/<tree>/<point>`` folder. Use it without an
        experiment and without ``--out``. ``--only`` selects points.
+   * - ``--hardware-map <file>``
+     - The hardware map (default: ``tests/benchmarks/hw-map.yml``, see
+       :ref:`benchguide-hw-map`).
+   * - ``--probe <id>``
+     - Select the map entry with this probe ID, if the map has more than
+       one entry for the board. With ``--port``, ``run.py`` uses no map.
    * - ``--port <dev>``
-     - The serial port (default: ``console`` of the board in
-       ``boards.yaml``).
+     - The serial port (default: ``serial`` of the map entry).
    * - ``--trees-root <dir>``
      - Override ``root`` of ``trees.yaml``.
 
@@ -213,6 +278,9 @@ Options:
    not examined. Then it expands the points.
    An axis value name that YAML reads as a Boolean (``on``, ``off``,
    ``yes``, ``no``, ``true``, ``false``) stops the run.
+#. **Hardware.** It selects the entry of the board in the hardware map
+   (see :ref:`benchguide-hw-map`). Without one connected entry with the
+   fixture ``latbench_loopback``, the run stops before it builds.
 #. **Snapshot.** It exports the safety repository at the current revision
    with ``git archive`` into ``<run>/src/``. All builds use this snapshot,
    not the worktree. Thus work in the worktree during a long run does not

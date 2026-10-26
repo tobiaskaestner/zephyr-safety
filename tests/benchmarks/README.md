@@ -10,8 +10,10 @@ cycles on the NUCLEO-G474RE). The full guide is the Sphinx document
 Only the NUCLEO-G474RE has data points. `boards.yaml` lists the other
 boards; their ports build, but nobody ran them yet.
 
-- NUCLEO-G474RE, connected through its ST-LINK (console on
-  `/dev/ttyACM0`, 115200 baud).
+- NUCLEO-G474RE, connected through its ST-LINK (console at 115200
+  baud). The probe and the console of each board are in the hardware
+  map of the host, `hw-map.yml` (twister format, not checked in; see
+  the guide, host tools).
 - One wire from D2 (PA10) to A3 (PB0) on the Arduino header.
   - PA10 is also TIM2 channel 4. TIM2 makes the stimulus edge.
   - PB0 is on EXTI line 0, which has its own interrupt vector.
@@ -21,10 +23,12 @@ boards; their ports build, but nobody ran them yet.
 | Path | Content |
 |---|---|
 | `trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
-| `boards.yaml` | For each board: port folder, modules, flash commands, console |
+| `boards.yaml` | For each board: port folder, modules, flash commands |
+| `hw-map.yml` | Not checked in: the probe and the console of each board on this host (twister hardware map) |
 | `experiments/*.yaml` | One file for each experiment: app, trees, points, repetitions |
 | `scripts/trees.py` | Creates and checks the pinned worktrees |
 | `scripts/run.py` | Runs an experiment and records its provenance |
+| `scripts/hwmap.py` | Reads the hardware map and selects the entry of a board |
 | `scripts/latbench.py` | Parses logs and prints percentiles |
 | `scripts/plot.py` | Plots the exceedance probability and the histograms |
 | `scripts/requirements.txt` | Python packages for the scripts |

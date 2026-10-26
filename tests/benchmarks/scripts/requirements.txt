@@ -2,3 +2,4 @@
 pyserial>=3.5
 PyYAML>=6.0
 matplotlib>=3.8
+jsonschema>=4.0

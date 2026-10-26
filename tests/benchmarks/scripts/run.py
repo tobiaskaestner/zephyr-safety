@@ -14,6 +14,9 @@ Rules (a run stops before it builds anything if one is broken):
 - The Zephyr SDK has the pinned version.
 - The build uses only the modules of the tree (ZEPHYR_MODULES), not the
   modules of a west workspace.
+- The hardware map of the host (hw-map.yml, twister format, not checked in)
+  has one connected entry for the board, with the fixture
+  "latbench_loopback". It gives the probe and the console (scripts/hwmap.py).
 
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
@@ -60,6 +63,7 @@ from pathlib import Path
 import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402
 
@@ -130,10 +134,11 @@ def safety_repo_state():
     return root, rev, dirty
 
 
-def flash_command(board_cfg, zephyr, pdir):
+def flash_command(board_cfg, zephyr, pdir, probe):
     """Return one command that runs the flash commands of the board in order."""
-    images = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex")}
-    cmds = [[arg.format(**images) for arg in cmd] for cmd in board_cfg["flash"]]
+    fields = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex"),
+              "probe": probe}
+    cmds = [[arg.format(**fields) for arg in cmd] for cmd in board_cfg["flash"]]
     if len(cmds) == 1:
         return cmds[0]
     return ["sh", "-c", " && ".join(shlex.join(c) for c in cmds)]
@@ -390,6 +395,23 @@ def rebuild(args):
         sys.exit(1)
 
 
+def select_hardware(args, board, zephyr):
+    """Return the probe and console of the board: from the hardware map, or from --probe and --port."""
+    if args.port and args.probe:
+        return {"platform": [board], "probe": args.probe, "id": args.probe, "product": None, "runner": None,
+                "serial": args.port, "baud": 115200, "fixtures": [], "notes": "from --probe and --port"}
+    try:
+        schema = zephyr / hwmap.SCHEMA
+        entries = hwmap.load(args.hardware_map, schema if schema.is_file() else None)
+        hw = hwmap.hardware(hwmap.select(entries, board, args.probe, args.hardware_map))
+    except hwmap.HwMapError as e:
+        fail(str(e))
+    hw["map"] = str(Path(args.hardware_map).resolve())
+    if args.port:
+        hw["serial"] = args.port
+    return hw
+
+
 def main():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     p.add_argument("experiment", nargs="?")
@@ -398,7 +420,10 @@ def main():
                    help="build the points of a run folder (or of one <run>/<tree>/<point> folder) again"
                         " and compare them with the stored images; does not flash")
     p.add_argument("--trees-root")
-    p.add_argument("--port", help="serial port of the console (default: console of the board in boards.yaml)")
+    p.add_argument("--hardware-map", default=str(hwmap.DEFAULT),
+                   help=f"hardware map of the host (default: {hwmap.DEFAULT.relative_to(BENCH_DIR)})")
+    p.add_argument("--probe", help="probe id: select the entry of the hardware map; with --port, no map is necessary")
+    p.add_argument("--port", help="serial port of the console (default: serial of the entry in the hardware map)")
     p.add_argument("--only", nargs="*", help="run only these point ids")
     p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
@@ -437,7 +462,6 @@ def main():
     except trees.TreeError as e:
         fail(str(e))
     board_cfg = boards["boards"][board]
-    port = args.port or board_cfg["console"]
     if not (BENCH_DIR / exp["app"]).is_dir():
         fail(f"no app folder {exp['app']}")
     points = expand_points(exp)
@@ -451,6 +475,10 @@ def main():
         print(f"  {pt['id']}: {pt['kconfig']} {pt['conf_files']} {pt['dtc_overlays']}")
     if args.dry_run:
         return
+    if not args.build_only:
+        hw = select_hardware(args, board, trees.repo_dir(tree_cfg, exp["trees"][0], "zephyr"))
+        port = hw["serial"]
+        print(f"board {board}: probe {hw['probe']} ({hw['product']}), console {port}")
     if args.build_only:
         import tempfile
 
@@ -508,6 +536,7 @@ def main():
         },
         "board": board,
         "board_cfg": board_cfg,
+        "hardware": hw,
         "console": port,
         "probe_serial": probe_serial,
         "points": [],
@@ -546,12 +575,12 @@ def main():
                 "logs": [],
             }
             manifest["points"].append(entry)
-            flash_cmd = flash_command(board_cfg, zephyr, pdir)
+            flash_cmd = flash_command(board_cfg, zephyr, pdir, hw["probe"])
             for rep in range(1, exp.get("repeat", 1) + 1):
                 log = pdir / f"rep{rep}.log"
                 print(f"[{tree}/{pt['id']}] rep {rep}", flush=True)
                 try:
-                    latbench.run_capture(log, flash_cmd, port, timeout=exp.get("timeout", 600))
+                    latbench.run_capture(log, flash_cmd, port, baud=hw["baud"], timeout=exp.get("timeout", 600))
                 except latbench.CaptureError as e:
                     entry["error"] = str(e)
                     save_manifest()

@@ -223,8 +223,8 @@ Board ``nucleo_g474re``
      - ``clocks/`` (85 MHz and 16 MHz, see :doc:`hardware`), ``systick/``
        (see :ref:`benchguide-systick-wrap`).
    * - ``boards.yaml``
-     - Modules ``cmsis_6``, ``hal_stm32``. Flash with OpenOCD. Console
-       ``/dev/ttyACM0``. ``status: tested``.
+     - Modules ``cmsis_6``, ``hal_stm32``. Flash with OpenOCD; ``adapter serial``
+       selects the ST-LINK. ``status: tested``.
 
 Board ``nrf52840dk``
 --------------------
@@ -267,7 +267,8 @@ Board ``nrf52840dk``
        (``C_DEBUGEN``) is 1 while a debugger is connected.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nordic``. Flash with ``nrfutil`` (the
-       ``.hex``). Console ``/dev/ttyACM0``. ``status: untested``.
+       ``.hex``); ``--serial-number`` selects the probe.
+       ``status: untested``.
 
 Examine these items first on the hardware:
 
@@ -328,8 +329,9 @@ Board ``nrf54l15dk``
      - ``dhcsr=<value>``, as on the nRF52840 DK.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nordic``. Flash with ``nrfutil`` (the
-       ``.hex``). Console ``/dev/ttyACM1`` (``uart20`` on the second VCOM
-       of the DK). ``status: untested``.
+       ``.hex``); ``--serial-number`` selects the probe. The console
+       (``uart20``) is on the second VCOM of the DK (interface ``if02``
+       of the J-Link OB). ``status: untested``.
 
 Examine these items first on the hardware:
 
@@ -389,8 +391,8 @@ Board ``mimxrt1060_evk``
        ``CCM_CLPCR`` instead.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nxp``. Flash with ``pyocd`` (the
-       ``.elf``, because the build makes no ``.hex``). Console
-       ``/dev/ttyACM0``. ``status: untested``.
+       ``.elf``, because the build makes no ``.hex``); ``-u`` selects the
+       probe. ``status: untested``.
 
 Examine these items first on the hardware:
 
@@ -436,8 +438,10 @@ Add a board
    ``port.cmake``, as ``nucleo_g474re`` does. Run the unit tests of the
    code placement and a smoke run with ``LATBENCH_CODE_RAM``.
 #. Add the board target to ``boards.yaml``: ``port``, ``modules``,
-   ``flash``, ``console`` and ``status: untested``. Write the wire and the
-   untested parts in a comment.
+   ``flash`` (with ``{probe}``, so that the command selects the probe)
+   and ``status: untested``. Write the wire and the untested parts in a
+   comment. Add the board to the hardware map of your host (see
+   :ref:`benchguide-hw-map`).
 #. If a tree does not pin a module of the board, add the module to the
    tree in ``trees.yaml`` (see :ref:`benchguide-tree-rule`).
 #. Add an overlay for ``loopback_check`` in ``loopback_check/boards/``.
