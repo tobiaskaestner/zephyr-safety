@@ -339,3 +339,24 @@ def test_add_refuses_wrong_board_and_unknown_experiment(tmp_path):
     (run / "manifest.json").write_text(json.dumps(m))
     with pytest.raises(instance.InstanceError):
         instance.add(design, inst, run, copy=True)
+
+
+def tiny_elf(payload):
+    """An ELF32 little-endian file with one PT_LOAD segment of payload at paddr 0x08000000."""
+    import struct
+    ehdr = bytearray(52)
+    ehdr[:6] = b"\x7fELF\x01\x01"
+    struct.pack_into("<I", ehdr, 0x1C, 52)          # e_phoff
+    struct.pack_into("<HH", ehdr, 0x2A, 32, 1)      # e_phentsize, e_phnum
+    phdr = struct.pack("<IIIIIIII", 1, 84, 0x08000000, 0x08000000, len(payload), len(payload), 5, 4)
+    return bytes(ehdr) + phdr + payload
+
+
+def test_image_and_code_digest(tmp_path):
+    from studylib import runfiles
+    rev_a, rev_b = "a" * 40, "b" * 40
+    (tmp_path / "a.elf").write_bytes(tiny_elf(b"code" + rev_a.encode() + b"more"))
+    (tmp_path / "b.elf").write_bytes(tiny_elf(b"code" + rev_b.encode() + b"more"))
+    assert runfiles.image_sha256(tmp_path / "a.elf") != runfiles.image_sha256(tmp_path / "b.elf")
+    assert runfiles.code_sha256(tmp_path / "a.elf", rev_a) == runfiles.code_sha256(tmp_path / "b.elf", rev_b)
+    assert runfiles.bench_rev({"cmake": ["cmake", f"-DLATBENCH_SRC_REV={rev_a}"]}) == rev_a

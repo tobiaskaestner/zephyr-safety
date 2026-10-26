@@ -107,8 +107,11 @@ The board is in the folder name only at the level that fixes it
 
 ``run.json`` has the run identity and provenance, and for each point its
 axes, the digests of ``.config``, ``zephyr.dts``, ``zephyr.elf``,
-``zephyr.hex`` and ``build.log``, and the image digest (the loadable
-segments of the ELF). The app data come from the extractor of the app,
+``zephyr.hex`` and ``build.log``, the image digest (the loadable
+segments of the ELF) and the code digest. The image has the safety
+revision of the build (``LATBENCH_SRC_REV``), so the same code at two
+revisions gives two image digests; the code digest counts these 40
+characters as zeros, so the same code gives the same code digest. The app data come from the extractor of the app,
 ``tests/benchmarks/<app>/scripts/extract.py``: META, the histograms, the
 tick phase tables, the M4 sites, and a check of the ``LAT CFG`` values
 against ``.config``.

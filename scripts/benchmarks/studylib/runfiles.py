@@ -29,13 +29,14 @@ from .design import repo_rel
 POINT_FILES = (".config", "zephyr.dts", "zephyr.elf", "zephyr.hex", "build.log")
 
 
-def image_sha256(elf):
+def image_sha256(elf, mask=None):
     """sha256 over (paddr, filesz, bytes) of the PT_LOAD segments of an ELF32, sorted by paddr.
 
     This is the image that the probe writes: it does not change with the
     debug information or the build folder. It has the bench_rev string of
     the app (LATBENCH_SRC_REV), so the same code at two safety revisions
-    gives two digests.
+    gives two digests; with mask (the bench_rev bytes) these bytes count as
+    zeros (code_sha256).
     """
     data = Path(elf).read_bytes()
     if data[:4] != b"\x7fELF" or data[4] != 1 or data[5] != 1:
@@ -49,9 +50,17 @@ def image_sha256(elf):
             segs.append((p_paddr, p_filesz, p_offset))
     h = hashlib.sha256()
     for paddr, filesz, offset in sorted(segs):
+        seg = data[offset:offset + filesz]
+        if mask:
+            seg = seg.replace(mask, b"0" * len(mask))
         h.update(struct.pack("<II", paddr, filesz))
-        h.update(data[offset:offset + filesz])
+        h.update(seg)
     return h.hexdigest()
+
+
+def code_sha256(elf, bench_rev):
+    """image_sha256 with the bench_rev string set to zeros: the same code at two revisions gives one digest."""
+    return image_sha256(elf, bench_rev.encode()) if bench_rev else None
 
 
 def design_axes(experiment_file):
@@ -62,6 +71,14 @@ def design_axes(experiment_file):
         return {p["id"]: p["axes"] for p in runpy.expand_points(yaml.safe_load(Path(experiment_file).read_text()))}
     except SystemExit:
         return {}
+
+
+def bench_rev(entry):
+    """The LATBENCH_SRC_REV of the build of a point (from its CMake command), or None."""
+    for a in entry.get("cmake", []):
+        if a.startswith("-DLATBENCH_SRC_REV="):
+            return a.split("=", 1)[1]
+    return None
 
 
 def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
@@ -89,6 +106,7 @@ def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
             "tree": e["tree"], "point": e["id"], "axes": axes,
             "files": {n: files[f"{rel}/{n}"] for n in POINT_FILES if f"{rel}/{n}" in files},
             "image_sha256": image_sha256(elf) if elf.is_file() else None,
+            "code_sha256": code_sha256(elf, bench_rev(e)) if elf.is_file() else None,
             "reps": [{"rep": i, "log": log, "log_sha256": files.get(log)} for i, log in enumerate(e["logs"], 1)],
         })
     note = {"manifest": "manifest"}.get("/".join(sorted(sources)))

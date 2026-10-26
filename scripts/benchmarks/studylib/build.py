@@ -283,13 +283,13 @@ class Tree:
                         coarse = (h["coarse"][0][0], h["coarse"][0][2]) if h["coarse"] else (None, None)
                         rows.append([r["id"], r["role"], p["tree"], p["point"], rep["rep"],
                                      *[p["axes"].get(a) for a in axes_all], metric, *vals, *coarse,
-                                     p["image_sha256"]])
+                                     p["image_sha256"], p.get("code_sha256")])
         efile = self.design.experiments.get(exp)
         return {"format": "latbench-experiment/2", "made_by": self.made_by, "experiment": exp,
                 "design": efile.file_ref() if efile else None,
                 "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
                 "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
-                            "coarse_from", "coarse_width", "image_sha256"],
+                            "coarse_from", "coarse_width", "image_sha256", "code_sha256"],
                 "rows": rows}
 
 
