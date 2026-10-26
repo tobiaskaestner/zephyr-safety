@@ -284,6 +284,18 @@ config LATBENCH_LOAD_TIMER_MAX_MS
 	depends on LATBENCH_LOAD_TIMER_PERIODIC
 	default 100
 
+config LATBENCH_LOAD_TIMER_SEED
+	hex "Seed of the periodic load timers"
+	depends on LATBENCH_LOAD_TIMER_PERIODIC
+	range 0x1 0xffffffff
+	default 0x6a09e667
+	help
+	  Start value of the xorshift32 generator that gives the period and
+	  the first expiry of each load timer. The default is the seed of all
+	  runs before this option. The seed sets which ticks have many
+	  expiries, and thus the long system timer ISRs of the run.
+	  scripts/loadmodel.py calculates these ticks for a seed.
+
 config LATBENCH_SYSTICK_PRIO
 	int "IRQ priority of SysTick (-1: the driver default)"
 	depends on CORTEX_M_SYSTICK

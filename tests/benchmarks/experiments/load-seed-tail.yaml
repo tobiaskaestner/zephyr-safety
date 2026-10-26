@@ -1,0 +1,92 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Question: what sets the tail of the IRQ latency, the run length, the
+# stimulus seed or the load timers? stim-seed-1m showed that 8 stimulus
+# seeds act as new independent samples (the counts above each threshold
+# agree with Poisson). The model of the load timers (scripts/loadmodel.py)
+# says that the long SysTick ISRs come from ticks on which several load
+# timers expire. LATBENCH_LOAD_TIMER_SEED sets these ticks; the stimulus
+# seed does not. Thus a stimulus seed gives new edges on the same ticks,
+# but a longer run or a load seed gives new ticks.
+#
+# Point: wp3-wake-1m baseline-t64, as in stim-seed-1m (default stimulus
+# seed). Reference: the 8 seeds of stim-seed-1m (cos-workstation,
+# 20261026T155715Z), irq, per 1M samples:
+#
+#   samples >= 4288: mean 100.4 (90..108)   >= 5952: mean 5.2 (3..6)
+#   max 6240..7840
+#
+# Model, ticks with >= k expiries in a run of 1M samples (311 s):
+#
+#   load seed     >=2    >=3   >=4  >=5  >=6
+#   0x6a09e667  33484   1518    39    0    0   (default)
+#   0x90befffa  23515    948    33    0    0
+#   0x78a5636f  43903   2674   125    8    1
+#   0xc67178f2  52259   3608   209    9    0
+#
+# The load seeds come from "loadmodel.py scan" over the 64 SHA-256 round
+# constants, by this rule: the fewest and the most ticks with >= 3
+# expiries (0x90befffa, 0xc67178f2), and the only seed with a tick with 6
+# expiries and the most ticks with >= 5 (0x78a5636f).
+#
+# The default point with 4M samples (1245 s) has 6142 ticks with >= 3,
+# 199 with >= 4, and 1 tick with 5 expiries (at 920 s).
+#
+# Predictions (written before the run):
+#
+#   1. default-4m: a longer run gives the same as more stimulus seeds.
+#      The counts are 4 x the mean of the 8 seeds, times the model ratio
+#      of the ticks: >= 4288: 406 (365..450); >= 5952: 27 (17..37).
+#      p50..p99.99 are in the range of the 8 seeds (+-1 coarse bin). The
+#      max is 7000..8000. An edge early in the one ISR with 5 expiries
+#      can give more than 8000, with a probability of about 4 %.
+#   2. The count >= 4288 changes with the ticks with >= 3 expiries:
+#      0x90befffa 63 (45..85), 0x78a5636f 177 (145..210), 0xc67178f2 239
+#      (200..280). If the count changed with the ticks with >= 2 instead,
+#      0xc67178f2 would give 157. The count >= 5952 changes with the ticks
+#      with >= 4: 4 (0..10), 17 (9..27), 28 (17..40).
+#   3. The mean of irq has the order 0x90befffa < default < 0x78a5636f <
+#      0xc67178f2 (the order of the expiries).
+#   4. The max is not a sharp test: an edge must come in the first
+#      1600..3400 cycles of an ISR with 5 or 6 expiries to give more than
+#      8000. Probability about 25 % for 0x78a5636f and for 0xc67178f2.
+#
+# Wrong if: the default-4m counts are out of their range (then a long
+# run is not the same as several seeds, for example because the run is
+# not stationary), or the order of prediction 2 is not correct (then the
+# tail does not come from the ticks with many expiries).
+#
+# The new META line moves the CCM code after load_print(), so this image
+# acts as a new stimulus seed against stim-seed-1m (stim-seed-2026-10-26
+# finding 3); the predictions are for the statistics, not bin for bin.
+#
+# Board time: 4M point 30 s + 4000000 x 300 us = 1200 s + 15 s; three
+# 1M points 3 x 340 s. About 40 min.
+
+name: load-seed-tail
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 1800
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+    LATBENCH_CODE_RAM: y     # hot code in the CCM SRAM (q4-validation.md)
+    LATBENCH_LOAD_TIMERS: 64
+
+# Strings: YAML reads 0x... as a number, and Kconfig reads the decimal
+# digits of a hex symbol as hex.
+points:
+  - id: default-4m
+    kconfig: {LATBENCH_SAMPLES: 4000000}
+  - id: lseed-90befffa
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0x90befffa"}
+  - id: lseed-78a5636f
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0x78a5636f"}
+  - id: lseed-c67178f2
+    kconfig: {LATBENCH_LOAD_TIMER_SEED: "0xc67178f2"}

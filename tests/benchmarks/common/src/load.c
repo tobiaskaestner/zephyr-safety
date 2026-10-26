@@ -127,7 +127,11 @@ static void load_timer_fn(struct k_timer *t)
 
 static void timers_start(void)
 {
-	uint32_t rng = 0x6a09e667U;
+#if defined(CONFIG_LATBENCH_LOAD_TIMER_PERIODIC)
+	uint32_t rng = CONFIG_LATBENCH_LOAD_TIMER_SEED;
+#else
+	uint32_t rng = 0U;
+#endif
 
 	lat_phase_init(&p_tmr, stim_tick_period());
 
@@ -192,6 +196,7 @@ void load_print(void)
 #if defined(CONFIG_LATBENCH_LOAD_TIMER_PERIODIC)
 	printk("LAT META load_timer_ms=%u..%u\n", CONFIG_LATBENCH_LOAD_TIMER_MIN_MS,
 	       CONFIG_LATBENCH_LOAD_TIMER_MAX_MS);
+	printk("LAT META load_timer_seed=0x%08x\n", CONFIG_LATBENCH_LOAD_TIMER_SEED);
 #endif
 	printk("LAT META load_timer_expiries=%u\n", n_timer_expiries);
 	lat_phase_print(&p_tmr);

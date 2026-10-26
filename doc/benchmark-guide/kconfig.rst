@@ -136,6 +136,11 @@ Load generators
      - 100
      - Maximum period of a periodic timer (only with
        ``LATBENCH_LOAD_TIMER_PERIODIC``)
+   * - ``LATBENCH_LOAD_TIMER_SEED``
+     - 0x6a09e667
+     - Seed of the periods and first expiries of the periodic timers (range
+       0x1 to 0xffffffff, only with ``LATBENCH_LOAD_TIMER_PERIODIC``).
+       ``scripts/loadmodel.py`` calculates the ticks with many expiries
    * - ``LATBENCH_SYSTICK_PRIO``
      - -1
      - IRQ priority of SysTick, in the numbers of ``IRQ_CONNECT()``. The

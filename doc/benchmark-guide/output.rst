@@ -231,9 +231,12 @@ Metadata keys
    * - ``load_thread_kind``, ``load_sleep_ms``, ``load_sleeper_wakes``
      - load
      - Kind of the load threads, sleep limits, number of wakes
-   * - ``load_timer_kind``, ``load_timer_ms``, ``load_timer_expiries``
+   * - ``load_timer_kind``, ``load_timer_ms``, ``load_timer_seed``,
+       ``load_timer_expiries``
      - load
-     - Kind of the load timers, period limits, number of expiries
+     - Kind of the load timers, period limits, seed
+       (``LATBENCH_LOAD_TIMER_SEED``), number of expiries. A log without
+       ``load_timer_seed`` used the seed 0x6a09e667.
    * - ``systick_prio``
      - load
      - SysTick priority in the NVIC, in the numbers of ``IRQ_CONNECT()``

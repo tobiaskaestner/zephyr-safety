@@ -21,6 +21,8 @@ packages in ``scripts/requirements.txt`` (``pyserial``, ``PyYAML``,
      - Captures, parses and summarizes the ``LAT`` output.
    * - ``plot.py``
      - Plots the distributions from the logs.
+   * - ``loadmodel.py``
+     - Calculates the ticks on which several periodic load timers expire.
 
 Reproducibility rules
 ---------------------
@@ -626,3 +628,36 @@ next log. The default label is ``<tree>/<point>`` from the path of the log.
 A chart can have a maximum of 8 logs. ``plot.py`` gives the number of
 invalid samples in the label. In a log from before the ``invalid=`` field,
 it leaves out the overflow bin 31.
+
+Load timer model (``loadmodel.py``)
+-----------------------------------
+
+.. code-block:: console
+
+   tests/benchmarks/scripts/loadmodel.py run  [--seed S] [--timers N] [--min-ms A] [--max-ms B] [--seconds T] [--parts P]
+   tests/benchmarks/scripts/loadmodel.py scan [--timers N] ... [SEED ...]
+   tests/benchmarks/scripts/loadmodel.py log  LOG
+
+The periodic load timers of ``common/src/load.c`` get their periods and
+first expiries from the seed ``LATBENCH_LOAD_TIMER_SEED``. They do not
+depend on the stimulus. Thus each run with the same seed has the same
+ticks with k expiries. The system timer ISR processes the k expiries one
+after the other, so these ticks are the long ISRs of the run. A different
+stimulus seed gives only new edges on the same ticks. A longer run or a
+different load seed gives new ticks.
+
+``run``
+   For one seed: the number of ticks with k expiries, the time of the
+   first tick with at least k expiries, and the counts in each of P parts
+   of the run.
+
+``scan``
+   For each seed (the default is the 64 SHA-256 round constants): the
+   number of ticks with at least k expiries. Use it to select load seeds
+   by a rule, not by hand.
+
+``log``
+   Reads the timer parameters, the seed and the run length from the
+   ``LAT META`` lines of a log, and compares the expiries of the model
+   with ``load_timer_expiries``. The model starts the timers at tick 0, so
+   the two numbers can differ by a few expiries.
