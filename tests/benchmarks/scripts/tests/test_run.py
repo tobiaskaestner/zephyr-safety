@@ -82,6 +82,24 @@ def test_compare_point(tmp_path):
     assert diff == ["zephyr.elf", ".config"]
 
 
+def test_compare_point_ignores_path_comments(tmp_path):
+    """The comments of .config and zephyr.dts have the paths of the host; the values must be the same."""
+    pdir, bdir = tmp_path / "p", tmp_path / "b"
+    (bdir / "zephyr").mkdir(parents=True)
+    pdir.mkdir()
+    (pdir / ".config").write_text("# cmsis_6 (/wrk/a/modules/cmsis_6)\nCONFIG_A=y\n# CONFIG_B is not set\n")
+    (bdir / "zephyr" / ".config").write_text("# cmsis_6 (/wrk/b/modules/cmsis_6)\nCONFIG_A=y\n# CONFIG_B is not set\n")
+    (pdir / "zephyr.dts").write_text("/ {\n\tmodel = \"x\"; /* in a/zephyr/b.dts:15 */\n};\n")
+    (bdir / "zephyr" / "zephyr.dts").write_text("/ {\n\tmodel = \"x\";      /* in zephyr/b.dts:15 */\n};\n")
+    (bdir / "zephyr" / "zephyr.elf").write_bytes(b"elf")
+    same, diff = run.compare_point(pdir, bdir, hashlib.sha256(b"elf").hexdigest())
+    assert (same, diff) == (["zephyr.elf", ".config", "zephyr.dts"], [])
+    (bdir / "zephyr" / ".config").write_text("CONFIG_A=y\nCONFIG_B=y\n")
+    (bdir / "zephyr" / "zephyr.dts").write_text("/ {\n\tmodel = \"y\";\n};\n")
+    _, diff = run.compare_point(pdir, bdir, hashlib.sha256(b"elf").hexdigest())
+    assert diff == [".config", "zephyr.dts"]
+
+
 def test_compare_point_elf_image(tmp_path):
     """Two ELFs with other debug information but the same loadable sections give the same image."""
     objcopy = tmp_path / "objcopy"

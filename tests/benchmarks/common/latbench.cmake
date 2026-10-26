@@ -3,6 +3,11 @@
 
 # Adds the common latency benchmark code to the app target.
 
+# __FILE__ (ASSERT messages) of the common code without the path of the
+# run folder, as Zephyr does for ZEPHYR_BASE: the image must not depend
+# on the folder of the snapshot.
+zephyr_cc_option(-fmacro-prefix-map=${CMAKE_CURRENT_LIST_DIR}=LATBENCH_COMMON)
+
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
 if(CONFIG_LATBENCH_CODE_RAM)
   # The code pad goes to a library of its own (latbench_code_ram() below).

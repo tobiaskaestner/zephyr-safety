@@ -308,6 +308,12 @@ Options:
      ``ZEPHYR_SAFETY_MODULE_DIR``. The module has no code, so the image
      does not change. The ``.config`` gets one more line,
      ``CONFIG_ZEPHYR_SAFETY_MODULE=y``.
+   - ``-DWEST_TOPDIR`` set to the folder of the tree. Zephyr writes the
+     paths of ``__FILE__`` (the messages of ``__ASSERT``) and the paths in
+     the comments of ``zephyr.dts`` relative to ``WEST_TOPDIR``. Without
+     this value, Zephyr looks for a west workspace around the tree, and an
+     image with ``ASSERT`` then depends on the host. ``common/latbench.cmake``
+     also removes the folder of the snapshot from ``__FILE__``.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
    - ``-DLATBENCH_SRC_REV`` set to the safety revision.
@@ -503,9 +509,12 @@ again:
 
 #. It reads the manifest. It makes sure that the trees are at the
    revisions of the manifest and clean, and that the SDK has the version
-   of the manifest. The current ``trees.yaml`` is not used, so the check
-   also works after a change of ``trees.yaml``. ``--trees-root`` overrides
-   ``trees_root`` of the manifest.
+   of the manifest. The revisions of the current ``trees.yaml`` are not
+   used, so the check also works after a change of ``trees.yaml``.
+   ``--trees-root`` or ``LATBENCH_TREES_ROOT`` overrides ``trees_root`` of
+   the manifest. If the SDK path of the manifest does not exist (a run of
+   a different host), the SDK path of ``trees.yaml`` is used; its version
+   must be that of the manifest.
 #. It runs the CMake command of the manifest again, with the same sources:
    the snapshot in ``src/``. A run without a snapshot built from the
    worktree, and its build took the revision string from ``git
@@ -519,10 +528,12 @@ again:
 #. It compares ``zephyr.elf`` (SHA-256), ``zephyr.hex``, ``.config`` and
    ``zephyr.dts`` with the stored files. If the SHA-256 of the ELF is not
    the same, it also compares the loadable sections of the two ELFs
-   (``objcopy -O ihex``, without the debug information). A point is the
-   same if the flashed image and the ``.config`` are the same. The
-   flashed image is ``zephyr.hex``. If the run has no HEX file, it is the
-   ELF or its loadable sections.
+   (``objcopy -O ihex``, without the debug information). It compares
+   ``.config`` and ``zephyr.dts`` without their comments, because the
+   comments have the paths of the host. A point is the same if the
+   flashed image and the ``.config`` are the same. The flashed image is
+   ``zephyr.hex``. If the run has no HEX file, it is the ELF or its
+   loadable sections.
 
 ``--rebuild`` does not flash. At the end, the result folder is as it was
 before (with ``--keep-build``, the ``build/`` folders stay). It prints

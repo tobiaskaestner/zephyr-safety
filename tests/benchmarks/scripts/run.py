@@ -54,6 +54,7 @@ import itertools
 import json
 import os
 import platform
+import re
 import shlex
 import shutil
 import subprocess
@@ -229,6 +230,10 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
         str(bdir),
         f"-DBOARD={board}",
         f"-DZEPHYR_MODULES={';'.join(modules)}",
+        # Zephyr maps __FILE__ (ASSERT messages) and the paths in zephyr.dts
+        # relative to WEST_TOPDIR. Without this, it finds a west workspace
+        # around the trees (if there is one), and the image depends on it.
+        f"-DWEST_TOPDIR={tree_cfg['root'] / tree}",
     ]
     if point["conf_files"]:
         args.append("-DEXTRA_CONF_FILE=" + ";".join(str(src_bench / f) for f in point["conf_files"]))
@@ -296,11 +301,21 @@ def elf_image(elf, objcopy, tmp):
     return image
 
 
+def without_comments(name, data):
+    """Return .config or zephyr.dts text without comments; they have the paths of the host."""
+    text = data.decode()
+    if name == ".config":
+        return [ln for ln in text.splitlines() if not ln.startswith("#") or ln.endswith(" is not set")]
+    text = re.sub(r"/\*.*?\*/", "", text, flags=re.S)
+    return [ln.rstrip() for ln in text.splitlines() if ln.strip()]
+
+
 def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
     """Return (same, different) file names of the stored files of a point and a new build.
 
     If the ELF hashes differ (the debug information has the build folder) and
     objcopy is given, "ELF image" compares the loadable sections of the two ELFs.
+    .config and zephyr.dts are compared without their comments (paths of the host).
     """
     same, diff = [], []
     elf = bdir / "zephyr" / "zephyr.elf"
@@ -312,7 +327,13 @@ def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
     for name in ("zephyr.hex", ".config", "zephyr.dts"):
         old, new = pdir / name, bdir / "zephyr" / name
         if old.exists():
-            (same if new.exists() and new.read_bytes() == old.read_bytes() else diff).append(name)
+            if not new.exists():
+                ok = False
+            elif name == "zephyr.hex":
+                ok = new.read_bytes() == old.read_bytes()
+            else:
+                ok = without_comments(name, new.read_bytes()) == without_comments(name, old.read_bytes())
+            (same if ok else diff).append(name)
     return same, diff
 
 
@@ -326,12 +347,20 @@ def rebuild(args):
     run_dir, manifest, entries = find_points(args.rebuild, args.only)
     old_run = Path(entries[0]["cmake"][entries[0]["cmake"].index("-B") + 1]).parents[2]
     moves = {str(old_run): str(run_dir)}
+    # On another host the paths of the manifest do not exist: use the trees
+    # root and the SDK path of this host. The revisions and the SDK version
+    # stay those of the manifest.
+    sdk_path = Path(manifest["toolchain"]["path"])
+    if not sdk_path.is_dir():
+        sdk_path = trees.load()["toolchain"]["zephyr_sdk"]["path"]
     cfg = {
-        "root": Path(args.trees_root or manifest["trees_root"]).expanduser(),
+        "root": Path(args.trees_root or os.environ.get("LATBENCH_TREES_ROOT") or manifest["trees_root"]).expanduser(),
         "trees": manifest["trees"],
-        "toolchain": {"zephyr_sdk": {"path": manifest["toolchain"]["path"],
+        "toolchain": {"zephyr_sdk": {"path": str(sdk_path),
                                      "version": manifest["toolchain"]["zephyr_sdk"]}},
     }
+    if Path(manifest["trees_root"]) != cfg["root"]:
+        moves[manifest["trees_root"]] = str(cfg["root"])
     try:
         sdk = trees.check_toolchain(cfg)
         for t in sorted({e["tree"] for e in entries}):
