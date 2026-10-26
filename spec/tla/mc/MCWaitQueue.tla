@@ -44,10 +44,11 @@ Spec == Init /\ [][Next]_vars
 -----------------------------------------------------------------------------
 (* Invariants of the library module *)
 
-Inv_TypeOK       == WQ!TypeOK
-Inv_StampsNormal == WQ!StampsNormal
-Inv_OrderIsTotal == WQ!OrderIsTotal
-Inv_BestIsHead   == WQ!BestIsHead
+Inv_TypeOK        == WQ!TypeOK
+Inv_StampsNormal  == WQ!StampsNormal
+Inv_OrderIsTotal  == WQ!OrderIsTotal
+Inv_BestIsHead    == WQ!BestIsHead
+Inv_RanksDistinct == WQ!RanksDistinct
 
 -----------------------------------------------------------------------------
 (* Action properties of the library module *)

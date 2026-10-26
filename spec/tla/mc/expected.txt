@@ -23,5 +23,6 @@ MCWaitQueue default pass
 MCWaitQueue reach   probes
 MCTimeout   dlist         pass
 MCTimeout   minheap       pass
+MCTimeout   minheap_full  fail:Inv_NoPanic
 MCTimeout   reach_dlist   probes
 MCTimeout   reach_minheap probes

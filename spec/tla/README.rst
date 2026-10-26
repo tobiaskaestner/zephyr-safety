@@ -420,6 +420,14 @@ becomes a real check when an object action adds the costs of several
 operations (for example a wake of all waiters that cancels one timeout for
 each waiter).
 
+An insertion into a full heap (``MINHEAP``) panics in ``kernel/timeout.c``.
+``mc/MCTimeout`` has this step (``PanicFull``) and the invariant
+``Inv_NoPanic``. This is the environment assumption "never more armed
+timeouts than ``CONFIG_TIMEOUT_HEAP_MAX_ENTRIES``". The configuration
+``minheap`` (capacity 3 for 3 entries) satisfies it. The configuration
+``minheap_full`` (capacity 2) violates it, as expected. A model of the
+callers must show that the assumption holds for a product.
+
 The observation record
 **********************
 
@@ -447,10 +455,22 @@ roadmap step 5. The specs keep a style that it can read from the start:
 - No ``LAMBDA`` as an operator argument. A ``LAMBDA`` cannot have an
   annotation, so a ``LAMBDA`` that reads a record field does not
   type-check. Use a named operator.
-- A range has constant bounds: ``1..Cardinality(W(o))`` is not
-  accepted. ``WaitQueue!Ordered`` has such a range, so it is for TLC
-  only (trace views).
+- A range has constant bounds: ``1..Cardinality(W(o))`` and
+  ``0..n`` with a parameter ``n`` are not accepted. A bound can be a
+  constant definition (``0..MaxHeight`` in ``Timeout!Log2Ceil``) or
+  computed from constants (``1..(Cardinality(Entries) + 1)`` in
+  ``Timeout!InsertAny``, where ``Insert`` selects the valid positions).
+  ``WaitQueue!Ordered`` has a range that depends on the state, so it is
+  for TLC only (trace views).
 - ``CHOOSE`` only over finite sets.
+- Each ``CHOOSE`` has exactly one witness, and an invariant or an example
+  test checks this: ``RanksDistinct`` and ``BestIsHead`` for
+  ``WaitQueue!Best`` and ``Ordered``, the test "Log2Ceil one witness" in
+  ``mc/TimeoutTest`` for ``Timeout!Log2Ceil``. Each ``CASE`` has guards
+  that do not overlap, or an ``OTHER``. The reason: TLC, TLAPM and
+  Apalache give these constructs different meanings when more than one
+  witness exists or when guards overlap (TLA+ RFC 26, open). With this
+  rule, a difference between TLC and Apalache has a real cause.
 - Records with a fixed set of fields.
 - No ``RECURSIVE`` operators (Apalache needs unroll limits for them).
 
@@ -582,7 +602,11 @@ stops the lookup.
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
 
 Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
-no run script yet. The library modules type-check:
+no run script yet. The library modules type-check, and ``Timeout`` also
+passes a symbolic check of its cost bound for both backends and the
+capacities 1 to 3 in one run (``--cinit``, length 6, with the model
+``research/kconfig-family/apalache/MCTimeoutApa.tla`` of the workspace
+notes):
 
 .. code-block:: console
 
