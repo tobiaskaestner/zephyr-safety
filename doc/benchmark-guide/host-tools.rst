@@ -1,9 +1,9 @@
 Host tools and reproducibility
 ==============================
 
-The folder ``scripts/`` has the host tools. They need Python 3 and the
-packages in ``scripts/requirements.txt`` (``pyserial``, ``PyYAML``,
-``matplotlib``).
+The folder ``scripts/benchmarks/`` has the host tools. They need Python
+3 and the packages in ``scripts/benchmarks/requirements.txt``
+(``pyserial``, ``PyYAML``, ``matplotlib``).
 
 .. list-table::
    :header-rows: 1
@@ -87,9 +87,9 @@ needs are in ``boards.yaml``.
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/trees.py setup [TREE ...]
-   tests/benchmarks/scripts/trees.py check [TREE ...]
-   tests/benchmarks/scripts/trees.py show
+   scripts/benchmarks/trees.py setup [TREE ...]
+   scripts/benchmarks/trees.py check [TREE ...]
+   scripts/benchmarks/trees.py show
 
 ``setup``
    Creates each missing repository at ``<root>/<tree>/<path>``. If the
@@ -242,7 +242,7 @@ Run an experiment (``run.py``)
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir>
 
 Options:
 
@@ -340,7 +340,8 @@ repetitions.
 Experiment file
 ---------------
 
-An experiment file is a YAML file in ``experiments/``. The keys are:
+An experiment file is a YAML file in
+``validation/empirical/latencies/experiments/``. The keys are:
 
 .. list-table::
    :header-rows: 1
@@ -440,8 +441,9 @@ The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
 experiment. ``run.py`` puts their Kconfig value on the CMake command line,
 and the port then adds its ``resp_irq_own.overlay`` (see :doc:`apps`).
 
-The files in ``experiments/`` are the current experiments. Each file starts
-with a comment that gives the question of the experiment.
+The files in ``validation/empirical/latencies/experiments/`` are the
+current experiments. Each file starts with a comment that gives the
+question of the experiment.
 
 .. _benchguide-result-folder:
 
@@ -504,8 +506,8 @@ again:
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/run.py --rebuild <run>
-   tests/benchmarks/scripts/run.py --rebuild <run>/<tree>/<point>
+   scripts/benchmarks/run.py --rebuild <run>
+   scripts/benchmarks/run.py --rebuild <run>/<tree>/<point>
 
 ``--rebuild`` does these steps:
 
@@ -553,8 +555,8 @@ repository at ``safety.rev`` of the manifest:
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/trees.py setup
-   tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir>
+   scripts/benchmarks/trees.py setup
+   scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir>
 
 Then compare the summaries of the old and the new logs (see the next
 section).
@@ -564,9 +566,9 @@ Summary and parse (``latbench.py``)
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
-   tests/benchmarks/scripts/latbench.py parse LOG
-   tests/benchmarks/scripts/latbench.py capture [--flash BUILD_DIR] [--runner openocd] [--port P] [--timeout S] [--echo] OUT
+   scripts/benchmarks/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
+   scripts/benchmarks/latbench.py parse LOG
+   scripts/benchmarks/latbench.py capture [--flash BUILD_DIR] [--runner openocd] [--port P] [--timeout S] [--echo] OUT
 
 ``summary``
    Prints one row for each histogram of each log. The columns are
@@ -606,9 +608,9 @@ Plots (``plot.py``)
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/plot.py ccdf  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
-   tests/benchmarks/scripts/plot.py hist  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
-   tests/benchmarks/scripts/plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/benchmarks/plot.py ccdf  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/benchmarks/plot.py hist  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/benchmarks/plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
 
 ``ccdf``
    The exceedance probability P(latency > x), on log scales, with one line
@@ -634,9 +636,9 @@ Load timer model (``loadmodel.py``)
 
 .. code-block:: console
 
-   tests/benchmarks/scripts/loadmodel.py run  [--seed S] [--timers N] [--min-ms A] [--max-ms B] [--seconds T] [--parts P]
-   tests/benchmarks/scripts/loadmodel.py scan [--timers N] ... [SEED ...]
-   tests/benchmarks/scripts/loadmodel.py log  LOG
+   scripts/benchmarks/loadmodel.py run  [--seed S] [--timers N] [--min-ms A] [--max-ms B] [--seconds T] [--parts P]
+   scripts/benchmarks/loadmodel.py scan [--timers N] ... [SEED ...]
+   scripts/benchmarks/loadmodel.py log  LOG
 
 The periodic load timers of ``common/src/load.c`` get their periods and
 first expiries from the seed ``LATBENCH_LOAD_TIMER_SEED``. They do not

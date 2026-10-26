@@ -16,13 +16,13 @@ board. ``unit/README.md`` gives the full commands.
        ``common/src/hist.c``
    * - ``unit/code_place/``
      - A ztest app for the code placement (``LATBENCH_CODE_PLACE``)
-   * - ``scripts/tests/test_latbench.py``
-     - A pytest module for ``scripts/latbench.py`` and ``scripts/plot.py``
-   * - ``scripts/tests/test_run.py``
-     - A pytest module for the rebuild functions of ``scripts/run.py``
-   * - ``scripts/tests/test_experiments.py``
+   * - ``scripts/benchmarks/tests/test_latbench.py``
+     - A pytest module for ``scripts/benchmarks/latbench.py`` and ``scripts/benchmarks/plot.py``
+   * - ``scripts/benchmarks/tests/test_run.py``
+     - A pytest module for the rebuild functions of ``scripts/benchmarks/run.py``
+   * - ``scripts/benchmarks/tests/test_experiments.py``
      - A pytest module that checks the experiment files
-   * - ``scripts/tests/fixtures/hist_*.log``
+   * - ``scripts/benchmarks/tests/fixtures/hist_*.log``
      - The console output of the ztest app, one log for each scenario
 
 The ztest app
@@ -105,12 +105,12 @@ Twister).
 The pytest modules
 ------------------
 
-Run pytest in the ``scripts`` folder. It needs the packages in
-``scripts/requirements.txt`` and ``pytest``:
+Run pytest in the ``scripts/benchmarks`` folder. It needs the packages in
+``scripts/benchmarks/requirements.txt`` and ``pytest``:
 
 .. code-block:: console
 
-   cd tests/benchmarks/scripts
+   cd scripts/benchmarks
    python3 -m pytest tests
 
 ``test_latbench.py`` has tests of the parser, the percentiles, the standard
@@ -119,9 +119,10 @@ round-trip tests read the fixtures. They make the same pseudo-random
 samples as the ztest app, and compare the parsed log with values from
 these samples.
 
-``test_experiments.py`` reads each file in ``experiments/``. A code pad
-must have ``LATBENCH_CODE_FLASH_PAD`` or ``LATBENCH_CODE_RAM``, and must
-be a multiple of 4. A point must select at most one code placement.
+``test_experiments.py`` reads each file in
+``validation/empirical/latencies/experiments/``. A code pad must have
+``LATBENCH_CODE_FLASH_PAD`` or ``LATBENCH_CODE_RAM``, and must be a
+multiple of 4. A point must select at most one code placement.
 ``LATBENCH_CODE_RAM`` needs a port with ``Kconfig.port``. Kconfig only
 warns about such errors, and ``run.py`` finds them only after the build.
 

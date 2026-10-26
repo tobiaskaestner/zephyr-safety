@@ -4,19 +4,19 @@
 
 """Run a latency experiment from pinned, clean trees and record its provenance.
 
-    run.py experiments/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
+    run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
 
 Rules (a run stops before it builds anything if one is broken):
 
 - The safety repo that holds this script and the experiment file is clean.
 - Each tree of the experiment is at its pinned rev in trees.yaml and clean
-  (scripts/trees.py setup creates the trees).
+  (scripts/benchmarks/trees.py setup creates the trees).
 - The Zephyr SDK has the pinned version.
 - The build uses only the modules of the tree (ZEPHYR_MODULES), not the
   modules of a west workspace.
 - The hardware map of the host (hw-map.yml, twister format, not checked in)
   has one connected entry for the board, with the fixture
-  "latbench_loopback". It gives the probe and the console (scripts/hwmap.py).
+  "latbench_loopback". It gives the probe and the console (scripts/benchmarks/hwmap.py).
 
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
@@ -481,7 +481,7 @@ def main():
                         " and compare them with the stored images; does not flash")
     p.add_argument("--trees-root")
     p.add_argument("--hardware-map", default=str(hwmap.DEFAULT),
-                   help=f"hardware map of the host (default: {hwmap.DEFAULT.relative_to(BENCH_DIR)})")
+                   help=f"hardware map of the host (default: {hwmap.DEFAULT.relative_to(trees.REPO_DIR)})")
     p.add_argument("--probe", help="probe id: select the entry of the hardware map; with --port, no map is necessary")
     p.add_argument("--port", help="serial port of the console (default: serial of the entry in the hardware map)")
     p.add_argument("--only", nargs="*", help="run only these point ids")

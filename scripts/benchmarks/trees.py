@@ -22,7 +22,11 @@ from pathlib import Path
 
 import yaml
 
-BENCH_DIR = Path(__file__).resolve().parent.parent
+# The safety repo, the folder of the benchmark apps and the folder of the
+# experiment files.
+REPO_DIR = Path(__file__).resolve().parents[2]
+BENCH_DIR = REPO_DIR / "tests" / "benchmarks"
+EXPERIMENTS_DIR = REPO_DIR / "validation" / "empirical" / "latencies" / "experiments"
 TREES_FILE = BENCH_DIR / "trees.yaml"
 BOARDS_FILE = BENCH_DIR / "boards.yaml"
 

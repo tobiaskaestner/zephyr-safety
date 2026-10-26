@@ -2,15 +2,16 @@
 
 These tests find errors in the histogram code and in the code placement
 of the benchmarks, and in the experiment files. They do not use the
-board.
+board. Paths that start with `scripts/` or `validation/` are relative to
+the root of the repo.
 
 | Path | Content |
 |---|---|
 | `hist/` | Zephyr ztest app for `common/include/latbench/hist.h` and `common/src/hist.c` |
 | `code_place/` | Zephyr ztest app for the code placement (`LATBENCH_CODE_PLACE`), on `mps2/an385` |
-| `../scripts/tests/test_experiments.py` | pytest module that checks `experiments/*.yaml` |
-| `../scripts/tests/test_latbench.py` | pytest module for `scripts/latbench.py` and `scripts/plot.py` |
-| `../scripts/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
+| `scripts/benchmarks/tests/test_experiments.py` | pytest module that checks `validation/empirical/latencies/experiments/*.yaml` |
+| `scripts/benchmarks/tests/test_latbench.py` | pytest module for `scripts/benchmarks/latbench.py` and `scripts/benchmarks/plot.py` |
+| `scripts/benchmarks/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
 
 ## Scenarios of the ztest app
 
@@ -75,15 +76,15 @@ skipped test cases are the known gaps.
 
 ## Run the pytest module
 
-Run pytest from the `scripts` folder:
+Run pytest from the `scripts/benchmarks` folder:
 
 ```sh
-cd tests/benchmarks/scripts
+cd scripts/benchmarks
 python3 -m pytest tests
 ```
 
 The result is 125 passed test cases and no failures. The packages in
-`scripts/requirements.txt` and `pytest` are necessary.
+`scripts/benchmarks/requirements.txt` and `pytest` are necessary.
 
 ## Make the fixtures again
 
@@ -97,7 +98,7 @@ generator `fixture_sample()` in `hist/src/main.c`.
    B=/wrk/z/ws-safety/build-hist-tests/twister-out/native_sim_native_64/host_gnu
    for s in fine coarse experiment; do
      $(find $B -path "*latbench.unit.hist.$s/zephyr/zephyr.exe") \
-       > tests/benchmarks/scripts/tests/fixtures/hist_$s.log
+       > scripts/benchmarks/tests/fixtures/hist_$s.log
    done
    ```
 

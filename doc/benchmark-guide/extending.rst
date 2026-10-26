@@ -4,7 +4,8 @@ Extend the suite
 Add an experiment
 -----------------
 
-#. Copy an experiment file in ``experiments/`` that is near to your
+#. Copy an experiment file in
+   ``validation/empirical/latencies/experiments/`` that is near to your
    question. Give the copy a new file name.
 #. Set ``name`` to the file name without ``.yaml``.
 #. At the top of the file, write a comment with the question, the
@@ -26,14 +27,14 @@ Add an experiment
 
    .. code-block:: console
 
-      tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir> --dry-run
+      scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> --dry-run
 
 #. Make sure that all points build. This step also does the Kconfig
    check of each point:
 
    .. code-block:: console
 
-      tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir> --build-only
+      scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir> --build-only
 
 #. Connect the board and run the experiment without ``--build-only``.
 
@@ -60,7 +61,7 @@ To use another revision of a repository, add a new tree:
 
    .. code-block:: console
 
-      tests/benchmarks/scripts/trees.py setup <tree>
+      scripts/benchmarks/trees.py setup <tree>
 
 To add a module repository that a new board needs to an existing tree:
 
@@ -141,4 +142,4 @@ Add an app
 #. Add an experiment for the app (see above).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in
-``scripts/latbench.py`` and to :doc:`output` in this guide.
+``scripts/benchmarks/latbench.py`` and to :doc:`output` in this guide.

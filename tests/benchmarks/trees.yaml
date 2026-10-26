@@ -3,8 +3,8 @@
 
 # Pinned source trees for the latency benchmarks.
 #
-# scripts/trees.py setup creates one detached git worktree per repo at
-# <root>/<tree>/<path>, at the pinned rev. A run (scripts/run.py) builds
+# scripts/benchmarks/trees.py setup creates one detached git worktree per repo at
+# <root>/<tree>/<path>, at the pinned rev. A run (scripts/benchmarks/run.py) builds
 # only from these worktrees, with exactly the modules that are listed
 # here, and refuses to run if a worktree is not at its rev or is dirty.
 #

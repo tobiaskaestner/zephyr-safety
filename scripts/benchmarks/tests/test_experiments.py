@@ -15,13 +15,12 @@ import pytest
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-BENCH = SCRIPTS.parent
 sys.path.insert(0, str(SCRIPTS))
 
 import run  # noqa: E402
 import trees  # noqa: E402
 
-EXPERIMENTS = sorted((BENCH / "experiments").glob("*.yaml"))
+EXPERIMENTS = sorted(trees.EXPERIMENTS_DIR.glob("*.yaml"))
 PLACES = ("LATBENCH_CODE_FLASH", "LATBENCH_CODE_FLASH_PAD", "LATBENCH_CODE_RAM")
 
 
@@ -38,7 +37,7 @@ def test_code_place(path):
     """The pad needs LATBENCH_CODE_FLASH_PAD or LATBENCH_CODE_RAM, and a point selects one place."""
     exp = yaml.safe_load(path.read_text())
     board = exp.get("board", trees.load_boards()["default"])
-    port = BENCH / "common" / "boards" / trees.load_boards()["boards"][board]["port"]
+    port = trees.BENCH_DIR / "common" / "boards" / trees.load_boards()["boards"][board]["port"]
     for pt in points(path):
         k = pt["kconfig"]
         places = [s for s in PLACES if is_y(k, s)]
@@ -55,5 +54,5 @@ def test_code_place(path):
 
 def test_code_layout_selects_the_pad():
     """code-layout measures the flash pad, as the run 20261025T060257Z."""
-    for pt in points(BENCH / "experiments" / "code-layout.yaml"):
+    for pt in points(trees.EXPERIMENTS_DIR / "code-layout.yaml"):
         assert is_y(pt["kconfig"], "LATBENCH_CODE_FLASH_PAD"), pt["id"]

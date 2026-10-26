@@ -8,7 +8,7 @@
 #
 # The latency histograms of these runs are not data: the hooks make each
 # mask section longer and add to the wake path. Each log says so
-# (LAT META m4=1, m4_note). Use the M4 tables (scripts/m4.py) only; the
+# (LAT META m4=1, m4_note). Use the M4 tables (scripts/benchmarks/m4.py) only; the
 # IRQ tail of the same run is used only as the cross check below.
 #
 # Points and expectations (written before any run; cycles at 170 MHz):

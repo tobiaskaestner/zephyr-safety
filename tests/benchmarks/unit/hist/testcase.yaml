@@ -19,7 +19,7 @@ tests:
       - CONFIG_LATBENCH_HIST_COARSE_BINS=4
       - CONFIG_LATBENCH_HIST_COARSE_SHIFT=2
       - CONFIG_LATBENCH_PHASE_BINS=8
-  # The sizes of the 1M experiments (experiments/*-1m.yaml).
+  # The sizes of the 1M experiments (validation/empirical/latencies/experiments/*-1m.yaml).
   latbench.unit.hist.experiment:
     extra_configs:
       - CONFIG_LATBENCH_HIST_BINS=2048

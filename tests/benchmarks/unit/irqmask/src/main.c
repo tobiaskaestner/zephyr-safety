@@ -278,7 +278,7 @@ ZTEST_SUITE(irqmask_print, NULL, NULL, before, NULL, NULL);
 
 /*
  * Print a run with pseudo-random values for four sites. The Python tests
- * (scripts/tests/test_m4.py) parse a saved copy of this output and compute
+ * (scripts/benchmarks/tests/test_m4.py) parse a saved copy of this output and compute
  * the same values with the same generator.
  */
 #define FIX_SEED    0x9e3779b9U

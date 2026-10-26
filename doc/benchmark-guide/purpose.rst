@@ -96,8 +96,8 @@ Tree
    in ``trees.yaml``.
 
 Experiment
-   A YAML file in ``experiments/``. It names an app, one or more trees,
-   and a list of points.
+   A YAML file in ``validation/empirical/latencies/experiments/``. It
+   names an app, one or more trees, and a list of points.
 
 Point
    One build configuration of an experiment, with an ID.
@@ -106,5 +106,5 @@ Repetition
    One flash and one capture of the serial output of a point.
 
 Run
-   One execution of ``scripts/run.py`` for one experiment. A run makes one
-   result folder.
+   One execution of ``scripts/benchmarks/run.py`` for one experiment. A
+   run makes one result folder.

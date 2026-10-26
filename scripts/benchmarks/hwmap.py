@@ -16,7 +16,8 @@ from pathlib import Path
 
 import yaml
 
-BENCH_DIR = Path(__file__).resolve().parent.parent
+from trees import BENCH_DIR
+
 DEFAULT = BENCH_DIR / "hw-map.yml"
 SCHEMA = "scripts/schemas/twister/hwmap-schema.yaml"  # in a Zephyr tree
 FIXTURE = "latbench_loopback"

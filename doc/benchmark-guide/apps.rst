@@ -43,8 +43,8 @@ The three measurement apps have the same frame:
    histograms, and then ``LAT DONE``.
 
 Each ``testcase.yaml`` of a measurement app is a build check only
-(``build_only: true``). A data point comes only from ``scripts/run.py``
-(see :doc:`host-tools`).
+(``build_only: true``). A data point comes only from
+``scripts/benchmarks/run.py`` (see :doc:`host-tools`).
 
 ``irq_latency`` (M1)
 --------------------

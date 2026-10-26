@@ -300,8 +300,8 @@ def test_max_text():
 
 
 def test_values_sorted_with_coarse_bins():
-    # 2048 + 2048 x 32 (experiments/*-1m.yaml): overflow bin 16 is at 65536,
-    # below the last coarse edges (up to 67552).
+    # 2048 + 2048 x 32 (validation/empirical/latencies/experiments/*-1m.yaml): overflow
+    # bin 16 is at 65536, below the last coarse edges (up to 67552).
     h = hist(bins={100: 5, 66016: 1, 67552: 1}, width={66016: 32, 67552: 32}, ovf={16: 1})
     assert plot.values(h) == [(100, 5), (65536, 1), (66016, 1), (67552, 1)]
 

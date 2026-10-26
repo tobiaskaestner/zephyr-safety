@@ -176,7 +176,7 @@ static inline void irqmask_add(struct irqmask_table *t, uint32_t pc, uint32_t ip
 void irqmask_table_reset(struct irqmask_table *t);
 
 /**
- * Print each used site in the LAT line format (see scripts/m4.py):
+ * Print each used site in the LAT line format (see scripts/benchmarks/m4.py):
  *
  *   LAT M4 BEGIN sites=.. used=.. dropped=.. bins=.. sub_bits=..
  *   LAT M4SITE <name> kind=mask|isr ipsr=.. pc=0x.. end_pc=0x.. n=.. sum=.. min=.. max=..

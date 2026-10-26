@@ -25,13 +25,6 @@ boards; their ports build, but nobody ran them yet.
 | `trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
 | `boards.yaml` | For each board: port folder, modules, flash commands |
 | `hw-map.yml` | Not checked in: the probe and the console of each board on this host (twister hardware map) |
-| `experiments/*.yaml` | One file for each experiment: app, trees, points, repetitions |
-| `scripts/trees.py` | Creates and checks the pinned worktrees |
-| `scripts/run.py` | Runs an experiment and records its provenance |
-| `scripts/hwmap.py` | Reads the hardware map and selects the entry of a board |
-| `scripts/latbench.py` | Parses logs and prints percentiles |
-| `scripts/plot.py` | Plots the exceedance probability and the histograms |
-| `scripts/requirements.txt` | Python packages for the scripts |
 | `common/` | Histogram, metadata, stimulus and load code, Kconfig fragments (`conf/`) |
 | `common/boards/<board>/` | Board port: `port.cmake`, `port.c`, `include/latbench/port_impl.h`, overlays (see `common/include/latbench/port.h`) |
 | `irq_latency/` | IRQ to ISR latency with a hardware time stamp of the edge |
@@ -39,6 +32,20 @@ boards; their ports build, but nobody ran them yet.
 | `thread_latency/` | Thread to thread wake, for each kernel primitive |
 | `loopback_check/` | Checks the wire |
 | `unit/` | Unit tests for the histogram code and the scripts, without the board (see `unit/README.md`) |
+
+The host scripts and the experiment files are in other folders. These
+paths are relative to the root of the repo:
+
+| Path | Content |
+|---|---|
+| `validation/empirical/latencies/experiments/*.yaml` | One file for each experiment: app, trees, points, repetitions |
+| `scripts/benchmarks/trees.py` | Creates and checks the pinned worktrees |
+| `scripts/benchmarks/run.py` | Runs an experiment and records its provenance |
+| `scripts/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
+| `scripts/benchmarks/latbench.py` | Parses logs and prints percentiles |
+| `scripts/benchmarks/plot.py` | Plots the exceedance probability and the histograms |
+| `scripts/benchmarks/requirements.txt` | Python packages for the scripts |
+| `scripts/benchmarks/tests/` | pytest modules for the scripts and the experiment files |
 
 ## Reproduce a data point
 
@@ -49,19 +56,19 @@ the experiment file, and the revs of all trees.
 2. Create the pinned trees (once):
 
    ```sh
-   tests/benchmarks/scripts/trees.py setup
+   scripts/benchmarks/trees.py setup
    ```
 
 3. Run the experiment again:
 
    ```sh
-   tests/benchmarks/scripts/run.py tests/benchmarks/experiments/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/experiments/<name>.yaml --out <dir>
    ```
 
 4. Compare the results:
 
    ```sh
-   tests/benchmarks/scripts/latbench.py summary <dir>/.../rep1.log <old>/.../rep1.log
+   scripts/benchmarks/latbench.py summary <dir>/.../rep1.log <old>/.../rep1.log
    ```
 
 `run.py` stops before it builds anything if one of these conditions is

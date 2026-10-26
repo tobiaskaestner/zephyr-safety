@@ -4,7 +4,7 @@
 # Question: what sets the tail of the IRQ latency, the run length, the
 # stimulus seed or the load timers? stim-seed-1m showed that 8 stimulus
 # seeds act as new independent samples (the counts above each threshold
-# agree with Poisson). The model of the load timers (scripts/loadmodel.py)
+# agree with Poisson). The model of the load timers (scripts/benchmarks/loadmodel.py)
 # says that the long SysTick ISRs come from ticks on which several load
 # timers expire. LATBENCH_LOAD_TIMER_SEED sets these ticks; the stimulus
 # seed does not. Thus a stimulus seed gives new edges on the same ticks,

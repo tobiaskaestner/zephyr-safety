@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for the hardware map (scripts/hwmap.py) and its use in run.py (no board)."""
+"""Unit tests for the hardware map (scripts/benchmarks/hwmap.py) and its use in run.py (no board)."""
 
 import argparse
 import sys
