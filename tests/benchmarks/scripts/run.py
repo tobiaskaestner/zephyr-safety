@@ -337,6 +337,34 @@ def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
     return same, diff
 
 
+def west_topdir(path):
+    """Return the west workspace folder (with .west) that contains path, or None."""
+    for d in Path(path).parents:
+        if (d / ".west").is_dir():
+            return d
+    return None
+
+
+def old_west_topdir(cmake, old_root, root):
+    """Return [-DWEST_TOPDIR=...] for a build of a run before run.py set WEST_TOPDIR.
+
+    Such a build took WEST_TOPDIR from a west workspace around the trees (if
+    there was one), and an image with ASSERT has __FILE__ relative to it. The
+    same folder above the new trees root gives the same strings.
+    """
+    if any(a.startswith("-DWEST_TOPDIR=") for a in cmake):
+        return []
+    top = west_topdir(old_root)
+    if top is None:
+        return []
+    rel = Path(old_root).relative_to(top)
+    if Path(root).parts[-len(rel.parts):] != rel.parts:
+        print(f"warning: the old trees root {old_root} was in the west workspace {top}; the trees root {root}"
+              f" does not end with {rel}, so ASSERT strings can be different", flush=True)
+        return []
+    return [f"-DWEST_TOPDIR={Path(*Path(root).parts[:-len(rel.parts)])}"]
+
+
 def rebuild(args):
     """Build the points of an old run again, from its snapshot and manifest, and compare the images.
 
@@ -353,8 +381,11 @@ def rebuild(args):
     sdk_path = Path(manifest["toolchain"]["path"])
     if not sdk_path.is_dir():
         sdk_path = trees.load()["toolchain"]["zephyr_sdk"]["path"]
+    root = Path(args.trees_root or os.environ.get("LATBENCH_TREES_ROOT") or manifest["trees_root"]).expanduser()
+    if not root.is_dir():
+        root = trees.load()["root"]
     cfg = {
-        "root": Path(args.trees_root or os.environ.get("LATBENCH_TREES_ROOT") or manifest["trees_root"]).expanduser(),
+        "root": root,
         "trees": manifest["trees"],
         "toolchain": {"zephyr_sdk": {"path": str(sdk_path),
                                      "version": manifest["toolchain"]["zephyr_sdk"]}},
@@ -395,7 +426,7 @@ def rebuild(args):
         bdir.mkdir(parents=True)
         bad = True
         try:
-            cmake = move_paths(e["cmake"], moves, bdir)
+            cmake = move_paths(e["cmake"], moves, bdir) + old_west_topdir(e["cmake"], manifest["trees_root"], root)
             run_build(cmake, build_env(trees.repo_dir(cfg, e["tree"], "zephyr"), sdk), bdir,
                       tmp / f"{e['tree']}-{e['id']}.log", name)
             same, diff = compare_point(pdir, bdir, e["elf_sha256"], cmake_cache_value(bdir, "CMAKE_OBJCOPY"), tmp)

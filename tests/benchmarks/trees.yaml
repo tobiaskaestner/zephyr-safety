@@ -14,7 +14,7 @@
 # tree and keep the old tree, so that old results stay reproducible.
 
 # Default root. Override with --trees-root or LATBENCH_TREES_ROOT.
-root: /wrk/z/ws-safety/latency-trees
+root: /wrk/z/lab-benchmarks/latency-trees
 
 # The boards and the modules that each board needs are in boards.yaml.
 

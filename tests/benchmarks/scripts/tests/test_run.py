@@ -137,3 +137,13 @@ def test_command_line_errors(monkeypatch, argv):
     with pytest.raises(SystemExit) as e:
         run.main()
     assert e.value.code == 2
+
+
+def test_old_west_topdir(tmp_path):
+    """A run before -DWEST_TOPDIR: the west workspace of the old trees root, moved with the trees."""
+    (tmp_path / "ws" / ".west").mkdir(parents=True)
+    old_root = tmp_path / "ws" / "latency-trees"
+    assert run.old_west_topdir(["cmake"], str(old_root), "/x/lab/latency-trees") == ["-DWEST_TOPDIR=/x/lab"]
+    assert run.old_west_topdir(["cmake", "-DWEST_TOPDIR=/y"], str(old_root), "/x/lab/latency-trees") == []
+    assert run.old_west_topdir(["cmake"], str(old_root), "/x/lab/trees") == []
+    assert run.old_west_topdir(["cmake"], str(tmp_path / "no-ws" / "latency-trees"), "/x/lab/latency-trees") == []

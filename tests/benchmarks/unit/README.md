@@ -47,7 +47,7 @@ These gaps are open:
 1. Set the environment:
 
    ```sh
-   export ZEPHYR_BASE=/wrk/z/ws-safety/latency-trees/ws-safety/zephyr
+   export ZEPHYR_BASE=/wrk/z/lab-benchmarks/latency-trees/ws-safety/zephyr
    export ZEPHYR_TOOLCHAIN_VARIANT=zephyr
    export ZEPHYR_SDK_INSTALL_DIR=~/zephyr-sdk-1.0.1
    ```

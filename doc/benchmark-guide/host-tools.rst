@@ -512,7 +512,12 @@ again:
    of the manifest. The revisions of the current ``trees.yaml`` are not
    used, so the check also works after a change of ``trees.yaml``.
    ``--trees-root`` or ``LATBENCH_TREES_ROOT`` overrides ``trees_root`` of
-   the manifest. If the SDK path of the manifest does not exist (a run of
+   the manifest. If that folder does not exist (the trees moved, or a run
+   of a different host), the ``root`` of ``trees.yaml`` is used. A run
+   from before ``-DWEST_TOPDIR`` took ``WEST_TOPDIR`` from a west
+   workspace around its trees root. ``--rebuild`` then gives the build the
+   same folder relative to the new root, so that the ``__FILE__`` strings
+   stay the same. If the SDK path of the manifest does not exist (a run of
    a different host), the SDK path of ``trees.yaml`` is used; its version
    must be that of the manifest.
 #. It runs the CMake command of the manifest again, with the same sources:
