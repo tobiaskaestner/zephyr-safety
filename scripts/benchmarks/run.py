@@ -4,7 +4,7 @@
 
 """Run a latency experiment from pinned, clean trees and record its provenance.
 
-    run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir> [--only ID ...] [--dry-run]
+    run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir> [--only ID ...] [--dry-run]
 
 Rules (a run stops before it builds anything if one is broken):
 

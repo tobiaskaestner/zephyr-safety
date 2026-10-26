@@ -38,7 +38,7 @@ paths are relative to the root of the repo:
 
 | Path | Content |
 |---|---|
-| `validation/empirical/latencies/<study>/<name>.yaml` | One file for each experiment, in the folder of the study that owns it: app, trees, points, repetitions |
+| `validation/empirical/latencies/<study>/<name>/experiment.yaml` | One folder for each experiment, in the folder of the study that owns it: app, trees, points, repetitions; `experiment.md` describes it |
 | `scripts/benchmarks/trees.py` | Creates and checks the pinned worktrees |
 | `scripts/benchmarks/run.py` | Runs an experiment and records its provenance |
 | `scripts/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
@@ -62,7 +62,7 @@ the experiment file, and the revs of all trees.
 3. Run the experiment again:
 
    ```sh
-   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir>
    ```
 
 4. Compare the results:

@@ -1,0 +1,37 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+name: wake-timers-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  timers:
+    t0: {value: 0}
+    t16:
+      value: 16
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+    t64:
+      value: 64
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      value: 256
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+    t256far:                # one-shot timers one hour away
+      value: 256
+      kconfig: {LATBENCH_LOAD_TIMERS: 256, LATBENCH_LOAD_TIMER_FAR: y}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}

@@ -169,15 +169,15 @@ Experiments
 
    * - File
      - Content
-   * - ``validation/empirical/latencies/measurement-validity/mask-instrumentation/m4-validate.yaml``
+   * - ``validation/empirical/latencies/measurement-validity/mask-instrumentation/m4-validate/experiment.yaml``
      - Calibration, the probe, and the points of ``systick-prio-1m`` and
        of the WHEEL backend, for the check against the IRQ tail
-   * - ``validation/empirical/latencies/mask-time/m4-sweep.yaml``
+   * - ``validation/empirical/latencies/mask-time/m4-sweep/experiment.yaml``
      - Load timers 0/16/64/256 x sleeper threads 0/8/64 x time slicing
        on/off
-   * - ``validation/empirical/latencies/mask-time/m4-thread.yaml``
+   * - ``validation/empirical/latencies/mask-time/m4-thread/experiment.yaml``
      - ``thread_latency`` with sem and mutex, 0 and 64 load timers
-   * - ``validation/empirical/latencies/measurement-validity/mask-instrumentation/m4-image-check.yaml``
+   * - ``validation/empirical/latencies/measurement-validity/mask-instrumentation/m4-image-check/experiment.yaml``
      - Build check only: ``ws-up`` and ``ws-up-irqoff`` with the hooks
        off give the same code
 

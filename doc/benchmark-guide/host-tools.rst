@@ -242,7 +242,7 @@ Run an experiment (``run.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir>
 
 Options:
 
@@ -340,8 +340,10 @@ repetitions.
 Experiment file
 ---------------
 
-An experiment file is a YAML file in the folder of the study that owns
-it, below ``validation/empirical/latencies/``. The keys are:
+An experiment is a folder ``<name>/`` in the folder of the study that
+owns it, below ``validation/empirical/latencies/``. The folder holds the
+experiment file ``experiment.yaml`` and the description
+``experiment.md``. The keys of the experiment file are:
 
 .. list-table::
    :header-rows: 1
@@ -351,7 +353,7 @@ it, below ``validation/empirical/latencies/``. The keys are:
      - Meaning
    * - ``name``
      - Name of the experiment. It is the name of the folder in the output.
-       By convention, it is the file name without ``.yaml``.
+       It must be the name of the experiment folder.
    * - ``app``
      - The app folder in ``tests/benchmarks/``.
    * - ``trees``
@@ -458,9 +460,9 @@ The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
 experiment. ``run.py`` puts their Kconfig value on the CMake command line,
 and the port then adds its ``resp_irq_own.overlay`` (see :doc:`apps`).
 
-The experiment files in the study folders below
+The experiment folders in the study folders below
 ``validation/empirical/latencies/`` are the current experiments. The
-description ``<name>.md`` next to each file gives the question of the
+description ``experiment.md`` in each folder gives the question of the
 experiment.
 
 .. _benchguide-result-folder:
@@ -574,7 +576,7 @@ repository at ``safety.rev`` of the manifest:
 .. code-block:: console
 
    scripts/benchmarks/trees.py setup
-   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>.yaml --out <dir>
+   scripts/benchmarks/run.py validation/empirical/latencies/<study>/<name>/experiment.yaml --out <dir>
 
 Then compare the summaries of the old and the new logs (see the next
 section).

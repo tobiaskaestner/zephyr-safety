@@ -1,0 +1,28 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+# Build only (run.py --build-only --keep-build), no board run.
+name: m4-image-check
+app: wake_latency
+trees: [ws-up, ws-up-irqoff]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+# Two points of wake-timers-1m, with the same axes and settings.
+axes:
+  timers:
+    t0: {value: 0}
+    t256:
+      value: 256
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  anchor:
+    default: {}

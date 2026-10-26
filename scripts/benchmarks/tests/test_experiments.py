@@ -32,13 +32,15 @@ def is_y(kconfig, sym):
     return run.kconfig_value(kconfig.get(sym, "n")) == "y"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
 def test_names_unique(path):
-    """Studies refer to an experiment by its name, so a name is in one file only."""
-    assert trees.experiment_file(path.stem) == path
+    """Studies refer to an experiment by its name: the name of its folder, unique in all studies."""
+    assert trees.experiment_file(path.parent.name) == path
+    assert yaml.safe_load(path.read_text())["name"] == path.parent.name, "name must be the folder name"
+    assert (path.parent / "experiment.md").is_file(), "each experiment has a description experiment.md"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
 def test_axes(path):
     """Each point has a value on each axis, so the analysis can group the points."""
     exp = yaml.safe_load(path.read_text())
@@ -52,7 +54,7 @@ def test_axes(path):
                 assert isinstance(v["value"], (int, float)), f"{axis}.{name}: value must be a number"
 
 
-@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.stem for p in EXPERIMENTS])
+@pytest.mark.parametrize("path", EXPERIMENTS, ids=[p.parent.name for p in EXPERIMENTS])
 def test_code_place(path):
     """The pad needs LATBENCH_CODE_FLASH_PAD or LATBENCH_CODE_RAM, and a point selects one place."""
     exp = yaml.safe_load(path.read_text())

@@ -2,9 +2,10 @@
 # SPDX-License-Identifier: Apache-2.0
 
 # The files of this study, by convention (no keys):
-#   <experiment>.yaml, <experiment>.md   the experiments that it owns
-#   hypotheses.yaml                      the hypotheses, written before the runs
-#   report.ipynb                         the report template (no outputs)
+#   <experiment>/experiment.yaml   an experiment that it owns
+#   <experiment>/experiment.md     its description
+#   hypotheses.yaml                the hypotheses, written before the runs
+#   report.ipynb                   the report template (no outputs)
 
 name: isr-to-thread
 question: >

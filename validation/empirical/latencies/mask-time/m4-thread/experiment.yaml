@@ -1,0 +1,32 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+# The latency histograms of these runs are not data (LAT META m4=1).
+name: m4-thread
+app: thread_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_STIM_MIN_US: 50          # as in thread2thread-1m
+    LATBENCH_STIM_MAX_US: 150
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+axes:
+  primitive:
+    sem: {kconfig: {LATBENCH_T2T_SEM: y}}
+    mutex: {kconfig: {LATBENCH_T2T_MUTEX: y}}
+  timers:
+    t0: {value: 0}
+    t64:
+      value: 64
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}

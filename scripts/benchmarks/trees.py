@@ -23,12 +23,12 @@ from pathlib import Path
 import yaml
 
 # The safety repo, the folder of the benchmark apps and the folder of the
-# latency studies. Each experiment file is in the folder of the study that
-# owns it.
+# latency studies. Each experiment is a folder <name>/ with experiment.yaml
+# and experiment.md, in the folder of the study that owns it.
 REPO_DIR = Path(__file__).resolve().parents[2]
 BENCH_DIR = REPO_DIR / "tests" / "benchmarks"
 STUDIES_DIR = REPO_DIR / "validation" / "empirical" / "latencies"
-STUDY_FILES = ("study.yaml", "hypotheses.yaml")
+EXPERIMENT_FILE = "experiment.yaml"
 TREES_FILE = BENCH_DIR / "trees.yaml"
 BOARDS_FILE = BENCH_DIR / "boards.yaml"
 
@@ -39,12 +39,12 @@ class TreeError(Exception):
 
 def experiment_files():
     """All experiment files of the studies, sorted by path."""
-    return sorted(p for p in STUDIES_DIR.rglob("*.yaml") if p.name not in STUDY_FILES)
+    return sorted(STUDIES_DIR.rglob(EXPERIMENT_FILE))
 
 
 def experiment_file(name):
-    """The experiment file with the stem name. The names are unique over all studies."""
-    found = [p for p in experiment_files() if p.stem == name]
+    """The experiment file of the experiment folder name. The names are unique over all studies."""
+    found = [p for p in experiment_files() if p.parent.name == name]
     if len(found) != 1:
         raise TreeError(f"experiment '{name}': {len(found)} files {[str(p) for p in found]}")
     return found[0]

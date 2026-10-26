@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: none.
+
+name: port-smoke-nrf52840dk
+app: wake_latency
+board: nrf52840dk/nrf52840
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 400
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 10000
+
+axes:
+  variant:
+    default: {}                 # the board defaults

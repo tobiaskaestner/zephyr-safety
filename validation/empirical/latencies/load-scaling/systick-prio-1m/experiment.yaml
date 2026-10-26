@@ -1,0 +1,30 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+name: systick-prio-1m
+app: wake_latency
+trees: [ws-safety, ws-up]
+repeat: 1
+timeout: 1200
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 2048
+    LATBENCH_HIST_COARSE_BINS: 2048
+
+axes:
+  timers:
+    t64:
+      value: 64
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      value: 256
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  prio:
+    same: {}                # driver default: SysTick and EXTI0 at priority 0
+    lower:                  # SysTick at priority 1
+      kconfig: {LATBENCH_SYSTICK_PRIO: 1}

@@ -1,0 +1,46 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+# The latency histograms of these runs are not data (LAT META m4=1).
+name: m4-sweep
+app: wake_latency
+trees: [ws-up-irqoff]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    ARM_IRQ_MASK_HOOKS: y
+    ARM_IRQ_MASK_HOOKS_ISR: y
+    LATBENCH_SAMPLES: 200000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_HIST_BINS: 1024
+    LATBENCH_HIST_COARSE_BINS: 1024
+    LATBENCH_HIST_COARSE_SHIFT: 6
+
+axes:
+  timers:                   # periodic k_timers, 10..100 ms, random start
+    t0: {value: 0}
+    t16:
+      value: 16
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+    t64:
+      value: 64
+      kconfig: {LATBENCH_LOAD_TIMERS: 64}
+    t256:
+      value: 256
+      kconfig: {LATBENCH_LOAD_TIMERS: 256}
+  sleepers:                 # sleeper threads, 1..20 ms sleeps, priority 5
+    s0: {value: 0}
+    s8:
+      value: 8
+      kconfig: {LATBENCH_LOAD_THREADS: 8, LATBENCH_LOAD_THREAD_SLEEPER: y}
+    s64:
+      value: 64
+      kconfig: {LATBENCH_LOAD_THREADS: 64, LATBENCH_LOAD_THREAD_SLEEPER: y}
+  slice:
+    slice: {}               # TIMESLICING=y (default, 20 ms)
+    noslice:
+      kconfig: {TIMESLICING: n}
