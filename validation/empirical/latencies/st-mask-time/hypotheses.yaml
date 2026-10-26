@@ -32,7 +32,7 @@
 #   formerly   the label in the old experiment comments, if it had one
 #   written    date, and the run that came after it
 #   experiment, select, metric, stat: the data that the check reads
-#   expect     the comparison (forms: study-design.md §14.3)
+#   expect     the comparison (forms: doc/benchmark-guide/studies.rst)
 #   manual     true: a person gives the verdict
 #   basis      where the number of the check comes from
 #

@@ -21,6 +21,11 @@ Rules (a run stops before it builds anything if one is broken):
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
 devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
+If <out> is the folder of a study instance (it has instance.json), the run
+goes to <out>/ex-<experiment>/<UTC time>/; add it to the run list with
+"study.py add". At the end, run.py writes the seal <UTC time>.sha256 beside
+the run folder (see studylib/seal.py). --rebuild writes its result to
+<UTC time>.rebuild-<UTC time of the check>.json beside the run folder.
 src/ is the snapshot of the committed safety repo (git archive) that the
 run built from. Each build also gets it as the Zephyr module "safety".
 
@@ -74,6 +79,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402
+from studylib import seal  # noqa: E402
 
 BENCH_DIR = trees.BENCH_DIR
 
@@ -427,6 +433,13 @@ def rebuild(args):
         atexit.register(trees.git, "worktree", "remove", "--force", str(src), cwd=repo_root, check=False)
         moves[safety["path"]] = str(src)
     print(f"rebuild {run_dir}  {len(entries)} points")
+    started = datetime.datetime.now(datetime.timezone.utc)
+    repo_root, repo_rev, repo_dirty = safety_repo_state()
+    record = {"format": "latbench-rebuild/1", "run": run_dir.name, "experiment": manifest["experiment"],
+              "run_digest": seal.digest(run_dir) if seal.seal_path(run_dir).is_file() else None,
+              "host": platform.node(), "started": started.isoformat(),
+              "tool": {"safety_rev": repo_rev, "dirty": bool(repo_dirty)},
+              "trees_root": str(cfg["root"]), "zephyr_sdk": str(sdk), "points": []}
     failed = 0
     for e in entries:
         name = f"{e['tree']}/{e['id']}"
@@ -455,9 +468,16 @@ def rebuild(args):
                 else:
                     shutil.rmtree(bdir)
         failed += bad
+        record["points"].append({"tree": e["tree"], "point": e["id"], "verdict": "different" if bad else "same",
+                                 "same": same, "different": diff})
         print(f"[{name}] {'DIFFERENT' if bad else 'same'}: same {', '.join(same) or '-'}"
               + (f"; different {', '.join(diff)}" if diff else ""), flush=True)
     print(f"{len(entries) - failed} of {len(entries)} points give the same image and .config")
+    record["finished"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    record["summary"] = f"{len(entries) - failed} of {len(entries)} points give the same image and .config"
+    rec = run_dir.parent / f"{run_dir.name}.rebuild-{started.strftime('%Y%m%dT%H%M%SZ')}.json"
+    rec.write_text(json.dumps(record, indent=2) + "\n")
+    print(f"record: {rec}")
     if failed or args.keep_build:
         print(f"logs and builds in {tmp}")
     else:
@@ -572,7 +592,9 @@ def main():
 
     # 2. Output folder and manifest.
     started = datetime.datetime.now(datetime.timezone.utc)
-    run_dir = Path(args.out).resolve() / exp["name"] / started.strftime("%Y%m%dT%H%M%SZ")
+    out = Path(args.out).resolve()
+    exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
+    run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
     src_bench = export_snapshot(repo_root, repo_rev, run_dir / "src")
     probe = subprocess.run(
@@ -673,7 +695,10 @@ def main():
         finally:
             sys.stdout = sys.__stdout__
     print((run_dir / "summary.txt").read_text())
-    print(f"results in {run_dir}")
+    digest = seal.write(run_dir)
+    print(f"results in {run_dir}  ({digest})")
+    if (out / "instance.json").is_file():
+        print(f"add it to the instance: scripts/benchmarks/study.py add {out} {run_dir}")
 
 
 if __name__ == "__main__":

@@ -26,7 +26,7 @@ experiments:
 #   id         unique in the study
 #   statement  the result as a sentence; {name} is a value of the result
 #   from       the data: experiment, point, metric, or hypotheses
-#   stat       the statistic (study-design.md §14.3)
+#   stat       the statistic (doc/benchmark-guide/studies.rst)
 #   unit       the unit of the values
 central_results:
   - id: t2t-p99-sem

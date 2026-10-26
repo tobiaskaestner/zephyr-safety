@@ -44,6 +44,9 @@ paths are relative to the root of the repo:
 | `scripts/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
 | `scripts/benchmarks/latbench.py` | Parses logs and prints percentiles |
 | `scripts/benchmarks/plot.py` | Plots the exceedance probability and the histograms |
+| `scripts/benchmarks/study.py` | Study instances: run lists, seals, and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide page "Studies and their results") |
+| `scripts/benchmarks/data.py` | Loads a built instance for a notebook |
+| `tests/benchmarks/<app>/scripts/extract.py` | The data of a run of the app as JSON (common part: `common/scripts/latextract.py`) |
 | `scripts/benchmarks/requirements.txt` | Python packages for the scripts |
 | `scripts/benchmarks/tests/` | pytest modules for the scripts and the experiment files |
 

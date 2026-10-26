@@ -26,6 +26,7 @@ to the root of the safety repository.
    host-tools
    unit-tests
    m4
+   studies
    extending
    boards
    pitfalls
