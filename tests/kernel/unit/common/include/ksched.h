@@ -109,6 +109,13 @@ struct kernel_unit_pend_refusal {
 /** The state of the ISR refusal of the fake z_pend_curr(). */
 extern struct kernel_unit_pend_refusal kernel_unit_pend_refusal;
 
+/**
+ * Return the value that the fake arch_is_in_isr() gives now, without a call.
+ * Thus the call count and the call history of arch_is_in_isr() show only the
+ * calls of the unit.
+ */
+bool kernel_unit_context_is_isr(void);
+
 /* clang-format off */
 /* KERNEL_UNIT_REAL_COPY_BEGIN kernel/include/ksched.h */
 static inline bool z_is_under_prio_ceiling(int prio)

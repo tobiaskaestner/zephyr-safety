@@ -9,7 +9,7 @@ project(kernel_unit_sem)
 
 include(${ZEPHYR_SAFETY_MODULE_DIR}/cmake/kernel_unit.cmake)
 
-kernel_unit_fakes(arch sched fatal kernel_internal)
+kernel_unit_fakes(arch sched fatal kernel_internal init sched_ref)
 kernel_unit_fakes_ifdef(CONFIG_OBJ_CORE obj_core)
 kernel_unit_fakes_ifdef(CONFIG_ASSERT assert)
 kernel_unit_fakes_ifdef(CONFIG_SPIN_VALIDATE spinlock)

@@ -20,6 +20,10 @@ architecture layer.
 The tests are a design specification of the unit. Each test states one
 design rule (see `Write a test`_).
 
+The application ``sched_ref`` is an exception: it includes no kernel source
+file. It is the self-test of the reference fake of the scheduler (see
+`Reference fake of the scheduler`_).
+
 Test applications
 *****************
 
@@ -56,6 +60,9 @@ Test applications
    * - ``obj_core``
      - ``kernel/obj_core.c``
      - 5
+   * - ``sched_ref``
+     - the fake group ``sched_ref`` (no kernel source file)
+     - 2
 
 `Configurations`_ gives the configuration options of each unit.
 
@@ -502,6 +509,11 @@ it must not link. The groups are:
 - ``spinlock``: the spinlock validation functions
   (``kernel/spinlock_validate.c``). Link it only with
   ``CONFIG_SPIN_VALIDATE``.
+- ``sched_ref``: the reference fake of the scheduler contract (see
+  `Reference fake of the scheduler`_). This group is a model group: no
+  kernel source file defines its functions. It sets the ``custom_fake`` of
+  the fakes of the groups ``sched`` and ``arch``, so it needs the groups
+  ``sched``, ``arch``, ``fatal`` and ``init``.
 - ``log_minimal``: ``z_log_minimal_printk()``
   (``subsys/logging/log_minimal.c``). The ``unit_testing`` board uses
   ``CONFIG_LOG_MODE_MINIMAL``. A ``LOG_DBG()`` of the unit calls this
@@ -560,6 +572,8 @@ of each unit are:
   of priority inheritance are in ``#if Z_MUTEX_PI_ENABLED`` blocks. The
   documentation tools do not read this condition (it is not a
   ``CONFIG_X``).
+- ``sched_ref`` (the self-test of the reference fake): ``CONFIG_ASSERT``
+  (scenario ``assert``), for the assertion hook of the ISR refusal.
 - ``obj_core.c``: ``CONFIG_OBJ_CORE`` (all scenarios,
   ``CONFIG_OBJ_CORE_SYSTEM`` has no prompt), ``CONFIG_OBJ_CORE_STATS``,
   ``CONFIG_OBJ_CORE_STATS_SYSTEM`` (scenario ``stats_no_system`` disables
@@ -722,6 +736,9 @@ header after ``kernel_unit.h``.
   ``zassert_stopped_by_oops()`` and ``zassert_stopped_by_panic()`` (see
   `Checks that do not return`_).
 
+The reference fake of the scheduler is not in this header. It has its own
+header and fake group (see `Reference fake of the scheduler`_).
+
 Each application keeps its local helpers in its test source. Examples are
 the observers of the lock spies, a thin ``assert_lock_released_once()``
 that names the lock of the unit, and the models that only one unit needs.
@@ -851,6 +868,52 @@ These models stay local, because only one unit needs them:
   ``z_pend_curr()``), the wake by ``arch_thread_return_value_set()``, and
   the priority (``z_thread_prio_set()`` sets ``base.prio`` and returns its
   ``return_val`` as the reschedule hint).
+
+Reference fake of the scheduler
+-------------------------------
+
+The models above state assumptions about the scheduler in prose. The
+reference fake is the C form of the scheduler contract
+(``safety/spec/tla/lib/Scheduler.tla``, layer A) for one CPU. The header is
+``common/include/kernel_unit_sched_ref.h``, the code is
+``common/fakes/sched_ref.c`` (fake group ``sched_ref``). The review of the
+models against the contract is in the workspace notes
+(``claude/kernel-unit/reffake/review.md``).
+
+- The fake has the threads of the test with their priorities, a wait queue
+  for each ``_wait_q_t`` (a higher priority first, then the order of
+  arrival), the current thread, the swap return value and the swap data of
+  each thread, and the armed timeouts.
+- Each scheduler function that the objects call has one fake function. Its
+  comment names the operator of the contract. ``z_reschedule()`` selects the
+  next thread with the rule ``Choices`` of the contract. Where the contract
+  and ``kernel/sched.c`` differ, the fake follows the code. For example,
+  after ``z_thread_prio_set()`` of a ready thread, the next selection has no
+  tie rule and no rule for cooperative threads, as ``update_cache(1)`` of the
+  code.
+- ``z_pend_curr()`` records the wait, selects the next thread and runs the
+  environment steps of the test: an action of another thread, an action of
+  an ISR, a timeout or an abort. When the CPU selects the waiting thread
+  again, the fake returns its swap return value. A ``K_FOREVER`` wait that
+  no step ends does not return: the check ``NO_RETURN`` fails.
+- The checks come from the invariants of the contract (for example
+  ``ArmedArePending`` and ``RunRuleHolds``) and from the preconditions of
+  the operators (``MISUSE``). A failed check fails the test, unless the test
+  expects it with ``kernel_unit_sched_ref_expect()``.
+- ``z_handle_obj_poll_events()`` stays a plain fake.
+
+The fake is opt-in. A test calls ``kernel_unit_sched_ref_install()``, adds
+its threads (``kernel_unit_sched_ref_thread()``), sets the current thread
+and the waiting threads, and adds the environment steps. FFF records each
+call before the fake runs, so the history helpers work. At the end, the test
+calls ``kernel_unit_sched_ref_assert_ok()``. The fake does not work together
+with the lock spies or the lock model, because all three replace the
+``custom_fake`` of ``z_reschedule()``.
+
+An application that uses the fake links the groups ``init`` and
+``sched_ref``. Today ``sem`` uses it (group ``kernel_unit_sem_ref``). The
+application ``sched_ref`` tests the fake against the example values of
+``mc/SchedulerTest.tla`` and against the misuses of ``mc/MCScheduler.tla``.
 
 Real object core code
 =====================

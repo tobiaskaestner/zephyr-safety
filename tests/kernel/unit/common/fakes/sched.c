@@ -31,9 +31,10 @@ struct kernel_unit_pend_refusal kernel_unit_pend_refusal;
 /*
  * Return the value that a call of the fake arch_is_in_isr() gives now, but
  * do not call it. The order is the order of FFF: custom fake sequence,
- * custom fake, return value sequence, return value.
+ * custom fake, return value sequence, return value. The reference fake
+ * (fake group sched_ref) also reads the context with this function.
  */
-static bool context_is_isr(void)
+bool kernel_unit_context_is_isr(void)
 {
 	const arch_is_in_isr_Fake *isr = &arch_is_in_isr_fake;
 
@@ -60,7 +61,7 @@ static bool context_is_isr(void)
  */
 static bool pend_refused_in_isr(void)
 {
-	if (!context_is_isr()) {
+	if (!kernel_unit_context_is_isr()) {
 		return false;
 	}
 
