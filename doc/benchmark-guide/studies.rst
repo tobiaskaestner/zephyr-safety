@@ -223,8 +223,9 @@ The board is in the folder name only at the level that fixes it
 (``@<port>``); the sub-instances inherit it.
 
 ``run.json`` has the run identity and provenance, and for each point its
-axes, the digests of ``.config``, ``zephyr.dts``, ``zephyr.elf``,
-``zephyr.hex`` and ``build.log``, the image digest (the loadable
+axes, the digests of ``.config``, ``zephyr.dts``, the images
+(``<app>-<tree>-<point>.elf`` and ``.hex``, or ``zephyr.elf`` and
+``zephyr.hex`` in an older run) and ``build.log``, the image digest (the loadable
 segments of the ELF) and the code digest. The image has the safety
 revision of the build (``LATBENCH_SRC_REV``), so the same code at two
 revisions gives two image digests; the code digest counts these 40
@@ -249,9 +250,8 @@ lab space, a campaign makes the instances and adds each run (see
 
    # once: the instance folders of a study for a board
    scripts/benchmarks/study.py instance new <results> load-scaling --board nucleo_g474re
-   # a run goes into its instance folder, then into the run list
-   scripts/benchmarks/run.py <experiment.yaml> --out <instance folder>
-   scripts/benchmarks/study.py instance add <instance folder> <run folder>
+   # a run goes into its instance folder and into its run list (run.py adds it)
+   scripts/benchmarks/run.py <experiment.yaml> --out <instance folder> [--role R --reason TEXT]
    # an old run from another place: copy it in (the original stays)
    scripts/benchmarks/study.py instance add <instance folder> <old run folder> --copy
    # the aggregates, and a check that they come again from the same inputs

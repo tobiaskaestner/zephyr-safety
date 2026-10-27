@@ -31,9 +31,10 @@ Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign check FOLDER [...] [--no-hwcheck] [--warn-as-error]
                                           the pre-flight check
     study.py campaign run FOLDER [...] [--no-hwcheck] [--detach] [--warn-as-error]
+                      [--role R --reason TEXT]
                                           check, then run each experiment and add each
-                                          run to its instance; build the results after
-                                          each run in the background
+                                          run to its instance (role R, default evidence);
+                                          build the results after each run in the background
     study.py campaign status [ID]         the record of a campaign (default: the latest)
     study.py campaign resume ID [--detach]
                                           run the experiments of a campaign that are not done
@@ -242,7 +243,8 @@ def campaign_extra(args):
 def cmd_campaign_run(args):
     lab = labmod.require()
     items = campaign.plan(lab, args.folder, args.board, args.only, args.skip)
-    rec = campaign.new_record(lab, args.folder, args.board, items, ["study.py", *sys.argv[1:]])
+    rec = campaign.new_record(lab, args.folder, args.board, items, ["study.py", *sys.argv[1:]],
+                              role=args.role, reason=args.reason)
     print(f"campaign {rec.id}: {sum(e['state'] == 'planned' for e in items)} experiments, record {rec.path}")
     if args.detach:
         pid, log = campaign.detach(rec, campaign_extra(args))
@@ -497,6 +499,9 @@ def parser():
             s.add_argument("--warn-as-error", action="store_true", help="a lint warning fails the check")
         if name == "run":
             s.add_argument("--detach", action="store_true", help="run in the background")
+            s.add_argument("--role", default="evidence", choices=instance.ROLES,
+                           help="the role of the runs in the run lists (default evidence)")
+            s.add_argument("--reason", help="the reason of a role other than evidence")
         s.set_defaults(func=func)
     s = camp.add_parser("resume")
     s.add_argument("id")

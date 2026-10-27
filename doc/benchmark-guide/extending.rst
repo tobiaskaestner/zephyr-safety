@@ -53,8 +53,8 @@ Add an experiment
    a lab space, run it with a campaign: ``study.py campaign run
    <experiment folder>`` (see :doc:`lab`). The campaign adds the run to
    the run list of its instance. Without a campaign, use ``--out
-   <instance folder>``, then ``study.py instance add <instance folder>
-   <run folder>`` (see :doc:`studies`).
+   <instance folder>``: ``run.py`` then adds the run to the run list of
+   the instance itself (see :doc:`studies`).
 
 Each value in ``kconfig`` of a point must be an option of the app or of
 the tree. If the tree does not define the option, the build stops. Thus

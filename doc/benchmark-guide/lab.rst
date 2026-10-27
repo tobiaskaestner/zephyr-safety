@@ -202,9 +202,14 @@ Build cache
 
 In a lab space, ``run.py`` keeps the image of each point in the build
 cache ``.lab/build-cache/<key[:2]>/<key>/``. An entry has ``zephyr.elf``,
-``zephyr.hex``, ``.config``, ``zephyr.dts``, ``build.log`` and
-``entry.json`` (the inputs of the key, the CMake command and the SHA-256
-of the ELF).
+``zephyr.hex``, ``.config``, ``zephyr.dts``, ``build.log``,
+``entry.json`` (the inputs of the key, the CMake command, the SHA-256 of
+the ELF and ``built_by``, the run that built it) and ``uses.jsonl``: one
+line for each run that took the image, with the point, ``from`` (``build``
+or ``cache``), the host and the time. The entry keeps the names
+``zephyr.elf`` and ``zephyr.hex``, because two experiments can share it. A
+run gives the images their names ``<app>-<tree>-<point>`` when it copies
+them into its point folder.
 
 The key is the SHA-256 of all inputs of the image:
 
@@ -230,7 +235,10 @@ these runs get the image from the cache:
 - A point of another experiment with the same settings.
 
 An entry counts only if its ELF has the SHA-256 of ``entry.json``. The
-manifest of the run records ``build: {key, cached}`` for each point. Each
+manifest of the run records ``build: {key, from, built_by}`` for each
+point, and the log of the run has one line for each image from the cache,
+for example ``[ws-safety/stock-idle] image from the build cache
+(c5c5146c5eef, built by irq-smoke/20261027T172644Z)``. Each
 build has a folder of its own process, and an entry that another process
 stored first stays. Before an image goes into the run or the cache,
 ``run.py`` checks again that the repository did not change during the
@@ -248,6 +256,7 @@ Campaigns
    study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
    study.py campaign check   FOLDER [--board B] [--only ...] [--skip ...] [--no-hwcheck] [--warn-as-error]
    study.py campaign run     FOLDER [--board B] [--only ...] [--skip ...] [--no-hwcheck] [--warn-as-error] [--detach]
+                             [--role R --reason TEXT]
    study.py campaign status  [ID] [--verdicts]
    study.py campaign resume  ID [--no-hwcheck] [--warn-as-error] [--detach]
 
@@ -318,17 +327,21 @@ A ``fail`` gives exit code 1.
    that the design repository is clean and at the commit of the
    campaign. It makes the instance if there is none (``instance new`` at
    the level that fixes the board). Then it runs ``run.py <experiment.yaml>
-   --out <instance folder>``.
-#. If ``run.py`` succeeds, it adds the run to the run list of the
-   instance (role ``evidence``). The experiment is ``done``.
+   --out <instance folder> --campaign <id> --role R``.
+#. ``run.py`` adds the run to the run list of the instance, with the role
+   of the campaign (``--role``, default ``evidence``; ``adjustment`` or
+   ``excluded`` need ``--reason``) and the campaign id. The experiment is
+   ``done``. The log has one line for it, for example ``done (rc 0) in
+   6 min, 5/5 images from the build cache, run irq-smoke/20261027T175848Z``.
 #. After each ``done`` experiment, a background process builds the
    results tree (``study.py analysis build`` and ``study.py analysis html``).
 
 Failure rules:
 
 - A failed experiment does not stop the campaign. The next experiment
-  starts. If ``run.py`` left a part of a run folder, the record names it
-  in ``note``. This part is not in the run list.
+  starts. The record gives the reason in ``note``: the step and the error
+  of ``<UTC>.failed.json`` (see :doc:`host-tools`), or a part of a run
+  folder that ``run.py`` left. Such a run is not in the run list.
 - A change of the design repository (a new commit, or changes that are
   not committed) stops the campaign before the next experiment.
 - ``SIGTERM`` or Ctrl-C stops the campaign. The running experiment is
@@ -336,7 +349,9 @@ Failure rules:
 
 The background build runs with ``nice 10``, one build at a time. If a run
 ends while a build runs, one more build follows. At the end, the campaign
-waits for the last build and then builds one more time. The builds write
+sets its status and asks for one more build: after the build that runs
+at that time, if there is one. That last build starts after the end of
+the campaign, so it makes the verdicts final. The builds write
 ``.lab/campaigns/<id>/post.log``. While the campaign runs, the build
 marks the verdicts that wait for an experiment of the campaign as
 provisional (see :ref:`benchguide-provisional`).

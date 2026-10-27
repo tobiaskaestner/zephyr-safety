@@ -168,13 +168,14 @@ def board_of(folder):
     return None
 
 
-def add(design, folder, run_dir, role="evidence", reason=None, copy=False):
+def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campaign=None):
     """Add a raw run to the run list of an instance; return the run id.
 
     A run in the instance folder (ex-<experiment>/<UTC>) is added as it is.
     With copy, a run from another place (for example an old flat results
     folder <experiment>/<UTC>) is copied into the instance first, with its
     seal; the original stays. The run is sealed if it has no seal yet.
+    campaign: the id of the campaign that made the run (in the run-list entry).
     """
     folder = Path(folder).resolve()
     run_dir = Path(run_dir).resolve()
@@ -213,6 +214,8 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False):
     entry = {"id": run_id, "digest": digest, "role": role}
     if reason:
         entry["reason"] = reason
+    if campaign:
+        entry["campaign"] = campaign
     if copied_from:
         entry["copied_from"] = copied_from
     with locked(folder):

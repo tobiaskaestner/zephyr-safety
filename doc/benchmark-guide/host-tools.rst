@@ -381,11 +381,21 @@ Options:
    output until ``LAT DONE``. If no ``LAT DONE`` comes before the timeout,
    or the flash fails, the run stops.
 #. **Summary.** It writes ``summary.txt`` with the percentiles of each
-   histogram.
+   histogram, one column per axis, and prints how many images came from
+   the build cache.
+#. **Seal and run list.** It writes the seal. If ``--out`` is the folder
+   of a study instance, it adds the run to the run list of the instance,
+   with ``--role`` (default ``evidence``) and ``--reason``. ``--campaign
+   ID`` names the campaign in the entry. It prints ``run <id> added to the
+   instance <folder>``.
 
 ``run.py`` writes ``manifest.json`` at the start and updates it after each
 repetition. Thus a run that stops still has a manifest for the completed
-repetitions.
+repetitions. A run that stops before its seal (an error, Ctrl-C or
+SIGTERM) writes ``<UTC time>.failed.json`` beside its folder: the step
+(for example ``flash and capture ws-safety/stock-idle rep 1``), the error
+and the last 20 lines of the log of that step. Such a run is not in a run
+list, so the results build and the export do not see it.
 
 .. _benchguide-experiment-file:
 
@@ -540,9 +550,14 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
        ├── build.log        CMake and Ninja output
        ├── .config          Kconfig of the build
        ├── zephyr.dts       devicetree of the build
-       ├── zephyr.elf       the binary
-       ├── zephyr.hex       the binary as Intel HEX, if the build makes it
+       ├── <app>-<tree>-<point>.elf   the binary
+       ├── <app>-<tree>-<point>.hex   the binary as Intel HEX, if the build makes it
        └── build/           only with --keep-build
+
+The image names, for example ``irq_latency-ws-safety-stock-idle.elf``,
+say what the image is also outside its folder. The runs before
+2026-10-28 have ``zephyr.elf`` and ``zephyr.hex``; their seals cover the
+names, so they keep them. The tools find the image by either name.
 
 A run of an older ``run.py`` also has ``src/``, a copy of the safety
 repository (``git archive``). Its builds used this copy.
@@ -578,8 +593,11 @@ repository (``git archive``). Its builds used this copy.
 - ``points``: one entry for each tree and point. An entry has the axes,
   the settings, the CMake command, the SHA-256 of the ELF and the logs.
   In a lab space, it also has ``build``: ``key`` (the key of the build
-  cache) and ``cached`` (``true`` if the image came from the cache). If
-  the point failed, it also has an ``error``.
+  cache), ``from`` (``build`` or ``cache``) and, for an image from the
+  cache, ``built_by`` (the run that built it, or ``<experiment> (build
+  only, <UTC>)`` for ``campaign prepare``). The runs before 2026-10-28 have
+  ``cached`` (``true`` or ``false``) instead of ``from``. If the point
+  failed, it also has an ``error``.
 
 .. _benchguide-rebuild:
 

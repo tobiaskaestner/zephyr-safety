@@ -23,10 +23,18 @@ import yaml
 import run as runpy
 import trees
 
-from . import seal
+from . import images, seal
 from .design import repo_rel
 
-POINT_FILES = (".config", "zephyr.dts", "zephyr.elf", "zephyr.hex", "build.log")
+POINT_FILES = (".config", "zephyr.dts", "build.log")
+
+
+def file_order(name):
+    """The order of the point files in run.json (as before the new image names: .config, .dts, .elf, .hex, log)."""
+    for i, end in enumerate((".config", ".dts", ".elf", ".hex", ".log")):
+        if name.endswith(end):
+            return i, name
+    return 9, name
 
 
 def image_sha256(elf, mask=None):
@@ -101,12 +109,14 @@ def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
         else:
             src = "none"
         sources.add(src)
-        elf = run_dir / rel / "zephyr.elf"
+        elf = images.find(run_dir / rel, ".elf")
+        imgs = [p.name for p in (elf, images.find(run_dir / rel, ".hex")) if p is not None]
         points.append({
             "tree": e["tree"], "point": e["id"], "axes": axes,
-            "files": {n: files[f"{rel}/{n}"] for n in POINT_FILES if f"{rel}/{n}" in files},
-            "image_sha256": image_sha256(elf) if elf.is_file() else None,
-            "code_sha256": code_sha256(elf, bench_rev(e)) if elf.is_file() else None,
+            "files": {n: files[f"{rel}/{n}"] for n in sorted([*POINT_FILES, *imgs], key=file_order)
+                      if f"{rel}/{n}" in files},
+            "image_sha256": image_sha256(elf) if elf is not None else None,
+            "code_sha256": code_sha256(elf, bench_rev(e)) if elf is not None else None,
             "reps": [{"rep": i, "log": log, "log_sha256": files.get(log)} for i, log in enumerate(e["logs"], 1)],
         })
     note = {"manifest": "manifest"}.get("/".join(sorted(sources)))

@@ -216,7 +216,10 @@ def find_prefix(log, given=None):
 
 
 def symbolizer_for(log, elf=None, prefix=None):
-    elf = Path(elf) if elf else Path(log).parent / "zephyr.elf"
+    if not elf:
+        from studylib import images
+        elf = images.find(Path(log).parent, ".elf") or Path(log).parent / "zephyr.elf"
+    elf = Path(elf)
     prefix = find_prefix(log, prefix)
     if not elf.is_file() or not prefix:
         return None
@@ -371,7 +374,7 @@ def main():
 
     t = sub.add_parser("table", help="site tables of one log")
     t.add_argument("log")
-    t.add_argument("--elf", help="ELF of the build (default: zephyr.elf next to the log)")
+    t.add_argument("--elf", help="ELF of the build (default: the .elf next to the log)")
     t.add_argument("--binutils", help="prefix of nm and addr2line (default: from the run manifest)")
     t.add_argument("--no-names", action="store_true")
     t.add_argument("--top", type=int, default=None, help="only the first N sites of each kind")

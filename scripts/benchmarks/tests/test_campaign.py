@@ -114,19 +114,25 @@ FAKE_RUN = '''
 import json, sys, time
 from pathlib import Path
 sys.path.insert(0, {scripts!r})
-from studylib import seal
+from studylib import instance, seal
+from studylib.design import Design
 exp = Path(sys.argv[1]).parent.name[3:]
-out = Path(sys.argv[sys.argv.index("--out") + 1])
-if exp == "exp-fail":
-    sys.exit("error: the board did not answer")
+arg = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
+out = Path(arg("--out"))
 run = out / ("ex-" + exp) / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 while run.exists():
     time.sleep(0.2)
     run = out / ("ex-" + exp) / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 run.mkdir(parents=True)
-(run / "manifest.json").write_text(json.dumps({{"experiment": exp, "board": "nucleo_g474re", "points": []}}))
+if exp == "exp-fail":
+    (run.parent / (run.name + ".failed.json")).write_text(json.dumps({{"step": "flash", "error": "no answer"}}))
+    sys.exit("error: the board did not answer")
+(run / "manifest.json").write_text(json.dumps({{"experiment": exp, "board": "nucleo_g474re",
+                                                "points": [{{"build": {{"from": "cache"}}}}, {{"build": {{"from": "build"}}}}]}}))
 seal.write(run)
 print("results in", run)
+rid = instance.add(Design({root!r}), out, run, role=arg("--role"), reason=arg("--reason"), campaign=arg("--campaign"))
+print(f"run {{rid}} added to the instance {{out}}")
 '''
 
 
@@ -142,7 +148,7 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     (root / "st-sub" / "study.yaml").write_text(yaml.safe_dump(d))
     design = Design(root)
     fake = tmp_path / "fake_run.py"
-    fake.write_text(FAKE_RUN.format(scripts=str(SCRIPTS)))
+    fake.write_text(FAKE_RUN.format(scripts=str(SCRIPTS), root=str(root)))
     monkeypatch.setattr(campaign, "run_py", lambda: fake)
     monkeypatch.setattr(campaign, "preflight", lambda *a, **k: [("ok", "fake", "")])
     monkeypatch.setattr(campaign.Post, "kick", lambda self: None)
@@ -150,17 +156,25 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     monkeypatch.setattr(trees, "git", lambda *a, **k: "")
     monkeypatch.chdir(lab.folder)
     items = campaign.plan(lab, root, design=design, board="nucleo_g474re")
-    rec = campaign.new_record(lab, root, "nucleo_g474re", items, ["study.py", "campaign", "run"])
-    failed = campaign.run_campaign(rec, design=design, log=lambda *a: None)
+    with pytest.raises(campaign.CampaignError):           # a role other than evidence needs a reason
+        campaign.new_record(lab, root, "nucleo_g474re", items, ["x"], role="adjustment")
+    rec = campaign.new_record(lab, root, "nucleo_g474re", items, ["study.py", "campaign", "run"],
+                              role="adjustment", reason="a test of the tools")
+    lines = []
+    failed = campaign.run_campaign(rec, design=design, log=lines.append)
     assert failed == 1
+    assert any(ln.startswith("    done (rc 0) in ") and "1/2 images from the build cache" in ln for ln in lines)
     data = campaign.Record(lab, rec.id).data
     states = [(e["experiment"], e["state"]) for e in data["experiments"]]
     assert states == [("exp-fail", "failed"), ("exp1", "done"), ("exp2", "skipped")]
     assert data["status"] == "done" and campaign.lock_holder(lab) is None
     from studylib import instance
     folder = lab.results / data["experiments"][1]["instance"]
-    assert [r["id"] for r in instance.load(folder)["runs"]] == [data["experiments"][1]["run"]]
+    runs = instance.load(folder)["runs"]
+    assert [r["id"] for r in runs] == [data["experiments"][1]["run"]]
+    assert (runs[0]["role"], runs[0]["reason"], runs[0]["campaign"]) == ("adjustment", "a test of the tools", rec.id)
     assert "board did not answer" in (lab.folder / data["experiments"][0]["log"]).read_text()
+    assert "failed at 'flash': no answer" in data["experiments"][0]["note"]
     # resume: only the failed experiment runs again; a changed repo stops the campaign
     monkeypatch.setattr(trees, "repo_state", lambda path: ("r" * 40, " M x"))
     with pytest.raises(campaign.CampaignError):

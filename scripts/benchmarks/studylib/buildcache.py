@@ -5,8 +5,11 @@
 
 An entry holds the files of one built point: zephyr.elf, zephyr.hex,
 .config, zephyr.dts, build.log and entry.json (the key inputs, the CMake
-command, the ELF digest). The key is the sha256 of everything that goes
-into the image:
+command, the ELF digest, built_by: the run or the step that built it), and
+uses.jsonl: one line for each run that took the image (also the run that
+built it). A run gives the images their names when it copies them into its
+point folder (studylib/images.py). The key is the sha256 of everything
+that goes into the image:
 
     the board, the app, the revs of the tree repos that the board needs,
     the BUILD_VERSION string of the Zephyr tree (git describe: it depends
@@ -72,7 +75,7 @@ class Cache:
         d.mkdir(parents=True)
         return d
 
-    def put(self, key, inputs, bdir, cmake, log, paths=None):
+    def put(self, key, inputs, bdir, cmake, log, paths=None, built_by=None):
         """Store the files of a build; return the entry. The entry appears at once (rename).
 
         If another process stored the key in the meantime, its entry stays (the same inputs give
@@ -88,7 +91,7 @@ class Cache:
             if src.exists():
                 shutil.copy2(src, tmp / name)
         shutil.copy2(log, tmp / "build.log")
-        entry = {"key": key, "inputs": inputs, "cmake": cmake, "paths": paths or {},
+        entry = {"key": key, "inputs": inputs, "cmake": cmake, "paths": paths or {}, "built_by": built_by,
                  "elf_sha256": hashlib.sha256((tmp / "zephyr.elf").read_bytes()).hexdigest()}
         (tmp / "entry.json").write_text(json.dumps(entry, indent=2) + "\n")
         final = self.entry_dir(key)
@@ -110,9 +113,19 @@ class Cache:
             return have
         return entry
 
-    def copy_to(self, key, pdir):
-        """Copy the files of an entry into a point folder of a run."""
+    def copy_to(self, key, pdir, rename=None):
+        """Copy the files of an entry into a point folder of a run; rename: {entry name: name there}."""
         d = self.entry_dir(key)
+        rename = rename or {}
         for name in (*FILES, "build.log"):
             if (d / name).exists():
-                shutil.copy2(d / name, Path(pdir) / name)
+                shutil.copy2(d / name, Path(pdir) / rename.get(name, name))
+
+    def note_use(self, key, use):
+        """Add one line to uses.jsonl of an entry: a run that took the image."""
+        with open(self.entry_dir(key) / "uses.jsonl", "a") as f:
+            f.write(json.dumps(use, sort_keys=True) + "\n")
+
+    def uses(self, key):
+        f = self.entry_dir(key) / "uses.jsonl"
+        return [json.loads(ln) for ln in f.read_text().splitlines() if ln.strip()] if f.is_file() else []

@@ -238,20 +238,24 @@ def summary(args):
 
     args.hist: only these histograms (default: all). args.meta: META keys
     to add as columns ("drift_ppm" is computed from the clock keys).
+    args.axes: {log path: {axis: value}}, one column per axis (else the
+    column "variant", the label of the app).
     args.md: a Markdown table.
     """
     only = getattr(args, "hist", None)
     meta_keys = getattr(args, "meta", None) or []
+    axes = getattr(args, "axes", None)
     rows = []
     for path in args.logs:
         run = parse_log(path)
-        label = run["meta"].get("variant", "?")
+        # one column per axis of the point (run.py), else the variant label of the app
+        label = axes[str(path)] if axes else {"variant": run["meta"].get("variant", "?")}
         for name, h in run["hists"].items():
             if only and name not in only:
                 continue
             row = {
                 "log": "/".join(Path(path).parts[-3:]),
-                "variant": label,
+                **label,
                 "hist": name,
                 "n": h["n"],
                 "min": h["min"],

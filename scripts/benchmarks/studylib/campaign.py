@@ -46,7 +46,7 @@ import yaml
 
 import trees
 
-from . import instance, jsonout, layout
+from . import instance, jsonout, layout, seal
 from .design import Design, repo_rel
 
 FORMAT = "latbench-campaign/1"
@@ -191,7 +191,7 @@ class Record:
         self.save()
 
 
-def new_record(lab, folder, board, items, argv):
+def new_record(lab, folder, board, items, argv, role="evidence", reason=None):
     cid = utc_id()
     while (lab.campaigns / f"{cid}.json").exists():
         time.sleep(1)
@@ -203,7 +203,10 @@ def new_record(lab, folder, board, items, argv):
     rec.data = {"format": FORMAT, "id": cid, "lab": lab.describe(), "host": platform.node(),
                 "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
                 "repo": {"path": str(trees.REPO_DIR), "rev": rev}, "ref": f"refs/latbench/campaign/{cid}",
+                "role": role, **({"reason": reason} if reason else {}),
                 "status": PLANNED, "created": utc_now().isoformat(), "experiments": items}
+    if role != "evidence" and not reason:
+        raise CampaignError(f"role {role} needs a reason (--reason)")
     rec.save()
     return rec
 
@@ -541,35 +544,38 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             e.pop("note", None)
             rec.save()
             log(f"=== {e['experiment']} ({e['instance']})")
-            cmd = [sys.executable, run_py(), trees.REPO_DIR / e["design"], "--out", folder]
+            # run.py adds the run to the run list of the instance, with the role and the campaign
+            cmd = [sys.executable, run_py(), trees.REPO_DIR / e["design"], "--out", folder,
+                   "--campaign", rec.id, "--role", d.get("role", "evidence"),
+                   *(["--reason", d["reason"]] if d.get("reason") else [])]
             if warn_as_error:
                 cmd.append("--warn-as-error")
+            t0 = time.monotonic()
             rc = run_subprocess(cmd, lab.folder / e["log"], cwd=lab.folder)
             e.update(rc=rc, finished=utc_now().isoformat())
-            run_dir = None
+            added, run_dir = None, None
             for line in (lab.folder / e["log"]).read_text().splitlines():
                 if line.startswith("results in "):
                     run_dir = Path(line.split()[2])
-            if rc == 0 and run_dir is not None:
-                try:
-                    e["run"] = instance.add(design, folder, run_dir)
-                    e["state"] = DONE
-                except (instance.InstanceError, OSError, ValueError, Exception) as x:
-                    e.update(state=FAILED, note=f"instance add: {type(x).__name__}: {x}")
+                elif line.startswith("run ") and " added to the instance " in line:
+                    added = line.split()[1]
+            if rc == 0 and added is not None:
+                e.update(run=added, state=DONE)
             else:
                 e["state"] = FAILED
-                partial = sorted((folder / f"{layout.EXPERIMENT_PREFIX}{e['experiment']}").glob("2*Z"))
-                if partial and not (partial[-1].parent / f"{partial[-1].name}.sha256").exists():
-                    e["note"] = f"a part of a run is left in {partial[-1].relative_to(lab.results)} (not in the run list)"
+                e["note"] = failed_note(folder, e["experiment"], run_dir, lab)
             failed += e["state"] == FAILED
             rec.save()
-            log(f"    {e['state']} (rc {rc})" + (f", run {e['run']}" if e.get("run") else ""))
+            log(f"    {e['state']} (rc {rc}) in {minutes(time.monotonic() - t0)}"
+                + (f", {images_note(folder, e['run'])}, run {e['run']}" if e.get("run") else "")
+                + (f": {e['note']}" if e.get("note") else ""))
             if e["state"] == DONE:
                 post.kick()
             post.poll()
         rec.set(status=DONE if not d.get("stopped") else FAILED, finished=utc_now().isoformat())
-        log("waiting for the last build of the results")
-        post.wait()
+        # A build that started while the campaign ran marks its verdicts provisional: one more
+        # build after the end makes them final (kick: after the build that runs now, if any).
+        log("waiting for the last build of the results (it makes the verdicts final)")
         post.kick()
         post.wait()
         log(f"campaign {rec.id}: {d['status']}, {failed} experiments failed; results {root}/index.html")
@@ -589,6 +595,39 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     finally:
         signal.signal(signal.SIGTERM, old)
         drop_lock(lab, rec.id)
+
+
+def minutes(secs):
+    return f"{secs / 60:.0f} min" if secs >= 90 else f"{secs:.0f} s"
+
+
+def images_note(folder, run_id):
+    """'5/5 images from the build cache' for a run (from its manifest)."""
+    try:
+        m = json.loads((Path(folder) / layout.run_folder(run_id) / "manifest.json").read_text())
+    except (OSError, ValueError):
+        return "images: no manifest"
+    pts = m.get("points", [])
+    n = sum(p.get("build", {}).get("from") == "cache" or p.get("build", {}).get("cached") is True for p in pts)
+    return f"{n}/{len(pts)} images from the build cache"
+
+
+def failed_note(folder, exp, run_dir, lab):
+    """Why an experiment failed: the <UTC>.failed.json of its run, or the newest run folder without a seal."""
+    if run_dir is None:
+        runs = sorted((Path(folder) / f"{layout.EXPERIMENT_PREFIX}{exp}").glob("2*Z"))
+        runs = [r for r in runs if r.is_dir()]
+        run_dir = runs[-1] if runs else None
+    if run_dir is None:
+        return "no run folder (see the log)"
+    rel = run_dir.relative_to(lab.results) if run_dir.is_relative_to(lab.results) else run_dir
+    f = run_dir.parent / f"{run_dir.name}.failed.json"
+    if f.is_file():
+        rec = json.loads(f.read_text())
+        return f"the run {rel} failed at '{rec.get('step')}': {rec.get('error')} (not in the run list)"
+    if seal.seal_path(run_dir).exists():
+        return f"the run {rel} is sealed, but not in the run list (see the log)"
+    return f"a part of a run is left in {rel} (not in the run list)"
 
 
 def detach(rec, extra):

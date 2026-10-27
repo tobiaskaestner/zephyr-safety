@@ -125,8 +125,8 @@ The tables
 ``scripts/benchmarks/m4.py table`` prints one table for the mask
 sections and one for the ISR bodies, sorted by max. It finds the
 function and the source line of each site with ``addr2line`` and ``nm``
-of the SDK in the run manifest. The ELF is ``zephyr.elf`` next to the
-log. For an inlined lock, ``place`` is the line in the real function and
+of the SDK in the run manifest. The ELF is the ``.elf`` file next to the
+log (``<app>-<tree>-<point>.elf``, or ``zephyr.elf`` in an older run). For an inlined lock, ``place`` is the line in the real function and
 ``via`` lists the inlined functions between:
 
 .. code-block:: console

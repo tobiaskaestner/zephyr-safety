@@ -22,11 +22,15 @@ Rules (a run stops before it builds anything if one is broken):
 
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
-devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
-If <out> is the folder of a study instance (it has instance.json), the run
-goes to <out>/ex-<experiment>/<UTC time>/; add it to the run list with
-"study.py instance add" (a campaign does it). At the end, run.py writes the
-seal <UTC time>.sha256 beside the run folder (see studylib/seal.py).
+devicetree, the images <app>-<tree>-<point>.elf/.hex and build.log.
+summary.txt has the percentiles, one column per axis. At the end, run.py
+writes the seal <UTC time>.sha256 beside the run folder (see
+studylib/seal.py). If <out> is the folder of a study instance (it has
+instance.json), the run goes to <out>/ex-<experiment>/<UTC time>/ and
+run.py adds it to the run list (--role, --reason; --campaign names the
+campaign in the entry). A run that stops before its seal (an error, Ctrl-C,
+SIGTERM) leaves <UTC time>.failed.json beside its folder: the step, the
+error and the end of the last log. Such a run is not in a run list.
 --rebuild writes its result to <UTC time>.rebuild-<UTC time of the check>.json
 beside the run folder.
 
@@ -79,6 +83,7 @@ import platform
 import re
 import shlex
 import shutil
+import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -207,8 +212,9 @@ def bench_hash(repo_root, rev, kind):
 
 def flash_command(board_cfg, zephyr, pdir, probe):
     """Return one command that runs the flash commands of the board in order."""
-    fields = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex"),
-              "probe": probe}
+    from studylib import images
+    fields = {"zephyr": str(zephyr), "elf": str(images.find(pdir, ".elf") or pdir / "zephyr.elf"),
+              "hex": str(images.find(pdir, ".hex") or pdir / "zephyr.hex"), "probe": probe}
     cmds = [[arg.format(**fields) for arg in cmd] for cmd in board_cfg["flash"]]
     if len(cmds) == 1:
         return cmds[0]
@@ -320,6 +326,7 @@ class Builder:
         self.bench_tree = firmware_hash(repo_root, repo_rev)
         self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
         self.build_versions = {}
+        self.run_id = None          # <experiment>/<UTC> of the run, once its folder exists
 
     def build_version(self, tree):
         """The BUILD_VERSION of the Zephyr tree: git describe, as Zephyr makes it (it depends on the tags)."""
@@ -339,22 +346,34 @@ class Builder:
                                        self.bench_tree, self.module_tree, pt, self.build_version(tree))
         return buildcache.key_of(inputs), inputs
 
+    def use(self, tree, pt, source):
+        """The line of uses.jsonl of a cache entry for this run (or for a build without a run)."""
+        return {"run": self.run_id, "experiment": self.exp["name"], "point": f"{tree}/{pt['id']}", "from": source,
+                "host": platform.node(), "time": datetime.datetime.now(datetime.timezone.utc).isoformat()}
+
     def build(self, tree, pt, pdir=None):
-        """Build one point (or take it from the cache); copy its files to pdir; return the manifest data."""
+        """Build one point (or take it from the cache); copy its files to pdir; return the manifest data.
+
+        The images get the names <app>-<tree>-<point>.elf/.hex in pdir (studylib/images.py).
+        """
+        from studylib import images
         check_repo_unchanged(self.repo_root, self.repo_rev)
         name = f"{tree}/{pt['id']}"
+        rename = images.names(self.exp["app"], tree, pt["id"])
         key, inputs = self.key(tree, pt) if self.cache else (None, None)
         entry = self.cache.get(key) if self.cache else None
         if entry is not None:
-            self.log(f"[{name}] image from the build cache ({key[:12]})")
+            by = entry.get("built_by")
+            self.log(f"[{name}] image from the build cache ({key[:12]}" + (f", built by {by})" if by else ")"))
             if pdir is not None:
-                self.cache.copy_to(key, pdir)
+                self.cache.copy_to(key, pdir, rename)
+            self.cache.note_use(key, self.use(tree, pt, "cache"))
             # the command with the paths of this place (the image does not depend on them)
             here = self.paths()
             moves = {old: here[k] for k, old in (entry.get("paths") or {}).items() if k in here and old != here[k]}
             cmake = [a for a in move_paths(entry["cmake"], moves, None)] if moves else entry["cmake"]
             return {"cmake": cmake, "elf_sha256": entry["elf_sha256"],
-                    "build": {"key": key, "cached": True}}
+                    "build": {"key": key, "from": "cache", **({"built_by": by} if by else {})}}
         self.log(f"[{name}] build", )
         if self.cache:
             bdir = self.cache.work_dir(key)
@@ -369,16 +388,20 @@ class Builder:
         elf = bdir / "zephyr" / "zephyr.elf"
         out = {"cmake": cmake, "elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest()}
         if self.cache:
-            self.cache.put(key, inputs, bdir, cmake, log, self.paths())
+            by = self.run_id or f"{self.exp['name']} (build only, {datetime.datetime.now(datetime.timezone.utc):%Y%m%dT%H%M%SZ})"
+            entry = self.cache.put(key, inputs, bdir, cmake, log, self.paths(), built_by=by)
             shutil.rmtree(bdir)
             log.unlink()
             if pdir is not None:
-                self.cache.copy_to(key, pdir)
-            out["build"] = {"key": key, "cached": False}
+                self.cache.copy_to(key, pdir, rename)
+            self.cache.note_use(key, self.use(tree, pt, "build"))
+            # another process may have stored the key in the meantime: its entry stays
+            out["build"] = {"key": key, "from": "build" if entry.get("built_by") == by else "cache",
+                            **({} if entry.get("built_by") == by else {"built_by": entry.get("built_by")})}
         elif pdir is not None:
             for f in (elf, bdir / "zephyr" / "zephyr.hex", bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
                 if f.exists():
-                    shutil.copy2(f, pdir / f.name)
+                    shutil.copy2(f, pdir / rename.get(f.name, f.name))
         return out
 
 
@@ -465,16 +488,20 @@ def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
     objcopy is given, "ELF image" compares the loadable sections of the two ELFs.
     .config and zephyr.dts are compared without their comments (paths of the host).
     """
+    from studylib import images
     same, diff = [], []
     elf = bdir / "zephyr" / "zephyr.elf"
+    old_elf = images.find(pdir, ".elf")
     sha = hashlib.sha256(elf.read_bytes()).hexdigest() if elf.exists() else None
     (same if sha == elf_sha256 else diff).append("zephyr.elf")
-    if sha and sha != elf_sha256 and objcopy and (pdir / "zephyr.elf").exists():
-        old = elf_image(pdir / "zephyr.elf", objcopy, tmp)
+    if sha and sha != elf_sha256 and objcopy and old_elf is not None:
+        old = elf_image(old_elf, objcopy, tmp)
         (same if old == elf_image(elf, objcopy, tmp) else diff).append("ELF image")
+    # the names in same/different are those of the build (the run may have <app>-<tree>-<point>.hex)
     for name in ("zephyr.hex", ".config", "zephyr.dts"):
-        old, new = pdir / name, bdir / "zephyr" / name
-        if old.exists():
+        old = images.find(pdir, ".hex") if name == "zephyr.hex" else pdir / name
+        new = bdir / "zephyr" / name
+        if old is not None and old.exists():
             if not new.exists():
                 ok = False
             elif name == "zephyr.hex":
@@ -606,7 +633,8 @@ def rebuild(args):
             run_build(cmake, build_env(trees.repo_dir(cfg, e["tree"], "zephyr"), sdk), bdir,
                       tmp / f"{e['tree']}-{e['id']}.log", name)
             same, diff = compare_point(pdir, bdir, e["elf_sha256"], cmake_cache_value(bdir, "CMAKE_OBJCOPY"), tmp)
-            if (pdir / "zephyr.hex").exists():
+            from studylib import images
+            if images.find(pdir, ".hex") is not None:
                 image_same = "zephyr.hex" in same
             else:
                 image_same = "zephyr.elf" in same or "ELF image" in same
@@ -669,6 +697,9 @@ def main():
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
     p.add_argument("--no-cache", action="store_true", help="do not use the build cache of the lab space")
+    p.add_argument("--role", default="evidence", help="the role of the run in the run list of the instance")
+    p.add_argument("--reason", help="the reason of a role other than evidence")
+    p.add_argument("--campaign", help="the id of the campaign that starts the run (in the run-list entry)")
     p.add_argument("--warn-as-error", action="store_true",
                    help="stop if the design lint finds a problem in the experiment or its study")
     args = p.parse_args()
@@ -755,7 +786,7 @@ def main():
                     pdir = tmp / tree / pt["id"]
                     pdir.mkdir(parents=True)
                 r = builder.build(tree, pt, pdir)
-                cached += r.get("build", {}).get("cached", False)
+                cached += r.get("build", {}).get("from") == "cache"
                 built += 1
         print(f"all {built} points build ({cached} from the build cache)")
         if tmp is not None:
@@ -771,6 +802,7 @@ def main():
     exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
     run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
+    builder.run_id = f"{exp['name']}/{run_dir.name}"
     # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
     # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
     run_ref = f"refs/latbench/run/{exp['name']}/{run_dir.name}"
@@ -822,14 +854,62 @@ def main():
 
     save_manifest()
 
-    # 3. Build, flash and capture each point.
+    # 3. Build, flash and capture each point; 4. summary, seal and run list. A stop before the
+    # seal leaves <UTC>.failed.json (the step, the error, the end of the last log).
+    state = {"step": "start", "log": None}
+
+    def on_term(signum, frame):
+        raise SystemExit(f"error: stopped by signal {signum}")
+
+    signal.signal(signal.SIGTERM, on_term)
+    try:
+        capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manifest, save_manifest, args, state)
+    except BaseException as x:
+        if not seal.seal_path(run_dir).exists():
+            write_failed(run_dir, exp, state, x)
+        raise
+    digest = seal.write(run_dir)
+    print(f"results in {run_dir}  ({digest})")
+    if (out / "instance.json").is_file():
+        from studylib import instance
+        from studylib.design import Design
+        try:
+            rid = instance.add(Design(), out, run_dir, role=args.role, reason=args.reason, campaign=args.campaign)
+        except instance.InstanceError as e:
+            fail(f"the run is sealed, but not in the run list of {out}: {e}")
+        print(f"run {rid} added to the instance {out}")
+
+
+def write_failed(run_dir, exp, state, x):
+    """<UTC>.failed.json beside a run folder that has no seal."""
+    if isinstance(x, SystemExit):
+        error = str(x.code).removeprefix("error: ") if x.code not in (None, 0) else "exit"
+    elif isinstance(x, KeyboardInterrupt):
+        error = "interrupt"
+    else:
+        error = f"{type(x).__name__}: {x}"
+    tail = []
+    if state.get("log") and Path(state["log"]).is_file():
+        tail = Path(state["log"]).read_text(errors="replace").splitlines()[-20:]
+    rec = {"format": "latbench-failed/1", "run": f"{exp['name']}/{run_dir.name}", "step": state["step"],
+           "error": error, "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
+           "host": platform.node(), "log": state.get("log") and str(Path(state["log"]).relative_to(run_dir)),
+           "log_tail": tail}
+    f = run_dir.parent / f"{run_dir.name}.failed.json"
+    f.write_text(json.dumps(rec, indent=2) + "\n")
+    print(f"the run failed ({error}); record {f}", file=sys.stderr)
+
+
+def capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manifest, save_manifest, args, state):
     logs = []
+    axes = {}
     for tree in exp["trees"]:
         zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
         for pt in points:
             pdir = run_dir / tree / pt["id"]
             bdir = pdir / "build"
             pdir.mkdir(parents=True)
+            state["step"] = f"build {tree}/{pt['id']}"
             built = builder.build(tree, pt, pdir)
             entry = {
                 "tree": tree,
@@ -847,6 +927,7 @@ def main():
             flash_cmd = flash_command(board_cfg, zephyr, pdir, hw["probe"])
             for rep in range(1, exp.get("repeat", 1) + 1):
                 log = pdir / f"rep{rep}.log"
+                state.update(step=f"flash and capture {tree}/{pt['id']} rep {rep}", log=str(log))
                 print(f"[{tree}/{pt['id']}] rep {rep}", flush=True)
                 try:
                     latbench.run_capture(log, flash_cmd, port, baud=hw["baud"], timeout=exp.get("timeout", 600))
@@ -856,6 +937,7 @@ def main():
                     fail(f"{tree}/{pt['id']} rep {rep}: {e}")
                 entry["logs"].append(str(log.relative_to(run_dir)))
                 logs.append(log)
+                axes[str(log)] = pt["axes"]
                 save_manifest()
             if bdir.exists() and not args.keep_build:
                 shutil.rmtree(bdir)
@@ -863,18 +945,17 @@ def main():
     manifest["finished"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
     save_manifest()
 
-    # 4. Summary.
+    state["step"] = "summary"
     with open(run_dir / "summary.txt", "w") as f:
         sys.stdout = f
         try:
-            latbench.summary(argparse.Namespace(logs=[str(x) for x in logs], json=False))
+            latbench.summary(argparse.Namespace(logs=[str(x) for x in logs], json=False, axes=axes))
         finally:
             sys.stdout = sys.__stdout__
     print((run_dir / "summary.txt").read_text())
-    digest = seal.write(run_dir)
-    print(f"results in {run_dir}  ({digest})")
-    if (out / "instance.json").is_file():
-        print(f"add it to the instance: scripts/benchmarks/study.py instance add {out} {run_dir}")
+    reused = [f"{p['tree']}/{p['id']}" for p in manifest["points"] if p.get("build", {}).get("from") == "cache"]
+    print(f"images: {len(reused)} of {len(manifest['points'])} from the build cache", flush=True)
+    state["step"] = "seal"
 
 
 if __name__ == "__main__":

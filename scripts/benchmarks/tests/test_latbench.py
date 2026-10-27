@@ -475,3 +475,10 @@ def test_extract_hist_without_negative():
     # A new log does not change.
     h = latextract.hist_out(hist(bins={50: 9}, vmax=50, mean=50.0, invalid=3))
     assert (h["n"], h["max"], h["invalid"]) == (9, 50, 3)
+
+
+def test_summary_has_one_column_per_axis(tmp_path, capsys):
+    p = write_log(tmp_path, LOG)
+    latbench.summary(argparse.Namespace(logs=[str(p)], json=True, axes={str(p): {"path": "direct", "background": "busy"}}))
+    (row,) = json.loads(capsys.readouterr().out)
+    assert (row["path"], row["background"]) == ("direct", "busy") and "variant" not in row
