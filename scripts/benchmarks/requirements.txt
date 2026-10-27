@@ -2,7 +2,7 @@
 pyserial>=3.5
 PyYAML>=6.0
 matplotlib>=3.8
-jsonschema>=4.0
+jsonschema>=4.18          # referencing (the schemas refer to each other)
 # Notebooks and data.py (not needed for run.py and study.py):
 # pandas>=2.0
 # plotly>=5.0

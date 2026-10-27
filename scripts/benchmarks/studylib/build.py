@@ -269,12 +269,15 @@ class Tree:
         hyps = []
         for h in study.hypotheses:
             out_checks = []
-            for c in h["checks"]:
+            for c in h.get("checks") or []:
                 entry = {"id": c["id"]}
                 if c.get("formerly"):
                     entry["formerly"] = c["formerly"]
                 m = manual.get((h["id"], c["id"]))
-                if c.get("manual"):
+                if has_todo(c) or has_todo(h.get("statement")):
+                    entry.update(verdict=DRAFT, by=None, limit=safe_limit(c),
+                                 measured="the check or its hypothesis has a TODO text of a template")
+                elif c.get("manual"):
                     if m and m["verdict"] not in ("confirmed", "wrong"):
                         notes.append(f"{h['id']} {c['id']}: manual verdict {m['verdict']!r} is not confirmed or wrong")
                         m = None
@@ -410,6 +413,20 @@ def reads_experiments(check):
         if isinstance(v, dict) and v.get("experiment"):
             out.append(v["experiment"])
     return out
+
+
+DRAFT = "draft"
+
+
+def has_todo(x):
+    """A TODO text that a template left, in a string of x (a check or a text)."""
+    if isinstance(x, str):
+        return "TODO" in x
+    if isinstance(x, dict):
+        return any(has_todo(v) for v in x.values())
+    if isinstance(x, list):
+        return any(has_todo(v) for v in x)
+    return False
 
 
 def hypothesis_entry(h, out_checks):

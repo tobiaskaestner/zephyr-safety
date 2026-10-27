@@ -1,0 +1,55 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The keys and types of experiment.yaml (JSON Schema 2020-12, in YAML).
+# The meaning of a check (stat, expect) is checked by studylib/checks.py,
+# the points by run.py (studylib/lint.py runs both).
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: latbench/experiment.schema.yaml
+title: experiment.yaml
+type: object
+additionalProperties: false
+required: [name, app, trees]
+properties:
+  name: {$ref: "common.schema.yaml#/$defs/name"}
+  renamed_from:
+    description: the earlier names of the experiment (runs and refs with these names stay valid)
+    oneOf:
+      - {$ref: "common.schema.yaml#/$defs/name"}
+      - {type: array, items: {$ref: "common.schema.yaml#/$defs/name"}, minItems: 1}
+  app: {type: string}
+  board: {type: string}
+  trees: {type: array, items: {type: string}, minItems: 1}
+  repeat: {type: integer, minimum: 1}
+  timeout: {type: number, exclusiveMinimum: 0}
+  common: {$ref: "common.schema.yaml#/$defs/settings"}
+  axes:
+    type: object
+    additionalProperties:
+      description: an axis; its values, each with the settings of the value
+      type: object
+      minProperties: 1
+      additionalProperties:
+        oneOf:
+          - type: "null"
+          - $ref: "common.schema.yaml#/$defs/axis_value"
+  extra_axes:
+    type: object
+    additionalProperties: {$ref: "common.schema.yaml#/$defs/scalar"}
+  points:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, axes]
+      properties:
+        id: {type: string}
+        axes:
+          type: object
+          additionalProperties: {$ref: "common.schema.yaml#/$defs/scalar"}
+        kconfig: {$ref: "common.schema.yaml#/$defs/kconfig"}
+        conf_files: {$ref: "common.schema.yaml#/$defs/paths"}
+        dtc_overlays: {$ref: "common.schema.yaml#/$defs/paths"}
+  acceptance:
+    type: array
+    items: {$ref: "common.schema.yaml#/$defs/check"}

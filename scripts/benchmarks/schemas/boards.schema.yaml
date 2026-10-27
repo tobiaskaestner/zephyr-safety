@@ -1,0 +1,28 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The keys and types of tests/benchmarks/boards.yaml (JSON Schema 2020-12, in YAML).
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: latbench/boards.schema.yaml
+title: boards.yaml
+type: object
+additionalProperties: false
+required: [default, boards]
+properties:
+  default: {type: string}
+  boards:
+    type: object
+    minProperties: 1
+    additionalProperties:
+      type: object
+      additionalProperties: false
+      required: [port, modules, flash]
+      properties:
+        port: {type: string}
+        status: {type: string}
+        modules: {type: array, items: {type: string}}
+        flash:
+          description: the flash commands, run in order; fields {zephyr} {elf} {hex} {probe}
+          type: array
+          minItems: 1
+          items: {type: array, items: {type: string}, minItems: 1}

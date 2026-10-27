@@ -16,12 +16,21 @@ import yaml
 
 import trees
 
-from . import layout
+from . import layout, schema
 from .seal import file_sha256
 
 
 class DesignError(Exception):
     pass
+
+
+def load(kind, path):
+    """A design file, checked against its schema; DesignError at the first violation."""
+    data = yaml.safe_load(path.read_text())
+    try:
+        return schema.check(kind, data, path)
+    except schema.SchemaError as e:
+        raise DesignError(str(e)) from None
 
 
 def repo_rel(path):
@@ -42,9 +51,9 @@ class Study:
     def __init__(self, path, folder):
         self.path = path
         self.folder = folder
-        self.data = yaml.safe_load((folder / "study.yaml").read_text())
+        self.data = load("study", folder / "study.yaml")
         h = folder / "hypotheses.yaml"
-        self.hypotheses = yaml.safe_load(h.read_text())["hypotheses"] if h.is_file() else []
+        self.hypotheses = load("hypotheses", h)["hypotheses"] if h.is_file() else []
         self.experiments = list(self.data.get("experiments") or [])
         self.imports = list(self.data.get("imports") or [])
         self.central_results = list(self.data.get("central_results") or [])
@@ -71,7 +80,7 @@ class Experiment:
     def __init__(self, folder, study):
         self.folder = folder
         self.study = study
-        self.data = yaml.safe_load((folder / "experiment.yaml").read_text())
+        self.data = load("experiment", folder / "experiment.yaml")
         self.name = self.data["name"]
         self.acceptance = list(self.data.get("acceptance") or [])
 

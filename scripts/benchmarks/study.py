@@ -375,7 +375,7 @@ def show(results, root, brief=False):
         for h in hyps:
             print(f"   {h['id']} {h['verdict']}{' (provisional)' if h.get('provisional') else ''} ({h['checks_confirmed']})")
             for c in h["checks"]:
-                if not brief or c["verdict"] in ("tool error", "not evaluated"):
+                if not brief or c["verdict"] in ("tool error", "not evaluated", build.DRAFT):
                     print(f"      {c['id']} {c['verdict']}: {c.get('measured', '')[:140]}")
         for c in crs:
             if c.get("not_evaluated"):

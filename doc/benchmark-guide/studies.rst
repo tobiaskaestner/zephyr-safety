@@ -106,6 +106,15 @@ error. With ``--warn-as-error``, a warning also gives exit code 1.
 
 Errors:
 
+- A key or a type that the schema of the file does not allow. The
+  schemas are in ``scripts/benchmarks/schemas/`` (JSON Schema, written in
+  YAML): ``experiment``, ``study``, ``hypotheses`` and ``boards``. For an
+  unknown key, the lint names the nearest known key, for example
+  ``schema: (top): unknown key 'repat' (did you mean 'repeat'?)``. The
+  tools that read a design file (``run.py``, the design of ``study.py``,
+  ``boards.yaml``) stop at the first violation. The copies of
+  ``experiment.yaml`` in sealed runs are history; the tools do not check
+  them against the current schemas.
 - A folder with ``experiment.yaml`` that is not ``ex-<name>``, a folder
   with ``study.yaml`` that is not ``st-<name>``, a ``name`` in
   ``study.yaml`` that is not the folder name, or a folder with neither
@@ -369,8 +378,10 @@ each metric and each stat.
 
 A check that the data cannot give (no point, a quantile in the overflow
 bin, a limit inside a coarse bin) is ``not evaluated``, with the reason.
-An error of the tools gives ``tool error``. Neither is confirmed or
-wrong; the hypothesis stays open. A study with a ``mode: rerun`` import
+An error of the tools gives ``tool error``. A check that has a ``TODO``
+text, or whose hypothesis statement has one, is ``draft``: the build does
+not evaluate it. None of the three is confirmed or wrong; the hypothesis
+stays open. A study with a ``mode: rerun`` import
 reads only its own runs of that experiment, never those of the owner.
 
 .. _benchguide-central:

@@ -584,3 +584,19 @@ def test_provisional_while_a_campaign_runs_and_reuse(tmp_path, monkeypatch):
     monkeypatch.setattr(build.runfiles, "app_json", lambda *a: calls.append(a) or (_ for _ in ()).throw(RuntimeError))
     build.build(res / "top", log=lambda *a: None)
     assert calls == []
+
+
+def test_a_check_with_a_todo_text_is_a_draft(tmp_path, monkeypatch):
+    design = make_design(tmp_path)
+    h = design.study("sub").hypotheses[0]
+    h["checks"][0]["basis"] = "TODO: where the number comes from"
+    res = tmp_path / "results"
+    monkeypatch.setattr(build, "Design", lambda: design)
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}), copy=True)
+    instance.add_verdict(inst, "confirmed", "tester", hypothesis="H1", check="b")
+    build.build(res / "top", log=lambda *a: None)
+    hj = json.loads((inst / "study.json").read_text())["hypotheses"][0]
+    assert hj["checks"][0]["verdict"] == "draft"        # the order holds, but nobody wrote the basis
+    assert hj["verdict"] == "open" and "draft" in hj["open"]

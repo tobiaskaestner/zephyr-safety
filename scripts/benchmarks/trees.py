@@ -95,7 +95,11 @@ def load(trees_root=None, lab=None, find_lab=True):
 
 
 def load_boards():
-    return yaml.safe_load(BOARDS_FILE.read_text())
+    from studylib import schema
+    try:
+        return schema.check("boards", yaml.safe_load(BOARDS_FILE.read_text()), BOARDS_FILE)
+    except schema.SchemaError as e:
+        raise TreeError(str(e)) from None
 
 
 def board_repos(boards, board):

@@ -3,7 +3,8 @@
 
 """The design lint: problems of the design files, found without a build or a board.
 
-An error makes the design unusable or a check wrong (a folder without its
+An error makes the design unusable or a check wrong (a key or a type that
+the schema of the file does not allow, a folder without its
 prefix, a point without a value on an axis, a check form that the tools
 do not know, a reference to an experiment that the study cannot read, a
 select of a point that the experiment does not have). A warning is a rule
@@ -18,7 +19,7 @@ import yaml
 
 import trees
 
-from . import checks, layout
+from . import checks, layout, schema
 from .design import Design, DesignError
 
 ERROR, WARNING = "error", "warning"
@@ -57,6 +58,21 @@ def lint_todo(root, out):
         n = sum("TODO" in ln for ln in f.read_text().splitlines())
         if n:
             out.append(Problem(WARNING, f, f"{n} TODO texts of a template"))
+
+
+def lint_schemas(root, out):
+    """Each design file against its schema (scripts/benchmarks/schemas/): all violations."""
+    files = [(kind, f) for kind in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{kind}.yaml"))]
+    if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
+        files.append(("boards", trees.BOARDS_FILE))
+    for kind, f in files:
+        try:
+            data = yaml.safe_load(f.read_text())
+        except yaml.YAMLError as e:
+            out.append(Problem(ERROR, f, f"not YAML: {e}"))
+            continue
+        for p in schema.problems(kind, data):
+            out.append(Problem(ERROR, f, f"schema: {p}"))
 
 
 def lint_folders(root, out):
@@ -229,6 +245,7 @@ def lint(root=None, only=None):
     """
     root = Path(root or trees.STUDIES_DIR)
     out = []
+    lint_schemas(root, out)
     lint_folders(root, out)
     lint_todo(root, out)
     try:

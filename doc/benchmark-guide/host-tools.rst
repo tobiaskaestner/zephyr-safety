@@ -397,7 +397,9 @@ owns it, below ``validation/empirical/latencies/``. A sub-study is a
 folder ``st-<name>/``. The prefixes are only in the folder names; the
 names in the files have no prefix. The experiment folder holds the
 experiment file ``experiment.yaml`` and the description
-``experiment.md``. The keys of the experiment file are:
+``experiment.md``. The schema ``scripts/benchmarks/schemas/experiment.schema.yaml``
+gives the keys and their types; ``run.py`` stops on a key that it does not
+know. The keys of the experiment file are:
 
 .. list-table::
    :header-rows: 1

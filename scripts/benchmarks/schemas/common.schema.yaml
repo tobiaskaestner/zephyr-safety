@@ -1,0 +1,61 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Definitions that the other schemas share.
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: latbench/common.schema.yaml
+$defs:
+  name:
+    type: string
+    pattern: "^[a-z0-9][a-z0-9_-]*$"
+  scalar:
+    type: [string, number, boolean]
+  kconfig:
+    description: Kconfig symbols without CONFIG_, and their values
+    type: object
+    propertyNames: {pattern: "^[A-Z0-9_]+$"}
+    additionalProperties: {$ref: "#/$defs/scalar"}
+  paths:
+    type: array
+    items: {type: string}
+  settings:
+    type: object
+    additionalProperties: false
+    properties:
+      kconfig: {$ref: "#/$defs/kconfig"}
+      conf_files: {$ref: "#/$defs/paths"}
+      dtc_overlays: {$ref: "#/$defs/paths"}
+  axis_value:
+    type: object
+    additionalProperties: false
+    properties:
+      value: {type: number, description: the number of the value on a plot}
+      kconfig: {$ref: "#/$defs/kconfig"}
+      conf_files: {$ref: "#/$defs/paths"}
+      dtc_overlays: {$ref: "#/$defs/paths"}
+  check:
+    description: an acceptance check or a check of a hypothesis (forms in studylib/checks.py)
+    type: object
+    additionalProperties: false
+    required: [id]
+    properties:
+      id: {type: [string, integer]}
+      written: {type: string, description: "when the limit was written, before which run"}
+      experiment: {type: string}
+      select: {type: object}
+      metric:
+        oneOf:
+          - {type: string}
+          - {type: array, items: {type: string}, minItems: 1}
+      stat:
+        oneOf:
+          - {type: string}
+          - {type: array, items: {type: string}, minItems: 1}
+      expect: {type: object, minProperties: 1}
+      basis: {type: string}
+      manual: {type: boolean}
+      statement: {type: string}
+      formerly:
+        oneOf:
+          - {type: string}
+          - {type: array, items: {type: string}}

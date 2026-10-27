@@ -1,0 +1,26 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The keys and types of hypotheses.yaml (JSON Schema 2020-12, in YAML).
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: latbench/hypotheses.schema.yaml
+title: hypotheses.yaml
+type: object
+additionalProperties: false
+required: [hypotheses]
+properties:
+  hypotheses:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, statement]
+      properties:
+        id: {type: string}
+        type: {enum: [method, model]}
+        statement: {type: string}
+        basis: {type: string}
+        wrong_if: {type: string}
+        checks:
+          type: array
+          items: {$ref: "common.schema.yaml#/$defs/check"}

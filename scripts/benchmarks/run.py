@@ -90,7 +90,7 @@ import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402
 from studylib import lab as labmod  # noqa: E402
-from studylib import lint, seal  # noqa: E402
+from studylib import lint, schema, seal  # noqa: E402
 
 BENCH_DIR = trees.BENCH_DIR
 
@@ -686,6 +686,10 @@ def main():
     exp_path = Path(args.experiment).resolve()
     exp_text = exp_path.read_text()
     exp = yaml.safe_load(exp_text)
+    try:
+        schema.check("experiment", exp, exp_path)
+    except schema.SchemaError as e:
+        fail(str(e))
 
     # 1. Provenance checks, before anything is built.
     repo_root, repo_rev, repo_dirty = safety_repo_state()

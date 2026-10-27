@@ -1,0 +1,80 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The keys and types of study.yaml (JSON Schema 2020-12, in YAML). The
+# rules of a central result (stat, group_by) are in studylib/lint.py.
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: latbench/study.schema.yaml
+title: study.yaml
+type: object
+additionalProperties: false
+required: [name]
+properties:
+  name: {$ref: "common.schema.yaml#/$defs/name"}
+  question: {type: string}
+  board: {type: [string, "null"]}
+  experiments:
+    type: array
+    items: {$ref: "common.schema.yaml#/$defs/name"}
+  imports:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [study, experiment]
+      properties:
+        study: {type: string}
+        experiment: {type: string}
+        mode: {enum: [reuse, rerun]}
+  substudies:
+    type: array
+    items:
+      oneOf:
+        - {$ref: "common.schema.yaml#/$defs/name"}
+        - type: object
+          additionalProperties: false
+          required: [use]
+          properties:
+            use: {$ref: "common.schema.yaml#/$defs/name"}
+            instances: {enum: [per-board]}
+  central_results:
+    type: array
+    items:
+      type: object
+      additionalProperties: false
+      required: [id, from]
+      # a result of a sub-study ({from: {substudy}}) takes its statement and stat from there
+      if: {properties: {from: {required: [substudy]}}}
+      then: {}
+      else: {required: [statement, stat]}
+      properties:
+        id: {type: string}
+        statement: {type: string}
+        from:
+          type: object
+          additionalProperties: false
+          properties:
+            experiment:
+              oneOf:
+                - {type: string}
+                - {type: array, items: {type: string}, minItems: 1}
+            point:
+              oneOf:
+                - {type: string}
+                - {type: array, items: {type: string}, minItems: 1}
+            axes: {type: object}
+            exclude: {type: array, items: {type: string}}
+            tree: {type: string}
+            metric:
+              oneOf:
+                - {type: string}
+                - {type: array, items: {type: string}, minItems: 1}
+            hypotheses: {type: array, items: {type: string}}
+            substudy: {type: string}
+        stat:
+          oneOf:
+            - {type: string}
+            - {type: array, items: {type: string}, minItems: 1}
+            - {type: object, minProperties: 1, maxProperties: 1}
+        group_by: {type: array, items: {type: string}, minItems: 1}
+        unit: {type: string}

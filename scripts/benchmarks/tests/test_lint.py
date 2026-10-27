@@ -132,3 +132,19 @@ def test_grouping_rules_of_central_results(tmp_path):
     assert not any(e.startswith("central result s2") for e in err)
     assert any(e.startswith("central result s3: group_by is for the aggregate stats") for e in err)
     assert any(e.startswith("central result s4: group_by 'colour' is not an axis") for e in err)
+
+
+def test_schema_errors_name_the_key(tmp_path):
+    import pytest
+    from studylib.design import Design, DesignError
+    make_design(tmp_path)
+    root = tmp_path / "design"
+    edit(root / "st-sub" / "ex-exp1" / "experiment.yaml", lambda d: d.update(repat=2))
+    edit(root / "st-sub" / "study.yaml", lambda d: d.update(centrl_results=[]))
+    edit(root / "st-sub" / "hypotheses.yaml", lambda d: d["hypotheses"][0]["checks"][0].update(expct={}))
+    err = texts(root, lint.ERROR)
+    assert "schema: (top): unknown key 'repat' (did you mean 'repeat'?)" in err
+    assert "schema: (top): unknown key 'centrl_results' (did you mean 'central_results'?)" in err
+    assert "schema: hypotheses.0.checks.0: unknown key 'expct' (did you mean 'expect'?)" in err
+    with pytest.raises(DesignError, match="unknown key"):
+        Design(root)
