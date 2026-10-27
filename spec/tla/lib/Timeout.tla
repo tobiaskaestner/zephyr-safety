@@ -106,10 +106,12 @@ InsertCost(i, n) ==
 RemoveCost(n) == IF Backend = "DLIST" THEN 1 ELSE Log2Ceil(n)
 
 \* The bound of each operation: the backend must not do more steps.
-\* DLIST: T + 1 steps (DRAFT-BND-18). MINHEAP: the heap height.
+\* DLIST: T + 1 steps (DRAFT-BND-18). MINHEAP: the heap height. A
+\* cancellation of k entries does at most n removals (k <= n).
 CostBound(op, n) ==
-    IF Backend = "DLIST" THEN (IF op = "insert" THEN n + 1 ELSE 1)
-    ELSE Log2Ceil(n) + 1
+    LET one == IF Backend = "DLIST" THEN (IF op = "insert" THEN n + 1 ELSE 1)
+               ELSE Log2Ceil(n) + 1
+    IN  IF op = "cancel_set" THEN n * one ELSE one
 
 -----------------------------------------------------------------------------
 (* Changes. Each one sets tq' and tqCost'.                                 *)
@@ -143,6 +145,20 @@ Cancel(e) ==
            /\ tqCost' = [op |-> "remove", n |-> Len(tq), cost |-> RemoveCost(Len(tq))]
       ELSE UNCHANGED <<tq, tqCost>>
 
+\* The entries in S are no longer armed, in one critical section (a wake of
+\* all waiters). The code calls z_abort_timeout() for each entry. The cost
+\* is k removals from a queue with n entries: exact for DLIST, an upper
+\* bound for MINHEAP (the heap becomes smaller after each removal). Without
+\* effect if no entry of S is armed.
+\* @kind action
+\* @c-function z_abort_timeout
+CancelSet(S) ==
+    LET k == Cardinality(S \cap Armed) IN
+    IF k > 0
+      THEN /\ tq' = SelectSeq(tq, LAMBDA x : x \notin S)
+           /\ tqCost' = [op |-> "cancel_set", n |-> Len(tq), cost |-> k * RemoveCost(Len(tq))]
+      ELSE UNCHANGED <<tq, tqCost>>
+
 \* sys_clock_announce(): the first entry expires (atomic form). The caller
 \* runs the handler of First in the same step.
 \* @kind action
@@ -158,7 +174,7 @@ Expire ==
 \* @kind invariant
 TypeOK ==
     /\ tq \in Seq(Entries)
-    /\ tqCost.op \in {"none", "insert", "remove", "expire"}
+    /\ tqCost.op \in {"none", "insert", "remove", "cancel_set", "expire"}
     /\ tqCost.n \in Nat
     /\ tqCost.cost \in Nat
 

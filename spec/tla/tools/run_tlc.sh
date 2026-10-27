@@ -60,22 +60,40 @@ while read -r module config expected rest; do
 
 	cfg=$spec/mc/${module}_${config}.cfg
 	log=$out/${module}_${config}.log
-	extra=()
-	[ "$expected" = probes ] && extra=(-continue)
 
 	# One worker: TLC with more than one worker can miss states and
 	# violations (tlaplus issue #1445, open at the pinned revision).
 	# -fp 0: a fixed fingerprint function. Without it, TLC selects one at
 	# random, and a reported trace can differ from run to run.
+	tlc() { # <config file> <log file>
+		(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
+			-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -fp 0 -cleanup -noGenerateSpecTE \
+			-metadir "$out/states/${module}_${config}" -config "$1" "$module.tla") > "$2" 2>&1
+	}
+
 	start=$(date +%s.%N)
-	(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
-		-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -fp 0 -cleanup -noGenerateSpecTE "${extra[@]}" \
-		-metadir "$out/states/${module}_${config}" -config "$cfg" "$module.tla") > "$log" 2>&1
+	if [ "$expected" = probes ]; then
+		# One run for each probe, without -continue: TLC stops at the first
+		# (shortest) violation. With -continue, TLC writes a trace for each
+		# state that violates a probe, and in a large model the log grows
+		# without a useful limit.
+		: > "$log"
+		for inv in $(awk '/^INVARIANTS?/{f=1; next} /^[A-Z]+/{f=0} f && NF {print $1}' "$cfg"); do
+			one=$out/${module}_${config}.$inv.cfg
+			awk -v inv="$inv" '/^INVARIANTS?/{print "INVARIANT " inv; f=1; next}
+				/^[A-Z]+/{f=0} !f' "$cfg" > "$one"
+			tlc "$one" "$out/${module}_${config}.$inv.log"
+			cat "$out/${module}_${config}.$inv.log" >> "$log"
+			rm -f "$one" "$out/${module}_${config}.$inv.log"
+		done
+	else
+		tlc "$cfg" "$log"
+	fi
 	end=$(date +%s.%N)
 	secs=$(awk -v a="$start" -v b="$end" 'BEGIN { printf "%.1f s", b - a }')
 
 	distinct=$(grep -oE '[0-9,]+ distinct states found' "$log" | tail -1 | cut -d' ' -f1)
-	depth=$(grep -oE 'depth of the complete state graph search is [0-9]+' "$log" | grep -oE '[0-9]+$')
+	depth=$(grep -oE 'depth of the complete state graph search is [0-9]+' "$log" | grep -oE '[0-9]+$' | sort -n | tail -1)
 	# A property that is an alias of an instance definition (Prop_X == WQ!X)
 	# has the name of that definition in the TLC output: WQ!X. TLC 1.8.0
 	# names one violated temporal property ("Temporal property X was
