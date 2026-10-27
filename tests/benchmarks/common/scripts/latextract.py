@@ -36,14 +36,35 @@ import m4  # noqa: E402
 import trees  # noqa: E402
 
 
-def hist_out(h):
+def valid_max(h, ovf):
+    """The max without the negative differences of an old log, from the highest non-empty bin.
+
+    A fine bin gives the exact value. A coarse bin or an overflow bin gives
+    its upper edge, a bound of the max.
+    """
+    if ovf:
+        return (1 << (ovf[-1][0] + 1)) - 1
     w = h.get("width", {})
+    v = max((v for v, c in h["bins"].items() if c), default=None)
+    return None if v is None else v + w.get(v, 1) - 1
+
+
+def hist_out(h):
+    """The histogram without the negative differences.
+
+    An old log has no "invalid=" field. It counts a negative difference in
+    n, in max and in overflow bin 31.
+    """
+    w = h.get("width", {})
+    bad = 0 if "invalid" in h else sum(c for e, c in h["ovf_log2"].items() if e >= 31)
+    ovf = [[e, c] for e, c in sorted(h["ovf_log2"].items()) if not (bad and e >= 31)]
     return {
-        "n": h["n"], "min": h["min"], "max": h["max"], "mean": latbench.mean(h),
-        "overflow": h.get("overflow", 0), "invalid": latbench.invalid(h),
+        "n": h["n"] - bad, "min": h["min"], "max": valid_max(h, ovf) if bad else h["max"],
+        "mean": latbench.mean(h),
+        "overflow": h.get("overflow", 0) - bad, "invalid": latbench.invalid(h),
         "bins": [[v, c] for v, c in sorted(h["bins"].items()) if v not in w],
         "coarse": [[v, c, w[v]] for v, c in sorted(h["bins"].items()) if v in w],
-        "ovf_log2": [[e, c] for e, c in sorted(h["ovf_log2"].items())],
+        "ovf_log2": ovf,
     }
 
 

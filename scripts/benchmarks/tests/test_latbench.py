@@ -458,3 +458,20 @@ def test_roundtrip_summary(fixture_run, capsys):
     assert row["n"] + row["inv"] == int(run["meta"]["samples"])
     assert row["inv"] == h["invalid"]
     assert row["ovf"] == h["overflow"]
+
+
+def test_extract_hist_without_negative():
+    sys.path.insert(0, str(SCRIPTS.parents[1] / "tests" / "benchmarks" / "common" / "scripts"))
+    import latextract
+    # An old log: the negative difference is in n, max and overflow bin 31.
+    h = latextract.hist_out(hist(bins={49: 9, 785: 1}, ovf={31: 1}, vmax=4294948032, mean=49.0))
+    assert (h["n"], h["max"], h["overflow"], h["invalid"], h["ovf_log2"]) == (10, 785, 0, 1, [])
+    # The top bin is a coarse bin: the max is its upper edge.
+    h = latextract.hist_out(hist(bins={49: 9, 2048: 1}, width={2048: 32}, ovf={31: 1}, vmax=2**32 - 1))
+    assert h["max"] == 2079
+    # A sample in another overflow bin: the max is the upper edge of that bin.
+    h = latextract.hist_out(hist(bins={49: 9}, ovf={12: 1, 31: 1}, vmax=2**32 - 1))
+    assert (h["max"], h["ovf_log2"]) == (8191, [[12, 1]])
+    # A new log does not change.
+    h = latextract.hist_out(hist(bins={50: 9}, vmax=50, mean=50.0, invalid=3))
+    assert (h["n"], h["max"], h["invalid"]) == (9, 50, 3)
