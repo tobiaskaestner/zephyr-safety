@@ -11,7 +11,7 @@ Rules (a run stops before it builds anything if one is broken):
 - The safety repo that holds this script and the experiment file is clean,
   and it stays at the same commit while the run builds (checked before each
   point).
-- Each tree of the experiment is at its pinned rev in validation/trees.yaml
+- Each tree of the experiment is at its pinned rev in validation/trees/<tree>.yml
   and clean (study.py trees setup creates the trees).
 - The Zephyr SDK has the pinned version.
 - The build uses only the modules of the tree (ZEPHYR_MODULES), not the
@@ -264,35 +264,64 @@ def build_env(zephyr, sdk):
     return env
 
 
-def run_build(args, env, bdir, log, name):
-    """Run CMake (args) and Ninja for one point; the output goes to log."""
+# The build of a point: "west build" in the west workspace of the tree (default), or CMake and
+# Ninja (LATBENCH_BUILDER=cmake; the runs before 2026-10-28 built so). Both give the same image.
+BUILDERS = ("west", "cmake")
+
+
+def builder_name():
+    b = os.environ.get("LATBENCH_BUILDER", "west")
+    if b not in BUILDERS:
+        fail(f"LATBENCH_BUILDER={b}: use one of {', '.join(BUILDERS)}")
+    return b
+
+
+def builder_id(builder):
+    """The builder and its version, for the cache key and the manifest: 'west 1.5.0' or 'cmake'."""
+    return f"west {trees.west_version()}" if builder == "west" else "cmake"
+
+
+def run_build(args, env, bdir, log, name, cwd=None):
+    """Run the build command of one point (west build, or CMake then Ninja); the output goes to log.
+
+    A west build runs in cwd, the west workspace of the tree, after a check that west finds that
+    workspace; the user and system west configuration do not count.
+    """
     with open(log, "w") as f:
         f.write("$ " + shlex.join(args) + "\n")
         f.flush()
-        for cmd in (args, ["ninja", "-C", str(bdir)]):
-            r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT)
+        if args[0] == "west":
+            trees.west_topdir(cwd)
+            env = {**env, "WEST_CONFIG_GLOBAL": os.devnull, "WEST_CONFIG_SYSTEM": os.devnull}
+            env.pop("WEST_CONFIG_LOCAL", None)
+            cmds = [[sys.executable, "-m", "west", *args[1:]]]
+        else:
+            cmds = [args, ["ninja", "-C", str(bdir)]]
+        for cmd in cmds:
+            r = subprocess.run(cmd, env=env, stdout=f, stderr=subprocess.STDOUT, cwd=cwd)
             if r.returncode != 0:
                 fail(f"build failed for {name}, see {log}")
 
 
-def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log, build_version=None):
+def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log, build_version=None,
+                builder="west"):
     """Build one point. src_bench is tests/benchmarks of a safety repo (or of an export of it).
 
     The modules are those of the board from the tree, plus the safety repo
-    (two folders above src_bench) as the module "safety".
+    (two folders above src_bench) as the module "safety": ZEPHYR_MODULES is
+    explicit also for west build, else Zephyr takes all modules of the
+    workspace (hal_nordic in a build for the G474).
     """
     app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
     modules = [str(trees.repo_dir(tree_cfg, tree, name)) for name in board_cfg["modules"]]
     modules.append(str(src_bench.parents[1]))
+    if builder == "west":
+        head = ["west", "build", "-d", str(bdir), "-b", board, str(app_dir), "--"]
+    else:
+        head = ["cmake", "-GNinja", "-S", str(app_dir), "-B", str(bdir), f"-DBOARD={board}"]
     args = [
-        "cmake",
-        "-GNinja",
-        "-S",
-        str(app_dir),
-        "-B",
-        str(bdir),
-        f"-DBOARD={board}",
+        *head,
         f"-DZEPHYR_MODULES={';'.join(modules)}",
         # Zephyr maps __FILE__ (ASSERT messages) and the paths in zephyr.dts
         # relative to WEST_TOPDIR. Without this, it finds a west workspace
@@ -309,7 +338,7 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     for sym, value in point["kconfig"].items():
         args.append(f"-DCONFIG_{sym}={kconfig_value(value)}")
 
-    run_build(args, build_env(zephyr, sdk), bdir, log, f"{tree}/{point['id']}")
+    run_build(args, build_env(zephyr, sdk), bdir, log, f"{tree}/{point['id']}", cwd=tree_cfg["root"] / tree)
     bad = check_config(bdir / "zephyr" / ".config", point["kconfig"])
     if bad:
         fail(f"Kconfig values not applied for {tree}/{point['id']}:\n  " + "\n  ".join(bad))
@@ -327,6 +356,8 @@ class Builder:
         self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
         self.build_versions = {}
         self.run_id = None          # <experiment>/<UTC> of the run, once its folder exists
+        self.builder = builder_name()
+        self.builder_id = builder_id(self.builder)
 
     def build_version(self, tree):
         """The BUILD_VERSION of the Zephyr tree: git describe, as Zephyr makes it (it depends on the tags)."""
@@ -343,7 +374,8 @@ class Builder:
         pins = {r: self.tree_cfg["trees"][tree]["repos"][r]["rev"] for r in self.repos}
         inputs = buildcache.key_inputs(self.board, self.exp["app"], pins,
                                        self.tree_cfg["toolchain"]["zephyr_sdk"]["version"],
-                                       self.bench_tree, self.module_tree, pt, self.build_version(tree))
+                                       self.bench_tree, self.module_tree, pt, self.build_version(tree),
+                                       self.builder_id)
         return buildcache.key_of(inputs), inputs
 
     def use(self, tree, pt, source):
@@ -381,7 +413,7 @@ class Builder:
         else:
             bdir, log = pdir / "build", pdir / "build.log"
         cmake = build_point(self.tree_cfg, tree, pt, BENCH_DIR, self.exp["app"], self.bench_tree, self.board,
-                            self.board_cfg, self.sdk, bdir, log, self.build_version(tree))
+                            self.board_cfg, self.sdk, bdir, log, self.build_version(tree), self.builder)
         # CMake and Ninja read the worktree: a change during the build stops the run before the
         # image goes into the run or the cache.
         check_repo_unchanged(self.repo_root, self.repo_rev)
@@ -439,12 +471,17 @@ def find_points(path, only=None):
     return run_dir, manifest, entries
 
 
+def build_dir_flag(cmd):
+    """The option before the build folder: -d (west build) or -B (CMake)."""
+    return "-d" if cmd[0] == "west" else "-B"
+
+
 def move_paths(cmake, moves, bdir):
     """Return the CMake command of a point with the build folder bdir (None: keep it) and each old
     folder of moves replaced."""
     out = []
     for i, arg in enumerate(cmake):
-        if i > 0 and cmake[i - 1] == "-B" and bdir is not None:
+        if i > 0 and cmake[i - 1] == build_dir_flag(cmake) and bdir is not None:
             out.append(str(bdir))
             continue
         for old, new in moves.items():
@@ -552,7 +589,7 @@ def rebuild(args):
     """
     run_dir, manifest, entries = find_points(args.rebuild, args.only)
     first = entries[0]
-    old_bdir = Path(first["cmake"][first["cmake"].index("-B") + 1])
+    old_bdir = Path(first["cmake"][first["cmake"].index(build_dir_flag(first["cmake"])) + 1])
     # a build in the run folder (<run>/<tree>/<point>/build), or in the build cache
     in_run = old_bdir.parts[-3:] == (first["tree"], first["id"], "build")
     old_run = old_bdir.parents[2] if in_run else None
@@ -631,7 +668,7 @@ def rebuild(args):
         try:
             cmake = move_paths(e["cmake"], moves, bdir) + old_west_topdir(e["cmake"], manifest["trees_root"], root)
             run_build(cmake, build_env(trees.repo_dir(cfg, e["tree"], "zephyr"), sdk), bdir,
-                      tmp / f"{e['tree']}-{e['id']}.log", name)
+                      tmp / f"{e['tree']}-{e['id']}.log", name, cwd=cfg["root"] / e["tree"])
             same, diff = compare_point(pdir, bdir, e["elf_sha256"], cmake_cache_value(bdir, "CMAKE_OBJCOPY"), tmp)
             from studylib import images
             if images.find(pdir, ".hex") is not None:
@@ -834,6 +871,7 @@ def main():
         "toolchain": {"zephyr_sdk": str(tree_cfg["toolchain"]["zephyr_sdk"]["version"]), "path": str(sdk)},
         "tools": {
             "cmake": tool_version(["cmake", "--version"]),
+            "builder": builder.builder_id,
             "ninja": tool_version(["ninja", "--version"]),
             # The tools that flash this board (first word of each flash command).
             **{cmd[0]: tool_version([cmd[0], "--version"]) for cmd in board_cfg["flash"]},

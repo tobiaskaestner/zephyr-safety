@@ -22,7 +22,7 @@ The import checks the digest of the file, then for each run:
   is refused: the two labs work from other design files;
 - study.yaml or hypotheses.yaml of the instance differs: a warning (the
   import builds with its own design);
-- the tree pins of the run differ from validation/trees.yaml here: a
+- the tree pins of the run differ from validation/trees/ here: a
   warning ("other code"; the build notes it);
 - the seal gives the digest of the run list entry.
 
@@ -229,7 +229,7 @@ def import_(lab, in_file, log=print, dry=False):
             for t, repos in item.get("trees", {}).items():
                 here = {n: v["rev"] for n, v in pins.get(t, {}).get("repos", {}).items()}
                 if any(here.get(n) not in (None, v) for n, v in repos.items()) or t not in pins:
-                    warnings.append(f"{rid}: the tree {t} of the run has other pins than validation/trees.yaml here")
+                    warnings.append(f"{rid}: the tree {t} of the run has other pins than validation/trees/ here")
             if dry:
                 added.append(rid)
                 continue

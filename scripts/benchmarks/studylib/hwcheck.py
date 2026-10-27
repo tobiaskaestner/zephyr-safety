@@ -4,12 +4,19 @@
 """The loopback wire check of a board (study.py lab hwcheck): hardware, not data.
 
 Builds the app tests/benchmarks/loopback_check for the board from a pinned
-tree, flashes it with the flash commands of boards.yaml and reads the
-console until the line "RESULT: OK" or "RESULT: FAIL". The build folder
-is in the lab space (.lab/hwcheck/<board>). The check writes no result
-data; a campaign records its outcome in the campaign record.
+tree (with the build cache, like the points of a run: run.Builder), flashes
+it with the flash commands of boards.yaml and reads the console until the
+line "RESULT: OK" or "RESULT: FAIL". Each check writes the record
+.lab/hwcheck/<board>.json: the time, the host, the tree, the image (digest,
+cache key, from build or cache), the result and all console lines. A
+campaign refers to that record. If the design repo has changes that are
+not committed, the image cannot go into the cache: the check builds in
+.lab/hwcheck/<board>/ and the record says "dirty".
 """
 
+import datetime
+import hashlib
+import platform
 import subprocess
 import time
 
@@ -24,11 +31,15 @@ class HwCheckError(Exception):
 
 
 def tree_for(cfg, repos):
-    """The first tree of trees.yaml that pins all repos (zephyr and the board modules)."""
+    """The first tree of validation/trees/ (by name) that pins all repos (zephyr and the board modules)."""
     for name, t in cfg["trees"].items():
         if all(r in t["repos"] for r in repos):
             return name
     raise HwCheckError(f"no tree pins {repos}")
+
+
+def record_path(lab, board):
+    return lab.folder / ".lab" / "hwcheck" / f"{board.replace('/', '_').replace('@', '_')}.json"
 
 
 def check(lab, board, log=print, tree=None):
@@ -48,19 +59,38 @@ def check(lab, board, log=print, tree=None):
     schema = zephyr / hwmap.SCHEMA
     hw = hwmap.hardware(hwmap.select(hwmap.load(lab.hw_map, schema if schema.is_file() else None), board,
                                      path=str(lab.hw_map)))
-    bdir = lab.folder / ".lab" / "hwcheck" / board.replace("/", "_").replace("@", "_")
-    modules = [str(trees.repo_dir(cfg, tree, m)) for m in bcfg["modules"]]
-    cmd = ["cmake", "-GNinja", "-S", str(trees.BENCH_DIR / "loopback_check"), "-B", str(bdir), f"-DBOARD={board}",
-           "-DZEPHYR_MODULES=" + ";".join(modules), f"-DWEST_TOPDIR={cfg['root'] / tree}"]
-    env = run.build_env(zephyr, sdk)
+    started = datetime.datetime.now(datetime.timezone.utc)
+    pdir = lab.folder / ".lab" / "hwcheck" / board.replace("/", "_").replace("@", "_")
+    if pdir.exists():
+        import shutil
+        shutil.rmtree(pdir)
+    pdir.mkdir(parents=True)
+    repo_root, repo_rev, dirty = run.safety_repo_state()
+    exp = {"name": "loopback-check", "app": "loopback_check", "trees": [tree]}
+    point = {"id": "default", "kconfig": {}, "conf_files": [], "dtc_overlays": []}
     log(f"{board}: build loopback_check ({tree})")
-    for c in (cmd, ["ninja", "-C", str(bdir)]):
-        r = subprocess.run(c, env=env, capture_output=True, text=True)
-        if r.returncode:
-            raise HwCheckError(f"build failed: {' '.join(c)}\n{r.stdout[-3000:]}\n{r.stderr[-3000:]}")
-    flash = run.flash_command(bcfg, zephyr, bdir / "zephyr", hw["probe"])
+    try:
+        if not dirty:
+            from . import buildcache
+            b = run.Builder(exp, cfg, repos, board, bcfg, sdk, repo_root, repo_rev, buildcache.Cache(lab.build_cache),
+                            log=lambda m: None)
+            built = b.build(tree, point, pdir)
+        else:
+            b = run.Builder(exp, cfg, repos, board, bcfg, sdk, repo_root, repo_rev, None, log=lambda m: None)
+            b.bench_tree = "dirty"
+            cmake = run.build_point(cfg, tree, point, trees.BENCH_DIR, "loopback_check", "dirty", board, bcfg, sdk,
+                                    pdir / "build", pdir / "build.log", b.build_version(tree), b.builder)
+            built = {"cmake": cmake, "build": {"from": "build (dirty repo, no cache)"}}
+            from . import images
+            for f in ("zephyr.elf", "zephyr.hex"):
+                if (pdir / "build" / "zephyr" / f).is_file():
+                    (pdir / images.names("loopback_check", tree, "default")[f]).write_bytes(
+                        (pdir / "build" / "zephyr" / f).read_bytes())
+    except SystemExit as e:
+        raise HwCheckError(f"build failed: {e}") from None
+    flash = run.flash_command(bcfg, zephyr, pdir, hw["probe"])
     log(f"{board}: flash, probe {hw['probe']}, console {hw['serial']}")
-    lines = []
+    lines, ok = [], None
     with serial.Serial(hw["serial"], hw["baud"], timeout=1) as s:
         s.reset_input_buffer()
         r = subprocess.run(flash, capture_output=True, text=True)
@@ -72,5 +102,16 @@ def check(lab, board, log=print, tree=None):
             if line:
                 lines.append(line)
             if line.startswith("RESULT:"):
-                return "OK" in line, lines
-    raise HwCheckError(f"no RESULT line in {TIMEOUT} s: {lines[-5:]}")
+                ok = "OK" in line
+                break
+    from . import images, jsonout
+    elf = images.find(pdir, ".elf")
+    rec = {"format": "latbench-hwcheck/1", "board": board, "host": platform.node(), "time": started.isoformat(),
+           "tree": tree, "repo": {"rev": repo_rev, "dirty": bool(dirty)}, "probe": hw["probe"],
+           "console": hw["serial"], "image": {"elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest() if elf else None,
+                                              **built.get("build", {})},
+           "result": None if ok is None else ("ok" if ok else "fail"), "lines": lines}
+    jsonout.write(record_path(lab, board), rec)
+    if ok is None:
+        raise HwCheckError(f"no RESULT line in {TIMEOUT} s: {lines[-5:]}")
+    return ok, lines

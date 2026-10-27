@@ -1,0 +1,40 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The pinned tree ws-safety-driftfix: a west manifest. "study.py trees setup ws-safety-driftfix"
+# copies it to <trees root>/ws-safety-driftfix/manifest/west.yml and makes the west
+# workspace <trees root>/ws-safety-driftfix/ with exactly these projects at these
+# revisions (scripts/benchmarks/trees.py). Do not change a revision: old
+# results refer to it. Pin a new commit as a new tree (a new file).
+# userdata of self: the description and the Zephyr SDK version of the
+# tree; userdata of a project: the branch that has the commit.
+
+manifest:
+  version: "1.0"
+  self:
+    userdata:
+      description: ws-safety Zephyr plus the SysTick reload gap experiment (branch tkaestner/latency-systick-drift)
+      zephyr_sdk: "1.0.1"
+  projects:
+    - name: zephyr
+      url: https://github.com/tiacsys/zephyr
+      revision: d793263cd6c0f2f8a2c8fb5d5188aab26e3e439f
+      path: zephyr
+      west-commands: scripts/west-commands.yml
+      userdata: {branch: tkaestner/latency-systick-drift}   # a local branch of the source, not pushed
+    - name: cmsis_6
+      url: https://github.com/ARM-software/CMSIS_6.git
+      revision: b2dfbe1a20bbd49c2d2c605073799671074bbb30
+      path: modules/hal/cmsis_6
+    - name: hal_stm32
+      url: https://github.com/zephyrproject-rtos/hal_stm32
+      revision: 02baa06ccea3304d1f65ec6550c68e5e300fcc58
+      path: modules/hal/stm32
+    - name: hal_nordic
+      url: https://github.com/zephyrproject-rtos/hal_nordic
+      revision: 4387c79cebd31927fb1ea7d64bee11728ae8041f
+      path: modules/hal/nordic
+    - name: hal_nxp
+      url: https://github.com/zephyrproject-rtos/hal_nxp
+      revision: c2d68e4b9526aa03174d1da9464dd8e8b87e0a3e
+      path: modules/hal/nxp

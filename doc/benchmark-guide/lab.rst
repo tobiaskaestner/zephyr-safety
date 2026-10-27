@@ -20,7 +20,7 @@ Typical session
    # on the lab host: make the lab space and the trees (once)
    <repo>/scripts/benchmarks/study.py lab init ~/lab --repo <repo> --sdk ~/zephyr-sdk-1.0.1
    cd ~/lab
-   study.py trees setup --clone-source
+   study.py trees setup ws-safety ws-up
    study.py lab status
    # run all experiments of a study
    study.py campaign check <repo>/validation/empirical/latencies/st-default-latencies
@@ -84,8 +84,8 @@ folder. ``~`` is the home folder. Example:
        first.
    * - ``[toolchain] zephyr_sdk``
      - Optional. The Zephyr SDK. The default is
-       ``~/zephyr-sdk-<version>``, with the version of
-       ``validation/trees.yaml``.
+       ``~/zephyr-sdk-<version>``, with the version of the tree manifests
+       in ``validation/trees/``.
    * - ``[results] root``
      - The folder of the results trees (default ``results``). The results
        tree of the design is ``<root>/kernel-latency``.
@@ -123,7 +123,7 @@ The tools use the lab space as follows:
 trees root. ``REPO`` must have ``scripts/benchmarks/study.py``. If
 ``FOLDER`` is a lab space already, the command stops. A path in
 ``FOLDER`` goes into the file as a relative path. The command prints the
-next step, ``study.py trees setup --clone-source``. If the hardware map
+next step, ``study.py trees setup <tree>``. If the hardware map
 does not exist, it tells you to make it with twister. If the results
 folder is outside ``FOLDER``, it gets the file ``.lab-space`` with the
 path of the lab folder: the build then finds the lab space of the results
@@ -151,12 +151,26 @@ also from another folder (``lab.owner()``, not the current folder).
 
 The command makes sure that the loopback wire of a board works. It builds
 the app ``tests/benchmarks/loopback_check`` for the board from a pinned
-tree, in ``.lab/hwcheck/<board>/``. The default tree is the first tree
-that pins ``zephyr`` and the modules of the board. Then it flashes the
-board with the ``flash`` commands of ``boards.yaml`` and reads the console
-until ``RESULT: OK`` or ``RESULT: FAIL``, for 60 s or less. The exit code
-is 0 for ``OK``, 1 for ``FAIL``, and 2 if the check cannot run (build,
-flash, no board). The check writes no result data.
+tree, through the build cache like a point of a run, and copies the
+image to ``.lab/hwcheck/<board>/``. The default tree is the first tree (by
+name) that pins ``zephyr`` and the modules of the board. Then it flashes
+the board with the ``flash`` commands of ``boards.yaml`` and reads the
+console until ``RESULT: OK`` or ``RESULT: FAIL``, for 60 s or less. The
+exit code is 0 for ``OK``, 1 for ``FAIL``, and 2 if the check cannot run
+(build, flash, no board).
+
+Each check writes the record ``.lab/hwcheck/<board>.json``: the time, the
+host, the tree, the design repo commit, the probe and the console, the
+image (SHA-256, cache key, from build or cache), the result and all
+console lines (with the loopback measurement). The pre-flight check of a
+campaign names this record. If the design repository has changes that are
+not committed, the image cannot go into the cache: the check builds in
+``.lab/hwcheck/<board>/build/`` and the record has ``dirty: true``.
+
+``campaign run --hwcheck-each`` also does the check before each
+experiment. If it fails, the experiment is ``failed`` (the note says why)
+and the campaign goes on with the next one. From the cache, a check takes
+10 s to 20 s.
 
 .. _benchguide-lab-trees:
 
@@ -165,35 +179,27 @@ Pinned trees (``study.py trees``)
 
 .. code-block:: console
 
-   study.py trees setup [--clone-source] [TREE ...]
+   study.py trees setup [TREE ...]
    study.py trees check [TREE ...]
-   study.py trees show
+   study.py trees show [TREE ...]
    # all three: [--trees-root DIR]
 
-The pins are in ``validation/trees.yaml`` (see :doc:`host-tools`). The
-paths come from the lab space.
+The pins are the west manifests ``validation/trees/<tree>.yml`` (see
+:doc:`host-tools`). The paths come from the lab space. ``setup`` makes the
+west workspace ``<trees root>/<tree>/`` of each tree, with a copy of its
+manifest, and runs ``west update`` with the cache ``<[trees]
+source>/<tree>`` of the lab space if it exists. A project that is not in
+the cache comes from its ``url``. Nothing is written into the cache. Set
+up only the trees that the studies of the lab space need, for example
+``study.py trees setup ws-safety ws-up``.
 
-``setup`` makes each missing repository at
-``<trees root>/<tree>/<path>``, at its pinned revision. The clone source
-is the first of these that exists:
+``check`` gives the state of each tree: ``ok``, ``not set up``
+(information) or ``wrong`` (an error). ``show`` prints the trees root, the
+trees, the revisions and the paths.
 
-#. ``<[trees] source>/<tree>/<path>`` of the lab space (a git
-   repository).
-#. The ``source`` of the repository in ``validation/trees.yaml``.
-#. The ``url``. Then ``setup`` clones from the network.
-
-With a local source, ``setup`` adds a detached git worktree to the
-source. If the revision is not in the source, it fetches the ``branch``
-into the source first. With ``--clone-source``, ``setup`` makes a local
-clone of the source instead. The clone uses hard links to the objects,
-and nothing is written into the source. If the revision is not in the
-clone, the clone fetches it from the ``url``. Use ``--clone-source`` if
-the source is a repository of a different workspace that must not
-change. After ``setup``, the command does the same as ``check``.
-
-``check`` makes sure that the SDK has the pinned version and that each
-repository is at its pinned revision and clean. ``show`` prints the trees
-root, the trees, the revisions and the paths.
+A lab space made before 2026-10-28 has its trees as plain clones in the
+same paths. ``trees setup <tree>`` makes them a west workspace: it adds the
+manifest copy and ``.west/`` and keeps the clones.
 
 .. _benchguide-build-cache:
 
@@ -486,7 +492,7 @@ these checks for each run:
      - The run is refused.
    * - ``study.yaml`` or ``hypotheses.yaml`` of the instance differs.
      - A warning. The build here uses the design files here.
-   * - The tree pins of the run differ from ``validation/trees.yaml``
+   * - The tree pins of the run differ from ``validation/trees/``
        here.
      - A warning.
    * - The seal does not give the digest of the run-list entry.

@@ -72,9 +72,12 @@ To use another revision of a repository, add a new tree:
 
 #. Make sure that a local clone has the revision of each repository, or
    that the ``url`` has it.
-#. Add a new entry under ``trees`` in ``validation/trees.yaml``. Do not
-   change the revisions of an existing entry.
-#. Commit ``validation/trees.yaml``.
+#. Copy a file of ``validation/trees/`` to ``validation/trees/<tree>.yml``,
+   and set the description and the revisions. Do not change the
+   revisions of an existing tree.
+#. Run ``study.py design lint``: it checks the file with the parser of
+   west.
+#. Commit the new file.
 #. Create the tree in your lab space (see :doc:`lab`):
 
    .. code-block:: console
@@ -83,9 +86,11 @@ To use another revision of a repository, add a new tree:
 
 To add a module repository that a new board needs to an existing tree:
 
-#. Add the repository to the ``repos`` of the tree in
-   ``validation/trees.yaml``, with its pinned revision.
-#. Commit ``validation/trees.yaml``.
+#. Add the project to ``projects`` of ``validation/trees/<tree>.yml``,
+   with its pinned revision. Do not change the other projects: ``trees
+   setup`` and ``trees check`` accept a new project, but no changed or
+   removed pin.
+#. Commit the file.
 #. Run ``study.py trees setup <tree>``. It creates only the missing
    repositories.
 

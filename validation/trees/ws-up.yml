@@ -1,0 +1,40 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The pinned tree ws-up: a west manifest. "study.py trees setup ws-up"
+# copies it to <trees root>/ws-up/manifest/west.yml and makes the west
+# workspace <trees root>/ws-up/ with exactly these projects at these
+# revisions (scripts/benchmarks/trees.py). Do not change a revision: old
+# results refer to it. Pin a new commit as a new tree (a new file).
+# userdata of self: the description and the Zephyr SDK version of the
+# tree; userdata of a project: the branch that has the commit.
+
+manifest:
+  version: "1.0"
+  self:
+    userdata:
+      description: upstream Zephyr main, v4.5.0-rc3-8
+      zephyr_sdk: "1.0.1"
+  projects:
+    - name: zephyr
+      url: https://github.com/zephyrproject-rtos/zephyr
+      revision: 3b42ac0d24bda3d655b70127186bd43115d69223
+      path: zephyr
+      west-commands: scripts/west-commands.yml
+      userdata: {branch: main}
+    - name: cmsis_6
+      url: https://github.com/zephyrproject-rtos/CMSIS_6
+      revision: 1c1840af7a7e757d6e2fec3ddb0e5ce0dfcc93c8
+      path: modules/hal/cmsis_6
+    - name: hal_stm32
+      url: https://github.com/zephyrproject-rtos/hal_stm32
+      revision: c9550199186236d610092f4005f8c9bae2a6bfcf
+      path: modules/hal/stm32
+    - name: hal_nordic
+      url: https://github.com/zephyrproject-rtos/hal_nordic
+      revision: c708b9fe1b7a36090c468374811a6e934b97e54a
+      path: modules/hal/nordic
+    - name: hal_nxp
+      url: https://github.com/zephyrproject-rtos/hal_nxp
+      revision: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
+      path: modules/hal/nxp

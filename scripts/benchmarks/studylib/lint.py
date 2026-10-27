@@ -65,6 +65,12 @@ def lint_schemas(root, out):
     files = [(kind, f) for kind in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{kind}.yaml"))]
     if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
         files.append(("boards", trees.BOARDS_FILE))
+    if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
+        for f in sorted(trees.TREES_DIR.glob("*.yml")):
+            try:
+                trees.read_manifest(f)
+            except (trees.TreeError, yaml.YAMLError, KeyError, TypeError) as e:
+                out.append(Problem(ERROR, f, f"tree manifest: {e}"))
     for kind, f in files:
         try:
             data = yaml.safe_load(f.read_text())

@@ -16,7 +16,7 @@ The folder ``scripts/benchmarks/`` has the host tools. They need Python
        (``study.py trees``), campaigns, and the aggregates of a results
        tree (see :doc:`studies` and :doc:`lab`).
    * - ``trees.py``
-     - The library of the pinned trees of ``validation/trees.yaml``. It
+     - The library of the pinned trees of ``validation/trees/``. It
        has no commands of its own: use ``study.py trees``. It reads
        ``boards.yaml`` for ``run.py``.
    * - ``run.py``
@@ -35,8 +35,9 @@ Reproducibility rules
 A data point that you publish or compare must come from ``run.py`` with
 an experiment file in the safety repository. These rules apply:
 
-- ``validation/trees.yaml`` pins each tree: the Zephyr revision, the
-  revision of each module, and the Zephyr SDK version.
+- ``validation/trees/<tree>.yml`` pins each tree (a west manifest): the
+  Zephyr revision, the revision of each module, and the Zephyr SDK
+  version.
 - A pinned revision does not change, because old results refer to it. A
   changed revision means a new tree (see :ref:`benchguide-tree-rule`).
 - A Zephyr patch for the study goes on a branch in the Zephyr repository.
@@ -55,32 +56,37 @@ an experiment file in the safety repository. These rules apply:
 - A manual build or capture is for development only. Its results are
   unpinned.
 
-Pinned trees (``validation/trees.yaml``)
-----------------------------------------
+Pinned trees (``validation/trees/``)
+------------------------------------
 
-``validation/trees.yaml`` has only the pins. The paths of a host are in
-the ``.lab/config`` of its lab space (see :doc:`lab`):
+Each tree is one west manifest, ``validation/trees/<tree>.yml``. The file
+has only the pins. The paths of a host are in the ``.lab/config`` of its
+lab space (see :doc:`lab`):
 
 - The trees root is ``[trees] root``. ``--trees-root`` or the environment
   variable ``LATBENCH_TREES_ROOT`` overrides it.
 - The SDK path is ``[toolchain] zephyr_sdk``. The default is
   ``~/zephyr-sdk-<version>``.
-- A folder of trees to clone from is ``[trees] source``.
+- A folder of local clones to clone from is ``[trees] source``, with the
+  layout ``<source>/<tree>/<path>``.
 
-``validation/trees.yaml`` has these keys:
+A tree manifest has these keys (the west manifest format):
 
-``toolchain.zephyr_sdk``
-   The pinned SDK ``version``. The scripts compare it with the
-   ``sdk_version`` file of the SDK.
+``manifest.self.userdata``
+   ``description`` (one line) and ``zephyr_sdk``, the pinned SDK version.
+   The scripts compare it with the ``sdk_version`` file of the SDK. All
+   trees must have the same SDK version, because a lab space has one SDK.
 
-``trees.<name>``
-   One entry for each tree, with a ``description`` and a ``repos`` map.
-   Each repository has a ``path`` in the tree, a ``url``, an optional
-   ``branch``, the pinned ``rev``, and an optional ``source``. The
-   ``source`` is a local clone that has the revision, so that no network
-   access is necessary. It is for a host without ``[trees] source``.
+``manifest.projects``
+   One entry for each repository, with ``name``, ``url``, the pinned
+   ``revision`` (a commit), ``path`` in the tree, and ``userdata:
+   {branch}``, the branch that has the commit. The project ``zephyr`` has
+   ``west-commands: scripts/west-commands.yml``, so that ``west build``
+   works in the tree. The manifest does not import the ``west.yml`` of
+   Zephyr: the tree has only the projects of the file.
 
-The file declares four trees today:
+The design lint checks each tree manifest with the parser of west. There
+are four trees today:
 
 ``ws-safety``
    The Zephyr of the safety workspace.
@@ -92,7 +98,7 @@ The file declares four trees today:
    The Zephyr of ``ws-up`` plus the interrupt mask hooks of M4 (see
    :doc:`m4`), on a local branch (``tkaestner/latency-irqoff-hook``). The
    branch is not pushed, so ``study.py trees setup`` needs a local clone
-   for this tree.
+   for this tree (``[trees] source``).
 
 ``ws-safety-driftfix``
    The Zephyr of ``ws-safety`` plus a SysTick experiment, on a local branch
@@ -107,32 +113,46 @@ needs are in ``boards.yaml``.
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py trees setup [--clone-source] [TREE ...]
+   scripts/benchmarks/study.py trees setup [TREE ...]
    scripts/benchmarks/study.py trees check [TREE ...]
-   scripts/benchmarks/study.py trees show
+   scripts/benchmarks/study.py trees show [TREE ...]
 
 ``setup``
-   Creates each missing repository at ``<trees root>/<tree>/<path>``. The
-   clone source is ``<[trees] source>/<tree>/<path>`` of the lab space if
-   it is a git repository, else the ``source`` of ``validation/trees.yaml``
-   if it exists. If a clone source exists, ``setup`` adds a detached git
-   worktree of it at the pinned revision. If the revision is not in the
-   clone source, it fetches the ``branch`` first. Without a clone source,
-   it clones the ``url``. Then it does the same examination as ``check``.
+   Makes the west workspace ``<trees root>/<tree>/`` of each tree:
 
-   With ``--clone-source``, ``setup`` clones the clone source instead
-   of adding a worktree to it. The local clone uses hard links to the
-   objects and needs no network access. Nothing is written into the
-   source: a worktree writes ``.git/worktrees/<name>`` there, and a
-   fetch writes objects there. If the revision is not in the source,
-   the new clone fetches the ``branch`` from the ``url``. Use it on a host
-   where a source path is a repository of a different workspace that
-   must not change.
+   #. It copies the manifest to ``<trees root>/<tree>/manifest/west.yml``.
+      If a copy is there and it is different, ``setup`` stops: the pins of
+      a tree never change.
+   #. It runs ``west init -l manifest`` (only once).
+   #. It makes sure that ``west topdir`` gives the tree folder, and stops
+      if not.
+   #. It runs ``west update``, with ``--path-cache <[trees] source>/<tree>``
+      if that folder exists. west makes a plain ``git clone`` of each
+      project from the cache (no worktree, no alternates, nothing written
+      into the cache) and then sets the remote to the ``url``. A project
+      that is not in the cache comes from its ``url``.
+   #. It does the same examination as ``check``.
+
+   west runs without the ``ZEPHYR_*`` variables of the caller and without
+   the user and system west configuration
+   (``WEST_CONFIG_GLOBAL=/dev/null``, ``WEST_CONFIG_SYSTEM=/dev/null``).
+   Thus a ``ZEPHYR_BASE`` of another workspace cannot lead west to that
+   workspace, and a ``~/.westconfig`` cannot change a build.
 
 ``check``
-   Makes sure that the SDK has the pinned version. Then it makes sure
-   that each repository exists, is at its pinned revision and is clean
-   (no changes, no untracked files).
+   Makes sure that the SDK has the pinned version. Then it gives the state
+   of each tree:
+
+   - ``ok``: each repository is at its pinned revision and clean (no
+     changes, no untracked files), and the manifest copy is the same as
+     the file in the repository.
+   - ``not set up``: a repository has no checkout. This is information:
+     a lab space sets up only the trees of its studies. It is an error
+     only for a tree that you name.
+   - ``wrong``: a repository is not at its pin or not clean, or the
+     manifest copy is different. This is an error (exit code 1).
+
+   ``lab status`` shows the same states.
 
 ``show``
    Prints the trees root, the trees, the revisions and the paths.
@@ -423,7 +443,7 @@ know. The keys of the experiment file are:
    * - ``app``
      - The app folder in ``tests/benchmarks/``.
    * - ``trees``
-     - List of tree names from ``validation/trees.yaml``.
+     - List of tree names (the files of ``validation/trees/``).
    * - ``board``
      - Optional. A board target of ``boards.yaml``. The default is
        ``default`` of ``boards.yaml``.
@@ -579,9 +599,9 @@ repository (``git archive``). Its builds used this copy.
   benchmark folder in its ``src/`` copy (``snapshot``) and the module
   folder (``module``). A still older run has no ``module``. The oldest
   runs have no ``snapshot``, because they built from the worktree.
-- ``trees``, ``trees_root``: the entries of the trees from
-  ``validation/trees.yaml``, with only the repositories that the build
-  used, and the trees root of the host.
+- ``trees``, ``trees_root``: the entries of the trees (from the tree
+  manifests, ``validation/trees.yaml`` before 2026-10-28), with only the
+  repositories that the build used, and the trees root of the host.
 - ``toolchain``: the SDK version and path.
 - ``tools``: the versions of CMake, Ninja, Python, pyserial, and of each
   tool in the ``flash`` commands of the board (for example ``openocd``,
@@ -619,8 +639,8 @@ again:
 
 #. It reads the manifest. It makes sure that the trees are at the
    revisions of the manifest and clean, and that the SDK has the version
-   of the manifest. The revisions of the current ``validation/trees.yaml``
-   are not used, so the check also works after a change of that file.
+   of the manifest. The revisions of the current tree manifests are not
+   used, so the check also works after a change of these files.
    ``--trees-root`` or ``LATBENCH_TREES_ROOT`` overrides ``trees_root`` of
    the manifest. If that folder does not exist (the trees moved, or a run
    of a different host), the trees root of the lab space is used. A run

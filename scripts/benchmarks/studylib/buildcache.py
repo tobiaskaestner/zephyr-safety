@@ -13,7 +13,8 @@ that goes into the image:
 
     the board, the app, the revs of the tree repos that the board needs,
     the BUILD_VERSION string of the Zephyr tree (git describe: it depends
-    on the tags, not only on the rev), the SDK version, the git tree hashes
+    on the tags, not only on the rev), the builder ("west <version>" or
+    "cmake"), the SDK version, the git tree hashes
     of tests/benchmarks and of the module folder zephyr/ of the safety
     repo, and the point (Kconfig values, conf files, overlays).
 
@@ -35,9 +36,9 @@ FILES = ("zephyr.elf", "zephyr.hex", ".config", "zephyr.dts")
 FORMAT = "latbench-build/1"
 
 
-def key_inputs(board, app, tree_repos, sdk_version, bench_tree, module_tree, point, build_version):
+def key_inputs(board, app, tree_repos, sdk_version, bench_tree, module_tree, point, build_version, builder="cmake"):
     return {"format": FORMAT, "board": board, "app": app, "repos": dict(sorted(tree_repos.items())),
-            "build_version": build_version,
+            "build_version": build_version, "builder": builder,
             "sdk": str(sdk_version), "bench_tree": bench_tree, "module_tree": module_tree,
             "kconfig": {k: str(v) for k, v in sorted(point["kconfig"].items())},
             "conf_files": list(point["conf_files"]), "dtc_overlays": list(point["dtc_overlays"])}

@@ -190,7 +190,7 @@ Experiments of ``STUDY/study.md``. The edits are text edits, so the
 comments of the files stay.
 
 The template ``experiment.yaml`` has the app, the board (only with
-``--board``), the first tree of ``validation/trees.yaml``, one axis
+``--board``), the first tree of ``validation/trees/`` (by name), one axis
 ``variant`` with the value ``default``, and the acceptance check ``A1``
 (no invalid samples). The metric of ``A1`` is the main metric of the app:
 ``irq`` for ``irq_latency``, ``isr2thr`` for ``wake_latency``, ``t2t``

@@ -191,7 +191,7 @@ class Record:
         self.save()
 
 
-def new_record(lab, folder, board, items, argv, role="evidence", reason=None):
+def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hwcheck_each=False):
     cid = utc_id()
     while (lab.campaigns / f"{cid}.json").exists():
         time.sleep(1)
@@ -204,6 +204,7 @@ def new_record(lab, folder, board, items, argv, role="evidence", reason=None):
                 "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
                 "repo": {"path": str(trees.REPO_DIR), "rev": rev}, "ref": f"refs/latbench/campaign/{cid}",
                 "role": role, **({"reason": reason} if reason else {}),
+                **({"hwcheck_each": True} if hwcheck_each else {}),
                 "status": PLANNED, "created": utc_now().isoformat(), "experiments": items}
     if role != "evidence" and not reason:
         raise CampaignError(f"role {role} needs a reason (--reason)")
@@ -436,7 +437,8 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
         if hwcheck:
             try:
                 ok, lines = hwc.check(lab, b, log=lambda m: None)
-                add("ok" if ok else "fail", f"loopback wire of {b}", lines[-1] if lines else "")
+                add("ok" if ok else "fail", f"loopback wire of {b}",
+                    (lines[-1] if lines else "") + f" (record {hwc.record_path(lab, b).relative_to(lab.folder)})")
             except Exception as x:
                 add("fail", f"loopback wire of {b}", f"{type(x).__name__}: {(str(x).splitlines() or [''])[0]}")
     free = shutil.disk_usage(lab.results if lab.results.exists() else lab.folder).free
@@ -544,6 +546,14 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             e.pop("note", None)
             rec.save()
             log(f"=== {e['experiment']} ({e['instance']})")
+            if d.get("hwcheck_each") and hwcheck:
+                why = wire_check(lab, e["board"])
+                if why:
+                    e.update(state=FAILED, finished=utc_now().isoformat(), note=why)
+                    failed += 1
+                    rec.save()
+                    log(f"    {e['state']}: {why}")
+                    continue
             # run.py adds the run to the run list of the instance, with the role and the campaign
             cmd = [sys.executable, run_py(), trees.REPO_DIR / e["design"], "--out", folder,
                    "--campaign", rec.id, "--role", d.get("role", "evidence"),
@@ -595,6 +605,16 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     finally:
         signal.signal(signal.SIGTERM, old)
         drop_lock(lab, rec.id)
+
+
+def wire_check(lab, board):
+    """None if the loopback wire of the board is good, else the reason (for --hwcheck-each)."""
+    from . import hwcheck as hwc
+    try:
+        ok, lines = hwc.check(lab, board, log=lambda m: None)
+    except Exception as x:
+        return f"the loopback wire check could not run: {type(x).__name__}: {(str(x).splitlines() or [''])[0]}"
+    return None if ok else f"the loopback wire check failed: {lines[-1] if lines else ''}"
 
 
 def minutes(secs):

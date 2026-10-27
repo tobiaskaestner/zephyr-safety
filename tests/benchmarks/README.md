@@ -37,9 +37,9 @@ paths are relative to the root of the repo:
 
 | Path | Content |
 |---|---|
-| `validation/trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
+| `validation/trees/<tree>.yml` | One west manifest for each tree: the pinned Zephyr and module revs, and the SDK version |
 | `validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml` | One folder `ex-<name>` for each experiment, in the folder `st-<study>` of the study that owns it: app, trees, points, repetitions; `experiment.md` describes it |
-| `scripts/benchmarks/trees.py` | The pinned trees of `validation/trees.yaml` (commands: `study.py trees setup / check / show`) |
+| `scripts/benchmarks/trees.py` | The pinned trees of `validation/trees/` as west workspaces (commands: `study.py trees setup / check / show`) |
 | `scripts/benchmarks/run.py` | Runs an experiment and records its provenance |
 | `scripts/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
 | `scripts/benchmarks/latbench.py` | Parses logs and prints percentiles |
@@ -102,7 +102,7 @@ cache. A run of an older `run.py` has a copy of the repo in
 
 ## Change a tree
 
-Do not change a pinned rev in `validation/trees.yaml`, because old
+Do not change a pinned rev in `validation/trees/`, because old
 results refer to it. Add a new tree instead. A Zephyr patch for this
 study goes on a branch (for example `tkaestner/latency-hooks`) in the Zephyr repo. Its
 commit is the rev of the new tree.

@@ -31,7 +31,7 @@ Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign check FOLDER [...] [--no-hwcheck] [--warn-as-error]
                                           the pre-flight check
     study.py campaign run FOLDER [...] [--no-hwcheck] [--detach] [--warn-as-error]
-                      [--role R --reason TEXT]
+                      [--role R --reason TEXT] [--hwcheck-each]
                                           check, then run each experiment and add each
                                           run to its instance (role R, default evidence);
                                           build the results after each run in the background
@@ -39,10 +39,10 @@ Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign resume ID [--detach]
                                           run the experiments of a campaign that are not done
 
-Pinned trees (validation/trees.yaml, paths from the lab space):
-    study.py trees setup [--clone-source] [TREE ...]
-    study.py trees check [TREE ...]
-    study.py trees show
+Pinned trees (validation/trees/<tree>.yml, west manifests; paths from the lab space):
+    study.py trees setup [TREE ...]       make the west workspace of each tree
+    study.py trees check [TREE ...]       ok, not set up (information) or wrong (exit 1)
+    study.py trees show [TREE ...]
 
 Instances (the run lists in a results tree):
     study.py instance new RESULTS STUDY --board B
@@ -144,7 +144,7 @@ def cmd_lab_init(args):
     print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
     print(f"  results      {lab.results}")
     print(f"  hardware map {lab.hw_map}" + ("" if lab.hw_map.is_file() else " (missing: make it with twister)"))
-    print(f"next: cd {lab.folder} && {lab.repo}/scripts/benchmarks/study.py trees setup --clone-source")
+    print(f"next: cd {lab.folder} && {lab.repo}/scripts/benchmarks/study.py trees setup <tree>")
 
 
 def cmd_lab_status(args):
@@ -160,12 +160,8 @@ def cmd_lab_status(args):
     except trees.TreeError as e:
         print(f"  zephyr sdk   {e}")
     for t in cfg["trees"]:
-        try:
-            trees.check_tree(cfg, t)
-            state = "ok"
-        except trees.TreeError as e:
-            state = str(e).splitlines()[0]
-        print(f"  tree {t:20} {state}")
+        state, text = trees.tree_state(cfg, t)
+        print(f"  tree {t:20} {state}" + (f": {text}" if state == "wrong" else ""))
     print(f"  results      {lab.results}")
     if lab.hw_map.is_file():
         try:
@@ -244,7 +240,7 @@ def cmd_campaign_run(args):
     lab = labmod.require()
     items = campaign.plan(lab, args.folder, args.board, args.only, args.skip)
     rec = campaign.new_record(lab, args.folder, args.board, items, ["study.py", *sys.argv[1:]],
-                              role=args.role, reason=args.reason)
+                              role=args.role, reason=args.reason, hwcheck_each=args.hwcheck_each)
     print(f"campaign {rec.id}: {sum(e['state'] == 'planned' for e in items)} experiments, record {rec.path}")
     if args.detach:
         pid, log = campaign.detach(rec, campaign_extra(args))
@@ -287,7 +283,7 @@ def cmd_campaign_status(args):
 
 # ------------------------------------------------------------ trees
 def cmd_trees(args):
-    trees.main(args)
+    return trees.main(args)
 
 
 # ------------------------------------------------------------ instance
@@ -465,7 +461,7 @@ def parser():
     s.add_argument("--name", help="the name of the lab space (default: the folder name)")
     s.add_argument("--trees-root", help="the folder of the pinned trees (default: FOLDER/trees)")
     s.add_argument("--trees-source", help="a folder with <tree>/<path> clones to clone the trees from")
-    s.add_argument("--sdk", help="the Zephyr SDK (default: ~/zephyr-sdk-<version of trees.yaml>)")
+    s.add_argument("--sdk", help="the Zephyr SDK (default: ~/zephyr-sdk-<version of the trees>)")
     s.add_argument("--results", help="the results folder (default: FOLDER/results)")
     s.add_argument("--hw-map", help="the hardware map (default: FOLDER/hw-map.yml)")
     s.set_defaults(func=cmd_lab_init)
@@ -502,6 +498,8 @@ def parser():
             s.add_argument("--role", default="evidence", choices=instance.ROLES,
                            help="the role of the runs in the run lists (default evidence)")
             s.add_argument("--reason", help="the reason of a role other than evidence")
+            s.add_argument("--hwcheck-each", action="store_true",
+                           help="the loopback wire check also before each experiment")
         s.set_defaults(func=func)
     s = camp.add_parser("resume")
     s.add_argument("id")
@@ -514,12 +512,10 @@ def parser():
     s.add_argument("--verdicts", action="store_true", help="also the verdicts of the instances of the campaign")
     s.set_defaults(func=cmd_campaign_status)
 
-    s = sub.add_parser("trees", help="the pinned trees of validation/trees.yaml")
+    s = sub.add_parser("trees", help="the pinned trees of validation/trees/ (west workspaces)")
     s.add_argument("cmd", choices=["setup", "check", "show"])
     s.add_argument("trees", nargs="*")
     s.add_argument("--trees-root", help="override the trees root of the lab space")
-    s.add_argument("--clone-source", action="store_true",
-                   help="setup: clone each source repo instead of adding a worktree to it")
     s.set_defaults(func=cmd_trees)
 
     inst = sub.add_parser("instance", help="the run lists of a results tree").add_subparsers(
