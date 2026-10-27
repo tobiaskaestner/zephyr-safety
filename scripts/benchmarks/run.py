@@ -8,9 +8,11 @@
 
 Rules (a run stops before it builds anything if one is broken):
 
-- The safety repo that holds this script and the experiment file is clean.
-- Each tree of the experiment is at its pinned rev in trees.yaml and clean
-  (scripts/benchmarks/trees.py setup creates the trees).
+- The safety repo that holds this script and the experiment file is clean,
+  and it stays at the same commit while the run builds (checked before each
+  point).
+- Each tree of the experiment is at its pinned rev in validation/trees.yaml
+  and clean (study.py trees setup creates the trees).
 - The Zephyr SDK has the pinned version.
 - The build uses only the modules of the tree (ZEPHYR_MODULES), not the
   modules of a west workspace.
@@ -23,11 +25,18 @@ versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
 devicetree, zephyr.elf and build.log. summary.txt has the percentiles.
 If <out> is the folder of a study instance (it has instance.json), the run
 goes to <out>/ex-<experiment>/<UTC time>/; add it to the run list with
-"study.py add". At the end, run.py writes the seal <UTC time>.sha256 beside
-the run folder (see studylib/seal.py). --rebuild writes its result to
-<UTC time>.rebuild-<UTC time of the check>.json beside the run folder.
-src/ is the snapshot of the committed safety repo (git archive) that the
-run built from. Each build also gets it as the Zephyr module "safety".
+"study.py instance add" (a campaign does it). At the end, run.py writes the
+seal <UTC time>.sha256 beside the run folder (see studylib/seal.py).
+--rebuild writes its result to <UTC time>.rebuild-<UTC time of the check>.json
+beside the run folder.
+
+The build reads the app from the safety repo, and the repo is the Zephyr
+module "safety" of each build. The app gets LATBENCH_SRC_REV = the git
+tree hash of tests/benchmarks (manifest: safety.bench_tree), so the same
+content gives the same image at any commit. In a lab space, the images go
+to the build cache (studylib/buildcache.py); a point with an image in the
+cache is not built again (manifest: point build.cached). --build-only fills
+the cache (or builds in a temporary folder outside a lab space).
 
 Experiment file:
 
@@ -153,6 +162,19 @@ def safety_repo_state():
     return root, rev, dirty
 
 
+def check_repo_unchanged(repo_root, rev):
+    """Stop if the safety repo is not clean at rev any more (a change during the run)."""
+    now, dirty = trees.repo_state(repo_root)
+    if now != rev or dirty:
+        fail(f"the safety repo {repo_root} changed during the run (was {rev[:12]}, now {now[:12]}"
+             f"{', dirty' if dirty else ''})")
+
+
+def tree_hash(repo_root, rev, path):
+    """The git tree hash of a folder of the repo at rev."""
+    return trees.git("rev-parse", f"{rev}:{path}", cwd=repo_root)
+
+
 def flash_command(board_cfg, zephyr, pdir, probe):
     """Return one command that runs the flash commands of the board in order."""
     fields = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex"),
@@ -170,20 +192,6 @@ def export_rev(repo_root, rev, dest):
     subprocess.run(["tar", "-x", "-C", str(dest)], stdin=archive.stdout, check=True)
     if archive.wait() != 0:
         fail(f"git archive {rev} failed")
-
-
-def export_snapshot(repo_root, rev, dest):
-    """Export the safety repo at rev to dest; return the bench folder in dest.
-
-    A run builds from this snapshot, not from the worktree, so that work in
-    the worktree during a long run cannot change what the run builds. The
-    snapshot is also the Zephyr module "safety" of each build (see
-    build_point()).
-    """
-    export_rev(repo_root, rev, dest)
-    if not (dest / "zephyr" / "module.yml").is_file():
-        fail(f"the safety repo at {rev} has no zephyr/module.yml")
-    return dest / BENCH_DIR.relative_to(repo_root)
 
 
 def check_config(config_file, kconfig):
@@ -232,8 +240,10 @@ def run_build(args, env, bdir, log, name):
 
 
 def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log):
-    """Build one point. The modules are those of the board from the tree, plus the
-    safety snapshot (two folders above src_bench) as the module "safety".
+    """Build one point. src_bench is tests/benchmarks of a safety repo (or of an export of it).
+
+    The modules are those of the board from the tree, plus the safety repo
+    (two folders above src_bench) as the module "safety".
     """
     app_dir = src_bench / app
     zephyr = trees.repo_dir(tree_cfg, tree, "zephyr")
@@ -266,6 +276,60 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     if bad:
         fail(f"Kconfig values not applied for {tree}/{point['id']}:\n  " + "\n  ".join(bad))
     return args
+
+
+class Builder:
+    """Builds the points of an experiment, with the build cache of the lab space if there is one."""
+
+    def __init__(self, exp, tree_cfg, repos, board, board_cfg, sdk, repo_root, repo_rev, cache=None, log=print):
+        self.exp, self.tree_cfg, self.repos = exp, tree_cfg, repos
+        self.board, self.board_cfg, self.sdk = board, board_cfg, sdk
+        self.repo_root, self.repo_rev, self.cache, self.log = repo_root, repo_rev, cache, log
+        self.bench_tree = tree_hash(repo_root, repo_rev, BENCH_DIR.relative_to(repo_root))
+        self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
+
+    def key(self, tree, pt):
+        from studylib import buildcache
+        pins = {r: self.tree_cfg["trees"][tree]["repos"][r]["rev"] for r in self.repos}
+        inputs = buildcache.key_inputs(self.board, self.exp["app"], pins,
+                                       self.tree_cfg["toolchain"]["zephyr_sdk"]["version"],
+                                       self.bench_tree, self.module_tree, pt)
+        return buildcache.key_of(inputs), inputs
+
+    def build(self, tree, pt, pdir=None):
+        """Build one point (or take it from the cache); copy its files to pdir; return the manifest data."""
+        check_repo_unchanged(self.repo_root, self.repo_rev)
+        name = f"{tree}/{pt['id']}"
+        key, inputs = self.key(tree, pt) if self.cache else (None, None)
+        entry = self.cache.get(key) if self.cache else None
+        if entry is not None:
+            self.log(f"[{name}] image from the build cache ({key[:12]})")
+            if pdir is not None:
+                self.cache.copy_to(key, pdir)
+            return {"cmake": entry["cmake"], "elf_sha256": entry["elf_sha256"],
+                    "build": {"key": key, "cached": True}}
+        self.log(f"[{name}] build", )
+        if self.cache:
+            bdir = self.cache.work_dir(key)
+            log = bdir.parent / f"{key}.log"
+        else:
+            bdir, log = pdir / "build", pdir / "build.log"
+        cmake = build_point(self.tree_cfg, tree, pt, BENCH_DIR, self.exp["app"], self.bench_tree, self.board,
+                            self.board_cfg, self.sdk, bdir, log)
+        elf = bdir / "zephyr" / "zephyr.elf"
+        out = {"cmake": cmake, "elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest()}
+        if self.cache:
+            self.cache.put(key, inputs, bdir, cmake, log)
+            shutil.rmtree(bdir)
+            log.unlink()
+            if pdir is not None:
+                self.cache.copy_to(key, pdir)
+            out["build"] = {"key": key, "cached": False}
+        elif pdir is not None:
+            for f in (elf, bdir / "zephyr" / "zephyr.hex", bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
+                if f.exists():
+                    shutil.copy2(f, pdir / f.name)
+        return out
 
 
 def find_points(path, only=None):
@@ -391,8 +455,12 @@ def rebuild(args):
     information, so the build goes to the original build folder if it is free.
     """
     run_dir, manifest, entries = find_points(args.rebuild, args.only)
-    old_run = Path(entries[0]["cmake"][entries[0]["cmake"].index("-B") + 1]).parents[2]
-    moves = {str(old_run): str(run_dir)}
+    first = entries[0]
+    old_bdir = Path(first["cmake"][first["cmake"].index("-B") + 1])
+    # a build in the run folder (<run>/<tree>/<point>/build), or in the build cache
+    in_run = old_bdir.parts[-3:] == (first["tree"], first["id"], "build")
+    old_run = old_bdir.parents[2] if in_run else None
+    moves = {str(old_run): str(run_dir)} if in_run else {}
     # On another host the paths of the manifest do not exist: use the trees
     # root and the SDK path of this host. The revisions and the SDK version
     # stay those of the manifest.
@@ -402,6 +470,9 @@ def rebuild(args):
     root = Path(args.trees_root or os.environ.get("LATBENCH_TREES_ROOT") or manifest["trees_root"]).expanduser()
     if not root.is_dir():
         root = trees.load()["root"]
+        if root is None:
+            fail(f"the trees root {manifest['trees_root']} of the run does not exist here; work in a lab space "
+                 "or give --trees-root")
     cfg = {
         "root": root,
         "trees": manifest["trees"],
@@ -421,7 +492,19 @@ def rebuild(args):
 
     # The logs and the builds that cannot go to the original folder. Kept if a point fails.
     tmp = Path(tempfile.mkdtemp(prefix="latbench-rebuild-"))
-    if "snapshot" not in manifest["safety"]:
+    safety = manifest["safety"]
+    if "bench_tree" in safety:
+        # A run that built from the safety repo: export its commit (the repo is at another rev now).
+        repo_root, _, _ = safety_repo_state()
+        if trees.git("cat-file", "-t", safety["rev"], cwd=repo_root, check=False) != "commit":
+            fail(f"the safety revision {safety['rev']} of the run is not in {repo_root} (fetch it, or the "
+                 "ref of its campaign refs/latbench/campaign/<UTC>)")
+        src = tmp / "src"
+        export_rev(repo_root, safety["rev"], src)
+        if tree_hash(repo_root, safety["rev"], BENCH_DIR.relative_to(repo_root)) != safety["bench_tree"]:
+            fail(f"the safety revision {safety['rev']} does not have the bench tree {safety['bench_tree']}")
+        moves[safety["path"]] = str(src)
+    elif "snapshot" not in safety:
         # An old run that built from the worktree. Its build took the revision
         # string from "git describe" and had no -DLATBENCH_SRC_REV, so an export
         # without .git gives another image: use a temporary worktree instead.
@@ -446,7 +529,7 @@ def rebuild(args):
         name = f"{e['tree']}/{e['id']}"
         pdir = run_dir / e["tree"] / e["id"]
         bdir = pdir / "build"
-        if bdir.exists() or run_dir != old_run:
+        if bdir.exists() or old_run is None or run_dir != old_run:
             bdir = tmp / e["tree"] / e["id"]
         bdir.mkdir(parents=True)
         bad = True
@@ -521,6 +604,7 @@ def main():
     p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
+    p.add_argument("--no-cache", action="store_true", help="do not use the build cache of the lab space")
     p.add_argument("--warn-as-error", action="store_true",
                    help="stop if the design lint finds a problem in the experiment or its study")
     args = p.parse_args()
@@ -532,8 +616,8 @@ def main():
             p.error("--rebuild takes no experiment and no --out")
         rebuild(args)
         return
-    if not args.experiment or not args.out:
-        p.error("an experiment and --out are necessary")
+    if not args.experiment or not (args.out or args.build_only or args.dry_run):
+        p.error("an experiment and --out are necessary (no --out with --build-only or --dry-run)")
 
     exp_path = Path(args.experiment).resolve()
     exp_text = exp_path.read_text()
@@ -545,6 +629,9 @@ def main():
         fail(f"safety repo {repo_root} is dirty, commit first:\n{repo_dirty}")
     if not exp_path.is_relative_to(repo_root):
         fail(f"{exp_path} is not in the safety repo {repo_root}")
+    lab = labmod.find()
+    if lab and lab.repo.resolve() != repo_root.resolve():
+        fail(f"this is run.py of {repo_root}; the lab space {lab.folder} uses the design repo {lab.repo}")
     problems = lint.lint_for_experiment(exp_path)
     for pr in problems:
         print(f"lint {pr}", flush=True)
@@ -582,24 +669,32 @@ def main():
         hw = select_hardware(args, board, trees.repo_dir(tree_cfg, exp["trees"][0], "zephyr"))
         port = hw["serial"]
         print(f"board {board}: probe {hw['probe']} ({hw['product']}), console {port}")
+    from studylib import buildcache
+    cache = buildcache.Cache(lab.build_cache) if lab and not args.no_cache else None
+    builder = Builder(exp, tree_cfg, repos, board, board_cfg, sdk, repo_root, repo_rev, cache,
+                      log=lambda m: print(m, flush=True))
     if args.build_only:
         import tempfile
 
-        # With --keep-build the folder stays, for example to compare the images of two trees.
-        tmp = tempfile.mkdtemp(prefix="latbench-build-")
-        src_bench = export_snapshot(repo_root, repo_rev, Path(tmp) / "src")
+        # Outside a lab space: a temporary folder (with --keep-build it stays, for example to
+        # compare the images of two trees).
+        tmp = None if cache else Path(tempfile.mkdtemp(prefix="latbench-build-"))
+        built = cached = 0
         for tree in exp["trees"]:
             for pt in points:
-                bdir = Path(tmp) / tree / pt["id"]
-                bdir.mkdir(parents=True)
-                print(f"[{tree}/{pt['id']}] build", flush=True)
-                build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
-                            bdir / "build", bdir / "build.log")
-        print("all points build")
-        if args.keep_build:
-            print(f"builds in {tmp}")
-        else:
-            shutil.rmtree(tmp)
+                pdir = None
+                if tmp is not None:
+                    pdir = tmp / tree / pt["id"]
+                    pdir.mkdir(parents=True)
+                r = builder.build(tree, pt, pdir)
+                cached += r.get("build", {}).get("cached", False)
+                built += 1
+        print(f"all {built} points build ({cached} from the build cache)")
+        if tmp is not None:
+            if args.keep_build:
+                print(f"builds in {tmp}")
+            else:
+                shutil.rmtree(tmp)
         return
 
     # 2. Output folder and manifest.
@@ -608,7 +703,6 @@ def main():
     exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
     run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
-    src_bench = export_snapshot(repo_root, repo_rev, run_dir / "src")
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", port], capture_output=True, text=True
     ).stdout
@@ -620,11 +714,13 @@ def main():
         "experiment": exp["name"],
         "experiment_file": str(exp_path.relative_to(repo_root)),
         "experiment_yaml": exp_text,
+        "experiment_sha256": hashlib.sha256(exp_text.encode()).hexdigest(),
         "command": shlex.join(sys.argv),
         "started": started.isoformat(),
         "host": platform.node(),
-        "safety": {"path": str(repo_root), "rev": repo_rev, "snapshot": str(src_bench.relative_to(run_dir)),
-                   "module": str(src_bench.parents[1].relative_to(run_dir))},
+        "lab": lab.describe() if lab else None,
+        "safety": {"path": str(repo_root), "rev": repo_rev, "bench_tree": builder.bench_tree,
+                   "module_tree": builder.module_tree},
         "trees": {
             t: {**tree_cfg["trees"][t], "repos": {r: tree_cfg["trees"][t]["repos"][r] for r in repos}}
             for t in exp["trees"]
@@ -661,13 +757,7 @@ def main():
             pdir = run_dir / tree / pt["id"]
             bdir = pdir / "build"
             pdir.mkdir(parents=True)
-            print(f"[{tree}/{pt['id']}] build", flush=True)
-            cmake_args = build_point(tree_cfg, tree, pt, src_bench, exp["app"], repo_rev, board, board_cfg, sdk,
-                                     bdir, pdir / "build.log")
-            elf = bdir / "zephyr" / "zephyr.elf"
-            for f in (elf, bdir / "zephyr" / "zephyr.hex", bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
-                if f.exists():
-                    shutil.copy2(f, pdir / f.name)
+            built = builder.build(tree, pt, pdir)
             entry = {
                 "tree": tree,
                 "id": pt["id"],
@@ -675,8 +765,9 @@ def main():
                 "kconfig": pt["kconfig"],
                 "conf_files": pt["conf_files"],
                 "dtc_overlays": pt["dtc_overlays"],
-                "cmake": cmake_args,
-                "elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest(),
+                "cmake": built["cmake"],
+                "elf_sha256": built["elf_sha256"],
+                **({"build": built["build"]} if "build" in built else {}),
                 "logs": [],
             }
             manifest["points"].append(entry)
@@ -693,7 +784,7 @@ def main():
                 entry["logs"].append(str(log.relative_to(run_dir)))
                 logs.append(log)
                 save_manifest()
-            if not args.keep_build:
+            if bdir.exists() and not args.keep_build:
                 shutil.rmtree(bdir)
 
     manifest["finished"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
@@ -710,7 +801,7 @@ def main():
     digest = seal.write(run_dir)
     print(f"results in {run_dir}  ({digest})")
     if (out / "instance.json").is_file():
-        print(f"add it to the instance: scripts/benchmarks/study.py add {out} {run_dir}")
+        print(f"add it to the instance: scripts/benchmarks/study.py instance add {out} {run_dir}")
 
 
 if __name__ == "__main__":
