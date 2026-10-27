@@ -88,6 +88,9 @@
  * below sem.c go to FFF fakes. The fake unit_arch_irq_lock() returns
  * KERNEL_UNIT_IRQ_KEY. Thus a test can follow the key to the call that
  * releases the lock. The FFF call history gives the order of the calls.
+ * The tests of @ref kernel_unit_sem_ref install the reference fake of the
+ * scheduler contract (@ref kernel_unit_sched_ref) in place of scripted return
+ * values. Then the scheduler has threads with priorities and wait queues.
  * The scenarios in @c testcase.yaml build the tests once for each Kconfig
  * option above. A test that applies only to some configurations is in an
  * @c \#ifdef block, or it calls ztest_test_skip().
@@ -97,6 +100,7 @@
 #include <zephyr/ztest.h>
 #include <kernel_unit.h>
 #include <kernel_unit_models.h>
+#include <kernel_unit_sched_ref.h>
 #ifdef CONFIG_OBJ_CORE
 #include <fakes/obj_core.h>
 #endif
@@ -2030,3 +2034,349 @@ ZTEST(sem_unit, test_obj_core_descriptor_covers_static_semaphores)
 	zassert_equal((obj - start) % desc->obj_size, 0U);
 }
 #endif /* CONFIG_OBJ_CORE_SEM */
+
+/**
+ * @defgroup kernel_unit_sem_ref Semaphore on the reference scheduler
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_give(), k_sem_take() and k_sem_reset() with the reference fake of the scheduler.
+ *
+ * These tests install the reference fake of the scheduler contract (see
+ * @ref kernel_unit_sched_ref) in place of scripted return values. The threads
+ * of a test have priorities, and the wait queue of the semaphore has the
+ * order of the contract: a higher priority first, then the order of arrival.
+ * A wait of k_sem_take() runs the environment of the test (another thread, an
+ * ISR or a timeout) and returns the value that the waker gave. Thus a test
+ * runs both halves of a hand-over, the give and the take, through the
+ * scheduler. Each test ends with kernel_unit_sched_ref_assert_ok(): the
+ * invariants of the contract hold, also the rule that the CPU runs a thread
+ * with the highest priority.
+ *
+ * Priorities in these tests are Zephyr priorities: a lower number is a higher
+ * priority.
+ */
+
+/* The threads of the tests on the reference scheduler. */
+static struct k_thread ref_main;
+static struct k_thread ref_other;
+static struct k_thread ref_a;
+static struct k_thread ref_b;
+static struct k_thread ref_c;
+
+/* The semaphore that an action of the environment uses. */
+static struct k_sem *env_sem;
+
+/* The threads that the wakes of z_sched_wake() selected, in order (trace hook). */
+static struct k_thread *woken[4];
+static size_t n_woken;
+
+static void record_wake(const struct kernel_unit_sched_ref_record *rec)
+{
+	if ((strcmp(rec->op, "WakeFirst") == 0) && (rec->thread != NULL) &&
+	    (n_woken < ARRAY_SIZE(woken))) {
+		woken[n_woken++] = rec->thread;
+	}
+}
+
+/* Install the reference scheduler: ref_main runs with priority prio. */
+static void ref_install(int prio)
+{
+	kernel_unit_sched_ref_install();
+	kernel_unit_sched_ref_thread(&ref_main, prio);
+	kernel_unit_sched_ref_set_current(&ref_main);
+	n_woken = 0U;
+	kernel_unit_sched_ref.trace = record_wake;
+}
+
+/* Add a thread that waits on the semaphore with K_FOREVER. */
+static void ref_waiter(struct k_thread *thread, int prio, struct k_sem *sem)
+{
+	kernel_unit_sched_ref_thread(thread, prio);
+	kernel_unit_sched_ref_wait(thread, &sem->wait_q, K_FOREVER);
+}
+
+/* The fake state of a thread. */
+static struct kernel_unit_sched_ref_thread *ref_of(struct k_thread *thread)
+{
+	return kernel_unit_sched_ref_of(thread);
+}
+
+/* Actions of the environment */
+static void env_gives(void)
+{
+	z_impl_k_sem_give(env_sem);
+}
+
+static void env_resets(void)
+{
+	z_impl_k_sem_reset(env_sem);
+}
+
+/**
+ * @brief k_sem_give() hands the semaphore to the waiting thread with the highest priority.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 5. ref_a (priority
+ *   7) waits, then ref_b (priority 3) waits.
+ * - Action: z_impl_k_sem_give().
+ * - Expected: the give wakes ref_b, although ref_a waited first. ref_b gets 0
+ *   (its k_sem_take() returns 0) and runs, because its priority is higher than
+ *   the priority of ref_main. ref_a still waits. The count stays 0.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_ref_give_wakes_highest_priority_waiter)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+	ref_waiter(&ref_a, 7, &sem);
+	ref_waiter(&ref_b, 3, &sem);
+
+	z_impl_k_sem_give(&sem);
+
+	zassert_equal(n_woken, 1U);
+	zassert_equal_ptr(woken[0], &ref_b);
+	zassert_equal(ref_of(&ref_b)->ret, 0);
+	zassert_equal_ptr(_current, &ref_b);
+	zassert_equal(ref_of(&ref_a)->state, KERNEL_UNIT_SCHED_REF_PENDING);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief k_sem_give() hands the semaphore to waiting threads with the same priority in the order of
+ * their wait.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 1. ref_a, then ref_b
+ *   wait, both with priority 5.
+ * - Action: z_impl_k_sem_give() two times.
+ * - Expected: the first give wakes ref_a, the second give wakes ref_b. Each
+ *   one gets 0. ref_main keeps the CPU (its priority is higher). The count
+ *   stays 0.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_ref_give_wakes_equal_priority_in_wait_order)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(1);
+	ref_waiter(&ref_a, 5, &sem);
+	ref_waiter(&ref_b, 5, &sem);
+
+	z_impl_k_sem_give(&sem);
+	z_impl_k_sem_give(&sem);
+
+	zassert_equal(n_woken, 2U);
+	zassert_equal_ptr(woken[0], &ref_a);
+	zassert_equal_ptr(woken[1], &ref_b);
+	zassert_equal(ref_of(&ref_a)->ret, 0);
+	zassert_equal(ref_of(&ref_b)->ret, 0);
+	zassert_equal_ptr(_current, &ref_main);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief A k_sem_take() that waits gets the semaphore from a k_sem_give() of another thread.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 5. ref_other
+ *   (priority 7) is ready. While ref_main waits, ref_other runs and calls
+ *   z_impl_k_sem_give().
+ * - Action: z_impl_k_sem_take() with K_FOREVER.
+ * - Expected: the give wakes ref_main with 0, and the reschedule of the give
+ *   switches back to ref_main. k_sem_take() returns 0. The count stays 0, and
+ *   no thread waits.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_take()
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_ref_take_waits_for_give_of_other_thread)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+	kernel_unit_sched_ref_thread(&ref_other, 7);
+	env_sem = &sem;
+	kernel_unit_sched_ref_env_thread(&ref_other, env_gives);
+
+	zassert_equal(z_impl_k_sem_take(&sem, K_FOREVER), 0);
+
+	zassert_equal_ptr(_current, &ref_main);
+	zassert_equal(sem.count, 0U);
+	zassert_is_null(z_waitq_head(&sem.wait_q));
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief A k_sem_take() that waits gets the semaphore from a k_sem_give() of an ISR.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs alone with priority 5. While
+ *   ref_main waits, an ISR calls z_impl_k_sem_give().
+ * - Action: z_impl_k_sem_take() with K_FOREVER.
+ * - Expected: in the ISR, the give wakes ref_main, and z_reschedule() does
+ *   not switch. At the exit of the ISR, the CPU selects ref_main.
+ *   k_sem_take() returns 0, and the count stays 0.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_take()
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_ref_take_waits_for_give_of_isr)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+	env_sem = &sem;
+	kernel_unit_sched_ref_env_isr(env_gives);
+
+	zassert_equal(z_impl_k_sem_take(&sem, K_FOREVER), 0);
+
+	zassert_equal_ptr(_current, &ref_main);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief If no thread gives the semaphore, a k_sem_take() with a timeout returns -EAGAIN at the
+ * timeout.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs alone. No action of another
+ *   thread.
+ * - Action: z_impl_k_sem_take() with a timeout of 10 ticks.
+ * - Expected: the timeout expires, and k_sem_take() returns -EAGAIN. ref_main
+ *   is not in the wait queue and has no armed timeout. The count stays 0.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_take()
+ */
+ZTEST(sem_unit, test_ref_take_timeout_returns_eagain)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+
+	zassert_equal(z_impl_k_sem_take(&sem, TEST_TIMEOUT), -EAGAIN);
+
+	zassert_is_null(z_waitq_head(&sem.wait_q));
+	zassert_false(ref_of(&ref_main)->armed);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief The give ends a timed wait: the woken thread keeps no timeout.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 3. ref_a (priority
+ *   7) waits with a timeout of 10 ticks.
+ * - Action: z_impl_k_sem_give().
+ * - Expected: ref_a is ready with 0 and has no armed timeout. Thus a late
+ *   timeout cannot end a later wait of ref_a. ref_main keeps the CPU, because
+ *   ref_a has a lower priority.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_ref_give_ends_timed_wait)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(3);
+	kernel_unit_sched_ref_thread(&ref_a, 7);
+	kernel_unit_sched_ref_wait(&ref_a, &sem.wait_q, TEST_TIMEOUT);
+
+	z_impl_k_sem_give(&sem);
+
+	zassert_equal(ref_of(&ref_a)->state, KERNEL_UNIT_SCHED_REF_READY);
+	zassert_equal(ref_of(&ref_a)->ret, 0);
+	zassert_false(ref_of(&ref_a)->armed);
+	zassert_equal_ptr(_current, &ref_main);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief k_sem_reset() wakes all waiting threads with -EAGAIN, in wait queue order, and
+ * reschedules once.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 5. ref_a (7), ref_b
+ *   (3) and ref_c (7) wait in this order.
+ * - Action: z_impl_k_sem_reset().
+ * - Expected: the wakes take ref_b, ref_a, ref_c. Each one gets -EAGAIN. No
+ *   thread waits. After the one reschedule, ref_b runs (the highest
+ *   priority). The count is 0.
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_reset()
+ */
+ZTEST(sem_unit, test_ref_reset_wakes_all_waiters_with_eagain)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+	ref_waiter(&ref_a, 7, &sem);
+	ref_waiter(&ref_b, 3, &sem);
+	ref_waiter(&ref_c, 7, &sem);
+
+	z_impl_k_sem_reset(&sem);
+
+	zassert_equal(n_woken, 3U);
+	zassert_equal_ptr(woken[0], &ref_b);
+	zassert_equal_ptr(woken[1], &ref_a);
+	zassert_equal_ptr(woken[2], &ref_c);
+	zassert_equal(ref_of(&ref_a)->ret, -EAGAIN);
+	zassert_equal(ref_of(&ref_b)->ret, -EAGAIN);
+	zassert_equal(ref_of(&ref_c)->ret, -EAGAIN);
+	zassert_is_null(z_waitq_head(&sem.wait_q));
+	zassert_equal(z_reschedule_fake.call_count, 1);
+	zassert_equal_ptr(_current, &ref_b);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
+ * @brief A k_sem_take() that waits returns -EAGAIN when another thread resets the semaphore.
+ *
+ * @details
+ * - Setup: count 0, limit 1. ref_main runs with priority 5. ref_other
+ *   (priority 7) is ready. While ref_main waits, ref_other calls
+ *   z_impl_k_sem_reset().
+ * - Action: z_impl_k_sem_take() with K_FOREVER.
+ * - Expected: k_sem_take() returns -EAGAIN, the value of the reset. The
+ *   count is 0. Without the reset, this wait never ends (K_FOREVER).
+ *
+ * @ingroup kernel_unit_sem_ref
+ * @see z_impl_k_sem_take()
+ * @see z_impl_k_sem_reset()
+ */
+ZTEST(sem_unit, test_ref_take_wait_ended_by_reset)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	ref_install(5);
+	kernel_unit_sched_ref_thread(&ref_other, 7);
+	env_sem = &sem;
+	kernel_unit_sched_ref_env_thread(&ref_other, env_resets);
+
+	zassert_equal(z_impl_k_sem_take(&sem, K_FOREVER), -EAGAIN);
+
+	zassert_equal_ptr(_current, &ref_main);
+	zassert_equal(sem.count, 0U);
+	kernel_unit_sched_ref_assert_ok();
+}

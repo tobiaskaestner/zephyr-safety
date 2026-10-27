@@ -1,0 +1,18 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Self-test of the reference fake of the scheduler contract (fake group
+# sched_ref). The scenario assert adds the assertion hook of the ISR refusal
+# of z_pend_curr().
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.sched_ref: {}
+  kernel.unit.sched_ref.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
