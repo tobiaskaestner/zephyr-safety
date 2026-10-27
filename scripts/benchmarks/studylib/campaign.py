@@ -509,7 +509,7 @@ def detach(rec, extra):
     rec.log_dir.mkdir(parents=True, exist_ok=True)
     log = rec.log_dir / "campaign.log"
     with open(log, "a") as f:
-        p = subprocess.Popen([sys.executable, str(study_py()), "campaign", "resume", rec.id, *extra],
+        p = subprocess.Popen([sys.executable, "-u", str(study_py()), "campaign", "resume", rec.id, *extra],
                              stdout=f, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL, cwd=rec.lab.folder,
                              start_new_session=True)
     return p.pid, log
