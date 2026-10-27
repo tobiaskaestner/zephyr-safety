@@ -1,27 +1,25 @@
 # irq-baseline-1m
 
-## Question
+## What it measures
 
-What is the IRQ entry latency of the four interrupt paths, with the
-board defaults and an idle CPU, on both trees? The experiment has 1M
-samples per point, for plots of the distribution and of its tail.
+App `irq_latency`, metric `irq`: the IRQ entry latency of the four
+interrupt paths, with the board defaults and an idle CPU, on both trees.
+The 1M samples per point are for plots of the distribution and of its
+tail.
 
 ## Method
 
-App `irq_latency`, trees `ws-safety` and `ws-up`, board defaults, idle
-CPU. 1M samples per point. Random stimulus interval 100..500 us.
+- Trees `ws-safety` and `ws-up`, board defaults, idle CPU.
+- 1M samples per point. Random stimulus interval 100..500 us.
+- The points are the cube `path` x `background`. Thus the point ids are
+  the same as in `irq-smoke`.
 
-The points are the cube `path` x `background`. The axis `background`
-has one value, `idle`. Thus the point ids are the same as in `irq-smoke`.
+## Axes
 
-| Point | Settings | Why |
-|---|---|---|
-| `stock-idle` | `LATBENCH_IRQ_PATH_STOCK` | The GPIO driver callback. |
-| `wrapped-idle` | `LATBENCH_IRQ_PATH_WRAPPED` | An own ISR through `_isr_wrapper`. |
-| `direct-idle` | `LATBENCH_IRQ_PATH_DIRECT` | An own direct ISR. The reference point of `irq-checks-1m`. |
-| `zli-idle` | `LATBENCH_IRQ_PATH_ZLI` | An own direct zero-latency ISR. |
-
-## References
-
-- `../ex-irq-smoke/experiment.md`: the first check of the method.
-- `../ex-irq-checks-1m/experiment.md`: the checks of the modes against `direct-idle`.
+- **path**: the interrupt path. `stock` is the GPIO driver callback
+  (`LATBENCH_IRQ_PATH_STOCK`). `wrapped` is an own ISR through
+  `_isr_wrapper`. `direct` is an own direct ISR, and `direct-idle` is the
+  reference point of `irq-checks-1m`. `zli` is an own direct
+  zero-latency ISR.
+- **background**: one value, `idle`. The axis keeps the point ids the
+  same as in `irq-smoke`.

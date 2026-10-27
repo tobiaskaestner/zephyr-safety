@@ -1,29 +1,25 @@
 # irq-smoke
 
-## Question
+## What it measures
 
-Does the method for the IRQ entry latency work? This experiment is the
-first check of the method. It measures the four interrupt paths with the
-board defaults and an idle CPU.
-
-The experiment also asks: does the wake-up of the CPU from WFI make the
-second mode of the latency?
+App `irq_latency`, metric `irq`: the IRQ entry latency of the four
+interrupt paths, with the board defaults and an idle CPU. It also
+measures the direct path with a busy CPU. It is the first check of the
+method.
 
 ## Method
 
-App `irq_latency`, tree `ws-safety`, board defaults. The sample count
-and the stimulus are the defaults of the app. The points have the axes
-`path` and `background` of `irq-baseline-1m`.
+- Tree `ws-safety`, board defaults.
+- The sample count and the stimulus are the defaults of the app.
+- No cube: five explicit points. The points have the axes `path` and
+  `background` of `irq-baseline-1m`.
 
-| Point | Settings | Why |
-|---|---|---|
-| `stock-idle` | `LATBENCH_IRQ_PATH_STOCK`, idle CPU | The GPIO driver callback (the default path of the app). |
-| `wrapped-idle` | `LATBENCH_IRQ_PATH_WRAPPED`, idle CPU | An own ISR through `_isr_wrapper`. |
-| `direct-idle` | `LATBENCH_IRQ_PATH_DIRECT`, idle CPU | An own direct ISR. |
-| `zli-idle` | `LATBENCH_IRQ_PATH_ZLI`, idle CPU | An own direct zero-latency ISR. |
-| `direct-busy` | `LATBENCH_IRQ_PATH_DIRECT`, `LATBENCH_BG_BUSY` | With a busy CPU, the idle thread does not run and the CPU does not execute WFI. The compare with `direct-idle` shows if the WFI wake-up makes the second mode. |
+## Axes
 
-## References
-
-- `../ex-irq-baseline-1m/experiment.md`: the same four paths with 1M samples.
-- `tests/benchmarks/irq_latency/Kconfig`: the paths and the defaults of the app.
+- **path**: the interrupt path. `stock` is the GPIO driver callback
+  (`LATBENCH_IRQ_PATH_STOCK`). `wrapped` is an own ISR through
+  `_isr_wrapper`. `direct` is an own direct ISR. `zli` is an own direct
+  zero-latency ISR.
+- **background**: `idle` or `busy` (`LATBENCH_BG_BUSY`, point
+  `direct-busy` only). With a busy CPU, the CPU does not execute WFI.
+  The compare with `direct-idle` shows the effect of the WFI wake-up.
