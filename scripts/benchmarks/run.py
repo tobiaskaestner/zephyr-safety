@@ -31,9 +31,10 @@ seal <UTC time>.sha256 beside the run folder (see studylib/seal.py).
 beside the run folder.
 
 The build reads the app from the safety repo, and the repo is the Zephyr
-module "safety" of each build. The app gets LATBENCH_SRC_REV = the git
-tree hash of tests/benchmarks (manifest: safety.bench_tree), so the same
-content gives the same image at any commit. In a lab space, the images go
+module "safety" of each build. The app gets LATBENCH_SRC_REV = a content
+hash of the firmware files of tests/benchmarks (manifest: safety.bench_tree,
+kind firmware/1; no scripts, Python or Markdown), so the same firmware
+gives the same image at any commit. In a lab space, the images go
 to the build cache (studylib/buildcache.py); a point with an image in the
 cache is not built again (manifest: point build.cached). --build-only fills
 the cache (or builds in a temporary folder outside a lab space).
@@ -175,6 +176,35 @@ def tree_hash(repo_root, rev, path):
     return trees.git("rev-parse", f"{rev}:{path}", cwd=repo_root)
 
 
+# Files of tests/benchmarks that do not go into an image: the host scripts (extractors), Python,
+# Markdown, the twister test files and the board list of the host tools (its modules are in the
+# cache key through the tree pins).
+NOT_FIRMWARE = ("/scripts/", ".py", ".md", "/.gitignore", "/testcase.yaml", "/boards.yaml")
+FIRMWARE_HASH = "firmware/1"
+
+
+def firmware_hash(repo_root, rev):
+    """A content hash (40 hex) of the files of tests/benchmarks at rev that can go into an image.
+
+    A change of an extractor or of a document does not change it, so it does not change the
+    image (LATBENCH_SRC_REV) or the build cache key.
+    """
+    out = trees.git("ls-tree", "-r", "--full-tree", rev, "--", str(BENCH_DIR.relative_to(repo_root)), cwd=repo_root)
+    lines = []
+    for ln in out.splitlines():
+        meta, path = ln.split("\t", 1)
+        if not any(x in "/" + path if x.startswith("/") else path.endswith(x) for x in NOT_FIRMWARE):
+            lines.append(f"{meta} {path}")
+    return hashlib.sha1("\n".join(sorted(lines)).encode()).hexdigest()
+
+
+def bench_hash(repo_root, rev, kind):
+    """The bench hash of a run: firmware_hash, or the git tree hash of tests/benchmarks (runs before it)."""
+    if kind == FIRMWARE_HASH:
+        return firmware_hash(repo_root, rev)
+    return tree_hash(repo_root, rev, BENCH_DIR.relative_to(repo_root))
+
+
 def flash_command(board_cfg, zephyr, pdir, probe):
     """Return one command that runs the flash commands of the board in order."""
     fields = {"zephyr": str(zephyr), "elf": str(pdir / "zephyr.elf"), "hex": str(pdir / "zephyr.hex"),
@@ -287,7 +317,7 @@ class Builder:
         self.exp, self.tree_cfg, self.repos = exp, tree_cfg, repos
         self.board, self.board_cfg, self.sdk = board, board_cfg, sdk
         self.repo_root, self.repo_rev, self.cache, self.log = repo_root, repo_rev, cache, log
-        self.bench_tree = tree_hash(repo_root, repo_rev, BENCH_DIR.relative_to(repo_root))
+        self.bench_tree = firmware_hash(repo_root, repo_rev)
         self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
         self.build_versions = {}
 
@@ -540,7 +570,7 @@ def rebuild(args):
                  f"repo of the run: ref {safety.get('ref', 'refs/latbench/run/...')})")
         src = tmp / "src"
         export_rev(repo_root, safety["rev"], src)
-        if tree_hash(repo_root, safety["rev"], BENCH_DIR.relative_to(repo_root)) != safety["bench_tree"]:
+        if bench_hash(repo_root, safety["rev"], safety.get("bench_tree_kind")) != safety["bench_tree"]:
             fail(f"the safety revision {safety['rev']} does not have the bench tree {safety['bench_tree']}")
         moves[safety["path"]] = str(src)
     elif "snapshot" not in safety:
@@ -758,6 +788,7 @@ def main():
         "host": platform.node(),
         "lab": lab.describe() if lab else None,
         "safety": {"path": str(repo_root), "rev": repo_rev, "ref": run_ref, "bench_tree": builder.bench_tree,
+                   "bench_tree_kind": FIRMWARE_HASH,
                    "module_tree": builder.module_tree},
         "trees": {
             t: {**tree_cfg["trees"][t], "repos": {r: tree_cfg["trees"][t]["repos"][r] for r in repos}}
