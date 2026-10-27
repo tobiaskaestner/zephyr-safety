@@ -1,35 +1,24 @@
 # fast-mode
 
-## Question
+## What it measures
 
-Does the fast mode depend on the stimulus delay, or on other state?
-
-The notes `later.md` (item L15) give these facts. With time slicing,
-about 20 % of the wakes are faster: 300 cycles in M2 (ISR to thread),
-700 cycles in M3 (thread to thread). The share is 20..21 % for all
-kernel objects, both trees and both stimulus ranges (100..500 us in M2,
-50..150 us in M3). The mean per tick phase is flat. Without time
-slicing, there is no fast mode.
+App `wake_latency`, metric `isr2thr`: the share of the fast mode of the
+ISR to thread wake. The points check if the fast mode depends on the
+stimulus delay or on other state.
 
 ## Method
 
-App `wake_latency`, semaphore given from the wrapped ISR, tree
-`ws-safety`. 200000 samples per point.
+- Tree `ws-safety`. Semaphore given from the wrapped ISR. 200000 samples
+  per point.
+- No cube: each point changes one factor against `r100-500` (the app
+  defaults).
 
-| Point | Settings | Why |
-|---|---|---|
-| `r100-500` | random interval 100..500 us (the default range) | The baseline. |
-| `r100-200` | random interval 100..200 us | A different range. |
-| `r400-500` | random interval 400..500 us | A different range. |
-| `fixed300` | fixed period 300 us, plus 1 cycle per edge | A fixed delay. |
-| `poll1000` | default range, the main thread polls every 1000 ms (not 100 ms) | Other state in the main thread. |
+## Axes
 
-How to read the result: if the share of the fast mode follows the range
-(for example 0 % or 100 % with a fixed period), the cause depends on the
-delay. If the share stays at 20 %, the cause is other state.
-
-## References
-
-- `later.md`, item L15 (latency notes): the fast mode.
-- `../ex-wake-isr-1m/experiment.md`, `../ex-wake-anchors-1m/experiment.md`: the two modes in M2.
-- `st-default-latencies/st-thread-to-thread/ex-thread2thread-1m/experiment.md`: the two modes in M3.
+- **stimulus**: the stimulus interval. `r100-500` is a random interval
+  of 100..500 us, the default range and the baseline. `r100-200` and
+  `r400-500` are different ranges. `fixed300` is a fixed period of
+  300 us, plus 1 cycle per edge: a fixed delay.
+- **poll**: the poll interval of the main thread, `100ms` (the default)
+  or `1000ms` (point `poll1000`). The axis changes other state in the
+  main thread.

@@ -1,35 +1,23 @@
 # wake-anchors-1m
 
-## Question
+## What it measures
 
-Which setting makes the two modes of the ISR to thread wake latency
-(M2)?
-
-`wake-isr-1m` showed the same two modes for all five kernel objects:
-310 cycles apart, with 80 % and 20 % of the samples. Thus the cost is
-in the common path of the wake and of the thread switch. The anchors of
-this experiment find the setting that makes it.
+App `wake_latency`, metric `isr2thr`: the ISR to thread wake latency
+(M2) of the semaphore, given from the wrapped ISR. The points find the
+setting that makes the two modes.
 
 ## Method
 
-App `wake_latency`, semaphore given from the wrapped ISR, trees
-`ws-safety` and `ws-up`. 1M samples per point. One kernel object is
-sufficient, because all five objects have the same two modes.
+- Trees `ws-safety` and `ws-up`. 1M samples per point.
+- One kernel object is sufficient, because all five objects have the
+  same two modes.
+- The points are the cube `anchor` x `arch`.
 
-The points are the cube `anchor` x `arch`. The axis `anchor` has the
-values `default`, `noslice` and `lean`. The axis `arch` has the values
-`legacy` (PendSV) and `switch` (`USE_SWITCH=y`).
+## Axes
 
-| Point | Settings | Why |
-|---|---|---|
-| `default-legacy` | board and kernel defaults | The reference. |
-| `default-switch` | `common/conf/use_switch.conf` | The new arch interface. |
-| `noslice-legacy` | `TIMESLICING: n` | Only time slicing off. |
-| `noslice-switch` | `TIMESLICING: n`, `use_switch.conf` | As `noslice-legacy`, with the new arch interface. |
-| `lean-legacy` | `common/conf/lean.conf` | No time slicing, no stack guard, `-O2`. |
-| `lean-switch` | `lean.conf`, `use_switch.conf` | As `lean-legacy`, with the new arch interface. |
-
-## References
-
-- `../ex-wake-isr-1m/experiment.md`: the two modes for the five kernel objects.
-- `tests/benchmarks/common/conf/lean.conf`, `use_switch.conf`: the anchor settings.
+- **anchor**: `default` is the board and kernel defaults, the
+  reference. `noslice` sets only time slicing off (`TIMESLICING: n`).
+  `lean` is `common/conf/lean.conf`: no time slicing, no stack guard,
+  `-O2`.
+- **arch**: `legacy` is the thread switch through PendSV. `switch` is the
+  new arch interface (`common/conf/use_switch.conf`).
