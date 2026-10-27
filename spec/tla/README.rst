@@ -10,11 +10,12 @@ This directory holds the formal design model of the Zephyr kernel objects
 variable, mutex, and more later). The model is written in TLA+ and checked
 with TLC.
 
-Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``
-and ``lib/Timeout`` exist and are checked alone (``mc/MCWaitQueue``,
-``mc/MCTimeout``) and by example tests (``mc/WaitQueueTest``,
-``mc/TimeoutTest``). ``Platform``, ``Scheduler`` and ``Waitable`` do not
-exist yet. The k_sem proof of concept is still in the workspace notes
+Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``,
+``lib/Timeout`` and ``lib/Scheduler`` exist and are checked alone
+(``mc/MCWaitQueue``, ``mc/MCTimeout``, ``mc/MCScheduler``) and by example
+tests (``mc/WaitQueueTest``, ``mc/TimeoutTest``, ``mc/SchedulerTest``).
+``Waitable`` does not exist yet. ``Platform`` comes at level 2 (roadmap
+step 5). The k_sem proof of concept is still in the workspace notes
 (``claude/kernel-unit/tla/``). It moves here when it is expressed on the
 library.
 
@@ -102,7 +103,9 @@ application code.
      - Not in the model
    * - CPU
      - An element of ``CPUS``. For each CPU: the current thread
-       (``cur[c]``), the interrupt lock state, and whether an ISR runs.
+       (``cur[c]``). At level 1 an ISR is one step, so the model has no
+       interrupt lock state and no "ISR runs" flag. Level 2 adds them
+       (``Platform``).
      - Registers, caches, the memory model.
    * - Interrupt and ISR
      - An ISR is an actor that runs on a CPU while that CPU has interrupts
@@ -112,15 +115,20 @@ application code.
        ISR runs on each CPU (no nesting).
      - Interrupt priorities, nesting (later, for the timer findings).
    * - Thread
-     - Base priority and current priority (``prio[t]``), the state (ready,
-       running, pending, suspended, dead), the object that it waits on
+     - The priority (``prio[t]``, the ``base.prio`` of the code; the mutex
+       keeps the original priority), the state (ready, pending, dead; a
+       running thread is a ready thread that is ``cur[c]`` of a CPU;
+       suspended comes with ``k_thread_suspend()``), the object that it waits on
        (``pendedOn[t]``), the result of its last wait (``swapRet[t]``,
        ``swapData[t]``).
      - Stacks, the thread entry function.
    * - Scheduler
      - The ready set, the rule "the highest priority runs", cooperative
        threads, the reschedule points.
-     - The ready queue implementations (``CONFIG_SCHED_*``).
+     - The ready queue implementations (``CONFIG_SCHED_*``), the order of
+       the ready threads with the same priority (the model selects any
+       one), time slices, ``k_yield()``, ``k_sched_lock()``, meta-IRQ
+       threads, CPU masks.
    * - Wait queue
      - One set of waiters for each object, with priorities and stamps (see
        `The wait queue`_).
@@ -178,7 +186,8 @@ Module structure
      - objects, priorities
    * - ``Scheduler``
      - ``tstate``, ``prio``, ``cur``, ``swapRet``, ``swapData``, ``panic``
-     - layer A operators, ``Abort``, ``SetPrio``, ``Resume``, the ISR guard,
+     - layer A operators, the selection rule ``Choices``, ``ThreadTimeout``,
+       ``Abort``, ``SetPrio``, ``Resume``, ``Preempt``, the ISR guard,
        fairness
      - resources, requests
    * - ``WaitQueue``
@@ -198,6 +207,12 @@ Module structure
      - the parameter operators, the object properties
      - scheduler internals
 
+At level 1, ``Platform`` does not exist. ``Scheduler`` has the constants
+``CPUS``, ``Isrs`` and ``IsrCpu``. They move to ``Platform`` at level 2,
+together with the lock owners and the IPIs. ``Scheduler`` instantiates
+``WaitQueue`` and ``Timeout`` (entries: the threads), so a module that
+uses ``Scheduler`` declares the variables of all three.
+
 ``pendedOn`` is one function over all threads and all objects of all types.
 The mutex chain walk reads the wait state of other threads, and an abort or
 a priority change acts on a waiter in any wait queue.
@@ -207,8 +222,11 @@ Layer A: the scheduler contract
 
 One operator for each C function of the scheduler API that the objects
 call. An object action composes these operators inside one critical
-section. The trace hook of the unit tests logs one record for each call of
-this API. Thus the names in the trace and in the model are the same.
+section: first the changes of the wait queues and of the thread states,
+then the end of the critical section (``Release``). The trace hook of the
+unit tests logs one record for each call of this API. Thus the names in
+the trace and in the model are the same. ``a`` is the actor (a thread or
+an ISR), ``o`` an object.
 
 .. list-table::
    :header-rows: 1
@@ -216,28 +234,63 @@ this API. Thus the names in the trace and in the model are the same.
 
    * - Operator
      - C function and meaning
-   * - ``PendCurr(o, t, to)``
-     - ``z_pend_curr()``: panic if the caller is an ISR. Else add ``t`` to
-       the wait queue of ``o``, preset ``swapRet[t]`` to ``-EAGAIN``, add a
-       timeout entry if ``to`` is finite, release the lock, switch.
+   * - ``PendCurr(a, o, to)``
+     - ``z_pend_curr()``: panic if ``a`` is an ISR. Else add ``a`` to the
+       wait queue of ``o``, preset ``swapRet[a]`` to ``-EAGAIN``, add a
+       timeout entry if ``to`` is finite (panic on a full heap), and
+       switch (``Release(a, "swap")``).
    * - ``WakeFirst(o, ret, data)``
      - ``z_sched_wake()``: the best waiter leaves the wait queue, its
        timeout is cancelled, it gets ``ret`` and ``data``, it is ready.
-       FALSE if the wait queue is empty.
+       Not enabled if the wait queue is empty (``HasWaiters(o)`` is the
+       return value).
    * - ``WakeFirstWith(o, F)``
      - ``z_unpend_first_thread_locked()`` and ``z_sched_ready_locked()``
        with object code between them (msgq copy, mutex owner). ``F(t)``
-       gives the result for the woken thread.
+       gives the pair ``<<ret, data>>`` for the woken thread.
    * - ``WakeAll(o, ret, data)``
-     - The loop ``while (z_sched_wake(...))``. One atomic wake of all
-       waiters.
+     - The loop ``while (z_sched_wake(...))``. One wake of all waiters,
+       also enabled on an empty wait queue (no change).
    * - ``WakeWalk(o, P, D)``
-     - ``z_sched_waitq_walk()``: wake each waiter that satisfies ``P``, in
-       the walk order, with the data ``D``.
-   * - ``Timeout(t)``, ``Abort(t)``, ``SetPrio(t, p)``, ``Resume(t)``
-     - Environment actions: the expiry of a timeout, ``k_thread_abort()``,
-       ``z_thread_prio_set()`` (a waiter gets a new stamp), the return
-       from the swap.
+     - ``z_sched_waitq_walk()``: wake each waiter ``t`` with ``P(t)``,
+       with the return value 0 and the data ``D(t)``.
+   * - ``WakeSet(S, ret, dat)``
+     - The common part of the wakes: ``z_sched_wake_thread_locked()`` with
+       the cancellation of the timeout that its callers do first.
+   * - ``PrioSet(t, p)``
+     - ``z_thread_prio_set()``: a waiter goes to the end of the waiters
+       with its new priority. No reschedule.
+   * - ``Release(a, kind)``
+     - The end of the critical section. ``"unlock"``:
+       ``k_spin_unlock()``, a thread keeps its CPU. ``"resched"``:
+       ``z_reschedule()``. ``"swap"``: ``z_swap()``. For an ISR each kind
+       is the exit of the ISR, which selects a thread.
+   * - ``ThreadTimeout(c)``, ``Abort(a, t)``, ``SetPrio(a, t, p)``,
+       ``Resume(t)``, ``Preempt(c)``
+     - Environment actions: the expiry of the first timeout on CPU ``c``,
+       ``k_thread_abort()``, ``k_thread_priority_set()``, the return from
+       the swap, an interrupt or IPI that selects a thread on ``c``.
+
+**The selection rule.** At each reschedule point, CPU ``c`` selects a
+thread from ``Choices(c, ...)``. The rule is the one of ``next_up()`` and
+``should_preempt()``: a ready cooperative thread keeps the CPU. Else the
+candidates are the ready threads that do not run on another CPU, and the
+current thread wins a tie. Among the other threads with the highest
+priority the model selects any one. ``mc/SchedulerTest`` fixes the rule
+for single states.
+
+**The composition rule.** A critical section that makes a thread ready
+ends with ``"resched"`` (or is an ISR). Then on one CPU the invariant
+``RunRuleHolds`` holds after each step: each CPU runs a thread that the
+rule selects. The mutant ``missed_resched`` of ``mc/MCScheduler`` (a wake
+that ends with ``k_spin_unlock()``) violates it. On SMP the invariant
+fails until the IPI arrives (configuration ``smp_rule``, expected). The
+liveness property ``SelectionHappens`` holds with the fairness of
+``Preempt``.
+
+**Abort.** At level 1 ``Abort`` has no join queue (an object, later), no
+essential threads, and no abort of a thread that runs on another CPU
+(level 2: the target halts itself in an IPI).
 
 Layer B: the ``Waitable`` template
 ==================================
@@ -384,17 +437,19 @@ real stamps with a wrap, to examine the renumbering of ``next_order_key``
 in ``z_priq_rb_add()`` (an ``int``, the wrap is a signed overflow).
 
 Higher priority means a lower number in Zephyr. ``Before`` uses the model
-value ``prio`` with "greater is higher". The object modules convert at one
-place, so that the review compares one rule.
+value ``prio`` with "greater is higher". ``Scheduler!ToZephyr`` and
+``Scheduler!FromZephyr`` are the only conversion, so that the review
+compares one rule.
 
 Time and bounds
 ***************
 
 The model has no clock. A thread that waits with a finite timeout has a
-timeout entry. The action ``Timeout(t)`` is enabled while the entry exists.
+timeout entry. The action ``Scheduler!ThreadTimeout(c)`` expires the first
+entry of the timeout queue.
 ``K_FOREVER`` makes no entry. ``K_NO_WAIT`` never pends.
 
-For a thread wait, an atomic ``Timeout(t)`` is equal to the two-step
+For a thread wait, an atomic ``ThreadTimeout`` is equal to the two-step
 dispatch of ``kernel/timeout.c``: if a give wins, the handler finds nothing
 to do. For the timer object this is not true (finding F1 of the paper
 check). Thus ``Timeout`` offers the atomic form for level 1 and a two-step
@@ -411,6 +466,20 @@ Bounds of time are step counters, not times:
 
 These counters are the model side of the draft bound requirements
 (``DRAFT-BND-*`` in the workspace notes).
+
+A wake of more than one waiter cancels one timeout for each woken
+waiter in one critical section. ``Timeout!CancelSet`` gives this cost:
+``k`` removals from a queue with ``n`` entries (exact for ``DLIST``, an
+upper bound for ``MINHEAP``), with the bound ``n`` times the bound of one
+removal.
+
+The liveness of a timeout needs a condition. The model has no clock, so a
+new timeout can go in front of an armed timeout again and again: TLC
+found such a behavior for ``TimedWaitEnds`` in the first run of
+``mc/MCScheduler``. Real time permits only a finite number of earlier
+deadlines (non-Zeno). Thus ``Scheduler!TimedWaitEnds`` states: if
+eventually no new timeout goes in front of the timeout of ``t``, the wait
+of ``t`` ends.
 
 In ``mc/MCTimeout``, the invariant ``CostBounded`` holds by construction:
 the module computes the cost with the formula of the backend, and the bound
@@ -544,7 +613,8 @@ Example tests (decided on 2026-10-26)
    alone does not fix. Example: ``Before`` with the wrong direction of the
    priority is still a total order. ``MCWaitQueue`` passes with this
    defect, and ``WaitQueueTest`` fails ("prio: Best", got ``t1``, want
-   ``t2``).
+   ``t2``). ``Scheduler!Choices`` with a reversed tie rule passes
+   ``MCScheduler`` and fails ``SchedulerTest`` ("up: current wins a tie").
 
    The tests are invariants of a spec with one state (``Init == unused =
    0``, ``Next == UNCHANGED unused``), not ``ASSUME`` statements. SANY gives an
@@ -602,7 +672,8 @@ stops the lookup.
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
 
 Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
-no run script yet. The library modules type-check, and ``Timeout`` also
+no run script yet. The library modules type-check (``WaitQueue``,
+``Timeout``, ``Scheduler``), and ``Timeout`` also
 passes a symbolic check of its cost bound for both backends and the
 capacities 1 to 3 in one run (``--cinit``, length 6, with the model
 ``research/kconfig-family/apalache/MCTimeoutApa.tla`` of the workspace
@@ -617,8 +688,9 @@ Open points
 
 1. Done (2026-10-21): Apalache accepts operators as arguments for the
    template (see `Composition pattern`_).
-2. Abort: model ``k_thread_abort()`` of a waiter, and state the
-   documented limits (``kernel.h``) as expected violations. The mutex has
+2. Abort: ``Scheduler!Abort`` models ``k_thread_abort()`` of a waiter
+   (2026-10-27). Open: state the documented limits (``kernel.h``) as
+   expected violations in the object models. The mutex has
    no reaction to the abort of a waiter (the owner stays boosted), and
    ``k_poll()`` leaves registrations (finding F3 of the paper check).
 3. The common properties C1 to C14 of the paper check: decide which ones

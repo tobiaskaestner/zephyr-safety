@@ -64,6 +64,9 @@ TestCosts ==
     /\ Check("heap insert",        H!InsertCost(1, 3), 2)
     /\ Check("heap remove",        H!RemoveCost(3), 2)
     /\ Check("heap bound",         H!CostBound("insert", 3), 3)
+    \* A cancellation of k <= n entries: at most n removals.
+    /\ Check("dlist bound cancel_set", D!CostBound("cancel_set", 3), 3)
+    /\ Check("heap bound cancel_set",  H!CostBound("cancel_set", 3), 9)
 
 -----------------------------------------------------------------------------
 (* The spec: one state, no deadlock. Its only purpose is the run of the    *)

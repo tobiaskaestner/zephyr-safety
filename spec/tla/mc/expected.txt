@@ -10,7 +10,7 @@
 #            fail:<Name>   TLC finds a violation of the property <Name>
 #                          (for an alias Prop_X == WQ!X, TLC names WQ!X)
 #            probes        TLC finds a violation of each invariant of the
-#                          configuration (run with -continue)
+#                          configuration (one run for each probe)
 #            fail:Assert   an example test (<Module>Test) fails. Not an
 #                          expected result: the line of a test is pass.
 #
@@ -19,6 +19,7 @@
 
 WaitQueueTest default pass
 TimeoutTest   default pass
+SchedulerTest default pass
 MCWaitQueue default pass
 MCWaitQueue reach   probes
 MCTimeout   dlist         pass
@@ -26,3 +27,12 @@ MCTimeout   minheap       pass
 MCTimeout   minheap_full  fail:Inv_NoPanic
 MCTimeout   reach_dlist   probes
 MCTimeout   reach_minheap probes
+MCScheduler default        pass
+MCScheduler coop           pass
+MCScheduler smp            pass
+MCScheduler smp_rule       fail:Inv_RunRuleHolds
+MCScheduler isr_pend       fail:Inv_NoPanic
+MCScheduler missed_resched fail:Inv_RunRuleHolds
+MCScheduler wake_no_cancel fail:Inv_ArmedArePending
+MCScheduler reach          probes
+MCScheduler reach_smp      probes

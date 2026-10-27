@@ -33,3 +33,10 @@ Timeout queue
 .. tla:module:: Timeout
    :body:
    :property-needs:
+
+Scheduler contract
+------------------
+
+.. tla:module:: Scheduler
+   :body:
+   :property-needs:

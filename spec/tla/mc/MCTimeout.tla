@@ -44,6 +44,7 @@ Next ==
     \/ /\ ~panicked
        /\ \/ \E e \in Entries : TO!InsertAny(e)
           \/ \E e \in TO!Armed : TO!Cancel(e)
+          \/ \E S \in SUBSET Entries : S # {} /\ TO!CancelSet(S)
           \/ TO!Expire
        /\ UNCHANGED panicked
     \/ ~panicked /\ PanicFull
@@ -65,6 +66,8 @@ Inv_NoPanic            == ~panicked
 Reach_DlistWorstCase == ~(tqCost.op = "insert" /\ tqCost.n = 2 /\ tqCost.cost = 2)
 \* Each entry can expire first.
 Reach_LastArmedFirst == ~(Len(tq) = 3 /\ tq[1] = e3)
+\* One step cancels three entries.
+Reach_CancelThree    == ~(tqCost.op = "cancel_set" /\ tqCost.n = 3 /\ tqCost.cost >= 3)
 \* The heap becomes full.
 Reach_HeapFull       == ~TO!Full
 =============================================================================
