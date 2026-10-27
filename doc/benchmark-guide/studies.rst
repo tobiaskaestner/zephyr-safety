@@ -146,7 +146,8 @@ Other commands: ``add --role excluded --reason <text>``, ``reference``
 (a run of another instance that a check reads), ``seal``, ``verify``, and
 ``merge OTHER ROOT``: it adds the runs of another results tree (for
 example a copy of the tree of the lab host) that ROOT does not have, with
-their roles, after it checks their seals and digests.
+their roles, after it checks their seals and digests. If OTHER is a local
+copy, ``--origin HOST:PATH`` records the original tree in ``copied_from``.
 
 ``build`` writes only derived files; it does not change a raw run or
 ``instance.json``. The same inputs and the same revision of the tools

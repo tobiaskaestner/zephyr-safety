@@ -241,12 +241,14 @@ def add_verdict(folder, verdict, by, text=None, hypothesis=None, check=None, cen
     save(folder, data)
 
 
-def merge(design, other_root, root, log=print):
+def merge(design, other_root, root, log=print, origin=None):
     """Add to the tree root the runs that the run lists of the tree other_root have and root does not.
 
     For each instance of other_root that root also has, each new run is
     copied (run folder and seal), its seal and its digest are checked, and
-    it is added with the role and the reason of other_root. Return the run ids.
+    it is added with the role and the reason of other_root. copied_from is
+    the run folder below origin (for example "host:/path/of/the/tree") if
+    other_root is a local copy of that tree. Return the run ids.
     """
     other_root, root = Path(other_root).resolve(), Path(root).resolve()
     added = []
@@ -273,7 +275,7 @@ def merge(design, other_root, root, log=print):
                 raise InstanceError(f"{target}: the copy does not agree with its seal")
             data = load(folder)
             entry = {k: r[k] for k in ("id", "digest", "role", "reason") if k in r}
-            entry["copied_from"] = str(src)
+            entry["copied_from"] = str(src) if origin is None else f"{origin.rstrip('/')}/{src.relative_to(other_root)}"
             data["runs"].append(entry)
             save(folder, data)
             added.append(r["id"])

@@ -18,9 +18,11 @@
                      (--hypothesis H --check C | --central-result ID)
                                           set a manual verdict (confirmed, wrong);
                                           a proposal says so in --by
-    study.py merge OTHER ROOT             add the runs of another results tree (for
+    study.py merge OTHER ROOT [--origin HOST:PATH]
+                                          add the runs of another results tree (for
                                           example a copy of the tree of the lab host)
-                                          that ROOT does not have, with their roles
+                                          that ROOT does not have, with their roles;
+                                          --origin is the place of the original tree
     study.py build ROOT                   write run.json, the app data,
                                           experiment.json and study.json
     study.py check ROOT                   check all seals, build again and compare
@@ -85,7 +87,8 @@ def cmd_verdict(args):
 
 
 def cmd_merge(args):
-    added = instance.merge(Design(), layout.find_root(args.other), layout.find_root(args.root))
+    added = instance.merge(Design(), layout.find_root(args.other), layout.find_root(args.root),
+                           origin=args.origin)
     print(f"{len(added)} runs added")
 
 
@@ -192,6 +195,7 @@ def main():
     s = sub.add_parser("merge")
     s.add_argument("other")
     s.add_argument("root")
+    s.add_argument("--origin", help="the place of the original tree, for copied_from (HOST:PATH)")
     s.set_defaults(func=cmd_merge)
     s = sub.add_parser("build")
     s.add_argument("root")

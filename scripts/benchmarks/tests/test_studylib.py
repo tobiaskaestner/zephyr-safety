@@ -543,3 +543,16 @@ def test_merge_takes_the_new_runs_of_another_tree(tmp_path, monkeypatch):
     here = tmp_path / "here" / "top" / "st-sub@nucleo_g474re"
     assert instance.load(here)["runs"][0]["digest"] == instance.load(lab)["runs"][0]["digest"]
     assert instance.merge(design, tmp_path / "lab" / "top", tmp_path / "here" / "top", log=lambda *a: None) == []
+
+
+def test_merge_records_the_origin_of_a_copy(tmp_path):
+    design = make_design(tmp_path)
+    for host in ("lab", "here"):
+        instance.new(design, tmp_path / host, "top", "sub", "nucleo_g474re")
+    lab = tmp_path / "lab" / "top" / "st-sub@nucleo_g474re"
+    instance.add(design, lab, make_run(tmp_path / "flat" / "exp1", {"a": (1, 2)}), copy=True)
+    instance.merge(design, tmp_path / "lab" / "top", tmp_path / "here" / "top", log=lambda *a: None,
+                   origin="lab-host:/results/top/")
+    here = tmp_path / "here" / "top" / "st-sub@nucleo_g474re"
+    assert instance.load(here)["runs"][0]["copied_from"] == \
+        "lab-host:/results/top/st-sub@nucleo_g474re/ex-exp1/20260101T000000Z"
