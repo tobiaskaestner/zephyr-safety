@@ -17,8 +17,16 @@ stat:  a stat or a list of stats of stats.py, value (META metrics),
        {fit_linear: {stat, x: [axes]}}, {diff_rank: [stats]},
        {tree_diff: stat}, {ram_cost: [stats]},
        {exceedance_bound: {thresholds: [..], confidence: c}}
-For an aggregate stat, the points form groups: one group for each series
-(run, tree) and each value of the axes that the statement names.
+group_by: [axes] (aggregate stats only): the points form one group for
+each series (run, tree) and each combination of values of these axes; the
+stat gives one row (one sentence) per group. Without group_by, a group is
+one series. The statement does not change the groups; it can name only
+the axes of group_by (the lint checks it), because the other axes have
+several values in a group.
+
+A per-point stat gives one row for each point, metric and series. If the
+rows come from more than one run or tree and the statement does not name
+{run} or {tree}, each sentence ends with "[<run UTC>, <tree>]".
 """
 
 import math
@@ -91,14 +99,23 @@ def base_row(o, metric=None):
     return row
 
 
-def groups(obs, template, extra_keys=()):
-    """Group points by series and by the axes that the statement names."""
-    names = set(placeholders(template)) | set(extra_keys)
+AGGREGATES = ("spread", "spread_abs", "slope", "fit_linear", "ram_cost")
+
+
+def groups(obs, group_by=()):
+    """Group points by series (run, tree) and by the values of the axes of group_by."""
     out = {}
     for o in obs:
-        key = (o.run, o.tree) + tuple(sorted((a, v) for a, v in o.axes.items() if a in names))
+        key = (o.run, o.tree) + tuple((a, o.axes.get(a)) for a in group_by)
         out.setdefault(key, []).append(o)
     return out
+
+
+def group_row(g, metric, group_by):
+    """The row of a group: run, tree, metric and the values of the group_by axes (not the other axes)."""
+    row = {"run": g[0].run, "tree": g[0].tree, "metric": metric}
+    row.update({a: g[0].axes.get(a) for a in group_by})
+    return row
 
 
 def from_obs(cr, src):
@@ -130,6 +147,7 @@ def evaluate(cr, src, ctx):
     f = cr.get("from") or {}
     template = cr.get("statement", "")
     metrics = checks.as_list(f.get("metric"))
+    group_by = list(cr.get("group_by") or [])
     rows = []
 
     if "substudy" in f:
@@ -161,8 +179,8 @@ def evaluate(cr, src, ctx):
         (kind, arg), = st.items()
         if kind in ("spread", "spread_abs"):
             for m in metrics:
-                for key, g in sorted(groups(obs, template).items()):
-                    row = {**base_row(g[0], m), "points": len(g)}
+                for key, g in sorted(groups(obs, group_by).items(), key=lambda x: str(x[0])):
+                    row = {**group_row(g, m, group_by), "points": len(g)}
                     for s in arg:
                         vals = [stats.value(o.rep, None if s.startswith("drift") else m, s) for o in g]
                         if len(vals) < 2:
@@ -173,7 +191,6 @@ def evaluate(cr, src, ctx):
                             row[s] = (max(vals) - min(vals)) / min(vals)
                         else:
                             row[s] = max(vals) - min(vals)
-                    del row["point"]
                     rows.append(row)
         elif kind == "exceedance_bound":
             for m in metrics:
@@ -191,7 +208,7 @@ def evaluate(cr, src, ctx):
             stat = arg["stat"]
             axes = [arg["axis"]] if kind == "slope" else arg["x"]
             for m in metrics:
-                for key, g in sorted(groups(obs, template).items()):
+                for key, g in sorted(groups(obs, group_by).items(), key=lambda x: str(x[0])):
                     pts = []
                     for o in g:
                         nums = [ctx.axis_number(o, a) for a in axes]
@@ -201,9 +218,7 @@ def evaluate(cr, src, ctx):
                     if len(pts) < 2:
                         continue
                     slope, icept = lstsq(*zip(*pts))
-                    row = {**base_row(g[0], m), "slope": slope, "intercept": icept, "points": len(pts)}
-                    del row["point"]
-                    rows.append(row)
+                    rows.append({**group_row(g, m, group_by), "slope": slope, "intercept": icept, "points": len(pts)})
         elif kind == "diff_rank":
             for m in metrics:
                 for s in arg:
@@ -247,13 +262,12 @@ def evaluate(cr, src, ctx):
                                      "tree_diff": stats.value(u.rep, m, arg) - stats.value(x.rep, m, arg)})
         elif kind == "ram_cost":
             for m in metrics:
-                for key, g in sorted(groups(obs, template).items()):
+                for key, g in sorted(groups(obs, group_by).items(), key=lambda x: str(x[0])):
                     ram = [o for o in g if str(o.axes.get("place", "")).startswith("r")]
                     flash = [o for o in g if str(o.axes.get("place", "")).startswith("f")]
                     if not ram or not flash:
                         continue
-                    row = {**base_row(g[0], m)}
-                    del row["point"]
+                    row = group_row(g, m, group_by)
                     for s in arg:
                         mm = None if s.startswith("drift") else m
                         row[s] = statistics.median(stats.value(o.rep, mm, s) for o in ram) - \

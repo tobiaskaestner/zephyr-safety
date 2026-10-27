@@ -47,6 +47,7 @@ central_results:
       0..28 (anchor {anchor}).
     from: {experiment: code-layout, metric: [irq, isr2thr]}
     stat: {spread_abs: [p50]}
+    group_by: [anchor]
     unit: cycles (max - min over the pads)
 
   - id: flash-pad-drift
@@ -69,6 +70,7 @@ central_results:
               r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]
       metric: [irq, isr2thr]
     stat: {spread_abs: [p50, drift_per_wake]}
+    group_by: [anchor]
     unit: cycles, cycles per wake (max - min over the pads)
 
   - id: tree-diff
@@ -88,6 +90,7 @@ central_results:
       flash (anchor {anchor}).
     from: {experiment: code-place-q4, metric: [irq, isr2thr]}
     stat: {ram_cost: [p50, drift_per_wake]}    # criterion C4 of the old file: no limit
+    group_by: [anchor]
     unit: cycles, cycles per wake
 
   - id: placement-choice

@@ -50,6 +50,7 @@ central_results:
       load ({slice}).
     from: {experiment: m4-sweep, metric: m4.mask}
     stat: {fit_linear: {stat: max(max_net), x: [timers, sleepers]}}
+    group_by: [slice]
     unit: cycles at 170 MHz
 
   - id: thread-sites

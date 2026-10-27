@@ -96,3 +96,26 @@ def test_scaffold_study_and_experiment_pass_the_lint(tmp_path):
         scaffold.scaffold(root / "st-sub" / "ex-new-first", "irq_latency")    # names are unique
     with pytest.raises(scaffold.ScaffoldError):
         scaffold.scaffold(root / "new-thing", "irq_latency")
+
+
+def test_grouping_rules_of_central_results(tmp_path):
+    make_design(tmp_path)
+    root = tmp_path / "design"
+    st = root / "st-sub" / "study.yaml"
+
+    def add(d):
+        d["central_results"] += [
+            {"id": "s1", "statement": "{variant}: {p50}", "from": {"experiment": "exp1", "metric": "isr2thr"},
+             "stat": {"spread_abs": ["p50"]}},
+            {"id": "s2", "statement": "{variant}: {p50}", "from": {"experiment": "exp1", "metric": "isr2thr"},
+             "stat": {"spread_abs": ["p50"]}, "group_by": ["variant"]},
+            {"id": "s3", "statement": "{p50}", "from": {"experiment": "exp1", "metric": "isr2thr"},
+             "stat": "p50", "group_by": ["variant"]},
+            {"id": "s4", "statement": "{p50}", "from": {"experiment": "exp1", "metric": "isr2thr"},
+             "stat": {"spread": ["p50"]}, "group_by": ["colour"]}]
+    edit(st, add)
+    err = texts(root, lint.ERROR)
+    assert any(e.startswith("central result s1: the statement names the axis 'variant'") for e in err)
+    assert not any(e.startswith("central result s2") for e in err)
+    assert any(e.startswith("central result s3: group_by is for the aggregate stats") for e in err)
+    assert any(e.startswith("central result s4: group_by 'colour' is not an axis") for e in err)

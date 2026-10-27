@@ -68,7 +68,9 @@ Results tree (ROOT is any folder of a results tree):
     study.py build ROOT                   write run.json, the app data,
                                           experiment.json and study.json
     study.py check ROOT                   check all seals, build again and compare
-    study.py show ROOT                    the verdicts and central results
+    study.py show ROOT [--brief]          the verdicts and central results
+    study.py show ROOT --explain [ID ...] how each central result is made: its
+                                          definition, the rows and the sentences
     study.py html ROOT [--out FILE]       one HTML page with all study.json files
                                           (default ROOT/index.html)
 
@@ -378,6 +380,36 @@ def show(results, root, brief=False):
                     print(f"   [{c['id']}] {t}")
 
 
+def explain(results, design, only=None):
+    """For each central result: its definition, the rows of the build and the sentence of each row."""
+    for folder, sj in sorted(results.items(), key=lambda x: str(x[0])):
+        try:
+            study = design.study(layout.strip_board(sj["instance"].split("/", 1)[1]) if "/" in sj["instance"] else "")
+        except DesignError:
+            continue
+        defs = {c["id"]: c for c in study.central_results}
+        for c in sj["central_results"]:
+            if only and c["id"] not in only:
+                continue
+            d = defs.get(c["id"], {})
+            print(f"\n== {sj['instance']} [{c['id']}]")
+            for k in ("statement", "from", "stat", "group_by"):
+                if k in d:
+                    v = " ".join(d[k].split()) if isinstance(d[k], str) else d[k]
+                    print(f"   {k}: {v}")
+            if c.get("not_evaluated"):
+                print(f"   not evaluated: {c['not_evaluated']}")
+                continue
+            rows = c.get("rows", [])
+            for i, t in enumerate(c.get("texts", [])):
+                if i < len(rows):
+                    print("   row: " + ", ".join(f"{k}={v:.4g}" if isinstance(v, float) else f"{k}={v}"
+                                               for k, v in rows[i].items()))
+                print(f"     -> {t}")
+            if c.get("unfilled"):
+                print(f"   unfilled placeholders: {c['unfilled']} (no such value in the rows)")
+
+
 def cmd_show(args):
     root = layout.find_root(args.root)
     res = {}
@@ -385,6 +417,9 @@ def cmd_show(args):
         p = f / "study.json"
         if p.is_file():
             res[f] = build.load_json(p)
+    if args.explain is not None:
+        explain(res, Design(), args.explain)
+        return
     show(res, root, brief=args.brief)
 
 
@@ -522,6 +557,8 @@ def parser():
     s = sub.add_parser("show")
     s.add_argument("root")
     s.add_argument("--brief", action="store_true")
+    s.add_argument("--explain", nargs="*", metavar="ID",
+                   help="for each central result (or these ids): its definition, the rows and the sentences")
     s.set_defaults(func=cmd_show)
     s = sub.add_parser("html")
     s.add_argument("root")

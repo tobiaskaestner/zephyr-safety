@@ -160,6 +160,26 @@ def lint_select(f, what, sel, pts, out):
                     out.append(Problem(ERROR, f, f"{what}: select of {a} = {bad}, the experiment has no such values"))
 
 
+def lint_grouping(f, cr, point_lists, out):
+    """group_by only with an aggregate stat, on axes of the experiment; the statement names no other axis."""
+    from . import central
+    st = cr.get("stat")
+    kind = next(iter(st)) if isinstance(st, dict) and len(st) == 1 else None
+    group_by = list(cr.get("group_by") or [])
+    what = f"central result {cr.get('id')}"
+    axes = {a for pts in point_lists if pts for p in pts for a in p["axes"]}
+    if group_by and kind not in central.AGGREGATES:
+        out.append(Problem(ERROR, f, f"{what}: group_by is for the aggregate stats {list(central.AGGREGATES)} only"))
+    for a in group_by:
+        if axes and a not in axes:
+            out.append(Problem(ERROR, f, f"{what}: group_by {a!r} is not an axis of the experiment"))
+    if kind in central.AGGREGATES:
+        named = [n for n in central.placeholders(cr.get("statement", "")) if n in axes and n not in group_by]
+        for n in named:
+            out.append(Problem(ERROR, f, f"{what}: the statement names the axis {n!r}, but a group has several "
+                                         f"values of it; add it to group_by"))
+
+
 def lint_study(d, path, st, points, out):
     f = st.folder / "hypotheses.yaml"
     if not (st.folder / "study.md").is_file():
@@ -194,6 +214,7 @@ def lint_study(d, path, st, points, out):
                                                   "experiment of the study and not imported"))
             if frm.get("point") and not isinstance(exp, list):
                 lint_select(sf, f"central result {cr.get('id')}", {"point": frm["point"]}, points.get(exp), out)
+        lint_grouping(sf, cr, [points.get(e) for e in checks.as_list(exp) if e in points], out)
         sub = frm.get("substudy")
         if sub and not any(s.rsplit("/", 1)[-1] == sub for s in st.substudies):
             out.append(Problem(ERROR, sf, f"central result {cr.get('id')}: {sub!r} is not a sub-study"))

@@ -49,6 +49,7 @@ central_results:
       cycles per thread ({tree}).
     from: {experiment: wake-threads-1m, metric: isr2thr}
     stat: {slope: {stat: p99, axis: threads}}
+    group_by: [kind]
     unit: cycles per thread
 
   - id: backend-tail
