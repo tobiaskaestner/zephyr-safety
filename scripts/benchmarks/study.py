@@ -4,6 +4,11 @@
 
 """Study designs, lab spaces, campaigns and the aggregates of a results tree.
 
+Design (validation/empirical/latencies):
+    study.py lint [FOLDER] [--warn-as-error]
+                                          the problems of the design files; exit 1
+                                          on an error (or a warning with the flag)
+
 Lab space (a folder with .lab/config, see studylib/lab.py):
     study.py lab init FOLDER --repo REPO [--trees-source DIR] [--sdk DIR] [--name N]
                                           make a lab space
@@ -57,6 +62,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import trees  # noqa: E402
 from studylib import build, html, instance, layout, seal  # noqa: E402
 from studylib import lab as labmod  # noqa: E402
+from studylib import lint  # noqa: E402
 from studylib.design import Design, DesignError  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
@@ -76,6 +82,17 @@ def reexec_in_lab_repo(argv):
         sys.exit(f"error: the lab space {lab.folder} has the design repo {lab.repo}, which has no {target}")
     os.environ[REEXEC_ENV] = str(Path(__file__).resolve())
     os.execv(sys.executable, [sys.executable, str(target), *argv])
+
+
+# ------------------------------------------------------------ design
+def cmd_lint(args):
+    problems = lint.lint(only=args.folder)
+    for p in problems:
+        print(p)
+    errors = sum(p.severity == lint.ERROR for p in problems)
+    warnings = len(problems) - errors
+    print(f"{errors} errors, {warnings} warnings")
+    return 1 if errors or (warnings and args.warn_as_error) else 0
 
 
 # ------------------------------------------------------------ lab
@@ -242,6 +259,11 @@ def cmd_html(args):
 def parser():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
+
+    s = sub.add_parser("lint", help="the problems of the design files")
+    s.add_argument("folder", nargs="?", help="only the files below this folder")
+    s.add_argument("--warn-as-error", action="store_true")
+    s.set_defaults(func=cmd_lint)
 
     lab = sub.add_parser("lab", help="the lab space").add_subparsers(dest="lab_cmd", required=True)
     s = lab.add_parser("init", help="make a lab space")

@@ -80,7 +80,7 @@ import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402
 from studylib import lab as labmod  # noqa: E402
-from studylib import seal  # noqa: E402
+from studylib import lint, seal  # noqa: E402
 
 BENCH_DIR = trees.BENCH_DIR
 
@@ -521,6 +521,8 @@ def main():
     p.add_argument("--dry-run", action="store_true", help="check and list the points, do not build")
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
+    p.add_argument("--warn-as-error", action="store_true",
+                   help="stop if the design lint finds a problem in the experiment or its study")
     args = p.parse_args()
     if not args.hardware_map:
         lab = labmod.find()
@@ -543,6 +545,11 @@ def main():
         fail(f"safety repo {repo_root} is dirty, commit first:\n{repo_dirty}")
     if not exp_path.is_relative_to(repo_root):
         fail(f"{exp_path} is not in the safety repo {repo_root}")
+    problems = lint.lint_for_experiment(exp_path)
+    for pr in problems:
+        print(f"lint {pr}", flush=True)
+    if problems and args.warn_as_error:
+        fail(f"{len(problems)} lint problems (--warn-as-error)")
 
     tree_cfg = trees.load(args.trees_root)
     boards = trees.load_boards()
