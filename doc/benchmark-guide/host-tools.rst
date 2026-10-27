@@ -364,9 +364,13 @@ Options:
      in ``__FILE__``.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
-   - ``-DLATBENCH_SRC_REV`` set to the git tree hash of
-     ``tests/benchmarks`` at the commit of the run. The same content gives
-     the same image at any commit.
+   - ``-DLATBENCH_SRC_REV`` set to a content hash of the firmware files of ``tests/benchmarks`` (kind
+     ``firmware/1``: all files without the host scripts in ``scripts/``,
+     Python, Markdown, ``testcase.yaml`` and ``boards.yaml``) at the commit of
+     the run. The same firmware gives the same image at any commit.
+   - ``-DBUILD_VERSION`` set to ``git describe --abbrev=12 --always`` of
+     the Zephyr tree, as Zephyr makes it. The string depends on the tags
+     of the tree; in the CMake command, a rebuild gives the same string.
 
 #. **Kconfig check.** It compares each Kconfig value of the point with the
    ``.config`` of the build. If the ``.config`` does not have the requested
@@ -549,9 +553,11 @@ repository (``git archive``). Its builds used this copy.
 - ``command``, ``started``, ``finished``, ``host``.
 - ``lab``: the lab space (``id``, ``name``, ``folder``), or ``null``
   outside a lab space.
-- ``safety``: the path and the revision of the safety repository, and
-  the git tree hashes of ``tests/benchmarks`` (``bench_tree``, the
-  ``LATBENCH_SRC_REV`` of the app) and of the module folder ``zephyr/``
+- ``safety``: the path and the revision of the safety repository, the
+  local ref of the run (``ref``), the firmware hash (``bench_tree``, the
+  ``LATBENCH_SRC_REV`` of the app, kind ``bench_tree_kind``; the first
+  runs of 2026-10-27 have the git tree hash of ``tests/benchmarks`` and
+  no kind) and the git tree hash of the module folder ``zephyr/``
   (``module_tree``). A run of an older ``run.py`` has instead the
   benchmark folder in its ``src/`` copy (``snapshot``) and the module
   folder (``module``). A still older run has no ``module``. The oldest
@@ -609,19 +615,17 @@ again:
    For a run with ``safety.bench_tree``, it exports the commit
    ``safety.rev`` of the safety repository (``git archive``) into a
    temporary folder. It stops if the commit is not in the repository
-   (fetch it, or the ref of its campaign ``refs/latbench/campaign/<id>``),
-   or if the tree hash of ``tests/benchmarks`` at that commit is not
+   (fetch it, or its ref ``safety.ref`` from the lab repository), or if the
+   hash of the kind ``bench_tree_kind`` at that commit is not
    ``bench_tree``. A run of an older ``run.py`` uses its copy in ``src/``.
    A run without ``src/`` built from the worktree, and its build took the
    revision string from ``git describe``. For such a run, ``--rebuild``
    makes a temporary git worktree at ``safety.rev``, so that ``git
    describe`` gives the same string. It stops if the revision is not in
    the safety repository.
-#. It builds into the original build folder, if that folder is free and
-   the run folder did not move. A point that was built in the build cache
-   always builds into a temporary folder. Then the ELF has the same debug
-   information, and its SHA-256 can be the same as in the manifest. Else
-   it builds into a temporary folder.
+#. It builds into a temporary folder, never into the sealed run folder.
+   The ELF then has other debug information, so its SHA-256 differs; the
+   flashed image decides (next step).
 #. It compares ``zephyr.elf`` (SHA-256), ``zephyr.hex``, ``.config`` and
    ``zephyr.dts`` with the stored files. If the SHA-256 of the ELF is not
    the same, it also compares the loadable sections of the two ELFs

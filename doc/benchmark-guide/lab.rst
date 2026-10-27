@@ -124,7 +124,10 @@ trees root. ``REPO`` must have ``scripts/benchmarks/study.py``. If
 ``FOLDER`` is a lab space already, the command stops. A path in
 ``FOLDER`` goes into the file as a relative path. The command prints the
 next step, ``study.py trees setup --clone-source``. If the hardware map
-does not exist, it tells you to make it with twister.
+does not exist, it tells you to make it with twister. If the results
+folder is outside ``FOLDER``, it gets the file ``.lab-space`` with the
+path of the lab folder: the build then finds the lab space of the results
+also from another folder (``lab.owner()``, not the current folder).
 
 ``lab status``
 ~~~~~~~~~~~~~~
@@ -207,22 +210,31 @@ The key is the SHA-256 of all inputs of the image:
 
 - the board and the app,
 - the pinned revisions of the tree repositories that the board needs,
+- the ``BUILD_VERSION`` of the Zephyr tree (``git describe``, which
+  depends on the tags of the tree; ``run.py`` gives it to CMake),
 - the SDK version,
-- the git tree hash of ``tests/benchmarks`` and of the module folder
-  ``zephyr/`` of the safety repository,
+- a content hash of the firmware files of ``tests/benchmarks`` (kind
+  ``firmware/1``: all files without the host scripts in ``scripts/``,
+  Python, Markdown, ``testcase.yaml`` and ``boards.yaml``), and the git
+  tree hash of the module folder ``zephyr/`` of the safety repository,
 - the point: its Kconfig values, conf files and overlays.
 
 The key has no host path, no experiment name and no safety commit. The
-app gets the tree hash of ``tests/benchmarks`` as ``LATBENCH_SRC_REV``,
-not the commit. Thus these runs get the image from the cache:
+app gets the firmware hash as ``LATBENCH_SRC_REV``, not the commit. Thus
+these runs get the image from the cache:
 
 - A repeat of an experiment.
 - A run after a commit that changes only the design files (for example
-  ``study.yaml``), because the tree hashes stay the same.
+  ``study.yaml``), the tools or an extractor, because the hashes stay the
+  same.
 - A point of another experiment with the same settings.
 
 An entry counts only if its ELF has the SHA-256 of ``entry.json``. The
-manifest of the run records ``build: {key, cached}`` for each point.
+manifest of the run records ``build: {key, cached}`` for each point. Each
+build has a folder of its own process, and an entry that another process
+stored first stays. Before an image goes into the run or the cache,
+``run.py`` checks again that the repository did not change during the
+build.
 ``run.py --build-only`` and ``study.py campaign prepare`` fill the cache.
 ``run.py --no-cache`` builds again and does not use the cache.
 
@@ -345,20 +357,27 @@ background build. With ``--verdicts``, it also prints the verdicts of the
 instances of the campaign.
 
 ``resume`` runs the experiments of a campaign that are not ``done`` or
-``skipped``, also the ``failed`` ones. The design repository must be at
+``skipped``, also the ``failed`` ones: at the start it sets them to
+``planned`` again (``attempts`` + 1), so they make the verdicts
+provisional until they run. The design repository must be at
 the commit of the campaign. To get it, check out the ref
 ``refs/latbench/campaign/<id>``.
 
 Lock and ref
 ~~~~~~~~~~~~
 
-The lock ``.lab/campaign.lock`` lets one campaign run in a lab space. It
-has the campaign id, the process id and the host. A lock of this host
-whose process stopped is removed at the next start.
+The lock is an ``flock`` on ``.lab/campaign.lock``. It lets one campaign
+run in a lab space. The kernel releases it when the process ends, so a
+crash or a kill leaves no stale lock. The file has the campaign id, the
+process id and the host of the holder, for information. A campaign of
+this lab space counts as running (for provisional verdicts) only while
+it holds the lock.
 
 The ref ``refs/latbench/campaign/<id>`` keeps the commit of the campaign
 in the design repository, also after a rebase of the branch. It is a
-local ref. Do not push it. ``run.py --rebuild`` needs this commit.
+local ref. Do not push it. ``run.py --rebuild`` needs this commit. Each
+run also gets the ref ``refs/latbench/run/<experiment>/<UTC>`` (manifest
+``safety.ref``), also without a campaign.
 
 Campaign record
 ~~~~~~~~~~~~~~~

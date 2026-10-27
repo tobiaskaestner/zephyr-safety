@@ -93,8 +93,10 @@ use the modules or the Zephyr tree of a west workspace.
 
 A run builds the app from the safety repo. Before each point, `run.py`
 makes sure that the repo is clean and at the commit of the start of the
-run, and stops if not. The app gets `LATBENCH_SRC_REV`, the git tree
-hash of `tests/benchmarks`. In a lab space, the images go into the build
+run, and stops if not; it checks again after each build. The app gets
+`LATBENCH_SRC_REV`, a content hash of the firmware files of
+`tests/benchmarks` (no host scripts, Python or Markdown), and run.py gives
+the Zephyr `BUILD_VERSION` (`git describe` of the tree) to CMake. In a lab space, the images go into the build
 cache. A run of an older `run.py` has a copy of the repo in
 `<run>/src/`. New runs have none.
 
