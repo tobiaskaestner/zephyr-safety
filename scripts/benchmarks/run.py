@@ -239,7 +239,7 @@ def run_build(args, env, bdir, log, name):
                 fail(f"build failed for {name}, see {log}")
 
 
-def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log):
+def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg, sdk, bdir, log, build_version=None):
     """Build one point. src_bench is tests/benchmarks of a safety repo (or of an export of it).
 
     The modules are those of the board from the tree, plus the safety repo
@@ -268,6 +268,8 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     if point["dtc_overlays"]:
         args.append("-DEXTRA_DTC_OVERLAY_FILE=" + ";".join(str(src_bench / f) for f in point["dtc_overlays"]))
     args.append(f"-DLATBENCH_SRC_REV={src_rev}")
+    if build_version:
+        args.append(f"-DBUILD_VERSION={build_version}")
     for sym, value in point["kconfig"].items():
         args.append(f"-DCONFIG_{sym}={kconfig_value(value)}")
 
@@ -287,13 +289,24 @@ class Builder:
         self.repo_root, self.repo_rev, self.cache, self.log = repo_root, repo_rev, cache, log
         self.bench_tree = tree_hash(repo_root, repo_rev, BENCH_DIR.relative_to(repo_root))
         self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
+        self.build_versions = {}
+
+    def build_version(self, tree):
+        """The BUILD_VERSION of the Zephyr tree: git describe, as Zephyr makes it (it depends on the tags)."""
+        if tree not in self.build_versions:
+            self.build_versions[tree] = trees.git("describe", "--abbrev=12", "--always",
+                                                  cwd=trees.repo_dir(self.tree_cfg, tree, "zephyr"))
+        return self.build_versions[tree]
+
+    def paths(self):
+        return {"repo": str(self.repo_root), "trees_root": str(self.tree_cfg["root"])}
 
     def key(self, tree, pt):
         from studylib import buildcache
         pins = {r: self.tree_cfg["trees"][tree]["repos"][r]["rev"] for r in self.repos}
         inputs = buildcache.key_inputs(self.board, self.exp["app"], pins,
                                        self.tree_cfg["toolchain"]["zephyr_sdk"]["version"],
-                                       self.bench_tree, self.module_tree, pt)
+                                       self.bench_tree, self.module_tree, pt, self.build_version(tree))
         return buildcache.key_of(inputs), inputs
 
     def build(self, tree, pt, pdir=None):
@@ -306,7 +319,11 @@ class Builder:
             self.log(f"[{name}] image from the build cache ({key[:12]})")
             if pdir is not None:
                 self.cache.copy_to(key, pdir)
-            return {"cmake": entry["cmake"], "elf_sha256": entry["elf_sha256"],
+            # the command with the paths of this place (the image does not depend on them)
+            here = self.paths()
+            moves = {old: here[k] for k, old in (entry.get("paths") or {}).items() if k in here and old != here[k]}
+            cmake = [a for a in move_paths(entry["cmake"], moves, None)] if moves else entry["cmake"]
+            return {"cmake": cmake, "elf_sha256": entry["elf_sha256"],
                     "build": {"key": key, "cached": True}}
         self.log(f"[{name}] build", )
         if self.cache:
@@ -315,11 +332,14 @@ class Builder:
         else:
             bdir, log = pdir / "build", pdir / "build.log"
         cmake = build_point(self.tree_cfg, tree, pt, BENCH_DIR, self.exp["app"], self.bench_tree, self.board,
-                            self.board_cfg, self.sdk, bdir, log)
+                            self.board_cfg, self.sdk, bdir, log, self.build_version(tree))
+        # CMake and Ninja read the worktree: a change during the build stops the run before the
+        # image goes into the run or the cache.
+        check_repo_unchanged(self.repo_root, self.repo_rev)
         elf = bdir / "zephyr" / "zephyr.elf"
         out = {"cmake": cmake, "elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest()}
         if self.cache:
-            self.cache.put(key, inputs, bdir, cmake, log)
+            self.cache.put(key, inputs, bdir, cmake, log, self.paths())
             shutil.rmtree(bdir)
             log.unlink()
             if pdir is not None:
@@ -367,10 +387,11 @@ def find_points(path, only=None):
 
 
 def move_paths(cmake, moves, bdir):
-    """Return the CMake command of a point with the build folder bdir and each old folder of moves replaced."""
+    """Return the CMake command of a point with the build folder bdir (None: keep it) and each old
+    folder of moves replaced."""
     out = []
     for i, arg in enumerate(cmake):
-        if i > 0 and cmake[i - 1] == "-B":
+        if i > 0 and cmake[i - 1] == "-B" and bdir is not None:
             out.append(str(bdir))
             continue
         for old, new in moves.items():
@@ -515,8 +536,8 @@ def rebuild(args):
         # A run that built from the safety repo: export its commit (the repo is at another rev now).
         repo_root, _, _ = safety_repo_state()
         if trees.git("cat-file", "-t", safety["rev"], cwd=repo_root, check=False) != "commit":
-            fail(f"the safety revision {safety['rev']} of the run is not in {repo_root} (fetch it, or the "
-                 "ref of its campaign refs/latbench/campaign/<UTC>)")
+            fail(f"the safety revision {safety['rev']} of the run is not in {repo_root} (fetch it from the lab "
+                 f"repo of the run: ref {safety.get('ref', 'refs/latbench/run/...')})")
         src = tmp / "src"
         export_rev(repo_root, safety["rev"], src)
         if tree_hash(repo_root, safety["rev"], BENCH_DIR.relative_to(repo_root)) != safety["bench_tree"]:
@@ -546,9 +567,8 @@ def rebuild(args):
     for e in entries:
         name = f"{e['tree']}/{e['id']}"
         pdir = run_dir / e["tree"] / e["id"]
-        bdir = pdir / "build"
-        if bdir.exists() or old_run is None or run_dir != old_run:
-            bdir = tmp / e["tree"] / e["id"]
+        # never in the sealed run folder: a crash or --keep-build would leave files in it
+        bdir = tmp / e["tree"] / e["id"]
         bdir.mkdir(parents=True)
         bad = True
         try:
@@ -562,13 +582,9 @@ def rebuild(args):
                 image_same = "zephyr.elf" in same or "ELF image" in same
             bad = not image_same or ".config" in diff
         finally:
-            # The result folder stays as it was; a build that failed or is different goes to tmp.
-            if not args.keep_build and bdir.is_relative_to(pdir):
-                if bad:
-                    (tmp / e["tree"]).mkdir(exist_ok=True)
-                    shutil.move(bdir, tmp / e["tree"] / e["id"])
-                else:
-                    shutil.rmtree(bdir)
+            # The builds stay in tmp (kept if a point fails or with --keep-build).
+            if bdir.exists() and not args.keep_build and not bad:
+                shutil.rmtree(bdir)
         failed += bad
         record["points"].append({"tree": e["tree"], "point": e["id"], "verdict": "different" if bad else "same",
                                  "same": same, "different": diff})
@@ -721,6 +737,10 @@ def main():
     exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
     run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
+    # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
+    # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
+    run_ref = f"refs/latbench/run/{exp['name']}/{run_dir.name}"
+    trees.git("update-ref", run_ref, repo_rev, cwd=repo_root)
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", port], capture_output=True, text=True
     ).stdout
@@ -737,7 +757,7 @@ def main():
         "started": started.isoformat(),
         "host": platform.node(),
         "lab": lab.describe() if lab else None,
-        "safety": {"path": str(repo_root), "rev": repo_rev, "bench_tree": builder.bench_tree,
+        "safety": {"path": str(repo_root), "rev": repo_rev, "ref": run_ref, "bench_tree": builder.bench_tree,
                    "module_tree": builder.module_tree},
         "trees": {
             t: {**tree_cfg["trees"][t], "repos": {r: tree_cfg["trees"][t]["repos"][r] for r in repos}}
