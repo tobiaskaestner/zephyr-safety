@@ -17,8 +17,9 @@ imports), then those of its sub-studies, depth first. A sub-study with
 "instances: per-board" is left out, unless FOLDER is in it.
 
 The record .lab/campaigns/<id>.json (format latbench-campaign/1) is written
-at the start and after each step, so a crash leaves a valid record. The
-lock .lab/campaign.lock allows one campaign at a time in a lab space. The
+at the start and after each step, so a crash leaves a valid record. A
+campaign holds the lock .lab/locks/board-<board>.lock of each board of its
+plan: campaigns on different boards run at the same time. The
 design repo gets the local ref refs/latbench/campaign/<id> at the commit of
 the campaign, so the commit stays reachable (never pushed). Before each
 experiment the repo must be clean and at that commit; if not, the campaign
@@ -47,6 +48,7 @@ import yaml
 import trees
 
 from . import instance, jsonout, layout, seal
+from . import lab as labmod
 from .design import Design, repo_rel
 
 FORMAT = "latbench-campaign/1"
@@ -147,13 +149,9 @@ def find_instance(lab, design, study_path, board):
     return None
 
 
-def ensure_instance(lab, design, study_path, board, log=print):
-    """The instance folder of a study for a board; made (instance new) if there is none."""
-    f = find_instance(lab, design, study_path, board)
-    if f is not None:
-        return f
-    # The board is fixed at the first level below the top study (as in the results of the
-    # night of 2026-10-26), or at the level of a per-board sub-study.
+def board_level(design, study_path):
+    """The study path whose instance fixes the board: the first level below the top study (as
+    in the results of the night of 2026-10-26), or the level of a per-board sub-study."""
     names = study_path.split("/")
     level = names[0]
     for i in range(1, len(names)):
@@ -161,6 +159,29 @@ def ensure_instance(lab, design, study_path, board, log=print):
         for s in parent.data.get("substudies") or []:
             if isinstance(s, dict) and s.get("use") == names[i] and s.get("instances") == "per-board":
                 level = "/".join(names[:i + 1])
+    return level
+
+
+def planned_instance(lab, design, study_path, board):
+    """(folder, exists) of the instance of a study for a board: the one there, or the one that
+    ensure_instance would make."""
+    f = find_instance(lab, design, study_path, board)
+    if f is not None:
+        return f, True
+    level = board_level(design, study_path)
+    names = study_path.split("/")
+    k = len(level.split("/"))
+    rel = layout.study_folder("/".join(names[:k]))
+    rel = rel.parent / f"{rel.name}@{instance.board_port(board)}"
+    return lab.results / design.top.name / rel / layout.study_folder("/".join(names[k:])), False
+
+
+def ensure_instance(lab, design, study_path, board, log=print):
+    """The instance folder of a study for a board; made (instance new) if there is none."""
+    f = find_instance(lab, design, study_path, board)
+    if f is not None:
+        return f
+    level = board_level(design, study_path)
     instance.new(design, lab.results, design.top.name, level, board)
     log(f"made the instances of {level} for {board}")
     f = find_instance(lab, design, study_path, board)
@@ -203,6 +224,8 @@ def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hw
     rec.data = {"format": FORMAT, "id": cid, "lab": lab.describe(), "host": platform.node(),
                 "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
                 "repo": {"path": str(trees.REPO_DIR), "rev": rev}, "ref": f"refs/latbench/campaign/{cid}",
+                "python": {"executable": sys.executable, "prefix": sys.prefix,
+                           "version": platform.python_version(), "packages": labmod.packages(trees.REPO_DIR)},
                 "role": role, **({"reason": reason} if reason else {}),
                 **({"hwcheck_each": True} if hwcheck_each else {}),
                 "status": PLANNED, "created": utc_now().isoformat(), "experiments": items}
@@ -236,7 +259,7 @@ def pending(lab, design=None):
     """{(instance folder, experiment)} that a running campaign of the lab space has still to run.
 
     A campaign counts from its start (also during its pre-flight check) to its
-    end, while it holds the lock of the lab space; a campaign whose process
+    end, while it holds the locks of its boards; a campaign whose process
     is gone does not count (aborted). A campaign of another lab space (imported) counts while its
     record says running. An experiment that has no instance yet counts for
     the instance of its study and board, if there is one.
@@ -245,7 +268,7 @@ def pending(lab, design=None):
     for rec in records(lab):
         d = rec.data or {}
         own = d.get("lab", {}).get("id") == lab.id and d.get("host") == platform.node()
-        if own and (d.get("status") not in (PLANNED, RUNNING) or lock_holder(lab) != rec.id):
+        if own and (d.get("status") not in (PLANNED, RUNNING) or rec.id not in lock_holders(lab).values()):
             continue
         if not own and d.get("status") != RUNNING:
             continue
@@ -262,17 +285,23 @@ def pending(lab, design=None):
 
 
 # ------------------------------------------------------------ lock
-# The lock is an flock on .lab/campaign.lock: the kernel drops it when the process ends, so a
-# crash or a kill leaves no stale lock. The file has the id and pid of the holder (information).
+# A campaign holds one lock for each board of its plan: .lab/locks/board-<board>.lock, an flock
+# (the kernel drops it when the process ends, so a crash or a kill leaves no stale lock). Two
+# campaigns on different boards run at the same time; two on one board do not. The file has the
+# id and pid of the holder (information). The results build has a lock of its own
+# (results_lock), so the builds of two campaigns run one after the other.
 _LOCKS = {}
 
 
-def lock_holder(lab):
-    """The id of the campaign that holds the lock of the lab space, or None."""
+def lock_file(lab, board):
+    return lab.locks / f"board-{board.replace('/', '_').replace('@', '_')}.lock"
+
+
+def _holder(path):
     import fcntl
-    if not lab.lock.exists():
+    if not path.exists():
         return None
-    with open(lab.lock) as f:
+    with open(path) as f:
         try:
             fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
         except BlockingIOError:
@@ -284,33 +313,80 @@ def lock_holder(lab):
     return None
 
 
-def take_lock(lab, cid):
+def lock_holders(lab):
+    """{board lock file name: campaign id} of the locks that a campaign holds now."""
+    out = {}
+    for f in sorted(lab.locks.glob("board-*.lock")) if lab.locks.is_dir() else []:
+        h = _holder(f)
+        if h:
+            out[f.stem[len("board-"):]] = h
+    return out
+
+
+def lock_holder(lab, board=None):
+    """The campaign that holds the lock of the board (any board: None), or None."""
+    if board is not None:
+        return _holder(lock_file(lab, board))
+    return next(iter(lock_holders(lab).values()), None)
+
+
+def take_lock(lab, cid, boards):
+    """Take the locks of the boards (all or none); CampaignError if a campaign holds one."""
     import fcntl
-    lab.lock.parent.mkdir(parents=True, exist_ok=True)
-    f = open(lab.lock, "a+")
-    try:
-        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-    except BlockingIOError:
-        f.seek(0)
+    lab.locks.mkdir(parents=True, exist_ok=True)
+    taken = []
+    for b in sorted(set(boards)):
+        path = lock_file(lab, b)
+        f = open(path, "a+")
         try:
-            d = json.loads(f.read() or "{}")
-        except ValueError:
-            d = {}
-        f.close()
-        raise CampaignError(f"the campaign {d.get('id', '?')} runs (pid {d.get('pid', '?')}, lock {lab.lock})") from None
-    f.seek(0)
-    f.truncate()
-    json.dump({"id": cid, "pid": os.getpid(), "host": platform.node()}, f)
-    f.flush()
-    _LOCKS[(str(lab.lock), cid)] = f
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            f.seek(0)
+            try:
+                d = json.loads(f.read() or "{}")
+            except ValueError:
+                d = {}
+            f.close()
+            for t in taken:
+                drop_one(t)
+            raise CampaignError(f"the campaign {d.get('id', '?')} runs on {b} (pid {d.get('pid', '?')}, "
+                                f"lock {path})") from None
+        f.seek(0)
+        f.truncate()
+        json.dump({"id": cid, "pid": os.getpid(), "host": platform.node(), "board": b}, f)
+        f.flush()
+        _LOCKS[(str(path), cid)] = f
+        taken.append((str(path), cid))
 
 
-def drop_lock(lab, cid):
-    f = _LOCKS.pop((str(lab.lock), cid), None)
+def drop_one(key):
+    f = _LOCKS.pop(key, None)
     if f is not None:
         f.seek(0)
         f.truncate()
         f.close()
+
+
+def drop_lock(lab, cid):
+    for key in [k for k in _LOCKS if k[1] == cid]:
+        drop_one(key)
+
+
+class results_lock:
+    """The lock of the results build of a lab space (with: wait for it)."""
+
+    def __init__(self, lab):
+        self.path = lab.locks / "results.lock"
+
+    def __enter__(self):
+        import fcntl
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        self.f = open(self.path, "a+")
+        fcntl.flock(self.f, fcntl.LOCK_EX)
+        return self
+
+    def __exit__(self, *exc):
+        self.f.close()
 
 
 # ------------------------------------------------------------ check
@@ -504,7 +580,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     if rev != d["repo"]["rev"] or dirty:
         raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
                             f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
-    take_lock(lab, rec.id)
+    take_lock(lab, rec.id, [e["board"] for e in d["experiments"] if e["state"] != SKIPPED] or [d.get("board") or "-"])
     # a resume runs the failed experiments again (and one that a crash left in running)
     for e in d["experiments"]:
         if e["state"] in (FAILED, RUNNING):

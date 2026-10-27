@@ -14,9 +14,11 @@ Design (validation/empirical/latencies):
                                           a new experiment of a study
 
 Lab space (a folder with .lab/config, see studylib/lab.py):
-    study.py lab init FOLDER --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
+    study.py lab init [FOLDER] --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
                       [--sdk DIR] [--results DIR] [--hw-map FILE]
-                                          make a lab space
+                                          make a lab space (default: the current folder);
+                                          the venv of the Python that runs it is the
+                                          Python of the lab space
     study.py lab status                   the lab space, its trees, boards and campaigns
     study.py lab hwcheck BOARD            the loopback wire check of a board
     study.py lab export [FOLDER] -o FILE [--campaign ID ...] [--all]
@@ -98,19 +100,27 @@ REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
 
 
 def reexec_in_lab_repo(argv):
-    """Run the study.py of the design repo of the lab space, if this is another one."""
+    """Run the study.py of the design repo of the lab space with the Python of the lab space (its
+    venv, [python] of .lab/config), if this is another study.py or another Python."""
     if os.environ.get(REEXEC_ENV) or (argv[:2] == ["lab", "init"]):
         return
     lab = labmod.find()
     if lab is None:
         return
     target = lab.repo / "scripts" / "benchmarks" / "study.py"
-    if target.resolve() == Path(__file__).resolve():
+    python = lab.python
+    same_script = target.resolve() == Path(__file__).resolve()
+    # a venv Python is a link to the base Python: compare the environments, not the files
+    same_python = python is None or (lab.venv is not None and Path(sys.prefix).resolve() == lab.venv.resolve())
+    if same_script and same_python:
         return
     if not target.is_file():
         sys.exit(f"error: the lab space {lab.folder} has the design repo {lab.repo}, which has no {target}")
+    if python is not None and not python.exists():
+        sys.exit(f"error: the lab space {lab.folder} has the Python environment {lab.venv}, which has no {python}")
+    exe = str(python) if python is not None else sys.executable
     os.environ[REEXEC_ENV] = str(Path(__file__).resolve())
-    os.execv(sys.executable, [sys.executable, str(target), *argv])
+    os.execv(exe, [exe, str(target), *argv])
 
 
 # ------------------------------------------------------------ design
@@ -141,6 +151,13 @@ def cmd_lab_init(args):
                       trees_source=args.trees_source, sdk=args.sdk, results=args.results, hw_map=args.hw_map)
     print(f"lab space {lab.id} in {lab.folder}")
     print(f"  design repo  {lab.repo}")
+    if lab.venv is not None:
+        print(f"  python       {lab.venv} (the Python of lab init)")
+    else:
+        print(f"  python       WARNING: lab init runs without a virtual environment ({sys.executable}); "
+              f"make one with {lab.repo}/scripts/benchmarks/requirements.txt and run lab init with its Python")
+    for p in labmod.package_problems(lab.repo):
+        print(f"  WARNING      {p}")
     print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
     print(f"  results      {lab.results}")
     print(f"  hardware map {lab.hw_map}" + ("" if lab.hw_map.is_file() else " (missing: make it with twister)"))
@@ -153,6 +170,9 @@ def cmd_lab_status(args):
     rev, dirty = trees.repo_state(lab.repo)
     print(f"lab space {lab.id} in {lab.folder}")
     print(f"  design repo  {lab.repo} at {rev[:12]}{' (dirty)' if dirty else ''}")
+    print(f"  python       {sys.executable} ({lab.venv or 'no venv in .lab/config'})")
+    for p in labmod.package_problems(lab.repo):
+        print(f"  WARNING      {p}")
     cfg = trees.load(lab=lab)
     try:
         sdk = trees.check_toolchain(cfg)
@@ -224,9 +244,15 @@ def cmd_campaign_prepare(args):
 def cmd_campaign_check(args):
     lab = labmod.require()
     items = campaign.plan(lab, args.folder, args.board, args.only, args.skip)
+    design = Design()
     for e in items:
-        print(f"  {e['state']:8} {e['experiment']} ({e['study']}, {e['board']})" + (f": {e['note']}" if e.get("note") else ""))
-    res = campaign.preflight(lab, items, Design(), hwcheck=not args.no_hwcheck, warn_as_error=args.warn_as_error)
+        where = ""
+        if e["state"] != "skipped":
+            f, exists = campaign.planned_instance(lab, design, e["study"], e["board"])
+            where = f" -> {f.relative_to(lab.results)} ({'exists' if exists else 'will be made'})"
+        print(f"  {e['state']:8} {e['experiment']} ({e['study']}, {e['board']}){where}"
+              + (f": {e['note']}" if e.get("note") else ""))
+    res = campaign.preflight(lab, items, design, hwcheck=not args.no_hwcheck, warn_as_error=args.warn_as_error)
     bad = [w for st, w, _ in res if st == "fail"]
     print("pre-flight check: " + ("ok" if not bad else f"FAILED ({', '.join(bad)})"))
     return 1 if bad else 0
@@ -334,9 +360,17 @@ def cmd_verify(args):
     return 1 if bad else 0
 
 
+def results_lock(root):
+    """The lock of the results build of the lab space that owns root (a no-op outside a lab space)."""
+    import contextlib
+    owner = labmod.owner(root)
+    return campaign.results_lock(owner) if owner else contextlib.nullcontext()
+
+
 def cmd_build(args):
     root = layout.find_root(args.root)
-    t, w = build.build(root)
+    with results_lock(root):
+        t, w = build.build(root)
     print(f"built {len(t.results)} instances, {len(t.loaded)} runs; {w.written} files written")
     if t.made_by.get("dirty"):
         print("WARNING: the safety repo has changes that are not committed: the aggregates are not reproducible")
@@ -361,7 +395,7 @@ def show(results, root, brief=False):
         crs = sj["central_results"]
         if brief and not hyps and not any(c.get("texts") for c in crs):
             continue
-        print(f"\n== {sj['instance']}")
+        print(f"\n== {layout.display(sj['instance'])}")
         for n in sj.get("notes", []):
             print(f"   NOTE {n}")
         for a in sj.get("acceptance", []):
@@ -395,7 +429,7 @@ def explain(results, design, only=None):
             if only and c["id"] not in only:
                 continue
             d = defs.get(c["id"], {})
-            print(f"\n== {sj['instance']} [{c['id']}]")
+            print(f"\n== {layout.display(sj['instance'])} [{c['id']}]")
             for k in ("statement", "from", "stat", "group_by"):
                 if k in d:
                     v = " ".join(d[k].split()) if isinstance(d[k], str) else d[k]
@@ -429,7 +463,8 @@ def cmd_show(args):
 def cmd_html(args):
     root = layout.find_root(args.root)
     out = Path(args.out) if args.out else root / "index.html"
-    out.write_text(html.page(root))
+    with results_lock(root):
+        out.write_text(html.page(root))
     print(out)
 
 
@@ -455,8 +490,8 @@ def parser():
     s.set_defaults(func=cmd_scaffold)
 
     lab = sub.add_parser("lab", help="the lab space").add_subparsers(dest="lab_cmd", required=True)
-    s = lab.add_parser("init", help="make a lab space")
-    s.add_argument("folder")
+    s = lab.add_parser("init", help="make a lab space (run it with the Python of the venv of the lab space)")
+    s.add_argument("folder", nargs="?", default=".", help="the lab folder (default: the current folder)")
     s.add_argument("--repo", required=True, help="the safety repo with the study designs and the tools")
     s.add_argument("--name", help="the name of the lab space (default: the folder name)")
     s.add_argument("--trees-root", help="the folder of the pinned trees (default: FOLDER/trees)")

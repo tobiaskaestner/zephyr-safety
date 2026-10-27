@@ -57,7 +57,10 @@ def test_plan_order_and_board(setup):
 
 def test_ensure_instance_makes_it_once(setup):
     lab, design, root = setup
+    planned, exists = campaign.planned_instance(lab, design, "sub", "nucleo_g474re")
+    assert not exists and planned == lab.results / "top" / "st-sub@nucleo_g474re"
     f = campaign.ensure_instance(lab, design, "sub", "nucleo_g474re", log=lambda *a: None)
+    assert campaign.planned_instance(lab, design, "sub", "nucleo_g474re") == (f, True) and f == planned
     assert f == lab.results / "top" / "st-sub@nucleo_g474re"
     assert campaign.ensure_instance(lab, design, "sub", "nucleo_g474re", log=lambda *a: None) == f
     # an instance folder resolves to its study and board
@@ -80,7 +83,7 @@ def test_pending_counts_running_campaigns_only(setup):
     record("20260101T000001Z", "running", 99999999, [("exp1", "planned")])     # it does not hold the lock
     record("20260101T000002Z", "done", os.getpid(), [("exp1", "planned")])
     assert campaign.pending(lab, design) == {}                                  # no campaign holds the lock
-    campaign.take_lock(lab, "20260101T000000Z")
+    campaign.take_lock(lab, "20260101T000000Z", ["nucleo_g474re"])
     assert campaign.pending(lab, design) == {(str(f), "exp2"): "20260101T000000Z"}
     campaign.drop_lock(lab, "20260101T000000Z")
     # a campaign in its pre-flight check: the experiments have no instance yet
@@ -88,7 +91,7 @@ def test_pending_counts_running_campaigns_only(setup):
         "id": "20260101T000003Z", "status": "planned", "pid": os.getpid(), "host": platform.node(),
         "lab": lab.describe(), "experiments": [{"experiment": "exp1", "study": "sub", "board": "nucleo_g474re",
                                                  "state": "planned"}]})
-    campaign.take_lock(lab, "20260101T000003Z")
+    campaign.take_lock(lab, "20260101T000003Z", ["nucleo_g474re"])
     assert campaign.pending(lab, design)[(str(f), "exp1")] == "20260101T000003Z"
     campaign.drop_lock(lab, "20260101T000003Z")
     # an imported running record (of another lab space) counts without a lock here
@@ -98,15 +101,19 @@ def test_pending_counts_running_campaigns_only(setup):
     assert campaign.pending(lab, design) == {(str(f), "exp1"): "20260101T000004Z@other"}
 
 
-def test_lock_allows_one_campaign(setup):
+def test_one_campaign_per_board(setup):
     lab, design, root = setup
-    campaign.take_lock(lab, "a")
-    with pytest.raises(campaign.CampaignError):
-        campaign.take_lock(lab, "b")
+    campaign.take_lock(lab, "a", ["nucleo_g474re"])
+    with pytest.raises(campaign.CampaignError, match="runs on nucleo_g474re"):
+        campaign.take_lock(lab, "b", ["nrf54l15dk/nrf54l15/cpuapp", "nucleo_g474re"])
+    assert campaign.lock_holder(lab, "nrf54l15dk/nrf54l15/cpuapp") is None     # all or none
+    campaign.take_lock(lab, "c", ["nrf54l15dk/nrf54l15/cpuapp"])               # another board: at the same time
+    assert set(campaign.lock_holders(lab).values()) == {"a", "c"}
     campaign.drop_lock(lab, "a")
-    campaign.take_lock(lab, "b")
-    assert campaign.lock_holder(lab) == "b"
+    campaign.take_lock(lab, "b", ["nucleo_g474re"])
+    assert campaign.lock_holder(lab, "nucleo_g474re") == "b"
     campaign.drop_lock(lab, "b")
+    campaign.drop_lock(lab, "c")
     assert campaign.lock_holder(lab) is None
 
 

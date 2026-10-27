@@ -65,11 +65,11 @@ def page(root):
     out.append("<div class='toc'><table><tr><th>Instance</th><th>Hypotheses</th><th>Notes</th></tr>")
     for s in studies:
         hs = " ".join(f"<span class='{cls(h['verdict'])}'>{esc(h['id'])}</span>" for h in s["hypotheses"])
-        out.append(f"<tr><td><a href='#{anchor(s['instance'])}'>{esc(s['instance'])}</a></td><td>{hs}</td>"
+        out.append(f"<tr><td><a href='#{anchor(s['instance'])}'>{esc(layout.display(s['instance']))}</a></td><td>{hs}</td>"
                    f"<td>{len(s.get('notes', []))}</td></tr>")
     out.append("</table></div>")
     for s in studies:
-        out.append(f"<h2 id='{anchor(s['instance'])}'>{esc(s['instance'])}</h2>")
+        out.append(f"<h2 id='{anchor(s['instance'])}'>{esc(layout.display(s['instance']))}</h2>")
         out.append(f"<div class='q'>{esc(s['question'])}</div>")
         out.append(f"<div class='small'>Board {esc(s.get('board') or '-')}; design {esc(s['design']['folder'])}; "
                    f"experiments: {esc(', '.join(e['name'] for e in s['experiments']) or '-')}</div>")

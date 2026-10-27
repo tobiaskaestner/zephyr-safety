@@ -55,18 +55,22 @@ paths are relative to the root of the repo:
 Each result folder has a `manifest.json`. It names the safety repo rev,
 the experiment file, and the revs of all trees.
 
-1. Check out the safety repo at the rev in `manifest.json` (`safety.rev`).
-2. Make a lab space (once). It gives the trees root, the SDK path and
-   the hardware map of the host:
+1. Make a lab space (once). It gives the trees root, the SDK path, the
+   hardware map and the Python environment of the host:
 
    ```sh
-   scripts/benchmarks/study.py lab init <lab folder> --repo <safety repo>
+   mkdir <lab folder> && cd <lab folder>
+   git clone <safety repo> safety
+   python3 -m venv .venv && .venv/bin/pip install -r safety/scripts/benchmarks/requirements.lock
+   .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety
    ```
 
-3. In the lab folder, create the pinned trees (once):
+2. Check out the safety repo of the lab space at the rev in
+   `manifest.json` (`safety.rev`).
+3. In the lab folder, create the pinned trees that the run used (once):
 
    ```sh
-   scripts/benchmarks/study.py trees setup
+   safety/scripts/benchmarks/study.py trees setup <tree>
    ```
 
 4. Run the experiment again:

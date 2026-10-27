@@ -204,7 +204,7 @@ class Tree:
                     self.load_run(f, r["id"], r.get("digest"))
                 except (NoValue, RuntimeError, FileNotFoundError, KeyError, ValueError) as e:
                     if r["role"] != "excluded":
-                        raise BuildError(f"{self.ipath[f] or '(top)'}: {r['id']}: {e}") from e
+                        raise BuildError(f"{layout.ipath_display(self.ipath[f])}: {r['id']}: {e}") from e
                     self.log(f"  note: excluded run {r['id']} does not parse: {e}")
             self.run_acceptance(f)
         self.check_references()
@@ -218,9 +218,9 @@ class Tree:
             for ref in self.data[f].get("references", []):
                 owner = self.runs.get(ref["id"])
                 if owner is None:
-                    raise BuildError(f"{self.ipath[f]}: reference {ref['id']} is in no run list")
+                    raise BuildError(f"{layout.ipath_display(self.ipath[f])}: reference {ref['id']} is in no run list")
                 if owner[1].get("digest") != ref.get("digest"):
-                    raise BuildError(f"{self.ipath[f]}: reference {ref['id']} has digest {ref.get('digest')}, "
+                    raise BuildError(f"{layout.ipath_display(self.ipath[f])}: reference {ref['id']} has digest {ref.get('digest')}, "
                                      f"its owner has {owner[1].get('digest')}")
 
     def run_acceptance(self, folder):
@@ -477,11 +477,11 @@ class Source:
             imp = next((i for i in study.imports if i["experiment"] == exp), None)
             if imp is None or imp.get("mode") == "rerun":
                 # a re-run study reads its own runs only, never those of the owner
-                raise NoValue(f"no evidence run of {exp} in {t.ipath[self.folder] or '(top)'}")
+                raise NoValue(f"no evidence run of {exp} in {layout.ipath_display(t.ipath[self.folder])}")
             folder = t.find_instance(imp["study"], t.board(self.folder))
             runs = t.own_runs(folder, exp)
             if not runs:
-                raise NoValue(f"no evidence run of {exp} in {t.ipath[folder]}")
+                raise NoValue(f"no evidence run of {exp} in {layout.ipath_display(t.ipath[folder])}")
         return [o for r in runs for o in t.obs[(folder, r["id"])]]
 
     def run_obs(self, ref):
@@ -492,7 +492,7 @@ class Source:
         folder = t.find_instance(study_path, t.board(self.folder))
         entry = next((r for r in t.data[folder].get("runs", []) if r["id"] == run_id), None)
         if entry is None:
-            raise NoValue(f"{t.ipath[folder]} has no run {run_id}")
+            raise NoValue(f"{layout.ipath_display(t.ipath[folder])} has no run {run_id}")
         if entry["role"] == "excluded" or t.failed_acceptance(folder, run_id):
             raise NoValue(f"reference run {run_id} is excluded or failed its acceptance checks")
         return t.load_run(folder, run_id, entry.get("digest"))

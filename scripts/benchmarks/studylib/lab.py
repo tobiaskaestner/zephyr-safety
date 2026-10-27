@@ -24,11 +24,20 @@ lab folder:
     root = results
     [hardware]
     map = hw-map.yml                the hardware map of the host (twister format)
+    [python]
+    venv = .venv                    the virtual environment that study.py runs in
+
+The setup order: make the lab folder, clone the safety repo into it, make
+a virtual environment with scripts/benchmarks/requirements.txt of that
+repo, then run "study.py lab init --repo <clone>" with the Python of that
+environment, in the lab folder. lab init records the environment; every
+study.py of the lab space then runs with its Python (see study.py).
 """
 
 import configparser
 import os
 import secrets
+import sys
 from pathlib import Path
 
 CONFIG = Path(".lab") / "config"
@@ -86,6 +95,18 @@ class Lab:
         return self._path("results", "root", "results")
 
     @property
+    def venv(self):
+        return self._path("python", "venv")
+
+    @property
+    def python(self):
+        """The Python of the lab space (of its venv), or None."""
+        v = self.venv
+        if v is None:
+            return None
+        return v / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
+
+    @property
     def hw_map(self):
         return self._path("hardware", "map", "hw-map.yml")
 
@@ -98,8 +119,8 @@ class Lab:
         return self.folder / ".lab" / "campaigns"
 
     @property
-    def lock(self):
-        return self.folder / ".lab" / "campaign.lock"
+    def locks(self):
+        return self.folder / ".lab" / "locks"
 
     def describe(self):
         return {"id": self.id, "name": self.name, "folder": str(self.folder)}
@@ -138,8 +159,57 @@ def require(start=None):
     return lab
 
 
+def in_venv():
+    return sys.prefix != getattr(sys, "base_prefix", sys.prefix)
+
+
+def requirements(repo):
+    """[(name, specifier text)] of scripts/benchmarks/requirements.txt of a repo (no comments)."""
+    import re
+    f = Path(repo) / "scripts" / "benchmarks" / "requirements.txt"
+    out = []
+    for ln in f.read_text().splitlines() if f.is_file() else []:
+        ln = ln.split("#", 1)[0].strip()
+        m = re.match(r"^([A-Za-z0-9_.-]+)\s*(.*)$", ln)
+        if m:
+            out.append((m.group(1), m.group(2).strip()))
+    return out
+
+
+def packages(repo):
+    """{name: installed version or None} of the requirements of the repo, in this Python."""
+    from importlib import metadata
+    out = {}
+    for name, _ in requirements(repo):
+        try:
+            out[name] = metadata.version(name)
+        except metadata.PackageNotFoundError:
+            out[name] = None
+    return out
+
+
+def package_problems(repo):
+    """The requirements of the repo that this Python does not meet, as text."""
+    have = packages(repo)
+    out = []
+    try:
+        from packaging.specifiers import SpecifierSet
+    except ImportError:
+        SpecifierSet = None
+    for name, spec in requirements(repo):
+        v = have.get(name)
+        if v is None:
+            out.append(f"{name}: not installed (requirements: {name}{spec})")
+        elif spec and SpecifierSet is not None and v not in SpecifierSet(spec):
+            out.append(f"{name}: {v} does not meet {spec}")
+    return out
+
+
 def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, results=None, hw_map=None):
-    """Make the lab space folder (with .lab/config, results/ and trees/); return the Lab."""
+    """Make the lab space folder (with .lab/config, results/ and trees/); return the Lab.
+
+    The Python that runs lab init is the Python of the lab space: its venv goes into [python].
+    """
     folder = Path(folder).resolve()
     if (folder / CONFIG).exists():
         raise LabError(f"{folder} is a lab space already ({folder / CONFIG})")
@@ -162,6 +232,8 @@ def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, 
         cfg["toolchain"] = {"zephyr_sdk": str(sdk)}
     cfg["results"] = {"root": rel(results) if results else "results"}
     cfg["hardware"] = {"map": rel(hw_map) if hw_map else "hw-map.yml"}
+    if in_venv():
+        cfg["python"] = {"venv": rel(sys.prefix)}
     (folder / ".lab").mkdir(parents=True)
     with open(folder / CONFIG, "w") as f:
         f.write("# The lab space (scripts/benchmarks/studylib/lab.py). Made by study.py lab init.\n")

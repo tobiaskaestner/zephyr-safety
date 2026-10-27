@@ -1,8 +1,13 @@
-# Python packages for the benchmark scripts (host side).
+# Python packages for the benchmark scripts (host side): the ranges that
+# the scripts need. A lab space installs the exact versions of
+# requirements.lock (pip install -r requirements.lock); each run and each
+# campaign record names the versions that it ran with.
 pyserial>=3.5
 PyYAML>=6.0
 matplotlib>=3.8
 jsonschema>=4.18          # referencing (the schemas refer to each other)
+packaging>=23             # the version check of lab init and lab status
+west>=1.4                 # the pinned trees are west workspaces; west build
 # Notebooks and data.py (not needed for run.py and study.py):
 # pandas>=2.0
 # plotly>=5.0

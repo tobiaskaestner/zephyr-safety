@@ -25,6 +25,19 @@ def study_folder(path):
     return Path(*(STUDY_PREFIX + n for n in path.split("/") if n)) if path else Path()
 
 
+def display(instance):
+    """The name of an instance in all output: its folder below the results folder, e.g.
+    "kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry" for the instance
+    "kernel-latency/default-latencies@nucleo_g474re/irq-entry" (the "instance" of study.json)."""
+    top, _, path = instance.partition("/")
+    return f"{top}/{study_folder(path)}" if path else top
+
+
+def ipath_display(path):
+    """The folder of an instance path (without the top), relative to the top instance."""
+    return str(study_folder(path)) if path else "(top)"
+
+
 def run_folder(run_id):
     """Folder of a run id, relative to the folder of its instance."""
     exp, utc = run_id.split("/")

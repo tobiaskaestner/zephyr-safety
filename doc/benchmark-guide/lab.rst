@@ -17,9 +17,13 @@ Typical session
 
 .. code-block:: console
 
-   # on the lab host: make the lab space and the trees (once)
-   <repo>/scripts/benchmarks/study.py lab init ~/lab --repo <repo> --sdk ~/zephyr-sdk-1.0.1
-   cd ~/lab
+   # on the lab host: make the lab space (once)
+   mkdir ~/lab && cd ~/lab
+   git clone <safety repository> safety
+   python3 -m venv .venv
+   .venv/bin/pip install -r safety/scripts/benchmarks/requirements.lock
+   .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety --sdk ~/zephyr-sdk-1.0.1
+   # from now on, any study.py in the lab folder runs the study.py of safety/ with .venv
    study.py trees setup ws-safety ws-up
    study.py lab status
    # run all experiments of a study
@@ -92,10 +96,16 @@ folder. ``~`` is the home folder. Example:
    * - ``[hardware] map``
      - The hardware map of the host (default ``hw-map.yml``, see
        :ref:`benchguide-hw-map`).
+   * - ``[python] venv``
+     - The virtual environment of the lab space (``lab init`` records the
+       one it runs in). Every ``study.py`` in the lab space runs the
+       ``study.py`` of the design repository with the Python of this
+       environment, so the packages are always those of the lab space.
 
 The folder ``.lab/`` also holds the build cache (``build-cache/``), the
-campaign records (``campaigns/``), the campaign lock (``campaign.lock``)
-and the builds of the wire check (``hwcheck/<board>/``).
+campaign records (``campaigns/``), the locks (``locks/``: one for each
+board and one for the results build) and the wire checks
+(``hwcheck/<board>.json`` and ``hwcheck/<board>/``).
 
 The tools use the lab space as follows:
 
@@ -116,12 +126,23 @@ The tools use the lab space as follows:
 
 .. code-block:: console
 
-   study.py lab init FOLDER --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
-                            [--sdk DIR] [--results DIR] [--hw-map FILE]
+   study.py lab init [FOLDER] --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
+                              [--sdk DIR] [--results DIR] [--hw-map FILE]
+
+The setup order of a lab space is: make the lab folder, clone the safety
+repository into it, make a virtual environment with
+``scripts/benchmarks/requirements.lock`` of that clone (the exact versions;
+``requirements.txt`` has the ranges), and run ``lab init`` with the Python
+of that environment, in the lab folder. ``FOLDER`` is the current folder
+by default.
 
 ``lab init`` makes ``FOLDER/.lab/config``, the results folder and the
 trees root. ``REPO`` must have ``scripts/benchmarks/study.py``. If
-``FOLDER`` is a lab space already, the command stops. A path in
+``FOLDER`` is a lab space already, the command stops. The virtual
+environment of the Python that runs ``lab init`` goes into ``[python]
+venv``. ``lab init`` warns if it runs without a virtual environment, or if
+a package of ``requirements.txt`` is missing or does not have a version
+in its range (``lab status`` gives the same warnings). A path in
 ``FOLDER`` goes into the file as a relative path. The command prints the
 next step, ``study.py trees setup <tree>``. If the hardware map
 does not exist, it tells you to make it with twister. If the results
@@ -294,8 +315,17 @@ the build cache, so that the run builds nothing. The output goes to
 ``check`` (the pre-flight check)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-``check`` prints the plan and then the pre-flight check. Each item is
-``ok``, ``warn`` or ``fail``:
+``check`` prints the plan and then the pre-flight check. The plan has one
+line for each experiment: its state, its study and board, and its
+instance folder, with ``exists`` or ``will be made``, for example::
+
+     planned  irq-smoke (default-latencies/irq-entry, nucleo_g474re) -> kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry (exists)
+
+A new instance gets the board one level below the top study, or at the
+level of a sub-study with ``instances: per-board`` (and the sub-studies
+below it inherit the board).
+
+Each item of the pre-flight check is ``ok``, ``warn`` or ``fail``:
 
 - Design repository: clean (``fail`` if it has changes).
 - Lint: the problems of each experiment of the plan and of its study.
@@ -387,12 +417,23 @@ the commit of the campaign. To get it, check out the ref
 Lock and ref
 ~~~~~~~~~~~~
 
-The lock is an ``flock`` on ``.lab/campaign.lock``. It lets one campaign
-run in a lab space. The kernel releases it when the process ends, so a
-crash or a kill leaves no stale lock. The file has the campaign id, the
-process id and the host of the holder, for information. A campaign of
-this lab space counts as running (for provisional verdicts) only while
-it holds the lock.
+A campaign holds one lock for each board of its plan: an ``flock`` on
+``.lab/locks/board-<board>.lock``. Two campaigns on different boards run
+at the same time; a second campaign on a board that a campaign uses
+stops at once and names the holder. A campaign takes all its locks or
+none. The kernel releases a lock when the process ends, so a crash or a
+kill leaves no stale lock. The file has the campaign id, the process id,
+the host and the board of the holder, for information. A campaign of this
+lab space counts as running (for provisional verdicts) only while it
+holds its locks.
+
+The results build has a lab-wide lock, ``.lab/locks/results.lock``:
+``analysis build`` and ``analysis html`` wait for it, so the background
+builds of two campaigns (and a build by hand) run one after the other.
+
+The campaign record names the Python and the versions of the packages of
+``requirements.txt`` (``python``); the manifest of each run has them too
+(``tools.python_packages``).
 
 The ref ``refs/latbench/campaign/<id>`` keeps the commit of the campaign
 in the design repository, also after a rebase of the branch. It is a

@@ -155,3 +155,23 @@ def test_owner_of_a_results_root_outside_the_lab(tmp_path, monkeypatch):
     assert labmod.find(deep) is None and labmod.owner(deep).folder == lab.folder
     assert labmod.owner(tmp_path / "lab" / "trees").folder == lab.folder
     assert labmod.owner(tmp_path) is None
+
+
+def test_lab_init_records_the_venv_and_checks_the_packages(tmp_path, monkeypatch):
+    import sys as _sys
+    from studylib import lab as labmod
+    repo = tmp_path / "lab" / "safety"
+    (repo / "scripts" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "benchmarks" / "requirements.txt").write_text(
+        "PyYAML>=6.0   # yaml\nno-such-package-x>=1\npackaging>=999\n")
+    venv = tmp_path / "lab" / ".venv"
+    venv.mkdir()
+    monkeypatch.setattr(_sys, "prefix", str(venv))
+    monkeypatch.setattr(_sys, "base_prefix", "/usr")
+    lab = labmod.init(tmp_path / "lab", repo)
+    assert lab.cfg.get("python", "venv") == ".venv" and lab.python == venv / "bin" / "python"
+    problems = labmod.package_problems(repo)
+    assert any(p.startswith("no-such-package-x: not installed") for p in problems)
+    assert any(p.startswith("packaging: ") and "does not meet >=999" in p for p in problems)
+    assert not any(p.startswith("PyYAML") for p in problems)

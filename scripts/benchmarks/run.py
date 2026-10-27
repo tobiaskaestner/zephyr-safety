@@ -877,6 +877,7 @@ def main():
             **{cmd[0]: tool_version([cmd[0], "--version"]) for cmd in board_cfg["flash"]},
             "python": sys.version.split()[0],
             "pyserial": serial.__version__,
+            "python_packages": labmod.packages(repo_root),
         },
         "board": board,
         "board_cfg": board_cfg,
