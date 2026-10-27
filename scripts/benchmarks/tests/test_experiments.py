@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""The design of the repo has no lint errors (study.py lint), plus checks of single experiments.
+"""The design of the repo has no lint errors (study.py design lint), plus checks of single experiments.
 
 Kconfig only warns about a value that it cannot apply, and run.py finds it
 only after the build. The lint (studylib/lint.py) finds such errors in the

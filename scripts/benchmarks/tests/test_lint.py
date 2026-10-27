@@ -78,24 +78,37 @@ def test_only_filters_by_folder(tmp_path):
 
 
 def test_scaffold_study_and_experiment_pass_the_lint(tmp_path):
+    import pytest
     from studylib import scaffold
     from studylib.design import Design
     make_design(tmp_path)
     root = tmp_path / "design"
     top_before = (root / "study.yaml").read_text()
-    scaffold.scaffold(root / "st-new", "irq_latency", experiment="new-first")
-    scaffold.scaffold(root / "st-new" / "ex-new-second", "wake_latency")
+    scaffold.scaffold_study(root / "st-new")
     d = Design(root)
-    assert "new" in d.studies and d.study("new").experiments == ["new-first", "new-second"]
+    assert "new" in d.studies and d.study("new").experiments == []
+    assert d.study("new").hypotheses[0]["checks"] == []
+    assert "the study has no experiments, imports or sub-studies" in texts(root, lint.WARNING)
+    scaffold.scaffold_experiment(root / "st-new" / "ex-new-first", "irq_latency")
+    scaffold.scaffold_experiment(root / "st-new" / "ex-new-second", "wake_latency")
+    d = Design(root)
+    assert d.study("new").experiments == ["new-first", "new-second"]
     assert d.experiment("new-first").data["app"] == "irq_latency"
+    md = (root / "st-new" / "study.md").read_text()
+    assert "- `new-first`: TODO" in md and "- `new-second`: TODO" in md
+    assert "TODO: the experiments, one line each" not in md
+    assert md.index("new-second") < md.index("## References")
     assert (root / "study.yaml").read_text().startswith(top_before.rstrip("\n"))
     assert texts(root, lint.ERROR) == []
-    assert any("TODO texts of a template" in w for w in texts(root, lint.WARNING))
-    import pytest
+    warn = texts(root, lint.WARNING)
+    assert any("TODO texts of a template" in w for w in warn)
+    assert "the study has no experiments, imports or sub-studies" not in warn
     with pytest.raises(scaffold.ScaffoldError):
-        scaffold.scaffold(root / "st-sub" / "ex-new-first", "irq_latency")    # names are unique
+        scaffold.scaffold_experiment(root / "st-sub" / "ex-new-first", "irq_latency")    # names are unique
     with pytest.raises(scaffold.ScaffoldError):
-        scaffold.scaffold(root / "new-thing", "irq_latency")
+        scaffold.scaffold_study(root / "new-thing")
+    with pytest.raises(scaffold.ScaffoldError):
+        scaffold.scaffold_experiment(root / "st-new" / "st-wrong", "irq_latency")
 
 
 def test_grouping_rules_of_central_results(tmp_path):

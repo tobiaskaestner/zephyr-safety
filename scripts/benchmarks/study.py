@@ -5,13 +5,12 @@
 """Study designs, lab spaces, campaigns and the aggregates of a results tree.
 
 Design (validation/empirical/latencies):
-    study.py lint [FOLDER] [--warn-as-error]
+    study.py design lint [FOLDER] [--warn-as-error]
                                           the problems of the design files; exit 1
                                           on an error (or a warning with the flag)
-    study.py scaffold PARENT/st-NAME --app APP [--experiment EXP] [--board B]
-                                          a new study with a first experiment
-                                          (default EXP: NAME-smoke)
-    study.py scaffold STUDY/ex-NAME --app APP [--board B]
+    study.py design scaffold study PARENT/st-NAME
+                                          a new study (no experiments yet)
+    study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
                                           a new experiment of a study
 
 Lab space (a folder with .lab/config, see studylib/lab.py):
@@ -62,17 +61,19 @@ Instances (the run lists in a results tree):
                                           add the runs of another results tree that
                                           is not a lab space (a copy of it) that
                                           ROOT does not have, with their roles
+    study.py instance seal RUN ...        write the seal <UTC>.sha256 of old runs
+    study.py instance verify RUN ...      check runs against their seals
 
-Results tree (ROOT is any folder of a results tree):
-    study.py seal RUN ...                 write the seal <UTC>.sha256 of old runs
-    study.py verify RUN ...               check runs against their seals
-    study.py build ROOT                   write run.json, the app data,
+Analysis (ROOT is any folder of a results tree):
+    study.py analysis build ROOT          write run.json, the app data,
                                           experiment.json and study.json
-    study.py check ROOT                   check all seals, build again and compare
-    study.py show ROOT [--brief]          the verdicts and central results
-    study.py show ROOT --explain [ID ...] how each central result is made: its
+    study.py analysis check ROOT          check all seals, build again and compare
+    study.py analysis show ROOT [--brief] the verdicts and central results
+    study.py analysis show ROOT --explain [ID ...]
+                                          how each central result is made: its
                                           definition, the rows and the sentences
-    study.py html ROOT [--out FILE]       one HTML page with all study.json files
+    study.py analysis html ROOT [--out FILE]
+                                          one HTML page with all study.json files
                                           (default ROOT/index.html)
 
 In a lab space, the tools of the design repo of the lab space run: another
@@ -123,11 +124,14 @@ def cmd_lint(args):
 
 
 def cmd_scaffold(args):
-    folder = scaffold.scaffold(args.path, args.app, args.experiment, args.board)
+    if args.kind == "study":
+        folder = scaffold.scaffold_study(args.path)
+    else:
+        folder = scaffold.scaffold_experiment(args.path, args.app, args.board)
     for f in sorted(folder.rglob("*")):
         if f.is_file():
             print(f"new {f}")
-    print("replace the TODO texts; 'study.py lint' lists them")
+    print("replace the TODO texts; 'study.py design lint' lists them")
 
 
 # ------------------------------------------------------------ lab
@@ -199,7 +203,7 @@ def cmd_lab_import(args):
     lab = labmod.require()
     added, skipped, refused, warnings = exchange.import_(lab, args.file, dry=args.dry_run)
     if added and not args.dry_run:
-        print(f"next: study.py build {lab.results / Design().top.name}")
+        print(f"next: study.py analysis build {lab.results / Design().top.name}")
     return 1 if refused else 0
 
 
@@ -315,7 +319,7 @@ def cmd_instance_merge(args):
     print(f"{len(added)} runs added")
 
 
-# ------------------------------------------------------------ results tree
+# ------------------------------------------------------------ seals and analysis
 def cmd_seal(args):
     for r in args.runs:
         print(seal.write(r), r)
@@ -436,14 +440,19 @@ def parser():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
 
-    s = sub.add_parser("lint", help="the problems of the design files")
+    des = sub.add_parser("design", help="the study design files").add_subparsers(dest="design_cmd", required=True)
+    s = des.add_parser("lint", help="the problems of the design files")
     s.add_argument("folder", nargs="?", help="only the files below this folder")
     s.add_argument("--warn-as-error", action="store_true")
     s.set_defaults(func=cmd_lint)
-    s = sub.add_parser("scaffold", help="the files of a new study (st-NAME) or experiment (ex-NAME)")
-    s.add_argument("path", help="PARENT_STUDY/st-NAME or STUDY/ex-NAME")
+    scf = des.add_parser("scaffold", help="the files of a new study or experiment").add_subparsers(
+        dest="kind", required=True)
+    s = scf.add_parser("study", help="a new study PARENT/st-NAME (no experiments yet)")
+    s.add_argument("path", help="PARENT_STUDY/st-NAME")
+    s.set_defaults(func=cmd_scaffold)
+    s = scf.add_parser("experiment", help="a new experiment STUDY/ex-NAME")
+    s.add_argument("path", help="STUDY/ex-NAME")
     s.add_argument("--app", required=True, help="the benchmark app (a folder of tests/benchmarks)")
-    s.add_argument("--experiment", help="the name of the first experiment of a new study (default NAME-smoke)")
     s.add_argument("--board", help="the board of the experiment (default: the default board of boards.yaml)")
     s.set_defaults(func=cmd_scaffold)
 
@@ -543,25 +552,28 @@ def parser():
     s.add_argument("--origin", help="the place of the original tree, for copied_from (HOST:PATH)")
     s.set_defaults(func=cmd_instance_merge)
 
-    s = sub.add_parser("seal")
+    s = inst.add_parser("seal", help="write the seal of old runs")
     s.add_argument("runs", nargs="+")
     s.set_defaults(func=cmd_seal)
-    s = sub.add_parser("verify")
+    s = inst.add_parser("verify", help="check runs against their seals")
     s.add_argument("runs", nargs="+")
     s.set_defaults(func=cmd_verify)
-    s = sub.add_parser("build")
+
+    ana = sub.add_parser("analysis", help="the aggregates of a results tree").add_subparsers(
+        dest="analysis_cmd", required=True)
+    s = ana.add_parser("build", help="write run.json, the app data, experiment.json and study.json")
     s.add_argument("root")
     s.set_defaults(func=cmd_build)
-    s = sub.add_parser("check")
+    s = ana.add_parser("check", help="check all seals, build again and compare")
     s.add_argument("root")
     s.set_defaults(func=cmd_check)
-    s = sub.add_parser("show")
+    s = ana.add_parser("show", help="the verdicts and central results")
     s.add_argument("root")
     s.add_argument("--brief", action="store_true")
     s.add_argument("--explain", nargs="*", metavar="ID",
                    help="for each central result (or these ids): its definition, the rows and the sentences")
     s.set_defaults(func=cmd_show)
-    s = sub.add_parser("html")
+    s = ana.add_parser("html", help="one HTML page with all study.json files")
     s.add_argument("root")
     s.add_argument("--out")
     s.set_defaults(func=cmd_html)

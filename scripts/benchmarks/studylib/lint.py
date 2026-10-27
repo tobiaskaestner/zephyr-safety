@@ -8,7 +8,7 @@ prefix, a point without a value on an axis, a check form that the tools
 do not know, a reference to an experiment that the study cannot read, a
 select of a point that the experiment does not have). A warning is a rule
 of good practice (study.md, each axis named in experiment.md, 1-4
-hypotheses per study). study.py lint fails on an error; run.py and the
+hypotheses per study). study.py design lint fails on an error; run.py and the
 campaign only warn, unless --warn-as-error.
 """
 
@@ -52,7 +52,7 @@ def is_y(kconfig, sym):
 
 
 def lint_todo(root, out):
-    """A TODO text that a template left (study.py scaffold)."""
+    """A TODO text that a template left (study.py design scaffold)."""
     for f in sorted([*Path(root).rglob("*.yaml"), *Path(root).rglob("*.md")]):
         n = sum("TODO" in ln for ln in f.read_text().splitlines())
         if n:
@@ -184,6 +184,8 @@ def lint_study(d, path, st, points, out):
     f = st.folder / "hypotheses.yaml"
     if not (st.folder / "study.md").is_file():
         out.append(Problem(WARNING, st.folder / "study.md", "a study has a description study.md"))
+    if not st.experiments and not st.imports and not st.substudies:
+        out.append(Problem(WARNING, st.folder / "study.yaml", "the study has no experiments, imports or sub-studies"))
     if len(st.hypotheses) > MAX_HYPOTHESES:
         out.append(Problem(WARNING, f, f"{len(st.hypotheses)} hypotheses; a study aims for 1-{MAX_HYPOTHESES}"))
     readable = st.readable()

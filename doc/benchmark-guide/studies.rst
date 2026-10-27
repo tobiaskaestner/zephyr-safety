@@ -87,12 +87,12 @@ reads a built instance with ``scripts/benchmarks/data.py``.
 
 .. _benchguide-lint:
 
-Design lint (``study.py lint``)
--------------------------------
+Design lint (``study.py design lint``)
+--------------------------------------
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py lint [FOLDER] [--warn-as-error]
+   scripts/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
 
 The lint reads the design files below ``validation/empirical/latencies/``.
 It needs no build and no board. It prints one line for each problem,
@@ -101,7 +101,7 @@ warnings. With ``FOLDER``, it prints only the problems of the files below
 that folder.
 
 An error makes the design unusable, or it makes a check wrong. A warning
-is a rule of good practice. ``study.py lint`` exits with 1 if it finds an
+is a rule of good practice. ``study.py design lint`` exits with 1 if it finds an
 error. With ``--warn-as-error``, a warning also gives exit code 1.
 
 Errors:
@@ -139,8 +139,9 @@ Errors:
 Warnings:
 
 - A ``TODO`` text in a ``.yaml`` or ``.md`` file (a template of
-  ``study.py scaffold``).
+  ``study.py design scaffold``).
 - A study without ``study.md``.
+- A study without experiments, imports and sub-studies.
 - An axis that ``experiment.md`` does not name.
 - More than 4 hypotheses in a study.
 
@@ -153,31 +154,31 @@ repository has a lint error.
 
 .. _benchguide-scaffold:
 
-New study or experiment (``study.py scaffold``)
------------------------------------------------
+New study or experiment (``study.py design scaffold``)
+------------------------------------------------------
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py scaffold PARENT/st-NAME --app APP [--experiment EXP] [--board B]
-   scripts/benchmarks/study.py scaffold STUDY/ex-NAME --app APP [--board B]
+   scripts/benchmarks/study.py design scaffold study PARENT/st-NAME
+   scripts/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
 
-The first form makes a new sub-study ``st-NAME/`` of the study
+``scaffold study`` makes a new sub-study ``st-NAME/`` of the study
 ``PARENT``, with these files:
 
-- ``study.yaml``: the name, a ``question``, the first experiment in
-  ``experiments`` and an empty ``central_results``.
+- ``study.yaml``: the name, a ``question``, no ``experiments`` and an
+  empty ``central_results``.
 - ``study.md``: the sections Background, Experiments and References.
-- ``hypotheses.yaml``: one template hypothesis ``H1`` with one check
-  ``a``, with today as ``written``.
-- ``ex-EXP/experiment.yaml`` and ``ex-EXP/experiment.md``. The default of
-  ``EXP`` is ``NAME-smoke``.
+- ``hypotheses.yaml``: one template hypothesis ``H1`` without checks.
 
 The command also adds ``use: NAME`` to ``substudies`` of the parent
-``study.yaml``.
+``study.yaml``. The new study has no experiment and its hypothesis has no
+check: write each check when the experiment that it reads exists. A
+template check would give a verdict from a limit that nobody wrote.
 
-The second form makes only the experiment ``ex-NAME/`` and adds it to
-``experiments`` of ``STUDY/study.yaml``. The edit of ``study.yaml`` is a
-text edit, so the comments of the file stay.
+``scaffold experiment`` makes the experiment ``ex-NAME/`` and adds it to
+``experiments`` of ``STUDY/study.yaml``, and a line for it to the section
+Experiments of ``STUDY/study.md``. The edits are text edits, so the
+comments of the files stay.
 
 The template ``experiment.yaml`` has the app, the board (only with
 ``--board``), the first tree of ``validation/trees.yaml``, one axis
@@ -189,7 +190,7 @@ for ``thread_latency``. A name has only lower case letters, digits and
 
 The templates pass the lint without errors. Each ``TODO`` text gives a
 lint warning until you replace it. The command prints the new files and
-the line ``replace the TODO texts; 'study.py lint' lists them``.
+the line ``replace the TODO texts; 'study.py design lint' lists them``.
 
 Results tree
 ------------
@@ -245,19 +246,19 @@ lab space, a campaign makes the instances and adds each run (see
    # an old run from another place: copy it in (the original stays)
    scripts/benchmarks/study.py instance add <instance folder> <old run folder> --copy
    # the aggregates, and a check that they come again from the same inputs
-   scripts/benchmarks/study.py build <results>/kernel-latency
-   scripts/benchmarks/study.py check <results>/kernel-latency
-   scripts/benchmarks/study.py show <results>/kernel-latency --brief
-   scripts/benchmarks/study.py html <results>/kernel-latency   # one HTML page: index.html
+   scripts/benchmarks/study.py analysis build <results>/kernel-latency
+   scripts/benchmarks/study.py analysis check <results>/kernel-latency
+   scripts/benchmarks/study.py analysis show <results>/kernel-latency --brief
+   scripts/benchmarks/study.py analysis html <results>/kernel-latency   # one HTML page: index.html
    # how each central result is made: definition, rows, sentences
-   scripts/benchmarks/study.py show <results>/kernel-latency --explain [ID ...]
+   scripts/benchmarks/study.py analysis show <results>/kernel-latency --explain [ID ...]
    # a manual verdict (a person, or a proposal that says so in --by)
    scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
        --verdict wrong --by "<name>" --text "<why>"
 
 Other commands: ``instance add --role excluded --reason <text>``,
 ``instance reference`` (a run of another instance that a check reads),
-``seal``, ``verify``, and ``instance merge OTHER ROOT``: it adds the runs
+``instance seal``, ``instance verify``, and ``instance merge OTHER ROOT``: it adds the runs
 of another results tree that ROOT does not have, with their roles, after
 it checks their seals and digests. Use ``instance merge`` for a results
 tree that is not in a lab space. Between two lab spaces, use ``study.py
@@ -265,9 +266,9 @@ lab export`` and ``study.py lab import`` (see :doc:`lab`). If OTHER is a
 local copy, ``--origin HOST:PATH`` records the original tree in
 ``copied_from``.
 
-``build`` writes only derived files; it does not change a raw run or
+``analysis build`` writes only derived files; it does not change a raw run or
 ``instance.json``. The same inputs and the same revision of the tools
-give the same bytes: ``check`` builds again and compares. Each aggregate
+give the same bytes: ``analysis check`` builds again and compares. Each aggregate
 records the safety revision of the tools (``made_by``); ``dirty: true``
 means that the tools had changes that were not committed.
 
@@ -407,7 +408,7 @@ names with a value each. Then the build fills the statement once for
 each row. Each filled statement is one sentence. Before it fills the
 statement, the build joins its lines into one line.
 
-``study.py show ROOT --explain [ID ...]`` prints, for each central result
+``study.py analysis show ROOT --explain [ID ...]`` prints, for each central result
 (or for the given IDs) of each instance below ``ROOT``: the definition,
 each row, and the sentence of each row.
 
@@ -679,5 +680,5 @@ This includes an experiment that the study imports with ``mode: reuse``.
 A campaign counts while its record has the status ``running``. A campaign
 of this lab space on this host whose process stopped does not count. An
 imported campaign record of another lab space counts while it has the
-status ``running``. ``study.py show``, ``study.py html`` and
+status ``running``. ``study.py analysis show``, ``study.py analysis html`` and
 ``scripts/benchmarks/data.py`` mark the provisional verdicts.

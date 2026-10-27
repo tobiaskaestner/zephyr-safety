@@ -9,8 +9,9 @@ Add an experiment
    ``ex-<name>/``. Copy an experiment folder of that study that is near
    to your question, and give the copy the folder name ``ex-<name>``. The
    name must be unique in all studies. Alternatively, make the files from
-   templates with ``study.py scaffold <study folder>/ex-<name> --app
-   <app>`` (see :ref:`benchguide-scaffold`). It also does the next step.
+   templates with ``study.py design scaffold experiment <study
+   folder>/ex-<name> --app <app>`` (see :ref:`benchguide-scaffold`). It
+   also does the next step.
 #. In ``experiment.yaml``, set ``name`` to the name without ``ex-``. Add
    the name to ``experiments`` in the ``study.yaml`` of the study.
 #. Write the description ``experiment.md``: the question, the method
@@ -31,7 +32,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/study.py lint validation/empirical/latencies/st-<study>
+      scripts/benchmarks/study.py design lint validation/empirical/latencies/st-<study>
 
 #. Commit the file. ``run.py`` refuses a safety repository that is not
    clean.

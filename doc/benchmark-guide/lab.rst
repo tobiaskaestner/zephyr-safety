@@ -30,8 +30,8 @@ Typical session
 
    # on the analysis host (another lab space), with lab.tar.gz and lab.tar.gz.sha256
    study.py lab import lab.tar.gz
-   study.py build results/kernel-latency
-   study.py html results/kernel-latency
+   study.py analysis build results/kernel-latency
+   study.py analysis html results/kernel-latency
 
 .. _benchguide-lab-space:
 
@@ -322,7 +322,7 @@ A ``fail`` gives exit code 1.
 #. If ``run.py`` succeeds, it adds the run to the run list of the
    instance (role ``evidence``). The experiment is ``done``.
 #. After each ``done`` experiment, a background process builds the
-   results tree (``study.py build`` and ``study.py html``).
+   results tree (``study.py analysis build`` and ``study.py analysis html``).
 
 Failure rules:
 
@@ -490,4 +490,4 @@ other lab also makes the verdicts here provisional. The default of
 
 ``--dry-run`` does only the checks. The command prints each warning, each
 refused run and the numbers. It exits with 1 if it refused a run. After
-an import, build the results tree (``study.py build``).
+an import, build the results tree (``study.py analysis build``).

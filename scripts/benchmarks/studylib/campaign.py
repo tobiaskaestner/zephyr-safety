@@ -34,6 +34,7 @@ import datetime
 import json
 import os
 import platform
+import shlex
 import shutil
 import signal
 import subprocess
@@ -376,7 +377,7 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
     if errors:
         add("fail", "lint", f"{len(errors)} errors, first: {errors[0]}")
     elif mine:
-        add("fail" if warn_as_error else "warn", "lint", f"{len(mine)} warnings (study.py lint)")
+        add("fail" if warn_as_error else "warn", "lint", f"{len(mine)} warnings (study.py design lint)")
     else:
         add("ok", "lint")
     cfg = trees.load(lab=lab)
@@ -459,7 +460,8 @@ class Post:
         with open(log, "a") as f:
             f.write(f"=== build {self.n} at {utc_now().isoformat()}\n")
             f.flush()
-            cmd = f"{sys.executable} {study_py()} build {self.root} && {sys.executable} {study_py()} html {self.root}"
+            cmd = " && ".join(shlex.join([sys.executable, str(study_py()), "analysis", step, str(self.root)])
+                              for step in ("build", "html"))
             self.proc = subprocess.Popen(["sh", "-c", cmd], stdout=f, stderr=subprocess.STDOUT,
                                          cwd=self.rec.lab.folder, preexec_fn=lambda: os.nice(10))
         self.again = False
