@@ -556,3 +556,31 @@ def test_merge_records_the_origin_of_a_copy(tmp_path):
     here = tmp_path / "here" / "top" / "st-sub@nucleo_g474re"
     assert instance.load(here)["runs"][0]["copied_from"] == \
         "lab-host:/results/top/st-sub@nucleo_g474re/ex-exp1/20260101T000000Z"
+
+
+def test_provisional_while_a_campaign_runs_and_reuse(tmp_path, monkeypatch):
+    design = make_design(tmp_path)
+    res = tmp_path / "results"
+    monkeypatch.setattr(build, "Design", lambda: design)
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}), copy=True)
+    pending = {(inst.resolve(), "exp1"): "20260101T120000Z"}
+    build.build(res / "top", log=lambda *a: None, pending=pending)
+    sj = json.loads((inst / "study.json").read_text())
+    assert sj["state"] == {"final": False, "waits": ["waits for exp1 of the campaign 20260101T120000Z"]}
+    h = sj["hypotheses"][0]
+    assert h["provisional"] and h["checks"][0]["provisional"].startswith("waits for exp1")
+    assert "provisional" not in h["checks"][1]        # a manual check reads no experiment
+    assert sj["central_results"][0]["provisional"]
+    build.build(res / "top", log=lambda *a: None, pending={})
+    sj = json.loads((inst / "study.json").read_text())
+    assert sj["state"] == {"final": True, "waits": []} and "provisional" not in sj["hypotheses"][0]
+    # a second build takes the app data of the first one (no extractor), unless the tool is dirty
+    monkeypatch.setattr(build.Tree, "find_pending", lambda self: {})
+    monkeypatch.setattr(build, "repo_rev", lambda: ("c" * 40, False))
+    build.build(res / "top", log=lambda *a: None)
+    calls = []
+    monkeypatch.setattr(build.runfiles, "app_json", lambda *a: calls.append(a) or (_ for _ in ()).throw(RuntimeError))
+    build.build(res / "top", log=lambda *a: None)
+    assert calls == []

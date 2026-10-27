@@ -12,7 +12,14 @@ For each instance (the deepest first):
 
 The build reads instance.json and the raw runs and does not change them.
 The same inputs and the same tools give the same bytes, so `check` can
-build again and compare.
+build again and compare. A build (not `check`) takes the run.json and the
+app data of a run from the files of an earlier build if they come from
+the same run digest and the same clean tool commit, so a build after a new
+run is fast.
+
+In a lab space, a check, a central result or an acceptance check that
+reads an experiment that a running campaign has still to run is
+provisional: study.json says so in the entry and in "state".
 """
 
 import json
@@ -60,7 +67,7 @@ class Writer:
 
 
 class Tree:
-    def __init__(self, root, design=None, writer=None, log=print):
+    def __init__(self, root, design=None, writer=None, log=print, pending=None):
         self.root = Path(root).resolve()
         self.design = design or Design()
         self.writer = writer or Writer()
@@ -77,11 +84,41 @@ class Tree:
         self.obs = {}         # (folder, run id) -> [Obs]
         self.acceptance = {}  # (folder, run id) -> [results]
         self.results = {}     # folder -> study.json object
+        self.pending = self.find_pending() if pending is None else pending
         for f in self.folders:
             for r in self.data[f].get("runs", []):
                 if r["id"] in self.runs:
                     raise BuildError(f"run {r['id']} is in two instances: {self.runs[r['id']][0]} and {f}")
                 self.runs[r["id"]] = (f, r)
+
+    def find_pending(self):
+        """{(instance folder, experiment): campaign id} of the running campaigns of the lab space."""
+        from . import campaign
+        from . import lab as labmod
+        lab = labmod.find(self.root)
+        if lab is None:
+            return {}
+        return {(Path(f).resolve(), e): c for (f, e), c in campaign.pending(lab).items()}
+
+    def waits_for(self, folder, experiments):
+        """The reason why a result of the instance that reads these experiments is provisional, or None."""
+        if not self.pending:
+            return None
+        study = self.study(folder)
+        out = []
+        for exp in sorted({e for e in experiments if e}):
+            places = [folder]
+            imp = next((i for i in study.imports if i["experiment"] == exp and i.get("mode") != "rerun"), None)
+            if imp is not None:
+                try:
+                    places.append(self.find_instance(imp["study"], self.board(folder)))
+                except NoValue:
+                    pass
+            for f in places:
+                c = self.pending.get((Path(f).resolve(), exp))
+                if c:
+                    out.append(f"waits for {exp} of the campaign {c}")
+        return "; ".join(dict.fromkeys(out)) or None
 
     # ------------------------------------------------------------ lookups
     def study(self, folder):
@@ -112,9 +149,11 @@ class Tree:
         efile = None
         if exp in self.design.experiments:
             efile = self.design.experiment(exp).folder / "experiment.yaml"
-        rj = runfiles.run_json(run_dir, run_id, digest, self.made_by, efile)
+        rj, aj = self.earlier_files(run_dir, digest)
+        if rj is None:
+            rj = runfiles.run_json(run_dir, run_id, digest, self.made_by, efile)
+            aj = runfiles.app_json(run_dir, rj["run"]["app"], run_id, digest, self.made_by)
         app = rj["run"]["app"]
-        aj = runfiles.app_json(run_dir, app, run_id, digest, self.made_by)
         rsha = self.writer.write(run_dir.parent / f"{run_dir.name}.run.json", rj)
         asha = self.writer.write(run_dir.parent / f"{run_dir.name}.{app}.json", aj)
         self.loaded[key] = (rj, aj, rsha, asha)
@@ -125,6 +164,21 @@ class Tree:
             obs.append(checks.Obs(run_id, p["tree"], p["point"], p["axes"], ap["reps"][0], len(ap["reps"])))
         self.obs[key] = obs
         return obs
+
+    def earlier_files(self, run_dir, digest):
+        """(run.json, app data) of an earlier build of the same run and the same clean tool commit, or (None, None)."""
+        if self.writer.dry or self.made_by.get("dirty"):
+            return None, None
+        try:
+            rj = load_json(run_dir.parent / f"{run_dir.name}.run.json")
+            aj = load_json(run_dir.parent / f"{run_dir.name}.{rj['run']['app']}.json")
+        except (OSError, ValueError, KeyError):
+            return None, None
+        for x in (rj, aj):
+            mb = x.get("made_by", {})
+            if mb.get("safety_rev") != self.made_by["safety_rev"] or mb.get("dirty") or x["run"]["digest"] != digest:
+                return None, None
+        return rj, aj
 
     def own_runs(self, folder, exp=None, roles=("evidence",)):
         out = []
@@ -240,6 +294,9 @@ class Tree:
                                      limit=safe_limit(c))
                     if m:
                         notes.append(f"{h['id']} {c['id']}: the manual verdict is not used, the check is automatic")
+                why = self.waits_for(folder, [c.get("experiment")] + reads_experiments(c))
+                if why:
+                    entry["provisional"] = why
                 out_checks.append(entry)
             hyps.append(hypothesis_entry(h, out_checks))
         self._hyps = {h["id"]: h["verdict"] for h in hyps}
@@ -257,6 +314,13 @@ class Tree:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [], "by": "auto",
                                 "not_evaluated": f"tool error: {type(e).__name__}: {e}"})
         notes.extend(dict.fromkeys(src.notes))
+        for cr, res in zip(study.central_results, results):
+            frm = cr.get("from") or {}
+            why = self.waits_for(folder, checks.as_list(frm.get("experiment")))
+            if why:
+                res["provisional"] = why
+        waits = sorted({w for h in hyps for c in h["checks"] if c.get("provisional") for w in [c["provisional"]]}
+                       | {r["provisional"] for r in results if r.get("provisional")})
 
         acceptance = [{"run": rid, "checks": res} for (f, rid), res in sorted(self.acceptance.items()) if f == folder and res]
         rebuilds = []
@@ -280,6 +344,7 @@ class Tree:
               "experiments": experiments,
               "acceptance": acceptance,
               "rebuild_checks": rebuilds,
+              "state": {"final": not waits, "waits": waits},
               "hypotheses": hyps,
               "central_results": results,
               "notes": notes,
@@ -338,6 +403,15 @@ class Tree:
         return out
 
 
+def reads_experiments(check):
+    """The other experiments that a check reads (diff_to, within)."""
+    out = []
+    for v in (check.get("expect") or {}).values():
+        if isinstance(v, dict) and v.get("experiment"):
+            out.append(v["experiment"])
+    return out
+
+
 def hypothesis_entry(h, out_checks):
     verdicts = [c["verdict"] for c in out_checks]
     if not verdicts:
@@ -355,6 +429,8 @@ def hypothesis_entry(h, out_checks):
            "verdict": verdict, "checks_confirmed": f"{verdicts.count('confirmed')} of {len(verdicts)}"}
     if open_reasons:
         out["open"] = open_reasons
+    if any(c.get("provisional") for c in out_checks):
+        out["provisional"] = True
     out["checks"] = out_checks
     return out
 
@@ -455,9 +531,9 @@ class Context:
         return None
 
 
-def build(root, dry=False, log=print):
+def build(root, dry=False, log=print, pending=None):
     writer = Writer(dry=dry)
-    t = Tree(root, writer=writer, log=log)
+    t = Tree(root, writer=writer, log=log, pending=pending)
     t.build()
     return t, writer
 

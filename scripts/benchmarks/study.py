@@ -344,8 +344,10 @@ def show(results, root, brief=False):
             bad = [c for c in a["checks"] if c["verdict"] != "confirmed"]
             if bad:
                 print(f"   acceptance {a['run']}: " + ", ".join(f"{c['id']} {c['verdict']}" for c in bad))
+        if not sj.get("state", {}).get("final", True):
+            print(f"   PROVISIONAL: {'; '.join(sj['state']['waits'])}")
         for h in hyps:
-            print(f"   {h['id']} {h['verdict']} ({h['checks_confirmed']})")
+            print(f"   {h['id']} {h['verdict']}{' (provisional)' if h.get('provisional') else ''} ({h['checks_confirmed']})")
             for c in h["checks"]:
                 if not brief or c["verdict"] in ("tool error", "not evaluated"):
                     print(f"      {c['id']} {c['verdict']}: {c.get('measured', '')[:140]}")

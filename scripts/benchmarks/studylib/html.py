@@ -73,6 +73,8 @@ def page(root):
         out.append(f"<div class='q'>{esc(s['question'])}</div>")
         out.append(f"<div class='small'>Board {esc(s.get('board') or '-')}; design {esc(s['design']['folder'])}; "
                    f"experiments: {esc(', '.join(e['name'] for e in s['experiments']) or '-')}</div>")
+        if not s.get("state", {}).get("final", True):
+            out.append(f"<div class='note'>Provisional: {esc('; '.join(s['state']['waits']))}</div>")
         for n in s.get("notes", []):
             out.append(f"<div class='note'>Note: {esc(n)}</div>")
         bad = [(a["run"], c) for a in s.get("acceptance", []) for c in a["checks"] if c["verdict"] != "confirmed"]
@@ -91,7 +93,8 @@ def page(root):
                 out.append(f"<tr><td>{esc(h['id'])}</td><td>{esc(h['statement'])}<details><summary>"
                            f"{esc(h['checks_confirmed'])} checks confirmed</summary><table><tr><th>Check</th>"
                            f"<th>Verdict</th><th>Limit</th><th>Measured</th></tr>{rows}</table></details></td>"
-                           f"<td class='{cls(h['verdict'])}'>{esc(h['verdict'])}</td></tr>")
+                           f"<td class='{cls(h['verdict'])}'>{esc(h['verdict'])}"
+                           f"{' (provisional)' if h.get('provisional') else ''}</td></tr>")
             out.append("</table>")
         crs = [c for c in s["central_results"] if c.get("texts") or c.get("not_evaluated")]
         if crs:

@@ -60,6 +60,7 @@ class Instance:
     def hypotheses(self):
         import pandas as pd
         return pd.DataFrame([{"id": h["id"], "type": h["type"], "claim": h["statement"], "verdict": h["verdict"],
+                              "provisional": bool(h.get("provisional")),
                               "checks confirmed": h["checks_confirmed"]} for h in self.study["hypotheses"]])
 
     def checks(self):
@@ -70,6 +71,7 @@ class Instance:
             for c in h["checks"]:
                 rows.append({"check": f"{h['id']} {c['id']}", "verdict": c["verdict"], "by": c.get("by"),
                              "measured": c.get("measured"), "limit": c.get("limit"),
+                             "provisional": c.get("provisional"),
                              "basis": " ".join(design.get(c["id"], {}).get("basis", "").split())})
         return pd.DataFrame(rows)
 
