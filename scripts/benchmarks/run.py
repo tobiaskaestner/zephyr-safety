@@ -79,6 +79,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402
+from studylib import lab as labmod  # noqa: E402
 from studylib import seal  # noqa: E402
 
 BENCH_DIR = trees.BENCH_DIR
@@ -511,8 +512,9 @@ def main():
                    help="build the points of a run folder (or of one <run>/<tree>/<point> folder) again"
                         " and compare them with the stored images; does not flash")
     p.add_argument("--trees-root")
-    p.add_argument("--hardware-map", default=str(hwmap.DEFAULT),
-                   help=f"hardware map of the host (default: {hwmap.DEFAULT.relative_to(trees.REPO_DIR)})")
+    p.add_argument("--hardware-map",
+                   help="hardware map of the host (default: [hardware] map of the lab space, else "
+                        f"{hwmap.DEFAULT.relative_to(trees.REPO_DIR)})")
     p.add_argument("--probe", help="probe id: select the entry of the hardware map; with --port, no map is necessary")
     p.add_argument("--port", help="serial port of the console (default: serial of the entry in the hardware map)")
     p.add_argument("--only", nargs="*", help="run only these point ids")
@@ -520,6 +522,9 @@ def main():
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
     args = p.parse_args()
+    if not args.hardware_map:
+        lab = labmod.find()
+        args.hardware_map = str(lab.hw_map if lab else hwmap.DEFAULT)
     if args.rebuild:
         if args.experiment or args.out:
             p.error("--rebuild takes no experiment and no --out")

@@ -2,27 +2,40 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Study instances and their aggregates (design: validation/empirical/latencies).
+"""Study designs, lab spaces, campaigns and the aggregates of a results tree.
 
-    study.py seal RUN ...                 write the seal <UTC>.sha256 of old runs
-    study.py verify RUN ...               check runs against their seals
-    study.py new RESULTS STUDY --board B  make the instance folders of a study
+Lab space (a folder with .lab/config, see studylib/lab.py):
+    study.py lab init FOLDER --repo REPO [--trees-source DIR] [--sdk DIR] [--name N]
+                                          make a lab space
+    study.py lab status                   the lab space, its trees and boards
+
+Pinned trees (validation/trees.yaml, paths from the lab space):
+    study.py trees setup [--clone-source] [TREE ...]
+    study.py trees check [TREE ...]
+    study.py trees show
+
+Instances (the run lists in a results tree):
+    study.py instance new RESULTS STUDY --board B
+                                          make the instance folders of a study
                                           (and of its sub-studies) for a board;
                                           STUDY "." is the top study
-    study.py add INSTANCE RUN [--role R --reason TEXT] [--copy]
+    study.py instance add INSTANCE RUN [--role R --reason TEXT] [--copy]
                                           add a run to the run list of an instance;
                                           --copy copies a run from another place
-    study.py reference INSTANCE OTHER RUN_ID --reason TEXT
+    study.py instance reference INSTANCE OTHER RUN_ID --reason TEXT
                                           add a run of another instance as a reference
-    study.py verdict INSTANCE --verdict V --by NAME [--text T]
+    study.py instance verdict INSTANCE --verdict V --by NAME [--text T]
                      (--hypothesis H --check C | --central-result ID)
                                           set a manual verdict (confirmed, wrong);
                                           a proposal says so in --by
-    study.py merge OTHER ROOT [--origin HOST:PATH]
-                                          add the runs of another results tree (for
-                                          example a copy of the tree of the lab host)
-                                          that ROOT does not have, with their roles;
-                                          --origin is the place of the original tree
+    study.py instance merge OTHER ROOT [--origin HOST:PATH]
+                                          add the runs of another results tree that
+                                          is not a lab space (a copy of it) that
+                                          ROOT does not have, with their roles
+
+Results tree (ROOT is any folder of a results tree):
+    study.py seal RUN ...                 write the seal <UTC>.sha256 of old runs
+    study.py verify RUN ...               check runs against their seals
     study.py build ROOT                   write run.json, the app data,
                                           experiment.json and study.json
     study.py check ROOT                   check all seals, build again and compare
@@ -30,22 +43,121 @@
     study.py html ROOT [--out FILE]       one HTML page with all study.json files
                                           (default ROOT/index.html)
 
-RESULTS is the results folder (it holds the top instance folder, named
-after the top study). ROOT is any folder of a results tree. A run made
-with "run.py <experiment> --out <instance folder>" is in the instance
-folder already; add it with "study.py add <instance folder> <run folder>".
+In a lab space, the tools of the design repo of the lab space run: another
+study.py starts the study.py of that repo with the same arguments.
 """
 
 import argparse
+import os
 import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import trees  # noqa: E402
 from studylib import build, html, instance, layout, seal  # noqa: E402
+from studylib import lab as labmod  # noqa: E402
 from studylib.design import Design, DesignError  # noqa: E402
 
+REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
 
+
+def reexec_in_lab_repo(argv):
+    """Run the study.py of the design repo of the lab space, if this is another one."""
+    if os.environ.get(REEXEC_ENV) or (argv[:2] == ["lab", "init"]):
+        return
+    lab = labmod.find()
+    if lab is None:
+        return
+    target = lab.repo / "scripts" / "benchmarks" / "study.py"
+    if target.resolve() == Path(__file__).resolve():
+        return
+    if not target.is_file():
+        sys.exit(f"error: the lab space {lab.folder} has the design repo {lab.repo}, which has no {target}")
+    os.environ[REEXEC_ENV] = str(Path(__file__).resolve())
+    os.execv(sys.executable, [sys.executable, str(target), *argv])
+
+
+# ------------------------------------------------------------ lab
+def cmd_lab_init(args):
+    lab = labmod.init(args.folder, args.repo, name=args.name, trees_root=args.trees_root,
+                      trees_source=args.trees_source, sdk=args.sdk, results=args.results, hw_map=args.hw_map)
+    print(f"lab space {lab.id} in {lab.folder}")
+    print(f"  design repo  {lab.repo}")
+    print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
+    print(f"  results      {lab.results}")
+    print(f"  hardware map {lab.hw_map}" + ("" if lab.hw_map.is_file() else " (missing: make it with twister)"))
+    print(f"next: cd {lab.folder} && {lab.repo}/scripts/benchmarks/study.py trees setup --clone-source")
+
+
+def cmd_lab_status(args):
+    import hwmap
+    lab = labmod.require()
+    rev, dirty = trees.repo_state(lab.repo)
+    print(f"lab space {lab.id} in {lab.folder}")
+    print(f"  design repo  {lab.repo} at {rev[:12]}{' (dirty)' if dirty else ''}")
+    cfg = trees.load(lab=lab)
+    try:
+        sdk = trees.check_toolchain(cfg)
+        print(f"  zephyr sdk   {sdk} ({cfg['toolchain']['zephyr_sdk']['version']})")
+    except trees.TreeError as e:
+        print(f"  zephyr sdk   {e}")
+    for t in cfg["trees"]:
+        try:
+            trees.check_tree(cfg, t)
+            state = "ok"
+        except trees.TreeError as e:
+            state = str(e).splitlines()[0]
+        print(f"  tree {t:20} {state}")
+    print(f"  results      {lab.results}")
+    if lab.hw_map.is_file():
+        try:
+            for e in hwmap.load(lab.hw_map):
+                print(f"  board        {' '.join(hwmap.platforms(e))}: {'connected' if e.get('connected') else 'not connected'}"
+                      f", fixtures {', '.join(hwmap.fixture_names(e)) or '-'}")
+        except hwmap.HwMapError as e:
+            print(f"  hardware map {e}")
+    else:
+        print(f"  hardware map {lab.hw_map} is missing")
+
+
+# ------------------------------------------------------------ trees
+def cmd_trees(args):
+    trees.main(args)
+
+
+# ------------------------------------------------------------ instance
+def cmd_instance_new(args):
+    d = Design()
+    path = "" if args.study in (".", "") else args.study
+    folder = instance.new(d, args.results, d.top.name, path, args.board)
+    print(folder)
+
+
+def cmd_instance_add(args):
+    d = Design()
+    rid = instance.add(d, args.instance, args.run, args.role, args.reason, args.copy)
+    print(f"added {rid} to {args.instance}")
+
+
+def cmd_instance_reference(args):
+    instance.add_reference(args.instance, args.other, args.run_id, args.reason)
+    print(f"reference {args.run_id} added to {args.instance}")
+
+
+def cmd_instance_verdict(args):
+    instance.add_verdict(args.instance, args.verdict, args.by, args.text, args.hypothesis, args.check,
+                         args.central_result)
+    print(f"verdict set in {args.instance}")
+
+
+def cmd_instance_merge(args):
+    added = instance.merge(Design(), layout.find_root(args.other), layout.find_root(args.root),
+                           origin=args.origin)
+    print(f"{len(added)} runs added")
+
+
+# ------------------------------------------------------------ results tree
 def cmd_seal(args):
     for r in args.runs:
         print(seal.write(r), r)
@@ -60,36 +172,6 @@ def cmd_verify(args):
             print(f"FAIL {e}")
             bad += 1
     return 1 if bad else 0
-
-
-def cmd_new(args):
-    d = Design()
-    path = "" if args.study in (".", "") else args.study
-    folder = instance.new(d, args.results, d.top.name, path, args.board)
-    print(folder)
-
-
-def cmd_add(args):
-    d = Design()
-    rid = instance.add(d, args.instance, args.run, args.role, args.reason, args.copy)
-    print(f"added {rid} to {args.instance}")
-
-
-def cmd_reference(args):
-    instance.add_reference(args.instance, args.other, args.run_id, args.reason)
-    print(f"reference {args.run_id} added to {args.instance}")
-
-
-def cmd_verdict(args):
-    instance.add_verdict(args.instance, args.verdict, args.by, args.text, args.hypothesis, args.check,
-                         args.central_result)
-    print(f"verdict set in {args.instance}")
-
-
-def cmd_merge(args):
-    added = instance.merge(Design(), layout.find_root(args.other), layout.find_root(args.root),
-                           origin=args.origin)
-    print(f"{len(added)} runs added")
 
 
 def cmd_build(args):
@@ -156,34 +238,54 @@ def cmd_html(args):
     print(out)
 
 
-def main():
+# ------------------------------------------------------------ parser
+def parser():
     p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     sub = p.add_subparsers(dest="cmd", required=True)
-    s = sub.add_parser("seal")
-    s.add_argument("runs", nargs="+")
-    s.set_defaults(func=cmd_seal)
-    s = sub.add_parser("verify")
-    s.add_argument("runs", nargs="+")
-    s.set_defaults(func=cmd_verify)
-    s = sub.add_parser("new")
+
+    lab = sub.add_parser("lab", help="the lab space").add_subparsers(dest="lab_cmd", required=True)
+    s = lab.add_parser("init", help="make a lab space")
+    s.add_argument("folder")
+    s.add_argument("--repo", required=True, help="the safety repo with the study designs and the tools")
+    s.add_argument("--name", help="the name of the lab space (default: the folder name)")
+    s.add_argument("--trees-root", help="the folder of the pinned trees (default: FOLDER/trees)")
+    s.add_argument("--trees-source", help="a folder with <tree>/<path> clones to clone the trees from")
+    s.add_argument("--sdk", help="the Zephyr SDK (default: ~/zephyr-sdk-<version of trees.yaml>)")
+    s.add_argument("--results", help="the results folder (default: FOLDER/results)")
+    s.add_argument("--hw-map", help="the hardware map (default: FOLDER/hw-map.yml)")
+    s.set_defaults(func=cmd_lab_init)
+    s = lab.add_parser("status", help="the lab space, its trees and boards")
+    s.set_defaults(func=cmd_lab_status)
+
+    s = sub.add_parser("trees", help="the pinned trees of validation/trees.yaml")
+    s.add_argument("cmd", choices=["setup", "check", "show"])
+    s.add_argument("trees", nargs="*")
+    s.add_argument("--trees-root", help="override the trees root of the lab space")
+    s.add_argument("--clone-source", action="store_true",
+                   help="setup: clone each source repo instead of adding a worktree to it")
+    s.set_defaults(func=cmd_trees)
+
+    inst = sub.add_parser("instance", help="the run lists of a results tree").add_subparsers(
+        dest="instance_cmd", required=True)
+    s = inst.add_parser("new")
     s.add_argument("results")
     s.add_argument("study")
     s.add_argument("--board")
-    s.set_defaults(func=cmd_new)
-    s = sub.add_parser("add")
+    s.set_defaults(func=cmd_instance_new)
+    s = inst.add_parser("add")
     s.add_argument("instance")
     s.add_argument("run")
     s.add_argument("--role", default="evidence")
     s.add_argument("--reason")
     s.add_argument("--copy", action="store_true")
-    s.set_defaults(func=cmd_add)
-    s = sub.add_parser("reference")
+    s.set_defaults(func=cmd_instance_add)
+    s = inst.add_parser("reference")
     s.add_argument("instance")
     s.add_argument("other")
     s.add_argument("run_id")
     s.add_argument("--reason", required=True)
-    s.set_defaults(func=cmd_reference)
-    s = sub.add_parser("verdict")
+    s.set_defaults(func=cmd_instance_reference)
+    s = inst.add_parser("verdict")
     s.add_argument("instance")
     s.add_argument("--verdict", required=True)
     s.add_argument("--by", required=True)
@@ -191,12 +293,19 @@ def main():
     s.add_argument("--hypothesis")
     s.add_argument("--check")
     s.add_argument("--central-result")
-    s.set_defaults(func=cmd_verdict)
-    s = sub.add_parser("merge")
+    s.set_defaults(func=cmd_instance_verdict)
+    s = inst.add_parser("merge")
     s.add_argument("other")
     s.add_argument("root")
     s.add_argument("--origin", help="the place of the original tree, for copied_from (HOST:PATH)")
-    s.set_defaults(func=cmd_merge)
+    s.set_defaults(func=cmd_instance_merge)
+
+    s = sub.add_parser("seal")
+    s.add_argument("runs", nargs="+")
+    s.set_defaults(func=cmd_seal)
+    s = sub.add_parser("verify")
+    s.add_argument("runs", nargs="+")
+    s.set_defaults(func=cmd_verify)
     s = sub.add_parser("build")
     s.add_argument("root")
     s.set_defaults(func=cmd_build)
@@ -211,10 +320,20 @@ def main():
     s.add_argument("root")
     s.add_argument("--out")
     s.set_defaults(func=cmd_html)
-    args = p.parse_args()
+    return p
+
+
+ERRORS = (DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
+          trees.TreeError, ValueError)
+
+
+def main(argv=None):
+    argv = sys.argv[1:] if argv is None else argv
+    reexec_in_lab_repo(argv)
+    args = parser().parse_args(argv)
     try:
         sys.exit(args.func(args) or 0)
-    except (DesignError, instance.InstanceError, seal.SealError, build.BuildError, ValueError) as e:
+    except ERRORS as e:
         sys.exit(f"error: {e}")
 
 

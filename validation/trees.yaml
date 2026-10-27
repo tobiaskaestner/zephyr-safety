@@ -1,27 +1,27 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Pinned source trees for the latency benchmarks.
+# Pinned source trees of the validation work (the latency studies).
 #
-# scripts/benchmarks/trees.py setup creates one detached git worktree per repo at
-# <root>/<tree>/<path>, at the pinned rev. A run (scripts/benchmarks/run.py) builds
-# only from these worktrees, with exactly the modules that are listed
-# here, and refuses to run if a worktree is not at its rev or is dirty.
+# "study.py trees setup" makes one git checkout per repo at
+# <trees root>/<tree>/<path>, at the pinned rev. A run builds only from
+# these checkouts, with exactly the modules that are listed here, and
+# refuses to run if a checkout is not at its rev or is dirty.
 #
-# "source" is a local clone that has the rev (no network access needed).
-# If it does not exist, trees.py clones "url" instead.
-# A Zephyr patch for the study goes on a branch; pin its commit as a new
-# tree and keep the old tree, so that old results stay reproducible.
-
-# Default root. Override with --trees-root or LATBENCH_TREES_ROOT.
-root: /wrk/z/lab-benchmarks/latency-trees
-
-# The boards and the modules that each board needs are in boards.yaml.
+# This file has the pins only. The paths of a host (the trees root, the
+# Zephyr SDK, a folder of trees to clone from) are in the .lab/config of
+# its lab space (scripts/benchmarks/studylib/lab.py).
+#
+# "source" is a local clone that has the rev (no network access needed),
+# a hint for a host without a [trees] source. If it does not exist either,
+# the setup clones "url". A Zephyr patch for the study goes on a branch;
+# pin its commit as a new tree and keep the old tree, so that old results
+# stay reproducible. The boards and the modules that each board needs are
+# in tests/benchmarks/boards.yaml.
 
 toolchain:
   zephyr_sdk:
     version: 1.0.1
-    path: ~/zephyr-sdk-1.0.1
 
 trees:
   ws-safety:

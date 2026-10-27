@@ -2,25 +2,31 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Create and check the pinned source trees of trees.yaml.
+"""The pinned source trees of validation/trees.yaml (commands: study.py trees).
 
-    trees.py setup [TREE ...]   create the missing worktrees at their pinned rev
-    trees.py setup --clone-source [TREE ...]
-                                clone each "source" repo instead of adding a
-                                worktree to it: nothing is written into the
-                                source (on a host where "source" is a repo of
-                                another workspace that must stay as it is)
-    trees.py check [TREE ...]   check that each worktree is at its rev and clean
-    trees.py show               print the trees and their worktree paths
+    study.py trees setup [TREE ...]   create the missing checkouts at their pinned rev
+    study.py trees setup --clone-source [TREE ...]
+                                      clone each source repo instead of adding a
+                                      worktree to it: nothing is written into the
+                                      source (on a host where the source is a repo
+                                      of another workspace that must stay as it is)
+    study.py trees check [TREE ...]   check that each checkout is at its rev and clean
+    study.py trees show               print the trees and their paths
+
+The trees root and the SDK path come from the lab space (.lab/config), or
+from --trees-root / LATBENCH_TREES_ROOT. A clone source is, in this order:
+<[trees] source of the lab>/<tree>/<path>, the "source" of the repo in
+trees.yaml, its "url".
 """
 
-import argparse
 import os
 import subprocess
 import sys
 from pathlib import Path
 
 import yaml
+
+from studylib import lab as labmod
 
 # The safety repo, the folder of the benchmark apps and the folder of the
 # latency studies. Each experiment is a folder ex-<name>/ with
@@ -33,7 +39,7 @@ STUDIES_DIR = REPO_DIR / "validation" / "empirical" / "latencies"
 EXPERIMENT_FILE = "experiment.yaml"
 EXPERIMENT_PREFIX = "ex-"
 STUDY_PREFIX = "st-"
-TREES_FILE = BENCH_DIR / "trees.yaml"
+TREES_FILE = REPO_DIR / "validation" / "trees.yaml"
 BOARDS_FILE = BENCH_DIR / "boards.yaml"
 
 
@@ -66,10 +72,24 @@ def git(*args, cwd=None, check=True):
     return r.stdout.strip()
 
 
-def load(trees_root=None):
+def load(trees_root=None, lab=None):
+    """The pins of trees.yaml with the paths of this host.
+
+    root: --trees-root, LATBENCH_TREES_ROOT or the [trees] root of the lab
+    space (None if there is none: then a tree path is an error). The SDK path:
+    the [toolchain] of the lab space, else ~/zephyr-sdk-<version>.
+    """
     cfg = yaml.safe_load(TREES_FILE.read_text())
-    root = trees_root or os.environ.get("LATBENCH_TREES_ROOT") or cfg["root"]
-    cfg["root"] = Path(root).expanduser()
+    lab = lab or labmod.find()
+    root = trees_root or os.environ.get("LATBENCH_TREES_ROOT") or (lab.trees_root if lab else None)
+    cfg["root"] = Path(root).expanduser() if root else None
+    sdk = cfg["toolchain"]["zephyr_sdk"]
+    if lab and lab.sdk:
+        sdk["path"] = str(lab.sdk)
+    elif not sdk.get("path"):
+        sdk["path"] = f"~/zephyr-sdk-{sdk['version']}"
+    cfg["source_root"] = lab.trees_source if lab else None
+    cfg["lab"] = lab
     return cfg
 
 
@@ -92,6 +112,8 @@ def check_tree_has(cfg, tree, repos):
 
 
 def repo_dir(cfg, tree, repo):
+    if cfg.get("root") is None:
+        raise TreeError("no trees root: work in a lab space (study.py lab init) or give --trees-root")
     return cfg["root"] / tree / cfg["trees"][tree]["repos"][repo]["path"]
 
 
@@ -114,7 +136,7 @@ def check_tree(cfg, tree, repos=None):
             continue
         path = repo_dir(cfg, tree, name)
         if not path.is_dir():
-            raise TreeError(f"{tree}/{name}: {path} does not exist, run 'trees.py setup {tree}'")
+            raise TreeError(f"{tree}/{name}: {path} does not exist, run 'study.py trees setup {tree}'")
         rev, dirty = repo_state(path)
         if rev != spec["rev"]:
             raise TreeError(f"{tree}/{name}: {path} is at {rev}, pinned rev is {spec['rev']}")
@@ -141,8 +163,12 @@ def setup_tree(cfg, tree, clone_source=False):
             print(f"{tree}/{name}: exists ({path})")
             continue
         path.parent.mkdir(parents=True, exist_ok=True)
-        source = Path(spec.get("source", "")).expanduser()
-        if clone_source and spec.get("source") and source.is_dir():
+        source = Path(spec.get("source", "")).expanduser() if spec.get("source") else None
+        lab_source = cfg.get("source_root") and Path(cfg["source_root"]) / tree / spec["path"]
+        if lab_source and (lab_source / ".git").exists():
+            source = lab_source
+        has_source = source is not None and source.is_dir()
+        if clone_source and has_source:
             # A local clone hardlinks the objects and writes nothing into the source.
             git("clone", "--no-checkout", str(source), str(path))
             git("remote", "set-url", "origin", spec["url"], cwd=path)
@@ -150,7 +176,7 @@ def setup_tree(cfg, tree, clone_source=False):
                 git("fetch", spec["url"], spec.get("branch", spec["rev"]), cwd=path)
             git("checkout", "--detach", spec["rev"], cwd=path)
             print(f"{tree}/{name}: clone of {source} at {spec['rev'][:12]}")
-        elif spec.get("source") and source.is_dir():
+        elif has_source:
             if git("cat-file", "-t", spec["rev"], cwd=source, check=False) != "commit":
                 git("fetch", spec["url"], spec.get("branch", spec["rev"]), cwd=source)
             git("worktree", "add", "--detach", str(path), spec["rev"], cwd=source)
@@ -162,34 +188,25 @@ def setup_tree(cfg, tree, clone_source=False):
     check_tree(cfg, tree)
 
 
-def main():
-    p = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    p.add_argument("--trees-root")
-    p.add_argument("--clone-source", action="store_true",
-                   help="setup: clone each source repo instead of adding a worktree to it")
-    p.add_argument("cmd", choices=["setup", "check", "show"])
-    p.add_argument("trees", nargs="*")
-    args = p.parse_args()
-
+def main(args, log=print):
+    """study.py trees: setup, check or show (args: cmd, trees, trees_root, clone_source)."""
     cfg = load(args.trees_root)
-    trees = args.trees or list(cfg["trees"])
-    try:
-        if args.cmd == "setup":
-            for t in trees:
-                setup_tree(cfg, t, clone_source=args.clone_source)
-        elif args.cmd == "check":
-            check_toolchain(cfg)
-            for t in trees:
-                check_tree(cfg, t)
-                print(f"{t}: ok")
-        else:
-            for t in trees:
-                print(f"{t}: {cfg['trees'][t]['description']}")
-                for name, spec in cfg["trees"][t]["repos"].items():
-                    print(f"  {name:10} {spec['rev'][:12]}  {repo_dir(cfg, t, name)}")
-    except TreeError as e:
-        sys.exit(f"error: {e}")
+    names = args.trees or list(cfg["trees"])
+    if args.cmd == "setup":
+        for t in names:
+            setup_tree(cfg, t, clone_source=args.clone_source)
+    elif args.cmd == "check":
+        log(f"zephyr sdk {cfg['toolchain']['zephyr_sdk']['version']}: {check_toolchain(cfg)}")
+        for t in names:
+            check_tree(cfg, t)
+            log(f"{t}: ok")
+    else:
+        log(f"trees root: {cfg['root']}")
+        for t in names:
+            log(f"{t}: {cfg['trees'][t]['description']}")
+            for name, spec in cfg["trees"][t]["repos"].items():
+                log(f"  {name:10} {spec['rev'][:12]}  {repo_dir(cfg, t, name) if cfg['root'] else '-'}")
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit("trees.py has no commands of its own: use scripts/benchmarks/study.py trees setup|check|show")

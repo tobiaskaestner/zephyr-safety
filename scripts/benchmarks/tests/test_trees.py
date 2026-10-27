@@ -63,3 +63,34 @@ def test_setup_worktree_writes_into_the_source(tmp_path):
     trees.setup_tree(cfg, "t")
     assert (src / ".git" / "worktrees").is_dir()
     assert git("rev-parse", "HEAD", cwd=trees.repo_dir(cfg, "t", "zephyr")) == rev
+
+
+def test_lab_space_gives_the_paths(tmp_path, monkeypatch):
+    from studylib import lab as labmod
+    repo = tmp_path / "safety"
+    (repo / "scripts" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    lab = labmod.init(tmp_path / "lab", repo, trees_source=tmp_path / "other", sdk="~/sdk-x")
+    assert lab.id.startswith("lab-") and len(lab.id) == len("lab-") + 8
+    assert lab.repo == repo.resolve() and lab.trees_root == tmp_path / "lab" / "trees"
+    assert (tmp_path / "lab" / "results").is_dir()
+    monkeypatch.chdir(tmp_path / "lab" / "results")
+    monkeypatch.delenv("LATBENCH_TREES_ROOT", raising=False)
+    found = labmod.find()
+    assert found.folder == lab.folder
+    cfg = trees.load()
+    assert cfg["root"] == lab.trees_root and cfg["source_root"] == tmp_path / "other"
+    assert cfg["toolchain"]["zephyr_sdk"]["path"] == str(Path("~/sdk-x").expanduser())
+    monkeypatch.chdir(tmp_path)
+    assert trees.load()["root"] is None
+
+
+def test_setup_clones_from_the_lab_source(tmp_path):
+    src, rev = make_source(tmp_path)
+    other = tmp_path / "other-trees" / "t"
+    git("clone", "-q", str(src), str(other / "zephyr"), cwd=tmp_path)
+    cfg = config(tmp_path, tmp_path / "missing", rev)
+    cfg["source_root"] = tmp_path / "other-trees"
+    trees.setup_tree(cfg, "t", clone_source=True)
+    path = trees.repo_dir(cfg, "t", "zephyr")
+    assert git("rev-parse", "HEAD", cwd=path) == rev
