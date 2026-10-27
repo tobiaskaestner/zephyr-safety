@@ -79,7 +79,13 @@ def test_pending_counts_running_campaigns_only(setup):
     record("20260101T000000Z", "running", os.getpid(), [("exp1", "done"), ("exp2", "planned")])
     record("20260101T000001Z", "running", 99999999, [("exp1", "planned")])     # its process is gone
     record("20260101T000002Z", "done", os.getpid(), [("exp1", "planned")])
-    assert campaign.pending(lab) == {(str(f), "exp2"): "20260101T000000Z"}
+    assert campaign.pending(lab, design) == {(str(f), "exp2"): "20260101T000000Z"}
+    # a campaign in its pre-flight check: the experiments have no instance yet
+    jsonout.write(lab.campaigns / "20260101T000003Z.json", {
+        "id": "20260101T000003Z", "status": "planned", "pid": os.getpid(), "host": platform.node(),
+        "lab": lab.describe(), "experiments": [{"experiment": "exp1", "study": "sub", "board": "nucleo_g474re",
+                                                 "state": "planned"}]})
+    assert campaign.pending(lab, design)[(str(f), "exp1")] == "20260101T000003Z"
 
 
 def test_lock_allows_one_campaign(setup):

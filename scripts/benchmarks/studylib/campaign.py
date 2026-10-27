@@ -227,22 +227,32 @@ def alive(pid):
     return True
 
 
-def pending(lab):
+def pending(lab, design=None):
     """{(instance folder, experiment)} that a running campaign of the lab space has still to run.
 
-    A campaign of this host whose process is gone is not running (aborted).
-    A campaign of another lab space (imported) counts while its record says running.
+    A campaign counts from its start (also during its pre-flight check) to its
+    end. A campaign of this host whose process is gone does not count
+    (aborted). A campaign of another lab space (imported) counts while its
+    record says running. An experiment that has no instance yet counts for
+    the instance of its study and board, if there is one.
     """
     out = {}
     for rec in records(lab):
         d = rec.data or {}
-        if d.get("status") != RUNNING:
+        own = d.get("lab", {}).get("id") == lab.id and d.get("host") == platform.node()
+        if own and (d.get("status") not in (PLANNED, RUNNING) or not alive(d.get("pid"))):
             continue
-        if d.get("lab", {}).get("id") == lab.id and d.get("host") == platform.node() and not alive(d.get("pid")):
+        if not own and d.get("status") != RUNNING:
             continue
         for e in d.get("experiments", []):
-            if e.get("state") in (PLANNED, RUNNING) and e.get("instance"):
-                out[(str(lab.results / e["instance"]), e["experiment"])] = rec.id
+            if e.get("state") not in (PLANNED, RUNNING):
+                continue
+            folder = lab.results / e["instance"] if e.get("instance") else None
+            if folder is None and e.get("study") and e.get("board"):
+                design = design or Design()
+                folder = find_instance(lab, design, e["study"], e["board"])
+            if folder is not None:
+                out[(str(folder), e["experiment"])] = rec.id
     return out
 
 
@@ -402,7 +412,8 @@ class Post:
     def finish(self):
         if self.proc is not None and self.proc.poll() is not None:
             rc = self.proc.returncode
-            self.rec.data.setdefault("post", []).append({"n": self.n, "rc": rc, "finished": utc_now().isoformat()})
+            # "noticed": the time when the campaign saw the end (after a run), not the end itself
+            self.rec.data.setdefault("post", []).append({"n": self.n, "rc": rc, "noticed": utc_now().isoformat()})
             self.rec.save()
             self.proc = None
             if self.again:
@@ -424,6 +435,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
                             f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
     take_lock(lab, rec.id)
+    rec.set(pid=os.getpid())
     rec.log_dir.mkdir(parents=True, exist_ok=True)
     stop = {"why": None}
 
@@ -523,5 +535,5 @@ def status_lines(rec):
         extra = f"run {e['run']}" if e.get("run") else e.get("note", "")
         out.append(f"  {e['state']:8} {e['experiment']:28} {e.get('instance', '-'):60} {extra}")
     for p in d.get("post", [])[-1:]:
-        out.append(f"  last results build: rc {p['rc']} at {p['finished']}")
+        out.append(f"  last results build: rc {p['rc']} (seen at {p.get('noticed', p.get('finished'))})")
     return out

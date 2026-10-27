@@ -98,7 +98,7 @@ class Tree:
         lab = labmod.find(self.root)
         if lab is None:
             return {}
-        return {(Path(f).resolve(), e): c for (f, e), c in campaign.pending(lab).items()}
+        return {(Path(f).resolve(), e): c for (f, e), c in campaign.pending(lab, self.design).items()}
 
     def waits_for(self, folder, experiments):
         """The reason why a result of the instance that reads these experiments is provisional, or None."""
