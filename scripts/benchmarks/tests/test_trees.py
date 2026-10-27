@@ -97,6 +97,19 @@ def test_tree_states(tmp_path):
     assert state == "wrong" and "dirty" in text
 
 
+def test_check_of_all_trees_counts_only_wrong_ones(tmp_path):
+    import argparse
+    src, rev = make_source(tmp_path)
+    cfg = config(tmp_path, src, rev)
+    lines = []
+    import unittest.mock as mock
+    with mock.patch.object(trees, "load", lambda *a, **k: cfg), mock.patch.object(trees, "check_toolchain",
+                                                                                 lambda c: "/sdk"):
+        assert trees.main(argparse.Namespace(cmd="check", trees=[], trees_root=None), log=lines.append) == 0
+        assert trees.main(argparse.Namespace(cmd="check", trees=["t"], trees_root=None), log=lines.append) == 1
+    assert lines[1].startswith("t: not set up") and lines[3].startswith("error: t: not set up")
+
+
 def test_west_env_has_no_zephyr_variables(monkeypatch):
     monkeypatch.setenv("ZEPHYR_BASE", "/x")
     env = trees.west_env()

@@ -291,11 +291,13 @@ def setup_tree(cfg, tree, log=print):
         log(f"{tree}: west workspace {tdir}")
     west_topdir(tdir)
     cache = Path(cfg["source_root"]) / tree if cfg.get("source_root") else None
+    had = {name for name, r in spec["repos"].items() if (tdir / r["path"]).is_dir()}
     args = ["update"] + (["--path-cache", str(cache)] if cache and cache.is_dir() else [])
     west(args, tdir)
     for name, r in spec["repos"].items():
-        log(f"{tree}/{name}: {r['rev'][:12]}" + (f" (from {cache})" if cache and (cache / r["path"]).is_dir()
-                                                 else f" (from {r['url']})"))
+        src = ("there before" if name in had else f"from {cache}" if cache and (cache / r["path"]).is_dir()
+               else f"from {r['url']}")
+        log(f"{tree}/{name}: {r['rev'][:12]} ({src})")
     check_tree(cfg, tree)
 
 
@@ -320,7 +322,7 @@ def main(args, log=print):
         for t in names:
             state, text = tree_state(cfg, t)
             # a tree that this lab space never set up is information, unless it was asked for by name
-            wrong = state == "wrong" or (state == "not set up" and args.trees)
+            wrong = state == "wrong" or (state == "not set up" and bool(args.trees))
             log(f"{'error: ' if wrong else ''}{t}: {state}" + (f" ({text})" if text else ""))
             bad += wrong
         return 1 if bad else 0
