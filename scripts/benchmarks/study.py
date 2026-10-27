@@ -17,7 +17,21 @@ Design (validation/empirical/latencies):
 Lab space (a folder with .lab/config, see studylib/lab.py):
     study.py lab init FOLDER --repo REPO [--trees-source DIR] [--sdk DIR] [--name N]
                                           make a lab space
-    study.py lab status                   the lab space, its trees and boards
+    study.py lab status                   the lab space, its trees, boards and campaigns
+    study.py lab hwcheck BOARD            the loopback wire check of a board
+
+Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
+    study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
+                                          build the images of all points (build cache)
+    study.py campaign check FOLDER [...] [--no-hwcheck]
+                                          the pre-flight check
+    study.py campaign run FOLDER [...] [--no-hwcheck] [--detach] [--warn-as-error]
+                                          check, then run each experiment and add each
+                                          run to its instance; build the results after
+                                          each run in the background
+    study.py campaign status [ID]         the record of a campaign (default: the latest)
+    study.py campaign resume ID [--detach]
+                                          run the experiments of a campaign that are not done
 
 Pinned trees (validation/trees.yaml, paths from the lab space):
     study.py trees setup [--clone-source] [TREE ...]
@@ -67,7 +81,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import trees  # noqa: E402
 from studylib import build, html, instance, layout, seal  # noqa: E402
 from studylib import lab as labmod  # noqa: E402
-from studylib import lint, scaffold  # noqa: E402
+from studylib import campaign, lint, scaffold  # noqa: E402
 from studylib.design import Design, DesignError  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
@@ -149,6 +163,98 @@ def cmd_lab_status(args):
             print(f"  hardware map {e}")
     else:
         print(f"  hardware map {lab.hw_map} is missing")
+    for rec in campaign.records(lab)[-3:]:
+        print("  " + campaign.status_lines(rec)[0])
+
+
+def cmd_lab_hwcheck(args):
+    from studylib import hwcheck
+    lab = labmod.require()
+    try:
+        ok, lines = hwcheck.check(lab, args.board, tree=args.tree)
+    except hwcheck.HwCheckError as e:
+        print(f"error: {e}")
+        return 2
+    for ln in lines:
+        print("  " + ln)
+    print(f"{args.board}: loopback wire {'ok' if ok else 'FAILED'}")
+    return 0 if ok else 1
+
+
+# ------------------------------------------------------------ campaign
+def cmd_campaign_prepare(args):
+    lab = labmod.require()
+    items = [e for e in campaign.plan(lab, args.folder, args.board, args.only, args.skip) if e["state"] != "skipped"]
+    log = lab.folder / ".lab" / "prepare.log"
+    log.parent.mkdir(parents=True, exist_ok=True)
+    bad = 0
+    for e in items:
+        print(f"=== {e['experiment']}", flush=True)
+        rc = campaign.run_subprocess([sys.executable, campaign.run_py(), trees.REPO_DIR / e["design"], "--build-only"],
+                                     log, cwd=lab.folder)
+        print(f"    {'ok' if rc == 0 else f'FAILED (rc {rc}, see {log})'}", flush=True)
+        bad += rc != 0
+    print(f"{len(items) - bad} of {len(items)} experiments build")
+    return 1 if bad else 0
+
+
+def cmd_campaign_check(args):
+    lab = labmod.require()
+    items = campaign.plan(lab, args.folder, args.board, args.only, args.skip)
+    for e in items:
+        print(f"  {e['state']:8} {e['experiment']} ({e['study']}, {e['board']})" + (f": {e['note']}" if e.get("note") else ""))
+    res = campaign.preflight(lab, items, Design(), hwcheck=not args.no_hwcheck, warn_as_error=args.warn_as_error)
+    bad = [w for st, w, _ in res if st == "fail"]
+    print("pre-flight check: " + ("ok" if not bad else f"FAILED ({', '.join(bad)})"))
+    return 1 if bad else 0
+
+
+def campaign_extra(args):
+    return [*(["--no-hwcheck"] if args.no_hwcheck else []), *(["--warn-as-error"] if args.warn_as_error else [])]
+
+
+def cmd_campaign_run(args):
+    lab = labmod.require()
+    items = campaign.plan(lab, args.folder, args.board, args.only, args.skip)
+    rec = campaign.new_record(lab, args.folder, args.board, items, ["study.py", *sys.argv[1:]])
+    print(f"campaign {rec.id}: {sum(e['state'] == 'planned' for e in items)} experiments, record {rec.path}")
+    if args.detach:
+        pid, log = campaign.detach(rec, campaign_extra(args))
+        print(f"runs in the background (pid {pid}); log {log}; 'study.py campaign status {rec.id}'")
+        return 0
+    return 1 if campaign.run_campaign(rec, hwcheck=not args.no_hwcheck, warn_as_error=args.warn_as_error) else 0
+
+
+def cmd_campaign_resume(args):
+    lab = labmod.require()
+    rec = campaign.Record(lab, args.id)
+    if rec.data is None:
+        raise campaign.CampaignError(f"no campaign {args.id} in {lab.campaigns}")
+    if args.detach:
+        pid, log = campaign.detach(rec, campaign_extra(args))
+        print(f"runs in the background (pid {pid}); log {log}")
+        return 0
+    return 1 if campaign.run_campaign(rec, hwcheck=not args.no_hwcheck, warn_as_error=args.warn_as_error) else 0
+
+
+def cmd_campaign_status(args):
+    lab = labmod.require()
+    rec = campaign.Record(lab, args.id) if args.id else campaign.latest(lab)
+    if rec is None or rec.data is None:
+        print(f"no campaign in {lab.campaigns}")
+        return 1
+    for ln in campaign.status_lines(rec):
+        print(ln)
+    root = lab.results / Design().top.name
+    if root.is_dir() and args.verdicts:
+        res = {}
+        for e in rec.data["experiments"]:
+            if e.get("instance"):
+                f = lab.results / e["instance"]
+                if (f / "study.json").is_file():
+                    res[f] = build.load_json(f / "study.json")
+        show(res, root, brief=True)
+    return 0
 
 
 # ------------------------------------------------------------ trees
@@ -295,8 +401,37 @@ def parser():
     s.add_argument("--results", help="the results folder (default: FOLDER/results)")
     s.add_argument("--hw-map", help="the hardware map (default: FOLDER/hw-map.yml)")
     s.set_defaults(func=cmd_lab_init)
-    s = lab.add_parser("status", help="the lab space, its trees and boards")
+    s = lab.add_parser("status", help="the lab space, its trees, boards and campaigns")
     s.set_defaults(func=cmd_lab_status)
+    s = lab.add_parser("hwcheck", help="the loopback wire check of a board")
+    s.add_argument("board")
+    s.add_argument("--tree", help="the tree to build loopback_check from (default: the first that has the board)")
+    s.set_defaults(func=cmd_lab_hwcheck)
+
+    camp = sub.add_parser("campaign", help="run the experiments below a folder").add_subparsers(
+        dest="campaign_cmd", required=True)
+    for name, func in (("prepare", cmd_campaign_prepare), ("check", cmd_campaign_check), ("run", cmd_campaign_run)):
+        s = camp.add_parser(name)
+        s.add_argument("folder")
+        s.add_argument("--board", help="only the experiments for this board (default: the board of the instance)")
+        s.add_argument("--only", nargs="+", help="only these experiments")
+        s.add_argument("--skip", nargs="+", help="not these experiments")
+        if name != "prepare":
+            s.add_argument("--no-hwcheck", action="store_true", help="no loopback wire check")
+            s.add_argument("--warn-as-error", action="store_true", help="a lint warning fails the check")
+        if name == "run":
+            s.add_argument("--detach", action="store_true", help="run in the background")
+        s.set_defaults(func=func)
+    s = camp.add_parser("resume")
+    s.add_argument("id")
+    s.add_argument("--no-hwcheck", action="store_true")
+    s.add_argument("--warn-as-error", action="store_true")
+    s.add_argument("--detach", action="store_true")
+    s.set_defaults(func=cmd_campaign_resume)
+    s = camp.add_parser("status")
+    s.add_argument("id", nargs="?")
+    s.add_argument("--verdicts", action="store_true", help="also the verdicts of the instances of the campaign")
+    s.set_defaults(func=cmd_campaign_status)
 
     s = sub.add_parser("trees", help="the pinned trees of validation/trees.yaml")
     s.add_argument("cmd", choices=["setup", "check", "show"])
@@ -364,7 +499,7 @@ def parser():
     return p
 
 
-ERRORS = (scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
+ERRORS = (campaign.CampaignError, scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
           trees.TreeError, ValueError)
 
 

@@ -223,9 +223,10 @@ def lint(root=None, only=None):
     return sorted(out, key=lambda p: (p.severity != ERROR, str(p.path), p.text))
 
 
-def lint_for_experiment(experiment_file):
+def lint_for_experiment(experiment_file, problems=None):
     """The problems of an experiment and of the study that owns it (for run.py and the campaign)."""
     folder = Path(experiment_file).resolve().parent
     study = folder.parent
-    return [p for p in lint() if p.path.resolve().is_relative_to(folder) or p.path.resolve() == study
+    return [p for p in (lint() if problems is None else problems)
+            if p.path.resolve().is_relative_to(folder) or p.path.resolve() == study
             or p.path.resolve().parent == study]

@@ -10,6 +10,7 @@ that the files stay readable and small.
 
 import hashlib
 import json
+import os
 from pathlib import Path
 
 
@@ -34,12 +35,14 @@ def dumps(obj, ind=0):
 
 
 def write(path, obj):
-    """Write obj to path; return the sha256 of the bytes."""
+    """Write obj to path (a reader sees the old or the new file, never a part); return the sha256 of the bytes."""
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     data = (dumps(obj) + "\n").encode()
     if not path.exists() or path.read_bytes() != data:
-        path.write_bytes(data)
+        tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")
+        tmp.write_bytes(data)
+        tmp.replace(path)
     return hashlib.sha256(data).hexdigest()
 
 

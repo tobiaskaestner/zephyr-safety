@@ -332,6 +332,21 @@ class Builder:
         return out
 
 
+def cache_state(exp_path, lab):
+    """(points, points with an image in the build cache of the lab space) of an experiment."""
+    from studylib import buildcache
+    exp = yaml.safe_load(Path(exp_path).read_text())
+    tree_cfg = trees.load(lab=lab)
+    boards = trees.load_boards()
+    board = exp.get("board", boards["default"])
+    repos = trees.board_repos(boards, board)
+    repo_root, repo_rev, _ = safety_repo_state()
+    cache = buildcache.Cache(lab.build_cache)
+    b = Builder(exp, tree_cfg, repos, board, boards["boards"][board], None, repo_root, repo_rev, cache)
+    keys = [b.key(t, pt)[0] for t in exp["trees"] for pt in expand_points(exp)]
+    return len(keys), sum(cache.get(k) is not None for k in keys)
+
+
 def find_points(path, only=None):
     """Return (run folder, manifest, entries) for a run folder or a point folder <run>/<tree>/<point>."""
     path = Path(path).resolve()
