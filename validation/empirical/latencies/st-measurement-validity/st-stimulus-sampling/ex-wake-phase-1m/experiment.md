@@ -1,22 +1,21 @@
 # wake-phase-1m
 
-## Question
+## What it measures
 
-Does the tick phase of the stimulus edge decide between the two modes of
-the ISR to thread wake latency (`isr2thr`)? `wake-isr-1m` showed two
-modes, 80 % and 20 % of the samples, 310 cycles apart.
+App `wake_latency`, metric `isr2thr`: the ISR to thread wake latency by
+the tick phase of the stimulus edge, with a random and with a fixed
+stimulus.
 
 ## Method
 
-App `wake_latency`, semaphore given from the wrapped ISR, board
-defaults, 1M samples per point. The app records each sample in one of 64
-bins by the tick phase of the stimulus edge.
+- Tree `ws-safety`. Semaphore given from the wrapped ISR, board
+  defaults.
+- 1M samples per point.
+- The app records each sample in one of 64 bins by the tick phase of the
+  stimulus edge.
 
-| Point | Stimulus | Why |
-|---|---|---|
-| `random` | random interval 100..500 us | As in `wake-isr-1m`. |
-| `fixed-scan` | fixed period 300 us + 1 cycle | 300 us is 3 ticks, so the tick phase moves by 1 cycle per edge. The scan covers the full tick about 59 times in 1M samples. |
+## Axes
 
-## References
-
-- `st-default-latencies/st-isr-to-thread/ex-wake-isr-1m/experiment.md`: the two modes.
+- **stimulus**: `random` is a random interval of 100..500 us, as in
+  `wake-isr-1m`. `fixed-scan` is a fixed period of 300 us + 1 cycle:
+  the tick phase moves by 1 cycle per edge.
