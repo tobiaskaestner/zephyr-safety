@@ -208,7 +208,8 @@ def new_record(lab, folder, board, items, argv):
 
 
 def latest(lab):
-    files = sorted(lab.campaigns.glob("*.json")) if lab.campaigns.is_dir() else []
+    """The latest campaign of this lab space (not an imported one, <id>@<lab>)."""
+    files = sorted(f for f in lab.campaigns.glob("*.json") if "@" not in f.stem) if lab.campaigns.is_dir() else []
     return Record(lab, files[-1].stem) if files else None
 
 

@@ -19,6 +19,11 @@ Lab space (a folder with .lab/config, see studylib/lab.py):
                                           make a lab space
     study.py lab status                   the lab space, its trees, boards and campaigns
     study.py lab hwcheck BOARD            the loopback wire check of a board
+    study.py lab export [FOLDER] -o FILE [--campaign ID ...] [--all]
+                                          the runs of this lab space (or of the campaigns,
+                                          or all runs) to FILE and FILE.sha256
+    study.py lab import FILE [--dry-run]  the runs of another lab space, after the
+                                          consistency checks (studylib/exchange.py)
 
 Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
@@ -179,6 +184,20 @@ def cmd_lab_hwcheck(args):
         print("  " + ln)
     print(f"{args.board}: loopback wire {'ok' if ok else 'FAILED'}")
     return 0 if ok else 1
+
+
+def cmd_lab_export(args):
+    from studylib import exchange
+    exchange.export(labmod.require(), args.out, args.folder, args.campaign, args.all)
+
+
+def cmd_lab_import(args):
+    from studylib import exchange
+    lab = labmod.require()
+    added, skipped, refused, warnings = exchange.import_(lab, args.file, dry=args.dry_run)
+    if added and not args.dry_run:
+        print(f"next: study.py build {lab.results / Design().top.name}")
+    return 1 if refused else 0
 
 
 # ------------------------------------------------------------ campaign
@@ -409,6 +428,16 @@ def parser():
     s.add_argument("board")
     s.add_argument("--tree", help="the tree to build loopback_check from (default: the first that has the board)")
     s.set_defaults(func=cmd_lab_hwcheck)
+    s = lab.add_parser("export", help="the runs of this lab space to a file")
+    s.add_argument("folder", nargs="?", help="only the instances below this folder of the results tree")
+    s.add_argument("-o", "--out", required=True)
+    s.add_argument("--campaign", nargs="+", help="only the runs of these campaigns")
+    s.add_argument("--all", action="store_true", help="all runs, also those that come from another lab")
+    s.set_defaults(func=cmd_lab_export)
+    s = lab.add_parser("import", help="the runs of another lab space")
+    s.add_argument("file")
+    s.add_argument("--dry-run", action="store_true", help="only the checks")
+    s.set_defaults(func=cmd_lab_import)
 
     camp = sub.add_parser("campaign", help="run the experiments below a folder").add_subparsers(
         dest="campaign_cmd", required=True)
@@ -501,7 +530,9 @@ def parser():
     return p
 
 
-ERRORS = (campaign.CampaignError, scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
+from studylib.exchange import ExchangeError  # noqa: E402
+
+ERRORS = (ExchangeError, campaign.CampaignError, scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
           trees.TreeError, ValueError)
 
 
