@@ -193,6 +193,11 @@ def import_(lab, in_file, log=print, dry=False):
             for name, sha in ref["files"].items():
                 if files.get(name) != sha:
                     warnings.append(f"{ipath}: {name} differs between the two labs (the build uses the file here)")
+        if not dry:
+            # the campaign records first: a run of a running campaign is provisional at once
+            lab.campaigns.mkdir(parents=True, exist_ok=True)
+            for p in sorted((work / "campaigns").glob("*.json")) if (work / "campaigns").is_dir() else []:
+                shutil.copy2(p, lab.campaigns / f"{p.stem}@{other['id']}.json")
         pins = trees.load(lab=lab)["trees"]
         root = lab.results / design.top.name
         have = {}
@@ -213,7 +218,12 @@ def import_(lab, in_file, log=print, dry=False):
                     refused.append(f"{rid}: the run id is in {have[rid][0]} with another digest (collision)")
                 continue
             src = work / "runs" / instance_rel(item["instance"]) / layout.run_folder(rid)
-            if seal.verify(src) != entry["digest"]:
+            try:
+                ok = seal.verify(src) == entry["digest"]
+            except (seal.SealError, OSError) as x:
+                refused.append(f"{rid}: {x}")
+                continue
+            if not ok:
                 refused.append(f"{rid}: the seal does not give the digest of the export")
                 continue
             for t, repos in item.get("trees", {}).items():
@@ -238,21 +248,24 @@ def import_(lab, in_file, log=print, dry=False):
                 refused.append(f"{rid}: {target} exists, but it is not in the run list")
                 continue
             target.parent.mkdir(parents=True, exist_ok=True)
-            subprocess.run(["cp", "-a", str(src), str(target)], check=True)
-            shutil.copy2(seal.seal_path(src), seal.seal_path(target))
-            if seal.verify(target) != entry["digest"]:
-                raise ExchangeError(f"{target}: the copy does not agree with its seal")
-            data = instance.load(folder)
+            try:
+                subprocess.run(["cp", "-a", str(src), str(target)], check=True)
+                shutil.copy2(seal.seal_path(src), seal.seal_path(target))
+                if seal.verify(target) != entry["digest"]:
+                    raise seal.SealError(f"{target}: the copy does not agree with its seal")
+            except (seal.SealError, OSError, subprocess.CalledProcessError) as x:
+                shutil.rmtree(target, ignore_errors=True)
+                seal.seal_path(target).unlink(missing_ok=True)
+                refused.append(f"{rid}: the copy failed: {x}")
+                continue
             new = dict(entry)
             new["copied_from"] = f"lab {other['id']}" + (f", campaign {item['campaign']}" if item.get("campaign") else "")
-            data["runs"].append(new)
-            instance.save(folder, data)
+            with instance.locked(folder):
+                data = instance.load(folder)
+                data["runs"].append(new)
+                instance.save(folder, data)
             added.append(rid)
             have[rid] = (folder, new)
-        if not dry:
-            lab.campaigns.mkdir(parents=True, exist_ok=True)
-            for p in sorted((work / "campaigns").glob("*.json")) if (work / "campaigns").is_dir() else []:
-                shutil.copy2(p, lab.campaigns / f"{p.stem}@{other['id']}.json")
         for w in dict.fromkeys(warnings):
             log(f"warning: {w}")
         for r in refused:

@@ -94,3 +94,25 @@ def test_import_refuses_a_run_id_with_another_digest(two_labs):
                  make_run(tmp / "flat-b" / "exp1", {"a": (111, 222)}), copy=True)
     added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None)
     assert added == [] and "collision" in refused[0]
+
+
+def test_import_refuses_only_a_damaged_run(two_labs, monkeypatch):
+    a, b, root, tmp = two_labs
+    design = Design(root)
+    inst = a.results / "top" / "st-sub@nucleo_g474re"
+    run2 = make_run(tmp / "flat2" / "exp1", {"a": (100, 200)}).rename(tmp / "flat2" / "exp1" / "20260102T000000Z")
+    m = json.loads((run2 / "manifest.json").read_text())
+    m["lab"] = a.describe()
+    (run2 / "manifest.json").write_text(json.dumps(m))
+    instance.add(design, inst, run2, copy=True)
+    f = tmp / "a.tar.gz"
+    assert exchange.export(a, f, log=lambda *x: None) == 2
+    real = exchange.seal.verify
+
+    def verify(path):
+        if Path(path).name == "20260101T000000Z" and ".lab" in str(path):
+            raise exchange.seal.SealError(f"{path}: a file differs from the seal")
+        return real(path)
+    monkeypatch.setattr(exchange.seal, "verify", verify)
+    added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None)
+    assert added == ["exp1/20260102T000000Z"] and "differs from the seal" in refused[0]

@@ -20,6 +20,7 @@ Roles: evidence (the hypotheses and central results read it), adjustment
 The run list is hand-made data: the tools add to it, the build only reads it.
 """
 
+import contextlib
 import json
 import shutil
 import subprocess
@@ -40,6 +41,19 @@ class InstanceError(Exception):
 
 def load(folder):
     return json.loads((Path(folder) / "instance.json").read_text())
+
+
+@contextlib.contextmanager
+def locked(folder):
+    """An flock on the instance folder for a read-change-write of instance.json: two tools that
+    add a run at the same time (a campaign and an import) do not lose an entry."""
+    import fcntl
+    f = open(Path(folder) / ".instance.lock", "a")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX)
+        yield
+    finally:
+        f.close()
 
 
 def save(folder, data):
@@ -196,15 +210,17 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False):
         shutil.copy2(seal.seal_path(run_dir), seal.seal_path(target))
         copied_from = str(run_dir)
     digest = seal.verify(target) if seal.seal_path(target).exists() else seal.write(target)
-    if any(r["id"] == run_id for r in data["runs"]):
-        raise InstanceError(f"{run_id} is already in the run list")
     entry = {"id": run_id, "digest": digest, "role": role}
     if reason:
         entry["reason"] = reason
     if copied_from:
         entry["copied_from"] = copied_from
-    data["runs"].append(entry)
-    save(folder, data)
+    with locked(folder):
+        data = load(folder)
+        if any(r["id"] == run_id for r in data["runs"]):
+            raise InstanceError(f"{run_id} is already in the run list")
+        data["runs"].append(entry)
+        save(folder, data)
     return run_id
 
 
@@ -214,21 +230,28 @@ def add_reference(folder, other_folder, run_id, reason):
     run = next((r for r in other["runs"] if r["id"] == run_id), None)
     if run is None:
         raise InstanceError(f"{other['instance']} has no run {run_id}")
-    data = load(folder)
-    data.setdefault("references", []).append(
-        {"instance": other["instance"], "id": run_id, "digest": run["digest"], "role": "reference", "reason": reason})
-    save(folder, data)
+    with locked(folder):
+        data = load(folder)
+        data.setdefault("references", []).append(
+            {"instance": other["instance"], "id": run_id, "digest": run["digest"], "role": "reference",
+             "reason": reason})
+        save(folder, data)
 
 
 def add_verdict(folder, verdict, by, text=None, hypothesis=None, check=None, central_result=None, date=None):
     """Set the manual verdict of a check (hypothesis + check) or of a conclusion (central_result)."""
-    import datetime
     if not by:
         raise InstanceError("a manual verdict needs the name of the person (--by)")
     if verdict not in ("confirmed", "wrong"):
         raise InstanceError(f"verdict {verdict!r}: use confirmed or wrong")
     if bool(hypothesis and check) == bool(central_result):
         raise InstanceError("give --hypothesis and --check, or --central-result")
+    with locked(folder):
+        _set_verdict(folder, verdict, by, text, hypothesis, check, central_result, date)
+
+
+def _set_verdict(folder, verdict, by, text, hypothesis, check, central_result, date):
+    import datetime
     data = load(folder)
     keep = [m for m in data.get("manual_verdicts", [])
             if not ((hypothesis and m.get("hypothesis") == hypothesis and m.get("check") == check)
@@ -273,11 +296,12 @@ def merge(design, other_root, root, log=print, origin=None):
             shutil.copy2(seal.seal_path(src), seal.seal_path(target))
             if seal.verify(target) != r["digest"]:
                 raise InstanceError(f"{target}: the copy does not agree with its seal")
-            data = load(folder)
             entry = {k: r[k] for k in ("id", "digest", "role", "reason") if k in r}
             entry["copied_from"] = str(src) if origin is None else f"{origin.rstrip('/')}/{src.relative_to(other_root)}"
-            data["runs"].append(entry)
-            save(folder, data)
+            with locked(folder):
+                data = load(folder)
+                data["runs"].append(entry)
+                save(folder, data)
             added.append(r["id"])
             log(f"added {r['id']} to {rel}")
     return added
