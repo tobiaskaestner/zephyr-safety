@@ -15,7 +15,8 @@ Design (validation/empirical/latencies):
                                           a new experiment of a study
 
 Lab space (a folder with .lab/config, see studylib/lab.py):
-    study.py lab init FOLDER --repo REPO [--trees-source DIR] [--sdk DIR] [--name N]
+    study.py lab init FOLDER --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
+                      [--sdk DIR] [--results DIR] [--hw-map FILE]
                                           make a lab space
     study.py lab status                   the lab space, its trees, boards and campaigns
     study.py lab hwcheck BOARD            the loopback wire check of a board
@@ -28,7 +29,7 @@ Lab space (a folder with .lab/config, see studylib/lab.py):
 Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
                                           build the images of all points (build cache)
-    study.py campaign check FOLDER [...] [--no-hwcheck]
+    study.py campaign check FOLDER [...] [--no-hwcheck] [--warn-as-error]
                                           the pre-flight check
     study.py campaign run FOLDER [...] [--no-hwcheck] [--detach] [--warn-as-error]
                                           check, then run each experiment and add each

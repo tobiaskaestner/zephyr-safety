@@ -47,7 +47,7 @@ The SysTick runs at 170 MHz. Thus:
 ## Kconfig traps
 
 The Kconfig of these variants has two traps. The ws-up tree of
-`tests/benchmarks/trees.yaml` gives the line numbers.
+`validation/trees.yaml` gives the line numbers.
 
 `tickless-off` sets `SYS_CLOCK_TICKS_PER_SEC=10000` explicitly. Without
 `TICKLESS_KERNEL`, the default is 100 ticks/s (`kernel/Kconfig:731`).

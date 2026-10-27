@@ -17,7 +17,7 @@ app data of a run from the files of an earlier build if they come from
 the same run digest and the same clean tool commit, so a build after a new
 run is fast.
 
-In a lab space, a check, a central result or an acceptance check that
+In a lab space, a check (and its hypothesis) or a central result that
 reads an experiment that a running campaign has still to run is
 provisional: study.json says so in the entry and in "state".
 """

@@ -8,7 +8,9 @@ Add an experiment
    question. A study is a folder ``st-<name>/``, an experiment is a folder
    ``ex-<name>/``. Copy an experiment folder of that study that is near
    to your question, and give the copy the folder name ``ex-<name>``. The
-   name must be unique in all studies.
+   name must be unique in all studies. Alternatively, make the files from
+   templates with ``study.py scaffold <study folder>/ex-<name> --app
+   <app>`` (see :ref:`benchguide-scaffold`). It also does the next step.
 #. In ``experiment.yaml``, set ``name`` to the name without ``ex-``. Add
    the name to ``experiments`` in the ``study.yaml`` of the study.
 #. Write the description ``experiment.md``: the question, the method
@@ -25,6 +27,12 @@ Add an experiment
    ``dtc_overlays``.
 #. Use text for the value names of an axis, not ``on``, ``off``, ``yes`` or
    ``no``.
+#. Run the design lint, and correct each error:
+
+   .. code-block:: console
+
+      scripts/benchmarks/study.py lint validation/empirical/latencies/st-<study>
+
 #. Commit the file. ``run.py`` refuses a safety repository that is not
    clean.
 #. Make sure that the points are correct:
@@ -40,7 +48,12 @@ Add an experiment
 
       scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir> --build-only
 
-#. Connect the board and run the experiment without ``--build-only``.
+#. Connect the board and run the experiment without ``--build-only``. In
+   a lab space, run it with a campaign: ``study.py campaign run
+   <experiment folder>`` (see :doc:`lab`). The campaign adds the run to
+   the run list of its instance. Without a campaign, use ``--out
+   <instance folder>``, then ``study.py instance add <instance folder>
+   <run folder>`` (see :doc:`studies`).
 
 Each value in ``kconfig`` of a point must be an option of the app or of
 the tree. If the tree does not define the option, the build stops. Thus
@@ -58,21 +71,22 @@ To use another revision of a repository, add a new tree:
 
 #. Make sure that a local clone has the revision of each repository, or
    that the ``url`` has it.
-#. Add a new entry under ``trees`` in ``trees.yaml``. Do not change the
-   revisions of an existing entry.
-#. Commit ``trees.yaml``.
-#. Create the tree:
+#. Add a new entry under ``trees`` in ``validation/trees.yaml``. Do not
+   change the revisions of an existing entry.
+#. Commit ``validation/trees.yaml``.
+#. Create the tree in your lab space (see :doc:`lab`):
 
    .. code-block:: console
 
-      scripts/benchmarks/trees.py setup <tree>
+      scripts/benchmarks/study.py trees setup <tree>
 
 To add a module repository that a new board needs to an existing tree:
 
-#. Add the repository to the ``repos`` of the tree in ``trees.yaml``, with
-   its pinned revision.
-#. Commit ``trees.yaml``.
-#. Run ``trees.py setup <tree>``. It creates only the missing repositories.
+#. Add the repository to the ``repos`` of the tree in
+   ``validation/trees.yaml``, with its pinned revision.
+#. Commit ``validation/trees.yaml``.
+#. Run ``study.py trees setup <tree>``. It creates only the missing
+   repositories.
 
 Add an app
 ----------

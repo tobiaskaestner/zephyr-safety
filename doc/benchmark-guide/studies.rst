@@ -65,7 +65,8 @@ Design files
      - ``{use: <name>}``. ``instances: per-board`` gives each board its
        own instance of the sub-study.
    * - ``central_results``
-     - ``{id, statement, from, stat, unit}``: see :ref:`benchguide-central`.
+     - ``{id, statement, from, stat, group_by, unit}``: see
+       :ref:`benchguide-central`.
 
 ``hypotheses.yaml`` has 1 to 4 hypotheses. A hypothesis is one claim
 about a mechanism: ``id``, ``type`` (``method`` or ``model``),
@@ -83,6 +84,112 @@ and the central results do not read it.
 
 ``report.ipynb`` is the report template of a study (no outputs). It
 reads a built instance with ``scripts/benchmarks/data.py``.
+
+.. _benchguide-lint:
+
+Design lint (``study.py lint``)
+-------------------------------
+
+.. code-block:: console
+
+   scripts/benchmarks/study.py lint [FOLDER] [--warn-as-error]
+
+The lint reads the design files below ``validation/empirical/latencies/``.
+It needs no build and no board. It prints one line for each problem,
+``<severity>: <file>: <text>``, and then the number of errors and
+warnings. With ``FOLDER``, it prints only the problems of the files below
+that folder.
+
+An error makes the design unusable, or it makes a check wrong. A warning
+is a rule of good practice. ``study.py lint`` exits with 1 if it finds an
+error. With ``--warn-as-error``, a warning also gives exit code 1.
+
+Errors:
+
+- A folder with ``experiment.yaml`` that is not ``ex-<name>``, a folder
+  with ``study.yaml`` that is not ``st-<name>``, a ``name`` in
+  ``study.yaml`` that is not the folder name, or a folder with neither
+  file.
+- The design does not load.
+- An experiment without ``experiment.md``, with an ``app`` that is not a
+  folder of ``tests/benchmarks/``, or without an axis.
+- An experiment file that ``run.py`` cannot expand into points (for
+  example an axis value name that YAML reads as a Boolean).
+- A point without a value on each axis, or an axis ``value`` that is not
+  a number.
+- A ``board`` that is not in ``boards.yaml``.
+- A point with more than one code place (``LATBENCH_CODE_FLASH``,
+  ``LATBENCH_CODE_FLASH_PAD``, ``LATBENCH_CODE_RAM``).
+  ``LATBENCH_CODE_PAD_BYTES`` without ``LATBENCH_CODE_FLASH_PAD`` or
+  ``LATBENCH_CODE_RAM``, or with a value that is not a multiple of 4.
+  ``LATBENCH_CODE_RAM`` without a RAM region from the point or the port.
+- A check (acceptance or hypothesis) in a form that the tools do not
+  know: no ``expect``, no ``stat``, a metric with a stat that the tools
+  cannot calculate, or a manual check without ``statement``.
+- A check or a central result that reads an experiment that its study
+  does not own or import. A ``diff_to`` experiment that does not exist.
+- A ``select`` (or a ``point`` of a central result) that names a point,
+  an axis or an axis value that the experiment does not have.
+- A ``group_by`` with a stat that is not an aggregate, a ``group_by``
+  axis that the experiment does not have, or the statement of an
+  aggregate that names an axis that is not in ``group_by`` (see
+  :ref:`benchguide-central`).
+- A central result from a ``substudy`` that is not a sub-study.
+
+Warnings:
+
+- A ``TODO`` text in a ``.yaml`` or ``.md`` file (a template of
+  ``study.py scaffold``).
+- A study without ``study.md``.
+- An axis that ``experiment.md`` does not name.
+- More than 4 hypotheses in a study.
+
+``run.py`` runs the lint for its experiment and for the study that owns
+it before it builds. It prints each problem and continues. With
+``--warn-as-error``, each problem (error or warning) stops the run. The
+pre-flight check of a campaign fails on a lint error (see :doc:`lab`).
+The tests in ``scripts/benchmarks/tests/`` fail if the design of the
+repository has a lint error.
+
+.. _benchguide-scaffold:
+
+New study or experiment (``study.py scaffold``)
+-----------------------------------------------
+
+.. code-block:: console
+
+   scripts/benchmarks/study.py scaffold PARENT/st-NAME --app APP [--experiment EXP] [--board B]
+   scripts/benchmarks/study.py scaffold STUDY/ex-NAME --app APP [--board B]
+
+The first form makes a new sub-study ``st-NAME/`` of the study
+``PARENT``, with these files:
+
+- ``study.yaml``: the name, a ``question``, the first experiment in
+  ``experiments`` and an empty ``central_results``.
+- ``study.md``: the sections Background, Experiments and References.
+- ``hypotheses.yaml``: one template hypothesis ``H1`` with one check
+  ``a``, with today as ``written``.
+- ``ex-EXP/experiment.yaml`` and ``ex-EXP/experiment.md``. The default of
+  ``EXP`` is ``NAME-smoke``.
+
+The command also adds ``use: NAME`` to ``substudies`` of the parent
+``study.yaml``.
+
+The second form makes only the experiment ``ex-NAME/`` and adds it to
+``experiments`` of ``STUDY/study.yaml``. The edit of ``study.yaml`` is a
+text edit, so the comments of the file stay.
+
+The template ``experiment.yaml`` has the app, the board (only with
+``--board``), the first tree of ``validation/trees.yaml``, one axis
+``variant`` with the value ``default``, and the acceptance check ``A1``
+(no invalid samples). The metric of ``A1`` is the main metric of the app:
+``irq`` for ``irq_latency``, ``isr2thr`` for ``wake_latency``, ``t2t``
+for ``thread_latency``. A name has only lower case letters, digits and
+``-``. An experiment name must be unique over all studies.
+
+The templates pass the lint without errors. Each ``TODO`` text gives a
+lint warning until you replace it. The command prints the new files and
+the line ``replace the TODO texts; 'study.py lint' lists them``.
 
 Results tree
 ------------
@@ -124,30 +231,39 @@ limit, verdict) and the central results as filled sentences.
 The tool study.py
 -----------------
 
+The commands that change a run list are below ``study.py instance``. In a
+lab space, a campaign makes the instances and adds each run (see
+:doc:`lab`). Without a campaign, use these commands:
+
 .. code-block:: console
 
    # once: the instance folders of a study for a board
-   scripts/benchmarks/study.py new <results> load-scaling --board nucleo_g474re
+   scripts/benchmarks/study.py instance new <results> load-scaling --board nucleo_g474re
    # a run goes into its instance folder, then into the run list
    scripts/benchmarks/run.py <experiment.yaml> --out <instance folder>
-   scripts/benchmarks/study.py add <instance folder> <run folder>
+   scripts/benchmarks/study.py instance add <instance folder> <run folder>
    # an old run from another place: copy it in (the original stays)
-   scripts/benchmarks/study.py add <instance folder> <old run folder> --copy
+   scripts/benchmarks/study.py instance add <instance folder> <old run folder> --copy
    # the aggregates, and a check that they come again from the same inputs
    scripts/benchmarks/study.py build <results>/kernel-latency
    scripts/benchmarks/study.py check <results>/kernel-latency
    scripts/benchmarks/study.py show <results>/kernel-latency --brief
    scripts/benchmarks/study.py html <results>/kernel-latency   # one HTML page: index.html
+   # how each central result is made: definition, rows, sentences
+   scripts/benchmarks/study.py show <results>/kernel-latency --explain [ID ...]
    # a manual verdict (a person, or a proposal that says so in --by)
-   scripts/benchmarks/study.py verdict <instance folder> --hypothesis H3 --check h \
+   scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
        --verdict wrong --by "<name>" --text "<why>"
 
-Other commands: ``add --role excluded --reason <text>``, ``reference``
-(a run of another instance that a check reads), ``seal``, ``verify``, and
-``merge OTHER ROOT``: it adds the runs of another results tree (for
-example a copy of the tree of the lab host) that ROOT does not have, with
-their roles, after it checks their seals and digests. If OTHER is a local
-copy, ``--origin HOST:PATH`` records the original tree in ``copied_from``.
+Other commands: ``instance add --role excluded --reason <text>``,
+``instance reference`` (a run of another instance that a check reads),
+``seal``, ``verify``, and ``instance merge OTHER ROOT``: it adds the runs
+of another results tree that ROOT does not have, with their roles, after
+it checks their seals and digests. Use ``instance merge`` for a results
+tree that is not in a lab space. Between two lab spaces, use ``study.py
+lab export`` and ``study.py lab import`` (see :doc:`lab`). If OTHER is a
+local copy, ``--origin HOST:PATH`` records the original tree in
+``copied_from``.
 
 ``build`` writes only derived files; it does not change a raw run or
 ``instance.json``. The same inputs and the same revision of the tools
@@ -261,25 +377,307 @@ reads only its own runs of that experiment, never those of the owner.
 Central results
 ---------------
 
-A central result is characterisation: measured values in a sentence.
-``statement`` has ``{placeholders}``; the build fills it once for each
-row of values. A placeholder is a stat name, an axis name, ``tree``,
-``point``, ``metric``, ``run``, ``board``, or a name that the stat gives.
-``from`` names the data (``experiment``, ``point``, ``axes``,
-``exclude``, ``tree``, ``metric``), the hypotheses of a ``conclusion``, or a
-``substudy`` whose central result of the same id the parent shows.
+A central result is characterisation: measured values in a sentence. It
+is an entry of ``central_results`` in ``study.yaml``:
 
-``stat``: a stat (or a list), ``value``, ``top_site``, ``conclusion`` (a
-person confirms the sentence with ``study.py verdict --central-result``),
-``phase_share_range``, ``hist_identical_count`` (re-runs against the run
-of the owner study), ``{spread: [stats]}``, ``{spread_abs: [stats]}``,
-``{slope: {stat, axis}}``, ``{fit_linear: {stat, x: [axes]}}`` (over the
-``value:`` numbers of the axes), ``{diff_rank: [stats]}`` (the variants
-by their change against ``baseline``), ``{tree_diff: stat}``
-(``ws-up`` - ``ws-safety``), ``{ram_cost: [stats]}``,
-``{exceedance_bound: {thresholds, confidence}}`` (a one-sided Poisson
-upper bound of P(value >= threshold) per sample). For an aggregate stat,
-the points form one group for each series and each value of the axes
-that the statement names. If the sentences come from more than one run or
-tree and the statement does not name them, each sentence ends with
-``[<run>, <tree>]``.
+``id``
+   The name of the result.
+
+``statement``
+   The sentence, with blanks (placeholders) for the values.
+
+``from``
+   The data: ``experiment`` (or a list), ``point`` (or a list), ``axes``,
+   ``exclude`` (point IDs), ``tree`` and ``metric`` (or a list). A
+   ``conclusion`` has ``hypotheses`` instead. A result of a sub-study has
+   ``substudy``.
+
+``stat``
+   What the build calculates from the data (see the table below).
+
+``group_by``
+   Only for an aggregate stat: the axes that divide the points into
+   groups.
+
+``unit``
+   The unit of the values. The build copies it into ``study.json``.
+
+The build calculates one or more rows from the data. A row is a set of
+names with a value each. Then the build fills the statement once for
+each row. Each filled statement is one sentence. Before it fills the
+statement, the build joins its lines into one line.
+
+``study.py show ROOT --explain [ID ...]`` prints, for each central result
+(or for the given IDs) of each instance below ``ROOT``: the definition,
+each row, and the sentence of each row.
+
+Placeholders
+~~~~~~~~~~~~
+
+A placeholder is a Python format field: ``{name}`` or ``{name:spec}``.
+``name`` is a name of the row. ``spec`` is a Python format
+specification:
+
+- ``{p99:.0f}`` writes 41 for the value 41.0 (no decimals).
+- ``{slope:.1f}`` writes 0.7 for the value 0.6791.
+- ``{bound:.1e}`` writes 2.3e-06 for the value 0.00000231.
+- ``{confidence:.0%}`` writes 95% for the value 0.95.
+
+A name can have a dot or a hyphen, for example ``{p99.99}``. If the spec
+does not fit the value (for example ``.0f`` for a text), the build writes
+the value without the spec.
+
+Each row has these names:
+
+- ``board`` and ``instance``: the board and the instance path of the
+  instance that the build makes.
+- ``run``: the run ID, ``<experiment>/<UTC>``.
+- ``tree``: the tree of the point.
+- ``metric``: the metric of the row, if ``from`` has one.
+- For a per-point stat: ``point`` (the point ID) and one name for each
+  axis of the point, with the value name (for example ``path``,
+  ``background``).
+- For an aggregate stat: only the axes of ``group_by``, not ``point``.
+- The names that the stat gives (table below).
+
+A few stats give rows without ``run`` and ``tree`` (see the table).
+
+.. list-table:: Names that each stat adds to a row
+   :header-rows: 1
+   :widths: 30 70
+
+   * - ``stat``
+     - Names in the row
+   * - a stat or a list of stats (``p99``, ``[p99, p99.99]``, ``max``,
+       ``mode_share(1)``, ``drift_per_wake``)
+     - One name for each stat, with the value of the point:
+       ``{p99}``, ``{p99.99}``.
+   * - ``value`` (with ``meta.<key>`` metrics)
+     - ``<key>`` for each metric (the name without ``meta.``), and
+       ``value``. The row has no ``metric``.
+   * - ``top_site``
+     - ``max_net``, ``place`` (the function of the mask site with the
+       largest ``max_net``, with ``(via ...)`` for inlined functions) and
+       ``ctx``.
+   * - ``phase_share_range``
+     - ``min`` and ``max``: the smallest and the largest share of a phase
+       bin (1 is uniform).
+   * - ``hist_identical_count``
+     - ``hist_identical_count`` (the points of the re-run with the same
+       histograms as the point of the owner study) and ``n`` (the points
+       with a point of the owner). One row, without ``run`` and ``tree``.
+   * - ``{spread: [stats]}``
+     - ``points`` (the points in the group), and for each stat its
+       spread (max - min) / min over the group.
+   * - ``{spread_abs: [stats]}``
+     - ``points``, and for each stat max - min over the group.
+   * - ``{slope: {stat, axis}}``
+     - ``slope``, ``intercept`` and ``points``: the least-squares line of
+       the stat over the ``value:`` numbers of the axis. A point whose axis
+       value has no ``value:`` is not used. A group with fewer than two
+       points gives no row.
+   * - ``{fit_linear: {stat, x: [axes]}}``
+     - As ``slope``. x is the sum of the ``value:`` numbers of the axes.
+   * - ``{diff_rank: [stats]}``
+     - ``stat``, ``first`` (the point with the largest change),
+       ``first_diff`` (its change as an integer) and ``ranking`` (all
+       points, ``<point> (+n)``). The change of a point is its value minus
+       the value of the point with ``variant: baseline`` and the same
+       other axes. One row for each metric, stat and series.
+   * - ``{tree_diff: stat}``
+     - ``tree_diff``: the value of ``ws-up`` minus the value of
+       ``ws-safety``. One row for each point and metric, with ``point``,
+       ``metric`` and the axes, without ``run`` and ``tree``.
+   * - ``{ram_cost: [stats]}``
+     - For each stat: the median over the points with a ``place`` value
+       that starts with ``r``, minus the median over the points with a
+       ``place`` value that starts with ``f``.
+   * - ``{exceedance_bound: {thresholds: [..], confidence: c}}``
+     - ``load_seed``, ``threshold``, ``count`` (the samples at or above the
+       threshold), ``n``, ``bound`` (a one-sided Poisson upper bound of
+       P(value >= threshold) per sample, rounded up to 3 digits) and
+       ``confidence``. One row for each point, metric and threshold.
+   * - ``conclusion``
+     - No row (see below).
+
+Rows of a per-point stat and of an aggregate stat
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+A series is the points of one run on one tree. A per-point stat (a stat
+or a list of stats, ``value``, ``top_site``, ``phase_share_range``,
+``exceedance_bound``) gives one row for each point, metric and series.
+
+An aggregate stat (``spread``, ``spread_abs``, ``slope``, ``fit_linear``,
+``ram_cost``) puts the points into groups and gives one row for each
+group and metric. There is one group for each series and each
+combination of values of the ``group_by`` axes. Without ``group_by``, a
+group is one series.
+
+The statement does not change the groups. In a group, each axis that is
+not in ``group_by`` has several values. Thus the statement of an
+aggregate can name only the axes of ``group_by``. The lint finds these
+errors (see :ref:`benchguide-lint`):
+
+- The statement names an axis that is not in ``group_by``.
+- ``group_by`` is on a stat that is not an aggregate.
+- ``group_by`` names an axis that the experiment does not have.
+
+Run and tree tag
+~~~~~~~~~~~~~~~~
+
+If the rows come from more than one run and the statement does not name
+``{run}``, each sentence ends with the UTC time of its run. If the rows
+come from more than one tree and the statement does not name
+``{tree}``, each sentence ends with its tree. The tag has the form
+``[<run UTC>, <tree>]``, with only the parts that apply.
+
+Missing values
+~~~~~~~~~~~~~~
+
+If the data cannot give a value (no point for ``from``, a quantile in
+the overflow bin, fewer than two points for a spread), the central
+result has no sentence. It is ``not evaluated``, and ``not_evaluated``
+in ``study.json`` gives the reason. An error of the tools gives ``not
+evaluated`` with the reason ``tool error: ...``.
+
+If a placeholder names a value that the row does not have, the build
+keeps the placeholder in the sentence as it is. The name goes into the
+list ``unfilled`` of the result. ``show --explain`` prints this list.
+
+Conclusion and sub-study
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+``stat: conclusion`` is a sentence without data. ``from`` names the
+hypotheses that the sentence is based on. The build does not fill
+placeholders in a conclusion. The result has the verdict of each
+hypothesis (``verdicts_of_hypotheses``) and the verdict ``open (a person
+confirms the sentence)``. A person sets the verdict ``confirmed`` or
+``wrong``:
+
+.. code-block:: console
+
+   scripts/benchmarks/study.py instance verdict <instance folder> --central-result <id> \
+       --verdict confirmed --by "<name>"
+
+``from: {substudy: <name>}`` shows the central result with the same
+``id`` of the sub-study ``<name>``. The parent instance shows the
+sentences, the rows and the verdict of the result of the child instance.
+If the child has no result with this ``id``, the result is ``not
+evaluated``.
+
+Examples
+~~~~~~~~
+
+Each example gives the entry of ``study.yaml``, the rows of the build,
+and the sentences. The rows and the sentences are the output of ``study.py
+show --explain`` on the results tree of the study (state of 2026-10-27).
+
+A per-point stat with two runs. The entry is in
+``st-default-latencies/st-irq-entry/study.yaml``:
+
+.. code-block:: none
+
+   - id: irq-entry-p99-direct
+     statement: >
+       With the board defaults and an idle CPU, the IRQ entry latency of
+       the direct path has a p99 of {p99:.0f} cycles.
+     from: {experiment: irq-baseline-1m, point: direct-idle, tree: ws-up, metric: irq}
+     stat: p99
+     unit: CPU cycles (170 MHz)
+
+   rows (one for each point, metric and series):
+     run=irq-baseline-1m/20261024T155016Z, tree=ws-up, point=direct-idle,
+       path=direct, background=idle, metric=irq, p99=41
+     run=irq-baseline-1m/20261026T223523Z, tree=ws-up, point=direct-idle,
+       path=direct, background=idle, metric=irq, p99=55
+
+   sentences:
+     With the board defaults and an idle CPU, the IRQ entry latency of the
+     direct path has a p99 of 41 cycles. [20261024T155016Z]
+     With the board defaults and an idle CPU, the IRQ entry latency of the
+     direct path has a p99 of 55 cycles. [20261026T223523Z]
+
+The instance has two evidence runs of ``irq-baseline-1m``, and the
+statement does not name ``{run}``. Thus each sentence ends with the UTC
+time of its run. ``from`` selects one tree, so the tag has no tree.
+
+An aggregate stat with ``group_by``. The entry is in
+``st-load-scaling/st-timeout-queue-cost/study.yaml``:
+
+.. code-block:: none
+
+   - id: thread-slope
+     statement: >
+       With {kind} load threads, the isr2thr p99 grows by {slope:.1f}
+       cycles per thread ({tree}).
+     from: {experiment: wake-threads-1m, metric: isr2thr}
+     stat: {slope: {stat: p99, axis: threads}}
+     group_by: [kind]
+     unit: cycles per thread
+
+   rows (one for each series, value of kind and metric, 2 of 6):
+     run=wake-threads-1m/20261025T004141Z, tree=ws-safety, metric=isr2thr,
+       kind=blocked, slope=0.6791, intercept=1667, points=4
+     run=wake-threads-1m/20261025T004141Z, tree=ws-safety, metric=isr2thr,
+       kind=busy, slope=1.663, intercept=2067, points=4
+
+   sentences:
+     With blocked load threads, the isr2thr p99 grows by 0.7 cycles per
+     thread (ws-safety).
+     With busy load threads, the isr2thr p99 grows by 1.7 cycles per
+     thread (ws-safety).
+
+The other four rows are for ``kind=sleeper`` and for the tree ``ws-up``.
+The statement names ``{tree}``, so the sentences have no tag. A group has
+the four values of ``threads``. Thus ``{threads}`` in the statement is a
+lint error.
+
+A conclusion. The entry is in
+``st-measurement-validity/st-clock-drift/study.yaml``:
+
+.. code-block:: none
+
+   - id: drift-cause
+     statement: >
+       Each SysTick reprogram loses about 8 cycles, and the gap
+       compensation removes the drift. With many load timers, the driver
+       also loses whole reloads when the shortest reload is too short.
+     from: {hypotheses: [H1, H2]}
+     stat: conclusion
+
+   rows: none
+
+   sentence:
+     Each SysTick reprogram loses about 8 cycles, and the gap compensation
+     removes the drift. With many load timers, the driver also loses whole
+     reloads when the shortest reload is too short.
+
+   study.json: verdict "open (a person confirms the sentence)",
+     verdicts_of_hypotheses {H1: open, H2: open}
+
+.. _benchguide-provisional:
+
+Provisional verdicts
+--------------------
+
+In a lab space, a campaign runs the experiments one after the other, and
+the build of the results tree runs after each run (see :doc:`lab`).
+Thus a build can come before the last run of an experiment. A verdict of
+such a build is provisional.
+
+A check of a hypothesis or a central result is provisional if it reads
+an experiment that a running campaign of the lab space has still to run.
+This includes an experiment that the study imports with ``mode: reuse``.
+``study.json`` then has these entries:
+
+- The key ``provisional`` on the check and on the central result, with
+  the reason (``waits for <experiment> of the campaign <id>``).
+- ``"provisional": true`` on a hypothesis with a provisional check.
+- ``state``: ``{final, waits}``. ``final`` is ``false`` if a result of the
+  instance is provisional. ``waits`` lists the reasons.
+
+A campaign counts while its record has the status ``running``. A campaign
+of this lab space on this host whose process stopped does not count. An
+imported campaign record of another lab space counts while it has the
+status ``running``. ``study.py show``, ``study.py html`` and
+``scripts/benchmarks/data.py`` mark the provisional verdicts.

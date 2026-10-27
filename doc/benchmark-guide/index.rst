@@ -27,6 +27,7 @@ to the root of the safety repository.
    unit-tests
    m4
    studies
+   lab
    extending
    boards
    pitfalls

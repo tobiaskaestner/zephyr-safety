@@ -13,7 +13,7 @@
 name: reproducibility
 question: >
   Does the same image give the same histograms on another host, does a
-  rebuild from the run snapshot give the same image, and does a new
+  rebuild from the sources of the run (its snapshot or its commit) give the same image, and does a new
   safety revision give the old data of the same code placement?
 
 # It runs points of other experiments again (mode rerun: its own runs of
@@ -51,6 +51,6 @@ central_results:
 
   - id: rebuild-same-image
     statement: >
-      A rebuild from the run snapshot gives the same image on two hosts.
+      A rebuild from the sources of the run gives the same image on two hosts.
     from: {experiment: [wp3-irq-1m, wp3-wake-1m, t2t-load-1m]}
     stat: conclusion               # a person confirms the sentence; run.py --rebuild writes no record yet

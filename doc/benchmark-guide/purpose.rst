@@ -93,7 +93,7 @@ Board port
 
 Tree
    A pinned set of source repositories (Zephyr and its modules), declared
-   in ``trees.yaml``.
+   in ``validation/trees.yaml``.
 
 Experiment
    A folder ``ex-<name>/`` in the folder of the study that owns it,

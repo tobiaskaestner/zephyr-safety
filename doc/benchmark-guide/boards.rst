@@ -443,7 +443,7 @@ Add a board
    comment. Add the board to the hardware map of your host (see
    :ref:`benchguide-hw-map`).
 #. If a tree does not pin a module of the board, add the module to the
-   tree in ``trees.yaml`` (see :ref:`benchguide-tree-rule`).
+   tree in ``validation/trees.yaml`` (see :ref:`benchguide-tree-rule`).
 #. Add an overlay for ``loopback_check`` in ``loopback_check/boards/``.
 #. Add a ``port-smoke-<port>`` experiment with ``board: <board target>``.
    Build all points with ``run.py <experiment> --out <dir> --build-only``.

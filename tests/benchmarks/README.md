@@ -22,9 +22,8 @@ boards; their ports build, but nobody ran them yet.
 
 | Path | Content |
 |---|---|
-| `trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
 | `boards.yaml` | For each board: port folder, modules, flash commands |
-| `hw-map.yml` | Not checked in: the probe and the console of each board on this host (twister hardware map) |
+| `hw-map.yml` | Not checked in: the probe and the console of each board on this host (twister hardware map). In a lab space, the map is in the lab space |
 | `common/` | Histogram, metadata, stimulus and load code, Kconfig fragments (`conf/`) |
 | `common/boards/<board>/` | Board port: `port.cmake`, `port.c`, `include/latbench/port_impl.h`, overlays (see `common/include/latbench/port.h`) |
 | `irq_latency/` | IRQ to ISR latency with a hardware time stamp of the edge |
@@ -38,13 +37,14 @@ paths are relative to the root of the repo:
 
 | Path | Content |
 |---|---|
+| `validation/trees.yaml` | Pinned Zephyr and module revs for each tree, and the SDK version |
 | `validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml` | One folder `ex-<name>` for each experiment, in the folder `st-<study>` of the study that owns it: app, trees, points, repetitions; `experiment.md` describes it |
-| `scripts/benchmarks/trees.py` | Creates and checks the pinned worktrees |
+| `scripts/benchmarks/trees.py` | The pinned trees of `validation/trees.yaml` (commands: `study.py trees setup / check / show`) |
 | `scripts/benchmarks/run.py` | Runs an experiment and records its provenance |
 | `scripts/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
 | `scripts/benchmarks/latbench.py` | Parses logs and prints percentiles |
 | `scripts/benchmarks/plot.py` | Plots the exceedance probability and the histograms |
-| `scripts/benchmarks/study.py` | Study instances: run lists, seals, and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide page "Studies and their results") |
+| `scripts/benchmarks/study.py` | Design lint and templates, lab spaces, pinned trees, campaigns, study instances (run lists, seals), and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide pages "Studies and their results" and "Lab spaces and campaigns") |
 | `scripts/benchmarks/data.py` | Loads a built instance for a notebook |
 | `tests/benchmarks/<app>/scripts/extract.py` | The data of a run of the app as JSON (common part: `common/scripts/latextract.py`) |
 | `scripts/benchmarks/requirements.txt` | Python packages for the scripts |
@@ -56,19 +56,26 @@ Each result folder has a `manifest.json`. It names the safety repo rev,
 the experiment file, and the revs of all trees.
 
 1. Check out the safety repo at the rev in `manifest.json` (`safety.rev`).
-2. Create the pinned trees (once):
+2. Make a lab space (once). It gives the trees root, the SDK path and
+   the hardware map of the host:
 
    ```sh
-   scripts/benchmarks/trees.py setup
+   scripts/benchmarks/study.py lab init <lab folder> --repo <safety repo>
    ```
 
-3. Run the experiment again:
+3. In the lab folder, create the pinned trees (once):
+
+   ```sh
+   scripts/benchmarks/study.py trees setup
+   ```
+
+4. Run the experiment again:
 
    ```sh
    scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
    ```
 
-4. Compare the results:
+5. Compare the results:
 
    ```sh
    scripts/benchmarks/latbench.py summary <dir>/.../rep1.log <old>/.../rep1.log
@@ -84,13 +91,16 @@ not true:
 A build uses only the modules of its tree (`ZEPHYR_MODULES`). It does not
 use the modules or the Zephyr tree of a west workspace.
 
-A run builds from a snapshot of the committed sources (`git archive` of
-the safety rev into `<run>/src/`), not from the worktree. Work in the
-worktree during a long run does not change what the run builds.
+A run builds the app from the safety repo. Before each point, `run.py`
+makes sure that the repo is clean and at the commit of the start of the
+run, and stops if not. The app gets `LATBENCH_SRC_REV`, the git tree
+hash of `tests/benchmarks`. In a lab space, the images go into the build
+cache. A run of an older `run.py` has a copy of the repo in
+`<run>/src/`. New runs have none.
 
 ## Change a tree
 
-Do not change a pinned rev in `trees.yaml`, because old results refer to
-it. Add a new tree instead. A Zephyr patch for this study goes on a
-branch (for example `tkaestner/latency-hooks`) in the Zephyr repo. Its
+Do not change a pinned rev in `validation/trees.yaml`, because old
+results refer to it. Add a new tree instead. A Zephyr patch for this
+study goes on a branch (for example `tkaestner/latency-hooks`) in the Zephyr repo. Its
 commit is the rev of the new tree.

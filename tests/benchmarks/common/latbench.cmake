@@ -4,8 +4,8 @@
 # Adds the common latency benchmark code to the app target.
 
 # __FILE__ (ASSERT messages) of the common code without the path of the
-# run folder, as Zephyr does for ZEPHYR_BASE: the image must not depend
-# on the folder of the snapshot.
+# source folder, as Zephyr does for ZEPHYR_BASE: the image must not depend
+# on the folder of the repo (or of the snapshot of an old run).
 zephyr_cc_option(-fmacro-prefix-map=${CMAKE_CURRENT_LIST_DIR}=LATBENCH_COMMON)
 
 target_include_directories(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/include)
@@ -26,9 +26,10 @@ else()
 endif()
 
 # Put the rev of the benchmark sources into the output, so that each log
-# names the code that produced it. run.py passes LATBENCH_SRC_REV, because
-# it builds from a snapshot without .git. A manual build asks git; a dirty
-# tree gets "-dirty".
+# names the code that produced it. run.py passes LATBENCH_SRC_REV: the git
+# tree hash of tests/benchmarks (old runs: the commit), so the build cache
+# gives the same image for the same content. A manual build asks git; a
+# dirty tree gets "-dirty".
 if(NOT DEFINED LATBENCH_SRC_REV)
   execute_process(
     COMMAND git describe --always --abbrev=12 --dirty

@@ -11,8 +11,13 @@ The folder ``scripts/benchmarks/`` has the host tools. They need Python
 
    * - Script
      - Purpose
+   * - ``study.py``
+     - Study designs (lint, scaffold), lab spaces, pinned trees
+       (``study.py trees``), campaigns, and the aggregates of a results
+       tree (see :doc:`studies` and :doc:`lab`).
    * - ``trees.py``
-     - Creates and examines the pinned trees of ``trees.yaml``. Reads
+     - The library of the pinned trees of ``validation/trees.yaml``. It
+       has no commands of its own: use ``study.py trees``. It reads
        ``boards.yaml`` for ``run.py``.
    * - ``run.py``
      - Runs an experiment from pinned, clean trees and records its
@@ -30,8 +35,8 @@ Reproducibility rules
 A data point that you publish or compare must come from ``run.py`` with
 an experiment file in the safety repository. These rules apply:
 
-- ``trees.yaml`` pins each tree: the Zephyr revision, the revision of each
-  module, and the Zephyr SDK version.
+- ``validation/trees.yaml`` pins each tree: the Zephyr revision, the
+  revision of each module, and the Zephyr SDK version.
 - A pinned revision does not change, because old results refer to it. A
   changed revision means a new tree (see :ref:`benchguide-tree-rule`).
 - A Zephyr patch for the study goes on a branch in the Zephyr repository.
@@ -39,34 +44,43 @@ an experiment file in the safety repository. These rules apply:
 - ``run.py`` stops before it builds anything in these conditions:
 
   - The safety repository is not clean.
+  - The lab space uses a different design repository (see :doc:`lab`).
   - A repository of a tree that the build needs is not at its pinned
     revision, or it is not clean.
   - The SDK version is not the pinned version.
 
+- The safety repository stays clean and at the same commit while the run
+  builds. ``run.py`` makes sure of this before each point, and stops if
+  the repository changed.
 - A manual build or capture is for development only. Its results are
   unpinned.
 
-Pinned trees (``trees.yaml``)
------------------------------
+Pinned trees (``validation/trees.yaml``)
+----------------------------------------
 
-``trees.yaml`` has these keys:
+``validation/trees.yaml`` has only the pins. The paths of a host are in
+the ``.lab/config`` of its lab space (see :doc:`lab`):
 
-``root``
-   The folder that holds the trees. ``--trees-root`` or the environment
-   variable ``LATBENCH_TREES_ROOT`` overrides it.
+- The trees root is ``[trees] root``. ``--trees-root`` or the environment
+  variable ``LATBENCH_TREES_ROOT`` overrides it.
+- The SDK path is ``[toolchain] zephyr_sdk``. The default is
+  ``~/zephyr-sdk-<version>``.
+- A folder of trees to clone from is ``[trees] source``.
+
+``validation/trees.yaml`` has these keys:
 
 ``toolchain.zephyr_sdk``
-   The pinned SDK ``version`` and its ``path``. The scripts compare the
-   version with the ``sdk_version`` file of the SDK.
+   The pinned SDK ``version``. The scripts compare it with the
+   ``sdk_version`` file of the SDK.
 
 ``trees.<name>``
    One entry for each tree, with a ``description`` and a ``repos`` map.
    Each repository has a ``path`` in the tree, a ``url``, an optional
    ``branch``, the pinned ``rev``, and an optional ``source``. The
    ``source`` is a local clone that has the revision, so that no network
-   access is necessary.
+   access is necessary. It is for a host without ``[trees] source``.
 
-The file declares three trees today:
+The file declares four trees today:
 
 ``ws-safety``
    The Zephyr of the safety workspace.
@@ -74,37 +88,45 @@ The file declares three trees today:
 ``ws-up``
    An upstream Zephyr ``main``.
 
+``ws-up-irqoff``
+   The Zephyr of ``ws-up`` plus the interrupt mask hooks of M4 (see
+   :doc:`m4`), on a local branch (``tkaestner/latency-irqoff-hook``). The
+   branch is not pushed, so ``study.py trees setup`` needs a local clone
+   for this tree.
+
 ``ws-safety-driftfix``
    The Zephyr of ``ws-safety`` plus a SysTick experiment, on a local branch
    (``tkaestner/latency-systick-drift``). The branch is not pushed, so
-   ``trees.py setup`` needs the local ``source`` clone for this tree.
+   ``study.py trees setup`` needs a local clone for this tree.
 
 Each tree has the repositories ``zephyr``, ``cmsis_6``, ``hal_stm32``,
 ``hal_nordic`` and ``hal_nxp``. The boards and the modules that each board
 needs are in ``boards.yaml``.
 
-``trees.py`` has three commands:
+``study.py trees`` has three commands:
 
 .. code-block:: console
 
-   scripts/benchmarks/trees.py setup [TREE ...]
-   scripts/benchmarks/trees.py check [TREE ...]
-   scripts/benchmarks/trees.py show
+   scripts/benchmarks/study.py trees setup [--clone-source] [TREE ...]
+   scripts/benchmarks/study.py trees check [TREE ...]
+   scripts/benchmarks/study.py trees show
 
 ``setup``
-   Creates each missing repository at ``<root>/<tree>/<path>``. If the
-   ``source`` clone exists, it adds a detached git worktree of it at the
-   pinned revision. If the revision is not in the clone, it fetches the
-   ``branch`` first. If the ``source`` clone does not exist, it clones the
-   ``url``. Then it does the same examination as ``check``.
+   Creates each missing repository at ``<trees root>/<tree>/<path>``. The
+   clone source is ``<[trees] source>/<tree>/<path>`` of the lab space if
+   it is a git repository, else the ``source`` of ``validation/trees.yaml``
+   if it exists. If a clone source exists, ``setup`` adds a detached git
+   worktree of it at the pinned revision. If the revision is not in the
+   clone source, it fetches the ``branch`` first. Without a clone source,
+   it clones the ``url``. Then it does the same examination as ``check``.
 
-   With ``--clone-source``, ``setup`` clones the ``source`` clone instead
+   With ``--clone-source``, ``setup`` clones the clone source instead
    of adding a worktree to it. The local clone uses hard links to the
    objects and needs no network access. Nothing is written into the
-   ``source``: a worktree writes ``.git/worktrees/<name>`` there, and a
-   fetch writes objects there. If the revision is not in the ``source``,
+   source: a worktree writes ``.git/worktrees/<name>`` there, and a
+   fetch writes objects there. If the revision is not in the source,
    the new clone fetches the ``branch`` from the ``url``. Use it on a host
-   where a ``source`` path is a repository of a different workspace that
+   where a source path is a repository of a different workspace that
    must not change.
 
 ``check``
@@ -113,7 +135,7 @@ needs are in ``boards.yaml``.
    (no changes, no untracked files).
 
 ``show``
-   Prints the trees, the revisions and the paths.
+   Prints the trees root, the trees, the revisions and the paths.
 
 Do not change files in a tree. A tree with changes is not clean, and
 ``run.py`` refuses it.
@@ -187,7 +209,10 @@ Hardware map (``hw-map.yml``)
 The hardware map tells ``run.py`` which probe and which serial port a
 board has on this host. It is a twister hardware map (see the Zephyr
 documentation, "Executing tests on multiple devices"). It is not in the
-repository: ``tests/benchmarks/.gitignore`` lists ``hw-map.yml``.
+repository: ``tests/benchmarks/.gitignore`` lists ``hw-map.yml``. In a
+lab space, the map is ``[hardware] map`` of ``.lab/config`` (default
+``<lab folder>/hw-map.yml``). Outside a lab space, the default is
+``tests/benchmarks/hw-map.yml``.
 
 Make the map with twister, from a Zephyr tree, on the host with the
 boards:
@@ -244,6 +269,9 @@ Run an experiment (``run.py``)
 
    scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
+In a lab space, a campaign runs ``run.py`` for each experiment (see
+:doc:`lab`).
+
 Options:
 
 .. list-table::
@@ -253,13 +281,24 @@ Options:
    * - Option
      - Meaning
    * - ``--out <dir>``
-     - The folder for the results (necessary).
+     - The folder for the results (necessary, but not with
+       ``--build-only`` or ``--dry-run``).
    * - ``--only ID ...``
      - Run only the points with these IDs.
    * - ``--dry-run``
      - Do the checks and list the points. Do not build.
    * - ``--build-only``
-     - Build each point in a temporary folder. Do not flash.
+     - Build each point. Do not flash. In a lab space, the images go into
+       the build cache. Outside a lab space, the builds go to a temporary
+       folder.
+   * - ``--no-cache``
+     - Do not use the build cache of the lab space: build each point
+       again, and do not store the image in the cache.
+   * - ``--warn-as-error``
+     - Stop before the build if the design lint finds a problem (error or
+       warning) in the experiment or in its study (see
+       :ref:`benchguide-lint`). Without it, ``run.py`` prints the problems
+       and continues.
    * - ``--keep-build``
      - Keep the build folder of each point.
    * - ``--rebuild <run>``
@@ -268,20 +307,23 @@ Options:
        folder or one ``<run>/<tree>/<point>`` folder. Use it without an
        experiment and without ``--out``. ``--only`` selects points.
    * - ``--hardware-map <file>``
-     - The hardware map (default: ``tests/benchmarks/hw-map.yml``, see
-       :ref:`benchguide-hw-map`).
+     - The hardware map (default: ``[hardware] map`` of the lab space,
+       else ``tests/benchmarks/hw-map.yml``, see :ref:`benchguide-hw-map`).
    * - ``--probe <id>``
      - Select the map entry with this probe ID, if the map has more than
        one entry for the board. With ``--port``, ``run.py`` uses no map.
    * - ``--port <dev>``
      - The serial port (default: ``serial`` of the map entry).
    * - ``--trees-root <dir>``
-     - Override ``root`` of ``trees.yaml``.
+     - Override the trees root of the lab space (also
+       ``LATBENCH_TREES_ROOT``).
 
 ``run.py`` does these steps:
 
 #. **Checks.** It makes sure that the safety repository is clean and that
-   the experiment file is in it. It finds the board target (``board:`` of
+   the experiment file is in it. In a lab space, the design repository of
+   the lab space must be this repository. It runs the design lint for the
+   experiment and its study (see :ref:`benchguide-lint`). It finds the board target (``board:`` of
    the experiment, or ``default`` of ``boards.yaml``). It makes sure that
    the SDK is as pinned. For each tree of the experiment, it makes sure
    that the tree pins ``zephyr`` and the modules of the board. Then it
@@ -292,20 +334,23 @@ Options:
 #. **Hardware.** It selects the entry of the board in the hardware map
    (see :ref:`benchguide-hw-map`). Without one connected entry with the
    fixture ``latbench_loopback``, the run stops before it builds.
-#. **Snapshot.** It exports the safety repository at the current revision
-   with ``git archive`` into ``<run>/src/``. All builds use this snapshot,
-   not the worktree. Thus work in the worktree during a long run does not
-   change what the run builds. The snapshot stays in the result folder, so
-   the sources of each data point stay available also after a rebase of
-   the branch.
-#. **Build.** For each tree and each point, it runs CMake and Ninja with:
+#. **Sources.** The build reads the app from the safety repository, not
+   from a copy. Before each point, ``run.py`` makes sure that the
+   repository is clean and at the commit of the start of the run. If not,
+   the run stops. Thus a change in the worktree during a run cannot change
+   what the run builds. A campaign also keeps the commit with a ref (see
+   :doc:`lab`). Runs of an older ``run.py`` have a copy of the repository
+   in ``<run>/src/``.
+#. **Build.** For each tree and each point, it takes the image from the
+   build cache of the lab space if the cache has it (see
+   :ref:`benchguide-build-cache`). Else it runs CMake and Ninja with:
 
    - ``ZEPHYR_BASE`` set to the Zephyr of the tree, and all other
      ``ZEPHYR_*`` environment variables removed.
    - ``-DBOARD`` set to the board target.
    - ``-DZEPHYR_MODULES`` set to the modules of the board from the tree
      only, so that no module of a west workspace goes into the build. The
-     snapshot is one more module: the safety repository is the Zephyr
+     safety repository is one more module: it is the Zephyr
      module ``safety`` (``zephyr/module.yml``), so an app finds it as
      ``ZEPHYR_SAFETY_MODULE_DIR``. The module has no code, so the image
      does not change. The ``.config`` gets one more line,
@@ -315,10 +360,13 @@ Options:
      the comments of ``zephyr.dts`` relative to ``WEST_TOPDIR``. Without
      this value, Zephyr looks for a west workspace around the tree, and an
      image with ``ASSERT`` then depends on the host. ``common/latbench.cmake``
-     also removes the folder of the snapshot from ``__FILE__``.
+     also replaces the folder of the common code with ``LATBENCH_COMMON``
+     in ``__FILE__``.
    - ``-DEXTRA_CONF_FILE`` and ``-DEXTRA_DTC_OVERLAY_FILE`` from the point.
    - ``-DCONFIG_<SYM>=<value>`` for each Kconfig value of the point.
-   - ``-DLATBENCH_SRC_REV`` set to the safety revision.
+   - ``-DLATBENCH_SRC_REV`` set to the git tree hash of
+     ``tests/benchmarks`` at the commit of the run. The same content gives
+     the same image at any commit.
 
 #. **Kconfig check.** It compares each Kconfig value of the point with the
    ``.config`` of the build. If the ``.config`` does not have the requested
@@ -359,7 +407,7 @@ experiment file ``experiment.yaml`` and the description
    * - ``app``
      - The app folder in ``tests/benchmarks/``.
    * - ``trees``
-     - List of tree names from ``trees.yaml``.
+     - List of tree names from ``validation/trees.yaml``.
    * - ``board``
      - Optional. A board target of ``boards.yaml``. The default is
        ``default`` of ``boards.yaml``.
@@ -480,7 +528,6 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
    <out>/<name>/<UTC time>/
    ├── manifest.json        provenance of the run
    ├── summary.txt          percentiles of each histogram
-   ├── src/                 snapshot of the safety repository
    └── <tree>/<point>/
        ├── rep1.log         serial output of repetition 1
        ├── rep2.log         ...
@@ -491,18 +538,27 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
        ├── zephyr.hex       the binary as Intel HEX, if the build makes it
        └── build/           only with --keep-build
 
+A run of an older ``run.py`` also has ``src/``, a copy of the safety
+repository (``git archive``). Its builds used this copy.
+
 ``manifest.json`` has these fields:
 
-- ``experiment``, ``experiment_file``, ``experiment_yaml``: the name, the
-  path in the repository and the full text of the experiment file.
+- ``experiment``, ``experiment_file``, ``experiment_yaml``,
+  ``experiment_sha256``: the name, the path in the repository, the full
+  text and the SHA-256 of the experiment file.
 - ``command``, ``started``, ``finished``, ``host``.
-- ``safety``: the path and the revision of the safety repository, the
-  benchmark folder in the snapshot (``snapshot``), and the module folder
-  (``module``). A run of an older ``run.py`` has only
-  ``tests/benchmarks`` in the snapshot and no ``module``. The oldest runs
-  have no ``snapshot``, because they built from the worktree.
-- ``trees``, ``trees_root``: the entries of the trees from ``trees.yaml``,
-  with only the repositories that the build used.
+- ``lab``: the lab space (``id``, ``name``, ``folder``), or ``null``
+  outside a lab space.
+- ``safety``: the path and the revision of the safety repository, and
+  the git tree hashes of ``tests/benchmarks`` (``bench_tree``, the
+  ``LATBENCH_SRC_REV`` of the app) and of the module folder ``zephyr/``
+  (``module_tree``). A run of an older ``run.py`` has instead the
+  benchmark folder in its ``src/`` copy (``snapshot``) and the module
+  folder (``module``). A still older run has no ``module``. The oldest
+  runs have no ``snapshot``, because they built from the worktree.
+- ``trees``, ``trees_root``: the entries of the trees from
+  ``validation/trees.yaml``, with only the repositories that the build
+  used, and the trees root of the host.
 - ``toolchain``: the SDK version and path.
 - ``tools``: the versions of CMake, Ninja, Python, pyserial, and of each
   tool in the ``flash`` commands of the board (for example ``openocd``,
@@ -513,7 +569,9 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
   port (from ``udevadm``).
 - ``points``: one entry for each tree and point. An entry has the axes,
   the settings, the CMake command, the SHA-256 of the ELF and the logs.
-  If the point failed, it also has an ``error``.
+  In a lab space, it also has ``build``: ``key`` (the key of the build
+  cache) and ``cached`` (``true`` if the image came from the cache). If
+  the point failed, it also has an ``error``.
 
 .. _benchguide-rebuild:
 
@@ -535,25 +593,33 @@ again:
 
 #. It reads the manifest. It makes sure that the trees are at the
    revisions of the manifest and clean, and that the SDK has the version
-   of the manifest. The revisions of the current ``trees.yaml`` are not
-   used, so the check also works after a change of ``trees.yaml``.
+   of the manifest. The revisions of the current ``validation/trees.yaml``
+   are not used, so the check also works after a change of that file.
    ``--trees-root`` or ``LATBENCH_TREES_ROOT`` overrides ``trees_root`` of
    the manifest. If that folder does not exist (the trees moved, or a run
-   of a different host), the ``root`` of ``trees.yaml`` is used. A run
+   of a different host), the trees root of the lab space is used. A run
    from before ``-DWEST_TOPDIR`` took ``WEST_TOPDIR`` from a west
    workspace around its trees root. ``--rebuild`` then gives the build the
    same folder relative to the new root, so that the ``__FILE__`` strings
    stay the same. If the SDK path of the manifest does not exist (a run of
-   a different host), the SDK path of ``trees.yaml`` is used; its version
-   must be that of the manifest.
-#. It runs the CMake command of the manifest again, with the same sources:
-   the snapshot in ``src/``. A run without a snapshot built from the
-   worktree, and its build took the revision string from ``git
-   describe``. For such a run, ``--rebuild`` makes a temporary git
-   worktree at ``safety.rev``, so that ``git describe`` gives the same
-   string. It stops if the revision is not in the safety repository.
+   a different host), the SDK path of this host is used (``[toolchain]
+   zephyr_sdk`` of the lab space, or its default). Its version must be
+   that of the manifest.
+#. It runs the CMake command of the manifest again, with the same sources.
+   For a run with ``safety.bench_tree``, it exports the commit
+   ``safety.rev`` of the safety repository (``git archive``) into a
+   temporary folder. It stops if the commit is not in the repository
+   (fetch it, or the ref of its campaign ``refs/latbench/campaign/<id>``),
+   or if the tree hash of ``tests/benchmarks`` at that commit is not
+   ``bench_tree``. A run of an older ``run.py`` uses its copy in ``src/``.
+   A run without ``src/`` built from the worktree, and its build took the
+   revision string from ``git describe``. For such a run, ``--rebuild``
+   makes a temporary git worktree at ``safety.rev``, so that ``git
+   describe`` gives the same string. It stops if the revision is not in
+   the safety repository.
 #. It builds into the original build folder, if that folder is free and
-   the run folder did not move. Then the ELF has the same debug
+   the run folder did not move. A point that was built in the build cache
+   always builds into a temporary folder. Then the ELF has the same debug
    information, and its SHA-256 can be the same as in the manifest. Else
    it builds into a temporary folder.
 #. It compares ``zephyr.elf`` (SHA-256), ``zephyr.hex``, ``.config`` and
@@ -577,7 +643,7 @@ repository at ``safety.rev`` of the manifest:
 
 .. code-block:: console
 
-   scripts/benchmarks/trees.py setup
+   scripts/benchmarks/study.py trees setup
    scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
 Then compare the summaries of the old and the new logs (see the next

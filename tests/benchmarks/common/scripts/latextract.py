@@ -103,7 +103,7 @@ def cfg_check(cfg, config):
 
 
 def binutils_prefix():
-    """The binutils of the Zephyr SDK of this host (trees.yaml), or None."""
+    """The binutils of the Zephyr SDK of this host (the lab space, else ~/zephyr-sdk-<version>), or None."""
     try:
         sdk = Path(os.path.expanduser(str(trees.load()["toolchain"]["zephyr_sdk"]["path"])))
     except Exception:
@@ -163,7 +163,7 @@ def extract(run_dir, app, prefix=None):
 def main(app):
     p = argparse.ArgumentParser(description=f"Data of a run of {app} as JSON (stdout).")
     p.add_argument("run", help="raw run folder (with manifest.json)")
-    p.add_argument("--binutils", help="binutils prefix for the M4 function names (default: SDK of trees.yaml)")
+    p.add_argument("--binutils", help="binutils prefix for the M4 function names (default: the SDK of the lab space)")
     args = p.parse_args()
     data = extract(args.run, app, args.binutils or binutils_prefix())
     json.dump(data, sys.stdout)

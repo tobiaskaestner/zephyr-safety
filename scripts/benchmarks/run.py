@@ -463,7 +463,10 @@ def old_west_topdir(cmake, old_root, root):
 
 
 def rebuild(args):
-    """Build the points of an old run again, from its snapshot and manifest, and compare the images.
+    """Build the points of an old run again, from its sources and manifest, and compare the images.
+
+    The sources: an export of the commit of the run (safety.rev), or the src/
+    snapshot of an old run, or a worktree of the commit of an older run.
 
     The flashed image (zephyr.hex, or zephyr.elf if the run has no hex) and
     the .config must be the same. The ELF has the build folder in its debug
