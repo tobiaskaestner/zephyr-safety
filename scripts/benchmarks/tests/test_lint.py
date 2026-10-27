@@ -75,3 +75,24 @@ def test_only_filters_by_folder(tmp_path):
     root = tmp_path / "design"
     exp = root / "st-sub" / "ex-exp1"
     assert all(p.path.resolve().is_relative_to(exp) for p in lint.lint(root, only=exp))
+
+
+def test_scaffold_study_and_experiment_pass_the_lint(tmp_path):
+    from studylib import scaffold
+    from studylib.design import Design
+    make_design(tmp_path)
+    root = tmp_path / "design"
+    top_before = (root / "study.yaml").read_text()
+    scaffold.scaffold(root / "st-new", "irq_latency", experiment="new-first")
+    scaffold.scaffold(root / "st-new" / "ex-new-second", "wake_latency")
+    d = Design(root)
+    assert "new" in d.studies and d.study("new").experiments == ["new-first", "new-second"]
+    assert d.experiment("new-first").data["app"] == "irq_latency"
+    assert (root / "study.yaml").read_text().startswith(top_before.rstrip("\n"))
+    assert texts(root, lint.ERROR) == []
+    assert any("TODO texts of a template" in w for w in texts(root, lint.WARNING))
+    import pytest
+    with pytest.raises(scaffold.ScaffoldError):
+        scaffold.scaffold(root / "st-sub" / "ex-new-first", "irq_latency")    # names are unique
+    with pytest.raises(scaffold.ScaffoldError):
+        scaffold.scaffold(root / "new-thing", "irq_latency")

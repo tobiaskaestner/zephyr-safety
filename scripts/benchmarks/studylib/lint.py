@@ -51,6 +51,14 @@ def is_y(kconfig, sym):
     return run.kconfig_value(kconfig.get(sym, "n")) == "y"
 
 
+def lint_todo(root, out):
+    """A TODO text that a template left (study.py scaffold)."""
+    for f in sorted([*Path(root).rglob("*.yaml"), *Path(root).rglob("*.md")]):
+        n = sum("TODO" in ln for ln in f.read_text().splitlines())
+        if n:
+            out.append(Problem(WARNING, f, f"{n} TODO texts of a template"))
+
+
 def lint_folders(root, out):
     for d in sorted(Path(root).rglob("*")):
         if not d.is_dir() or d.name == "__pycache__":
@@ -199,6 +207,7 @@ def lint(root=None, only=None):
     root = Path(root or trees.STUDIES_DIR)
     out = []
     lint_folders(root, out)
+    lint_todo(root, out)
     try:
         d = Design(root)
     except (DesignError, OSError, yaml.YAMLError, KeyError, TypeError) as e:

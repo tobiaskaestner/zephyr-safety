@@ -8,6 +8,11 @@ Design (validation/empirical/latencies):
     study.py lint [FOLDER] [--warn-as-error]
                                           the problems of the design files; exit 1
                                           on an error (or a warning with the flag)
+    study.py scaffold PARENT/st-NAME --app APP [--experiment EXP] [--board B]
+                                          a new study with a first experiment
+                                          (default EXP: NAME-smoke)
+    study.py scaffold STUDY/ex-NAME --app APP [--board B]
+                                          a new experiment of a study
 
 Lab space (a folder with .lab/config, see studylib/lab.py):
     study.py lab init FOLDER --repo REPO [--trees-source DIR] [--sdk DIR] [--name N]
@@ -62,7 +67,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import trees  # noqa: E402
 from studylib import build, html, instance, layout, seal  # noqa: E402
 from studylib import lab as labmod  # noqa: E402
-from studylib import lint  # noqa: E402
+from studylib import lint, scaffold  # noqa: E402
 from studylib.design import Design, DesignError  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
@@ -93,6 +98,14 @@ def cmd_lint(args):
     warnings = len(problems) - errors
     print(f"{errors} errors, {warnings} warnings")
     return 1 if errors or (warnings and args.warn_as_error) else 0
+
+
+def cmd_scaffold(args):
+    folder = scaffold.scaffold(args.path, args.app, args.experiment, args.board)
+    for f in sorted(folder.rglob("*")):
+        if f.is_file():
+            print(f"new {f}")
+    print("replace the TODO texts; 'study.py lint' lists them")
 
 
 # ------------------------------------------------------------ lab
@@ -264,6 +277,12 @@ def parser():
     s.add_argument("folder", nargs="?", help="only the files below this folder")
     s.add_argument("--warn-as-error", action="store_true")
     s.set_defaults(func=cmd_lint)
+    s = sub.add_parser("scaffold", help="the files of a new study (st-NAME) or experiment (ex-NAME)")
+    s.add_argument("path", help="PARENT_STUDY/st-NAME or STUDY/ex-NAME")
+    s.add_argument("--app", required=True, help="the benchmark app (a folder of tests/benchmarks)")
+    s.add_argument("--experiment", help="the name of the first experiment of a new study (default NAME-smoke)")
+    s.add_argument("--board", help="the board of the experiment (default: the default board of boards.yaml)")
+    s.set_defaults(func=cmd_scaffold)
 
     lab = sub.add_parser("lab", help="the lab space").add_subparsers(dest="lab_cmd", required=True)
     s = lab.add_parser("init", help="make a lab space")
@@ -345,7 +364,7 @@ def parser():
     return p
 
 
-ERRORS = (DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
+ERRORS = (scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
           trees.TreeError, ValueError)
 
 
