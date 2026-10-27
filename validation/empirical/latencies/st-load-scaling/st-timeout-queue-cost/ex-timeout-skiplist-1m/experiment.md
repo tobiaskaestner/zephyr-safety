@@ -1,20 +1,16 @@
 # timeout-skiplist-1m
 
-## Question
+## What it measures
 
-As `timeout-backends-1m`, for the SKIPLIST timeout queue backend.
+App `wake_latency`, metrics `irq` and `isr2thr`: as `timeout-backends-1m`,
+for the SKIPLIST timeout queue backend.
 
 ## Method
 
-As `timeout-backends-1m`, but only in the tree `ws-up`: the SKIPLIST
-backend is only in this tree.
+- As `timeout-backends-1m`, but only in the tree `ws-up`: the SKIPLIST
+  backend is only in this tree.
 
-| Point | Settings | Why |
-|---|---|---|
-| `skiplist` | `TIMEOUT_BACKEND_SKIPLIST` | A backend under test. |
+## Axes
 
-The axis has the name `backend`, as in `timeout-backends-1m`.
-
-## References
-
-- `../ex-timeout-backends-1m/experiment.md`: the other backends and the DLIST reference.
+- **backend**: one value, `skiplist` (`TIMEOUT_BACKEND_SKIPLIST`). The
+  axis has the name of the axis of `timeout-backends-1m`.
