@@ -77,15 +77,25 @@ def test_pending_counts_running_campaigns_only(setup):
             "experiments": [{"experiment": e, "instance": inst, "state": s} for e, s in states]})
 
     record("20260101T000000Z", "running", os.getpid(), [("exp1", "done"), ("exp2", "planned")])
-    record("20260101T000001Z", "running", 99999999, [("exp1", "planned")])     # its process is gone
+    record("20260101T000001Z", "running", 99999999, [("exp1", "planned")])     # it does not hold the lock
     record("20260101T000002Z", "done", os.getpid(), [("exp1", "planned")])
+    assert campaign.pending(lab, design) == {}                                  # no campaign holds the lock
+    campaign.take_lock(lab, "20260101T000000Z")
     assert campaign.pending(lab, design) == {(str(f), "exp2"): "20260101T000000Z"}
+    campaign.drop_lock(lab, "20260101T000000Z")
     # a campaign in its pre-flight check: the experiments have no instance yet
     jsonout.write(lab.campaigns / "20260101T000003Z.json", {
         "id": "20260101T000003Z", "status": "planned", "pid": os.getpid(), "host": platform.node(),
         "lab": lab.describe(), "experiments": [{"experiment": "exp1", "study": "sub", "board": "nucleo_g474re",
                                                  "state": "planned"}]})
+    campaign.take_lock(lab, "20260101T000003Z")
     assert campaign.pending(lab, design)[(str(f), "exp1")] == "20260101T000003Z"
+    campaign.drop_lock(lab, "20260101T000003Z")
+    # an imported running record (of another lab space) counts without a lock here
+    jsonout.write(lab.campaigns / "20260101T000004Z@other.json", {
+        "id": "20260101T000004Z", "status": "running", "host": "elsewhere", "lab": {"id": "other"},
+        "experiments": [{"experiment": "exp1", "instance": inst, "state": "planned"}]})
+    assert campaign.pending(lab, design) == {(str(f), "exp1"): "20260101T000004Z@other"}
 
 
 def test_lock_allows_one_campaign(setup):
@@ -95,8 +105,9 @@ def test_lock_allows_one_campaign(setup):
         campaign.take_lock(lab, "b")
     campaign.drop_lock(lab, "a")
     campaign.take_lock(lab, "b")
+    assert campaign.lock_holder(lab) == "b"
     campaign.drop_lock(lab, "b")
-    assert not lab.lock.exists()
+    assert campaign.lock_holder(lab) is None
 
 
 FAKE_RUN = '''
@@ -145,7 +156,7 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     data = campaign.Record(lab, rec.id).data
     states = [(e["experiment"], e["state"]) for e in data["experiments"]]
     assert states == [("exp-fail", "failed"), ("exp1", "done"), ("exp2", "skipped")]
-    assert data["status"] == "done" and not lab.lock.exists()
+    assert data["status"] == "done" and campaign.lock_holder(lab) is None
     from studylib import instance
     folder = lab.results / data["experiments"][1]["instance"]
     assert [r["id"] for r in instance.load(folder)["runs"]] == [data["experiments"][1]["run"]]
@@ -154,3 +165,51 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     monkeypatch.setattr(trees, "repo_state", lambda path: ("r" * 40, " M x"))
     with pytest.raises(campaign.CampaignError):
         campaign.run_campaign(campaign.Record(lab, rec.id), design=design, log=lambda *a: None)
+
+
+def test_resume_counts_failed_experiments_as_pending(setup, monkeypatch):
+    lab, design, root = setup
+    f = campaign.ensure_instance(lab, design, "sub", "nucleo_g474re", log=lambda *a: None)
+    items = campaign.plan(lab, root, design=design, board="nucleo_g474re")
+    items[0].update(state="failed", instance=str(f.relative_to(lab.results)))
+    monkeypatch.setattr(trees, "repo_state", lambda path: ("r" * 40, ""))
+    rec = campaign.new_record(lab, root, "nucleo_g474re", items, ["x"])
+    seen = {}
+
+    def preflight(*a, **k):
+        seen.update(campaign.pending(lab, design))
+        return [("fail", "stop here", "")]
+    monkeypatch.setattr(campaign, "preflight", preflight)
+    monkeypatch.setattr(trees, "git", lambda *a, **k: "")
+    campaign.run_campaign(rec, design=design, log=lambda *a: None)
+    assert seen == {(str(f), "exp1"): rec.id}
+
+
+def test_post_runs_one_build_at_a_time(setup, monkeypatch, tmp_path):
+    lab, design, root = setup
+    rec = campaign.Record(lab, "20260101T000000Z")
+    rec.data = {"id": rec.id}
+    rec.log_dir.mkdir(parents=True)
+    started = []
+
+    class Proc:
+        def __init__(self, *a, **k):
+            self.done, self.returncode = False, 0
+            started.append(self)
+
+        def poll(self):
+            return 0 if self.done else None
+
+        def wait(self):
+            self.done = True
+    monkeypatch.setattr(campaign.subprocess, "Popen", Proc)
+    post = campaign.Post(rec, tmp_path)
+    post.kick()                     # build 1 starts
+    post.kick()                     # build 1 runs: one more later
+    post.kick()                     # still only one more
+    assert len(started) == 1
+    started[0].done = True
+    post.poll()                     # build 1 ended: build 2 starts
+    assert len(started) == 2 and post.proc is started[1]
+    post.wait()
+    assert len(started) == 2 and [x["n"] for x in rec.data["post"]] == [1, 2]

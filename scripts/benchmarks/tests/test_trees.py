@@ -94,3 +94,17 @@ def test_setup_clones_from_the_lab_source(tmp_path):
     trees.setup_tree(cfg, "t", clone_source=True)
     path = trees.repo_dir(cfg, "t", "zephyr")
     assert git("rev-parse", "HEAD", cwd=path) == rev
+
+
+def test_owner_of_a_results_root_outside_the_lab(tmp_path, monkeypatch):
+    from studylib import lab as labmod
+    repo = tmp_path / "safety"
+    (repo / "scripts" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    lab = labmod.init(tmp_path / "lab", repo, results=tmp_path / "data" / "results")
+    deep = tmp_path / "data" / "results" / "top" / "st-a"
+    deep.mkdir(parents=True)
+    monkeypatch.chdir(tmp_path)
+    assert labmod.find(deep) is None and labmod.owner(deep).folder == lab.folder
+    assert labmod.owner(tmp_path / "lab" / "trees").folder == lab.folder
+    assert labmod.owner(tmp_path) is None

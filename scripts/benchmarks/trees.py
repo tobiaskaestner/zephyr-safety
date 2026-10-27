@@ -72,7 +72,7 @@ def git(*args, cwd=None, check=True):
     return r.stdout.strip()
 
 
-def load(trees_root=None, lab=None):
+def load(trees_root=None, lab=None, find_lab=True):
     """The pins of trees.yaml with the paths of this host.
 
     root: --trees-root, LATBENCH_TREES_ROOT or the [trees] root of the lab
@@ -80,7 +80,8 @@ def load(trees_root=None, lab=None):
     the [toolchain] of the lab space, else ~/zephyr-sdk-<version>.
     """
     cfg = yaml.safe_load(TREES_FILE.read_text())
-    lab = lab or labmod.find()
+    if lab is None and find_lab:
+        lab = labmod.find()
     root = trees_root or os.environ.get("LATBENCH_TREES_ROOT") or (lab.trees_root if lab else None)
     cfg["root"] = Path(root).expanduser() if root else None
     sdk = cfg["toolchain"]["zephyr_sdk"]

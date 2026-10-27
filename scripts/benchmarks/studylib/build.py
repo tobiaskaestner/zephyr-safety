@@ -95,7 +95,7 @@ class Tree:
         """{(instance folder, experiment): campaign id} of the running campaigns of the lab space."""
         from . import campaign
         from . import lab as labmod
-        lab = labmod.find(self.root)
+        lab = labmod.owner(self.root)
         if lab is None:
             return {}
         return {(Path(f).resolve(), e): c for (f, e), c in campaign.pending(lab, self.design).items()}

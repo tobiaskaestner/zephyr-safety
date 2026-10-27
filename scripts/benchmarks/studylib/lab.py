@@ -32,6 +32,8 @@ import secrets
 from pathlib import Path
 
 CONFIG = Path(".lab") / "config"
+# In a results root outside the lab folder: a file with the path of the lab folder.
+RESULTS_MARK = ".lab-space"
 
 
 class LabError(Exception):
@@ -112,6 +114,22 @@ def find(start=None):
     return None
 
 
+def owner(path):
+    """The lab space that owns path: the lab folder above it, or the lab space whose results root
+    holds it (the mark file RESULTS_MARK in that root). Not the current folder: the answer must not
+    depend on where a tool starts."""
+    path = Path(path).resolve()
+    for p in [path, *path.parents]:
+        if (p / CONFIG).is_file():
+            return Lab(p)
+        mark = p / RESULTS_MARK
+        if mark.is_file():
+            folder = Path(mark.read_text().strip())
+            if (folder / CONFIG).is_file():
+                return Lab(folder)
+    return None
+
+
 def require(start=None):
     lab = find(start)
     if lab is None:
@@ -150,5 +168,7 @@ def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, 
         cfg.write(f)
     lab = Lab(folder)
     lab.results.mkdir(parents=True, exist_ok=True)
+    if not lab.results.resolve().is_relative_to(folder):
+        (lab.results / RESULTS_MARK).write_text(f"{folder}\n")
     lab.trees_root.mkdir(parents=True, exist_ok=True)
     return lab

@@ -231,8 +231,8 @@ def pending(lab, design=None):
     """{(instance folder, experiment)} that a running campaign of the lab space has still to run.
 
     A campaign counts from its start (also during its pre-flight check) to its
-    end. A campaign of this host whose process is gone does not count
-    (aborted). A campaign of another lab space (imported) counts while its
+    end, while it holds the lock of the lab space; a campaign whose process
+    is gone does not count (aborted). A campaign of another lab space (imported) counts while its
     record says running. An experiment that has no instance yet counts for
     the instance of its study and board, if there is one.
     """
@@ -240,7 +240,7 @@ def pending(lab, design=None):
     for rec in records(lab):
         d = rec.data or {}
         own = d.get("lab", {}).get("id") == lab.id and d.get("host") == platform.node()
-        if own and (d.get("status") not in (PLANNED, RUNNING) or not alive(d.get("pid"))):
+        if own and (d.get("status") not in (PLANNED, RUNNING) or lock_holder(lab) != rec.id):
             continue
         if not own and d.get("status") != RUNNING:
             continue
@@ -257,32 +257,84 @@ def pending(lab, design=None):
 
 
 # ------------------------------------------------------------ lock
+# The lock is an flock on .lab/campaign.lock: the kernel drops it when the process ends, so a
+# crash or a kill leaves no stale lock. The file has the id and pid of the holder (information).
+_LOCKS = {}
+
+
+def lock_holder(lab):
+    """The id of the campaign that holds the lock of the lab space, or None."""
+    import fcntl
+    if not lab.lock.exists():
+        return None
+    with open(lab.lock) as f:
+        try:
+            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+        except BlockingIOError:
+            try:
+                return json.loads(f.read() or "{}").get("id") or "?"
+            except ValueError:
+                return "?"
+        fcntl.flock(f, fcntl.LOCK_UN)
+    return None
+
+
 def take_lock(lab, cid):
+    import fcntl
     lab.lock.parent.mkdir(parents=True, exist_ok=True)
-    if lab.lock.exists():
-        d = json.loads(lab.lock.read_text())
-        if d.get("host") == platform.node() and not alive(d.get("pid")):
-            lab.lock.unlink()
-        else:
-            raise CampaignError(f"the campaign {d.get('id')} runs (pid {d.get('pid')}, lock {lab.lock})")
-    fd = os.open(lab.lock, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-    with os.fdopen(fd, "w") as f:
-        json.dump({"id": cid, "pid": os.getpid(), "host": platform.node()}, f)
+    f = open(lab.lock, "a+")
+    try:
+        fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        f.seek(0)
+        try:
+            d = json.loads(f.read() or "{}")
+        except ValueError:
+            d = {}
+        f.close()
+        raise CampaignError(f"the campaign {d.get('id', '?')} runs (pid {d.get('pid', '?')}, lock {lab.lock})") from None
+    f.seek(0)
+    f.truncate()
+    json.dump({"id": cid, "pid": os.getpid(), "host": platform.node()}, f)
+    f.flush()
+    _LOCKS[(str(lab.lock), cid)] = f
 
 
 def drop_lock(lab, cid):
-    if lab.lock.exists() and json.loads(lab.lock.read_text()).get("id") == cid:
-        lab.lock.unlink()
+    f = _LOCKS.pop((str(lab.lock), cid), None)
+    if f is not None:
+        f.seek(0)
+        f.truncate()
+        f.close()
 
 
 # ------------------------------------------------------------ check
 def run_subprocess(cmd, log, cwd, nice=False):
+    """Run cmd in a session of its own; on an interrupt, stop its whole process group (run.py and
+    its flash tools, which hold the probe), then raise again."""
     with open(log, "a") as f:
         f.write(f"$ {' '.join(map(str, cmd))}\n")
         f.flush()
-        r = subprocess.run([str(c) for c in cmd], cwd=cwd, stdout=f, stderr=subprocess.STDOUT,
-                           preexec_fn=(lambda: os.nice(10)) if nice else None)
-    return r.returncode
+        p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=f, stderr=subprocess.STDOUT,
+                             start_new_session=True, preexec_fn=(lambda: os.nice(10)) if nice else None)
+        try:
+            return p.wait()
+        except BaseException:
+            stop_group(p)
+            raise
+
+
+def stop_group(p, grace=20):
+    for sig, wait in ((signal.SIGTERM, grace), (signal.SIGKILL, 5)):
+        try:
+            os.killpg(p.pid, sig)
+        except ProcessLookupError:
+            return
+        try:
+            p.wait(timeout=wait)
+            return
+        except subprocess.TimeoutExpired:
+            continue
 
 
 def estimate(lab, design, exp):
@@ -290,7 +342,10 @@ def estimate(lab, design, exp):
     root = lab.results / design.top.name
     best = None
     for m in sorted(root.glob(f"**/{layout.EXPERIMENT_PREFIX}{exp}/*/manifest.json")) if root.is_dir() else []:
-        d = json.loads(m.read_text())
+        try:
+            d = json.loads(m.read_text())
+        except (OSError, ValueError):
+            continue
         if d.get("started") and d.get("finished"):
             t = (datetime.datetime.fromisoformat(d["finished"]) - datetime.datetime.fromisoformat(d["started"]))
             size = sum(f.stat().st_size for f in m.parent.rglob("*") if f.is_file())
@@ -342,8 +397,8 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
         try:
             n, c = run.cache_state(trees.REPO_DIR / e["design"], lab)
             total, cached = total + n, cached + c
-        except (SystemExit, trees.TreeError, OSError) as x:
-            add("fail", f"images of {e['experiment']}", str(x))
+        except (SystemExit, Exception) as x:
+            add("fail", f"images of {e['experiment']}", f"{type(x).__name__}: {x}")
         s, b = estimate(lab, design, e["experiment"])
         if s is None:
             unknown.append(e["experiment"])
@@ -378,8 +433,8 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
             try:
                 ok, lines = hwc.check(lab, b, log=lambda m: None)
                 add("ok" if ok else "fail", f"loopback wire of {b}", lines[-1] if lines else "")
-            except (hwc.HwCheckError, hwmap.HwMapError, trees.TreeError) as x:
-                add("fail", f"loopback wire of {b}", str(x).splitlines()[0])
+            except Exception as x:
+                add("fail", f"loopback wire of {b}", f"{type(x).__name__}: {(str(x).splitlines() or [''])[0]}")
     free = shutil.disk_usage(lab.results if lab.results.exists() else lab.folder).free
     add("ok" if free > 2 * size else "fail", "disk", f"{free / 2**30:.0f} GiB free, the runs need about {size / 2**20:.0f} MiB")
     dur = f"about {secs / 3600:.1f} h" if secs else "unknown"
@@ -389,40 +444,48 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
 
 # ------------------------------------------------------------ run
 class Post:
-    """The background build of the results tree after each run (one at a time, low priority)."""
+    """The background build of the results tree after each run: one process at a time, low priority.
+
+    kick() asks for a build; if one runs, the next build starts after it (only one more, however
+    many runs end in the meantime). poll() notes an ended build and starts the next one.
+    """
 
     def __init__(self, rec, root):
         self.rec, self.root, self.proc, self.again, self.n = rec, root, None, False, 0
 
-    def kick(self):
-        if self.proc is not None and self.proc.poll() is None:
-            self.again = True
-            return
-        self.finish()
+    def _start(self):
         self.n += 1
         log = self.rec.log_dir / "post.log"
-        f = open(log, "a")
-        f.write(f"=== build {self.n} at {utc_now().isoformat()}\n")
-        f.flush()
-        cmd = f"{sys.executable} {study_py()} build {self.root} && {sys.executable} {study_py()} html {self.root}"
-        self.proc = subprocess.Popen(["sh", "-c", cmd], stdout=f, stderr=subprocess.STDOUT, cwd=self.rec.lab.folder,
-                                     preexec_fn=lambda: os.nice(10))
+        with open(log, "a") as f:
+            f.write(f"=== build {self.n} at {utc_now().isoformat()}\n")
+            f.flush()
+            cmd = f"{sys.executable} {study_py()} build {self.root} && {sys.executable} {study_py()} html {self.root}"
+            self.proc = subprocess.Popen(["sh", "-c", cmd], stdout=f, stderr=subprocess.STDOUT,
+                                         cwd=self.rec.lab.folder, preexec_fn=lambda: os.nice(10))
         self.again = False
 
-    def finish(self):
+    def poll(self):
         if self.proc is not None and self.proc.poll() is not None:
-            rc = self.proc.returncode
             # "noticed": the time when the campaign saw the end (after a run), not the end itself
-            self.rec.data.setdefault("post", []).append({"n": self.n, "rc": rc, "noticed": utc_now().isoformat()})
+            self.rec.data.setdefault("post", []).append({"n": self.n, "rc": self.proc.returncode,
+                                                         "noticed": utc_now().isoformat()})
             self.rec.save()
             self.proc = None
-            if self.again:
-                self.kick()
+        if self.proc is None and self.again:
+            self._start()
+
+    def kick(self):
+        self.poll()
+        if self.proc is None:
+            self._start()
+        else:
+            self.again = True
 
     def wait(self):
-        while self.proc is not None:
-            self.proc.wait()
-            self.finish()
+        while self.proc is not None or self.again:
+            if self.proc is not None:
+                self.proc.wait()
+            self.poll()
 
 
 def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print):
@@ -435,6 +498,10 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
                             f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
     take_lock(lab, rec.id)
+    # a resume runs the failed experiments again (and one that a crash left in running)
+    for e in d["experiments"]:
+        if e["state"] in (FAILED, RUNNING):
+            e.update(state=PLANNED, attempts=e.get("attempts", 1) + 1)
     rec.set(pid=os.getpid())
     rec.log_dir.mkdir(parents=True, exist_ok=True)
     stop = {"why": None}
@@ -485,8 +552,8 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
                 try:
                     e["run"] = instance.add(design, folder, run_dir)
                     e["state"] = DONE
-                except instance.InstanceError as x:
-                    e.update(state=FAILED, note=f"instance add: {x}")
+                except (instance.InstanceError, OSError, ValueError, Exception) as x:
+                    e.update(state=FAILED, note=f"instance add: {type(x).__name__}: {x}")
             else:
                 e["state"] = FAILED
                 partial = sorted((folder / f"{layout.EXPERIMENT_PREFIX}{e['experiment']}").glob("2*Z"))
@@ -497,7 +564,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             log(f"    {e['state']} (rc {rc})" + (f", run {e['run']}" if e.get("run") else ""))
             if e["state"] == DONE:
                 post.kick()
-            post.finish()
+            post.poll()
         rec.set(status=DONE if not d.get("stopped") else FAILED, finished=utc_now().isoformat())
         log("waiting for the last build of the results")
         post.wait()
@@ -511,6 +578,12 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
                 e.update(state=FAILED, note=f"stopped ({stop['why'] or 'interrupt'})")
         rec.set(status="aborted", finished=utc_now().isoformat(), stopped=stop["why"] or "interrupt")
         raise CampaignError(f"campaign {rec.id} aborted") from None
+    except Exception as x:
+        for e in d["experiments"]:
+            if e["state"] == RUNNING:
+                e.update(state=FAILED, note=f"stopped ({type(x).__name__})")
+        rec.set(status="aborted", finished=utc_now().isoformat(), stopped=f"{type(x).__name__}: {x}")
+        raise
     finally:
         signal.signal(signal.SIGTERM, old)
         drop_lock(lab, rec.id)

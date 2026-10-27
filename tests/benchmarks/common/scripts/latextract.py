@@ -102,10 +102,12 @@ def cfg_check(cfg, config):
     return out
 
 
-def binutils_prefix():
-    """The binutils of the Zephyr SDK of this host (the lab space, else ~/zephyr-sdk-<version>), or None."""
+def binutils_prefix(run_dir):
+    """The binutils of the Zephyr SDK: of the lab space that owns the run (not of the current
+    folder), else ~/zephyr-sdk-<version>; or None."""
+    from studylib import lab as labmod
     try:
-        sdk = Path(os.path.expanduser(str(trees.load()["toolchain"]["zephyr_sdk"]["path"])))
+        sdk = Path(os.path.expanduser(str(trees.load(lab=labmod.owner(run_dir), find_lab=False)["toolchain"]["zephyr_sdk"]["path"])))
     except Exception:
         return None
     p = sdk / "gnu" / "arm-zephyr-eabi" / "bin" / "arm-zephyr-eabi-"
@@ -165,6 +167,6 @@ def main(app):
     p.add_argument("run", help="raw run folder (with manifest.json)")
     p.add_argument("--binutils", help="binutils prefix for the M4 function names (default: the SDK of the lab space)")
     args = p.parse_args()
-    data = extract(args.run, app, args.binutils or binutils_prefix())
+    data = extract(args.run, app, args.binutils or binutils_prefix(args.run))
     json.dump(data, sys.stdout)
     sys.stdout.write("\n")
