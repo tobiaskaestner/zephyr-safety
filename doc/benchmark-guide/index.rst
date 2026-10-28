@@ -51,5 +51,4 @@ part answers a different question:
 .. toctree::
    :maxdepth: 2
 
-   extending
    pitfalls

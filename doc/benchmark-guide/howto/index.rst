@@ -11,7 +11,9 @@ the tools work as they do.
    wire-the-nucleo-g474re
    make-a-hardware-map
    add-a-tree
+   add-an-experiment
    add-a-study
+   add-an-app
    add-a-board
    write-a-central-result
    resume-a-campaign
