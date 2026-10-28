@@ -2,8 +2,11 @@ Host tools and reproducibility
 ==============================
 
 The folder ``scripts/benchmarks/`` has the host tools. They need Python
-3 and the packages in ``scripts/benchmarks/requirements.txt``
-(``pyserial``, ``PyYAML``, ``matplotlib``).
+3 and the packages in ``scripts/benchmarks/requirements.txt`` (the
+ranges: ``pyserial``, ``PyYAML``, ``matplotlib``, ``jsonschema``,
+``packaging`` and ``west``). A lab space installs the exact versions of
+``scripts/benchmarks/requirements.lock``, which also has the Python
+packages of the Zephyr build (``pyelftools`` and others) and ``pyocd``.
 
 .. list-table::
    :header-rows: 1
@@ -320,7 +323,21 @@ Options:
        :ref:`benchguide-lint`). Without it, ``run.py`` prints the problems
        and continues.
    * - ``--keep-build``
-     - Keep the build folder of each point.
+     - Keep the build folder of each point. With the build cache of a lab
+       space, the build is in a work folder of the cache and the cache
+       keeps only the files of an entry, so ``--keep-build`` keeps nothing
+       there (use ``--no-cache``). With ``--rebuild``, the builds stay in
+       the temporary folder of the rebuild.
+   * - ``--role``, ``--reason``
+     - The role of the run in the run list of an instance (``evidence``,
+       ``adjustment``, ``excluded``; the default is ``evidence``, and a
+       run of some points with ``--only`` must name it) and the reason of
+       a role other than ``evidence``. ``run.py`` checks the role, the
+       reason and the instance (the experiment of its study, the board)
+       before the first build.
+   * - ``--campaign``
+     - The id of the campaign that starts the run, for the run-list
+       entry. A run without it takes the board lock of the lab space.
    * - ``--rebuild <run>``
      - Build the points of an old run again and compare them with the
        stored files (see :ref:`benchguide-rebuild`). ``<run>`` is a run
@@ -363,11 +380,21 @@ Options:
    in ``<run>/src/``.
 #. **Build.** For each tree and each point, it takes the image from the
    build cache of the lab space if the cache has it (see
-   :ref:`benchguide-build-cache`). Else it runs CMake and Ninja with:
+   :ref:`benchguide-build-cache`). Else it runs ``west build
+   --no-sysbuild -d <build folder> -b <board> <app> -- <CMake options>``
+   in the west workspace of the tree, after it makes sure that ``west
+   topdir`` gives that folder and that the ``.west/config`` of the tree
+   has only the keys of ``west init``. The user and system west
+   configuration do not count (``WEST_CONFIG_GLOBAL`` and
+   ``WEST_CONFIG_SYSTEM`` are ``/dev/null``). With the environment
+   variable ``LATBENCH_BUILDER=cmake``, it runs CMake and Ninja instead
+   (the builder of the runs before 2026-10-28; it takes the Python of
+   ``PATH`` for the Zephyr scripts, and the manifest names it as
+   ``tools.cmake_python``). Both give the same image. The options are:
 
    - ``ZEPHYR_BASE`` set to the Zephyr of the tree, and all other
      ``ZEPHYR_*`` environment variables removed.
-   - ``-DBOARD`` set to the board target.
+   - The board target (``-b`` of ``west build``, ``-DBOARD`` of CMake).
    - ``-DZEPHYR_MODULES`` set to the modules of the board from the tree
      only, so that no module of a west workspace goes into the build. The
      safety repository is one more module: it is the Zephyr
@@ -564,7 +591,9 @@ Result folder
 -------------
 
 A run writes its results to ``<out>/<name>/<UTC time>/``, for example
-``<out>/irq-example/20261024T153130Z/``:
+``<out>/irq-example/20261024T153130Z/``. If ``<out>`` is the folder of an
+instance (it has ``instance.json``), the folder is
+``<out>/ex-<name>/<UTC time>/``.
 
 .. code-block:: text
 
@@ -574,7 +603,7 @@ A run writes its results to ``<out>/<name>/<UTC time>/``, for example
    └── <tree>/<point>/
        ├── rep1.log         serial output of repetition 1
        ├── rep2.log         ...
-       ├── build.log        CMake and Ninja output
+       ├── build.log        output of the build (west build, or CMake and Ninja)
        ├── .config          Kconfig of the build
        ├── zephyr.dts       devicetree of the build
        ├── <app>-<tree>-<point>.elf   the binary
@@ -612,7 +641,9 @@ repository (``git archive``). Its builds used this copy.
 - ``toolchain``: the SDK version and path.
 - ``tools``: the versions of CMake, Ninja, Python, pyserial, and of each
   tool in the ``flash`` commands of the board (for example ``openocd``,
-  ``nrfutil`` or ``pyocd``).
+  ``nrfutil`` or ``pyocd``); ``builder`` (``west <version>`` or
+  ``cmake``); ``python_packages`` (the versions of the packages of
+  ``requirements.txt`` and ``requirements.lock``).
 - ``board``, ``board_cfg``, ``console``: the board target, its entry from
   ``boards.yaml``, and the serial port.
 - ``probe_serial``: the serial number of the debug probe of the console
@@ -622,7 +653,8 @@ repository (``git archive``). Its builds used this copy.
   In a lab space, it also has ``build``: ``key`` (the key of the build
   cache), ``from`` (``build`` or ``cache``) and, for an image from the
   cache, ``built_by`` (the run that built it, or ``<experiment> (build
-  only, <UTC>)`` for ``campaign prepare``). The runs before 2026-10-28 have
+  only, <UTC>)`` for a build without a run: ``campaign prepare``,
+  ``run.py --build-only``, ``lab hwcheck``). The runs before 2026-10-28 have
   ``cached`` (``true`` or ``false``) instead of ``from``. If the point
   failed, it also has an ``error``.
 
@@ -683,9 +715,12 @@ again:
    ``zephyr.hex``. If the run has no HEX file, it is the ELF or its
    loadable sections.
 
-``--rebuild`` does not flash. At the end, the result folder is as it was
-before (with ``--keep-build``, the ``build/`` folders stay). It prints
-one line for each point and exits with 1 if a point is not the same. Then
+``--rebuild`` does not flash, and it never builds in the run folder: at
+the end, the run folder is as it was before. The builds go to a temporary
+folder ``latbench-rebuild-*`` (with ``--keep-build``, it stays). The
+result goes to ``<UTC time>.rebuild-<UTC time of the check>.json`` beside
+the run folder. It prints one line for each point and exits with 1 if a
+point is not the same. Then
 the logs and the builds of the points that are not the same stay in a
 temporary folder, and the last line gives the folder.
 

@@ -9,8 +9,9 @@ prefix, a point without a value on an axis, a check form that the tools
 do not know, a reference to an experiment that the study cannot read, a
 select of a point that the experiment does not have). A warning is a rule
 of good practice (study.md, each axis named in experiment.md, 1-4
-hypotheses per study). study.py design lint fails on an error; run.py and the
-campaign only warn, unless --warn-as-error.
+hypotheses per study). study.py design lint fails on an error; run.py prints
+the problems and goes on (it stops with --warn-as-error); the pre-flight
+check of a campaign fails on an error (and on a warning with --warn-as-error).
 """
 
 from pathlib import Path

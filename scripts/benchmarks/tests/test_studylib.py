@@ -330,7 +330,7 @@ def test_build_small_tree(tmp_path, monkeypatch):
     sub = (inst / "index.html").read_text()
     assert "b is slower" in sub and "<a href='../index.html'>top</a>" in sub
     top_page = (res / "top" / "index.html").read_text()
-    assert "<a href='st-sub@nucleo_g474re/index.html'>sub@nucleo_g474re</a>" in top_page
+    assert "<a href='st-sub@nucleo_g474re/index.html'>st-sub@nucleo_g474re</a>" in top_page
     exp_page = (inst / "ex-exp1" / "index.html").read_text()
     assert "exp1/20260101T000000Z" in exp_page and "<a href='../../index.html'>top</a>" in exp_page
     assert [f.read_bytes() for f in files] == [f.read_bytes() for f in html.write_pages(res / "top", design=design)]

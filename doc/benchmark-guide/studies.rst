@@ -98,7 +98,9 @@ The lint reads the design files below ``validation/empirical/latencies/``.
 It needs no build and no board. It prints one line for each problem,
 ``<severity>: <file>: <text>``, and then the number of errors and
 warnings. With ``FOLDER``, it prints only the problems of the files below
-that folder.
+that folder, and the problems of its parent folders (for example "the
+design does not load"). The tree manifests and ``boards.yaml`` are checked
+only without ``FOLDER``.
 
 An error makes the design unusable, or it makes a check wrong. A warning
 is a rule of good practice. ``study.py design lint`` exits with 1 if it finds an
@@ -226,10 +228,13 @@ The board is in the folder name only at the level that fixes it
 axes, the digests of ``.config``, ``zephyr.dts``, the images
 (``<app>-<tree>-<point>.elf`` and ``.hex``, or ``zephyr.elf`` and
 ``zephyr.hex`` in an older run) and ``build.log``, the image digest (the loadable
-segments of the ELF) and the code digest. The image has the safety
-revision of the build (``LATBENCH_SRC_REV``), so the same code at two
-revisions gives two image digests; the code digest counts these 40
-characters as zeros, so the same code gives the same code digest. The app data come from the extractor of the app,
+segments of the ELF) and the code digest. The image has the
+``LATBENCH_SRC_REV`` of the build: for the runs since 2026-10-27 this is the
+content hash of the firmware files (kind ``firmware/1``), so the same
+firmware at two commits gives the same image; older runs have the safety
+revision or a git tree hash there. The code digest counts these 40
+characters as zeros, so the same code gives the same code digest also
+over these kinds. The app data come from the extractor of the app,
 ``tests/benchmarks/<app>/scripts/extract.py``: META, the histograms, the
 tick phase tables, the M4 sites, and a check of the ``LAT CFG`` values
 against ``.config``.
@@ -245,7 +250,7 @@ instance:
 
 - ``overview-<metric>.svg``: the exceedance probability (the share of
   samples at or above x) of each point of the newest run, at most 8 points
-  in one chart;
+  in one chart (with more points: ``overview-<metric>-<k>.svg``);
 - ``ccdf-<metric>-<tree>-<point>.svg``: the exceedance probability of one
   point, one line for each run (the newest 8);
 - ``hist-<metric>-<tree>-<point>.svg``: the histogram of one point of the
@@ -255,6 +260,9 @@ instance:
   draw again.
 
 The metric is the main metric of the app (``irq``, ``isr2thr``, ``t2t``).
+The plots show repetition 1 of each point. A run that failed an
+acceptance check is in the plots, with ``acceptance failed`` in its label
+(it is not evidence for the checks).
 The SVG files have no date, so the same inputs and the same matplotlib
 give the same bytes. A failed plot gives a note in ``study.json``, not a
 failed build. In a campaign, the background build draws the plots of an
@@ -354,7 +362,9 @@ local copy, ``--origin HOST:PATH`` records the original tree in
 
 ``analysis build`` writes only derived files; it does not change a raw run or
 ``instance.json``. The same inputs and the same revision of the tools
-give the same bytes: ``analysis check`` builds again and compares. Each aggregate
+give the same bytes: ``analysis check`` builds again and compares the JSON
+files (``run.json``, the app data, ``experiment.json``, ``study.json``; not
+the plots, the pages or the notebooks). Each aggregate
 records the safety revision of the tools (``made_by``); ``dirty: true``
 means that the tools had changes that were not committed.
 
@@ -631,7 +641,7 @@ evaluated`` with the reason ``tool error: ...``.
 
 If a placeholder names a value that the row does not have, the build
 keeps the placeholder in the sentence as it is. The name goes into the
-list ``unfilled`` of the result. ``show --explain`` prints this list.
+list ``unfilled`` of the result. ``analysis show --explain`` prints this list.
 
 Conclusion and sub-study
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -659,7 +669,8 @@ Examples
 
 Each example gives the entry of ``study.yaml``, the rows of the build,
 and the sentences. The rows and the sentences are the output of ``study.py
-show --explain`` on the results tree of the study (state of 2026-10-27).
+analysis show --explain`` on the results tree of the study (state of
+2026-10-27).
 
 A per-point stat with two runs. The entry is in
 ``st-default-latencies/st-irq-entry/study.yaml``:
@@ -765,8 +776,9 @@ This includes an experiment that the study imports with ``mode: reuse``.
 - ``state``: ``{final, waits}``. ``final`` is ``false`` if a result of the
   instance is provisional. ``waits`` lists the reasons.
 
-A campaign counts while its record has the status ``running``. A campaign
-of this lab space on this host whose process stopped does not count. An
-imported campaign record of another lab space counts while it has the
-status ``running``. ``study.py analysis show``, ``study.py analysis html`` and
+A campaign of this lab space counts while its record has the status
+``planned`` (its pre-flight check) or ``running`` and it holds the locks of
+its boards; a campaign whose process stopped does not count. An imported
+campaign record of another lab space counts while it has the status
+``running`` (not after ``lab import --close``). ``study.py analysis show``, ``study.py analysis html`` and
 ``scripts/benchmarks/data.py`` mark the provisional verdicts.

@@ -123,7 +123,7 @@ def crumbs(folder, root, studies, up=0):
     parts = []
     f, k = folder.parent, 1
     while f.resolve().is_relative_to(root.parent.resolve()) and (f / "instance.json").is_file():
-        name = studies[f]["instance"].rsplit("/", 1)[-1] if f in studies else f.name
+        name = f.name          # the folder name: the page title is the folder path
         parts.append(f"<a href='{'../' * (k + up)}index.html'>{esc(name)}</a>")
         f, k = f.parent, k + 1
     return "<div class='crumbs'>" + " / ".join(reversed(parts)) + "</div>" if parts else ""
@@ -155,7 +155,7 @@ def instance_page(folder, root, studies, design=None):
     if subs:
         out.append("<h2>Sub-studies</h2><table><tr><th>Sub-study</th><th>Verdicts</th></tr>")
         for c in subs:
-            out.append(f"<tr><td><a href='{esc(c.name)}/index.html'>{esc(studies[c]['instance'].rsplit('/', 1)[-1])}</a>"
+            out.append(f"<tr><td><a href='{esc(c.name)}/index.html'>{esc(c.name)}</a>"
                        f"</td><td>{verdict_line(studies[c])}</td></tr>")
         out.append("</table>")
     out.append("</body></html>")

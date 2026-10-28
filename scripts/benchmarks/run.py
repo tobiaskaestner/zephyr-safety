@@ -40,7 +40,7 @@ hash of the firmware files of tests/benchmarks (manifest: safety.bench_tree,
 kind firmware/1; no scripts, Python or Markdown), so the same firmware
 gives the same image at any commit. In a lab space, the images go
 to the build cache (studylib/buildcache.py); a point with an image in the
-cache is not built again (manifest: point build.cached). --build-only fills
+cache is not built again (manifest: point build {key, from, built_by}). --build-only fills
 the cache (or builds in a temporary folder outside a lab space).
 
 Experiment file:

@@ -93,8 +93,10 @@ not true:
 - Each tree is at its pinned rev and is clean.
 - The Zephyr SDK has the pinned version.
 
-A build uses only the modules of its tree (`ZEPHYR_MODULES`). It does not
-use the modules or the Zephyr tree of a west workspace.
+Each tree is a west workspace of its own (`study.py trees setup`), and a
+build is `west build` in that workspace. The build uses only the modules
+of its board from its tree (`ZEPHYR_MODULES`), never a module or a Zephyr
+of another workspace.
 
 A run builds the app from the safety repo. Before each point, `run.py`
 makes sure that the repo is clean and at the commit of the start of the

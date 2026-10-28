@@ -42,9 +42,10 @@ def image_sha256(elf, mask=None):
 
     This is the image that the probe writes: it does not change with the
     debug information or the build folder. It has the bench_rev string of
-    the app (LATBENCH_SRC_REV), so the same code at two safety revisions
-    gives two digests; with mask (the bench_rev bytes) these bytes count as
-    zeros (code_sha256).
+    the app (LATBENCH_SRC_REV: the firmware hash since 2026-10-27, before
+    that the safety revision or a tree hash), so two bench_revs give two
+    digests; with mask (the bench_rev bytes) these bytes count as zeros
+    (code_sha256).
     """
     data = Path(elf).read_bytes()
     if data[:4] != b"\x7fELF" or data[4] != 1 or data[5] != 1:

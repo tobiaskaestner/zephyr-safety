@@ -20,7 +20,9 @@ Lab space (a folder with .lab/config, see studylib/lab.py):
                                           the venv of the Python that runs it is the
                                           Python of the lab space
     study.py lab status                   the lab space, its trees, boards and campaigns
-    study.py lab hwcheck BOARD            the loopback wire check of a board
+    study.py lab hwcheck BOARD [--tree TREE]
+                                          the loopback wire check of a board (a record in
+                                          .lab/hwcheck/history/<board>/)
     study.py lab export [FOLDER] -o FILE [--campaign ID ...] [--all]
                                           the runs of this lab space (or of the campaigns,
                                           or all runs) to FILE and FILE.sha256
@@ -38,7 +40,8 @@ Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
                                           check, then run each experiment and add each
                                           run to its instance (role R, default evidence);
                                           build the results after each run in the background
-    study.py campaign status [ID]         the record of a campaign (default: the latest)
+    study.py campaign status [ID] [--verdicts]
+                                          the record of a campaign (default: the latest)
     study.py campaign resume ID [--detach]
                                           run the experiments of a campaign that are not done
 

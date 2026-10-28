@@ -157,11 +157,16 @@ also from another folder (``lab.owner()``, not the current folder).
 
 - The id and the folder of the lab space.
 - The design repository, its commit, and ``(dirty)`` if it has changes.
+- The Python that runs (the venv of the lab space), and a warning for
+  each package that is missing or not at the version of
+  ``requirements.txt`` or ``requirements.lock``.
 - The SDK and its version, or the problem.
-- Each tree: ``ok``, or the first line of the problem.
+- Each tree: ``ok``, ``not set up``, or ``wrong`` with the first line of
+  the problem.
 - The results folder.
 - Each board of the hardware map: connected or not, and its fixtures.
-- The last three campaigns.
+- The last three campaigns, and each imported campaign that is not
+  complete.
 
 ``lab hwcheck``
 ~~~~~~~~~~~~~~~
@@ -178,20 +183,27 @@ name) that pins ``zephyr`` and the modules of the board. Then it flashes
 the board with the ``flash`` commands of ``boards.yaml`` and reads the
 console until ``RESULT: OK`` or ``RESULT: FAIL``, for 60 s or less. The
 exit code is 0 for ``OK``, 1 for ``FAIL``, and 2 if the check cannot run
-(build, flash, no board).
+(build, flash, board, hardware map, tree, SDK, console). The check takes
+the board lock, as a campaign does (a check that a campaign runs uses the
+lock of the campaign), and opens the console exclusively.
 
-Each check writes the record ``.lab/hwcheck/<board>.json``: the time, the
-host, the tree, the design repo commit, the probe and the console, the
-image (SHA-256, cache key, from build or cache), the result and all
-console lines (with the loopback measurement). The pre-flight check of a
-campaign names this record. If the design repository has changes that are
-not committed, the image cannot go into the cache: the check builds in
-``.lab/hwcheck/<board>/build/`` and the record has ``dirty: true``.
+Each check writes its own record,
+``.lab/hwcheck/history/<board>/<UTC>.json``, also a check that cannot run
+(``result: error`` and the ``error``), and a copy of the newest record as
+``.lab/hwcheck/<board>.json``. A record has the time, the host, the tree,
+the design repo commit (``repo``: ``rev``, ``dirty``), the probe and the
+console, the image (SHA-256, cache key, from build or cache), the result
+and all console lines (with the loopback measurement). The pre-flight
+check of a campaign names the record of its check. If the design
+repository has changes that are not committed, the image cannot go into
+the cache: the check builds in ``.lab/hwcheck/<board>/build/`` and the
+record has ``repo.dirty: true``.
 
 ``campaign run --hwcheck-each`` also does the check before each
-experiment. If it fails, the experiment is ``failed`` (the note says why)
-and the campaign goes on with the next one. From the cache, a check takes
-10 s to 20 s.
+experiment; the experiment gets the record of its check (``hwcheck``). If
+the check fails, the experiment is ``failed`` (the note says why) and the
+campaign goes on with the next one. From the cache, a check takes 10 s to
+20 s.
 
 .. _benchguide-lab-trees:
 
@@ -215,7 +227,10 @@ up only the trees that the studies of the lab space need, for example
 ``study.py trees setup ws-safety ws-up``.
 
 ``check`` gives the state of each tree: ``ok``, ``not set up``
-(information) or ``wrong`` (an error). ``show`` prints the trees root, the
+(information; an error for a tree that you name) or ``wrong`` (an
+error). A tree that is not a west workspace yet, or whose ``.west/config``
+has a key that ``west init`` does not write (for example
+``build.cmake-args``), is not ``ok``. ``show`` prints the trees root, the
 trees, the revisions and the paths.
 
 A lab space made before 2026-10-28 has its trees as plain clones in the
@@ -232,8 +247,8 @@ cache ``.lab/build-cache/<key[:2]>/<key>/``. An entry has ``zephyr.elf``,
 ``zephyr.hex``, ``.config``, ``zephyr.dts``, ``build.log``,
 ``entry.json`` (the inputs of the key, the CMake command, the SHA-256 of
 the ELF and ``built_by``, the run that built it) and ``uses.jsonl``: one
-line for each run that took the image, with the point, ``from`` (``build``
-or ``cache``), the host and the time. The entry keeps the names
+line for each run that took the image, with the run, the experiment, the
+point, ``from`` (``build`` or ``cache``), the host and the time. The entry keeps the names
 ``zephyr.elf`` and ``zephyr.hex``, because two experiments can share it. A
 run gives the images their names ``<app>-<tree>-<point>`` when it copies
 them into its point folder.
@@ -244,6 +259,8 @@ The key is the SHA-256 of all inputs of the image:
 - the pinned revisions of the tree repositories that the board needs,
 - the ``BUILD_VERSION`` of the Zephyr tree (``git describe``, which
   depends on the tags of the tree; ``run.py`` gives it to CMake),
+- the builder (``west <version>``, or ``cmake`` with
+  ``LATBENCH_BUILDER=cmake``): a new west version gives new keys,
 - the SDK version,
 - a content hash of the firmware files of ``tests/benchmarks`` (kind
   ``firmware/1``: all files without the host scripts in ``scripts/``,
@@ -283,7 +300,7 @@ Campaigns
    study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
    study.py campaign check   FOLDER [--board B] [--only ...] [--skip ...] [--no-hwcheck] [--warn-as-error]
    study.py campaign run     FOLDER [--board B] [--only ...] [--skip ...] [--no-hwcheck] [--warn-as-error] [--detach]
-                             [--role R --reason TEXT]
+                             [--role R --reason TEXT] [--hwcheck-each]
    study.py campaign status  [ID] [--verdicts]
    study.py campaign resume  ID [--no-hwcheck] [--warn-as-error] [--detach]
 
@@ -473,13 +490,22 @@ record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
    * - ``preflight``
      - The items of the pre-flight check: ``status``, ``what``, ``text``.
    * - ``post``
-     - The background builds: ``n``, ``rc``, ``finished``.
+     - The background builds: ``n``, ``rc``, ``noticed`` (the time when
+       the campaign saw the end of the build).
+   * - ``python``
+     - The Python of the campaign: ``executable``, ``prefix``,
+       ``version`` and the ``packages`` with their versions.
+   * - ``role``, ``reason``, ``hwcheck_each``
+     - The role of the runs (``--role``, ``--reason``) and
+       ``--hwcheck-each``.
    * - ``experiments``
      - One entry for each experiment: ``experiment``, ``study``,
        ``design`` (the experiment file), ``board``, ``state``
        (``planned``, ``running``, ``done``, ``failed``, ``skipped``),
        ``instance``, ``started``, ``finished``, ``log``, ``rc``, ``run``
-       (the run id) and ``note``.
+       (the run id), ``note``, ``attempts`` (after a resume) and
+       ``hwcheck`` (the record of its wire check, with
+       ``--hwcheck-each``).
 
 .. _benchguide-lab-exchange:
 

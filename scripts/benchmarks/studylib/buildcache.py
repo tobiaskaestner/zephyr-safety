@@ -14,16 +14,17 @@ that goes into the image:
     the board, the app, the revs of the tree repos that the board needs,
     the BUILD_VERSION string of the Zephyr tree (git describe: it depends
     on the tags, not only on the rev), the builder ("west <version>" or
-    "cmake"), the SDK version, the git tree hashes
-    of tests/benchmarks and of the module folder zephyr/ of the safety
-    repo, and the point (Kconfig values, conf files, overlays).
+    "cmake"), the SDK version, the content hash of the firmware files of
+    tests/benchmarks (firmware/1) and the git tree hash of the module
+    folder zephyr/ of the safety repo, and the point (Kconfig values, conf
+    files, overlays).
 
 It has no host path, no experiment name and no safety commit: the same
 content at another commit (a change of the design only) or a repeat of
 the experiment gives the same key. This is correct because the build of
 a point does not depend on the host paths (the cross-host rebuilds give
-the same image) and the app gets the tree hash of tests/benchmarks as
-LATBENCH_SRC_REV, not the commit.
+the same image) and the app gets the firmware hash as LATBENCH_SRC_REV,
+not the commit.
 """
 
 import hashlib
