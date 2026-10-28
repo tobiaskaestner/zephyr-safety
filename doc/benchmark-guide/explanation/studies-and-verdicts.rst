@@ -17,7 +17,7 @@ Provisional verdicts
 --------------------
 
 In a lab space, a campaign runs the experiments one after the other, and
-the build of the results tree runs after each run (see :doc:`../lab`).
+the build of the results tree runs after each run (see :doc:`campaigns`).
 Thus a build can come before the last run of an experiment. A verdict of
 such a build is provisional.
 

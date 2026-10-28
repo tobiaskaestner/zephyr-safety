@@ -17,7 +17,7 @@ packages of the Zephyr build (``pyelftools`` and others) and ``pyocd``.
    * - ``study.py``
      - Study designs (lint, scaffold), lab spaces, pinned trees
        (``study.py trees``), campaigns, and the aggregates of a results
-       tree (see :doc:`../reference/cli/study-py` and :doc:`../lab`).
+       tree (see :doc:`../reference/cli/study-py` and :doc:`campaigns`).
    * - ``trees.py``
      - The library of the pinned trees of ``validation/trees/``. It
        has no commands of its own: use ``study.py trees``. It reads
@@ -48,7 +48,7 @@ an experiment file in the safety repository. These rules apply:
 - ``run.py`` stops before it builds anything in these conditions:
 
   - The safety repository is not clean.
-  - The lab space uses a different design repository (see :doc:`../lab`).
+  - The lab space uses a different design repository (see :doc:`../reference/files/lab-config`).
   - A repository of a tree that the build needs is not at its pinned
     revision, or it is not clean.
   - The SDK version is not the pinned version.
@@ -70,7 +70,7 @@ does these steps:
    repository is clean and at the commit of the start of the run. If not,
    the run stops. Thus a change in the worktree during a run cannot change
    what the run builds. A campaign also keeps the commit with a ref (see
-   :doc:`../lab`). Runs of an older ``run.py`` have a copy of the repository
+   :doc:`campaigns`). Runs of an older ``run.py`` have a copy of the repository
    in ``<run>/src/``.
 #. **Build.** For each tree and each point, it takes the image from the
    build cache of the lab space if the cache has it (see
@@ -112,3 +112,45 @@ does these steps:
    - ``-DBUILD_VERSION`` set to ``git describe --abbrev=12 --always`` of
      the Zephyr tree, as Zephyr makes it. The string depends on the tags
      of the tree; in the CMake command, a rebuild gives the same string.
+
+.. _benchguide-build-cache:
+
+Build cache
+-----------
+
+The key is the SHA-256 of all inputs of the image:
+
+- the board and the app,
+- the pinned revisions of the tree repositories that the board needs,
+- the ``BUILD_VERSION`` of the Zephyr tree (``git describe``, which
+  depends on the tags of the tree; ``run.py`` gives it to CMake),
+- the builder (``west <version>``, or ``cmake`` with
+  ``LATBENCH_BUILDER=cmake``): a new west version gives new keys,
+- the SDK version,
+- a content hash of the firmware files of ``tests/benchmarks`` (kind
+  ``firmware/1``: all files without the host scripts in ``scripts/``,
+  Python, Markdown, ``testcase.yaml`` and ``boards.yaml``), and the git
+  tree hash of the module folder ``zephyr/`` of the safety repository,
+- the point: its Kconfig values, conf files and overlays.
+
+The key has no host path, no experiment name and no safety commit. The
+app gets the firmware hash as ``LATBENCH_SRC_REV``, not the commit. Thus
+these runs get the image from the cache:
+
+- A repeat of an experiment.
+- A run after a commit that changes only the design files (for example
+  ``study.yaml``), the tools or an extractor, because the hashes stay the
+  same.
+- A point of another experiment with the same settings.
+
+An entry counts only if its ELF has the SHA-256 of ``entry.json``. The
+manifest of the run records ``build: {key, from, built_by}`` for each
+point, and the log of the run has one line for each image from the cache,
+for example ``[ws-safety/stock-idle] image from the build cache
+(c5c5146c5eef, built by irq-smoke/20261027T172644Z)``. Each
+build has a folder of its own process, and an entry that another process
+stored first stays. Before an image goes into the run or the cache,
+``run.py`` checks again that the repository did not change during the
+build.
+``run.py --build-only`` and ``study.py campaign prepare`` fill the cache.
+``run.py --no-cache`` builds again and does not use the cache.

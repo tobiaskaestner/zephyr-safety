@@ -6,7 +6,7 @@ Run an experiment (``run.py``)
    scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
 In a lab space, a campaign runs ``run.py`` for each experiment (see
-:doc:`../../lab`).
+:doc:`../../explanation/campaigns`).
 
 Options:
 

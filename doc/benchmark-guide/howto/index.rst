@@ -14,5 +14,7 @@ the tools work as they do.
    add-a-study
    add-a-board
    write-a-central-result
+   resume-a-campaign
+   combine-lab-spaces
    reproduce-a-data-point
    run-the-unit-tests

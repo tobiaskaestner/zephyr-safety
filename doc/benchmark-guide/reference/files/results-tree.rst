@@ -146,3 +146,66 @@ repository (``git archive``). Its builds used this copy.
   ``run.py --build-only``, ``lab hwcheck``). The runs before 2026-10-28 have
   ``cached`` (``true`` or ``false``) instead of ``from``. If the point
   failed, it also has an ``error``.
+
+Build cache
+-----------
+
+In a lab space, ``run.py`` keeps the image of each point in the build
+cache ``.lab/build-cache/<key[:2]>/<key>/``. An entry has ``zephyr.elf``,
+``zephyr.hex``, ``.config``, ``zephyr.dts``, ``build.log``,
+``entry.json`` (the inputs of the key, the CMake command, the SHA-256 of
+the ELF and ``built_by``, the run that built it) and ``uses.jsonl``: one
+line for each run that took the image, with the run, the experiment, the
+point, ``from`` (``build`` or ``cache``), the host and the time. The entry keeps the names
+``zephyr.elf`` and ``zephyr.hex``, because two experiments can share it. A
+run gives the images their names ``<app>-<tree>-<point>`` when it copies
+them into its point folder.
+
+Campaign record
+---------------
+
+The record ``.lab/campaigns/<id>.json`` (format ``latbench-campaign/1``)
+is written at the start and after each step. Thus a crash leaves a valid
+record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 25 75
+
+   * - Field
+     - Meaning
+   * - ``id``, ``format``
+     - The campaign id (UTC time) and the format.
+   * - ``lab``, ``host``
+     - The lab space (``id``, ``name``, ``folder``) and the host.
+   * - ``command``, ``cwd``, ``folder``, ``board``
+     - The command, its folder, the ``FOLDER`` of the campaign and the
+       board (or ``null``).
+   * - ``repo``, ``ref``
+     - The design repository (``path``, ``rev``) and the ref of the
+       campaign.
+   * - ``status``
+     - ``planned``, ``running``, ``done``, ``failed`` or ``aborted``.
+   * - ``created``, ``started``, ``finished``, ``pid``
+     - The times and the process id.
+   * - ``stopped``
+     - The reason why the campaign stopped early.
+   * - ``preflight``
+     - The items of the pre-flight check: ``status``, ``what``, ``text``.
+   * - ``post``
+     - The background builds: ``n``, ``rc``, ``noticed`` (the time when
+       the campaign saw the end of the build).
+   * - ``python``
+     - The Python of the campaign: ``executable``, ``prefix``,
+       ``version`` and the ``packages`` with their versions.
+   * - ``role``, ``reason``, ``hwcheck_each``
+     - The role of the runs (``--role``, ``--reason``) and
+       ``--hwcheck-each``.
+   * - ``experiments``
+     - One entry for each experiment: ``experiment``, ``study``,
+       ``design`` (the experiment file), ``board``, ``state``
+       (``planned``, ``running``, ``done``, ``failed``, ``skipped``),
+       ``instance``, ``started``, ``finished``, ``log``, ``rc``, ``run``
+       (the run id), ``note``, ``attempts`` (after a resume) and
+       ``hwcheck`` (the record of its wire check, with
+       ``--hwcheck-each``).

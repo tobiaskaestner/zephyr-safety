@@ -11,6 +11,7 @@ output format and the terms. Use it to look up one item.
    cli/study-py
    cli/run-py
    cli/scripts
+   files/lab-config
    files/trees-yaml
    files/boards-yaml
    files/hw-map

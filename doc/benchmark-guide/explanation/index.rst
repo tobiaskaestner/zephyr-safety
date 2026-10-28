@@ -13,6 +13,8 @@ work in this way.
    apps
    studies-and-verdicts
    reproducibility
+   campaigns
+   lab-exchange
    mask-time
    code-placement
    documentation-guidelines

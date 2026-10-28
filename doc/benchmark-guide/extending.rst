@@ -51,7 +51,7 @@ Add an experiment
 
 #. Connect the board and run the experiment without ``--build-only``. In
    a lab space, run it with a campaign: ``study.py campaign run
-   <experiment folder>`` (see :doc:`lab`). The campaign adds the run to
+   <experiment folder>`` (see :doc:`reference/cli/study-py`). The campaign adds the run to
    the run list of its instance. Without a campaign, use ``--out
    <instance folder>``: ``run.py`` then adds the run to the run list of
    the instance itself (see :doc:`reference/cli/study-py`).
@@ -78,7 +78,7 @@ To use another revision of a repository, add a new tree:
 #. Run ``study.py design lint``: it checks the file with the parser of
    west.
 #. Commit the new file.
-#. Create the tree in your lab space (see :doc:`lab`):
+#. Create the tree in your lab space (see :doc:`reference/cli/study-py`):
 
    .. code-block:: console
 

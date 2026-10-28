@@ -3,7 +3,7 @@ Pinned trees (``validation/trees/``)
 
 Each tree is one west manifest, ``validation/trees/<tree>.yml``. The file
 has only the pins. The paths of a host are in the ``.lab/config`` of its
-lab space (see :doc:`../../lab`):
+lab space (see :doc:`lab-config`):
 
 - The trees root is ``[trees] root``. ``--trees-root`` or the environment
   variable ``LATBENCH_TREES_ROOT`` overrides it.

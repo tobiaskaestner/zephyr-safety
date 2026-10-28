@@ -60,6 +60,6 @@ Warnings:
 ``run.py`` runs the lint for its experiment and for the study that owns
 it before it builds. It prints each problem and continues. With
 ``--warn-as-error``, each problem (error or warning) stops the run. The
-pre-flight check of a campaign fails on a lint error (see :doc:`../lab`).
+pre-flight check of a campaign fails on a lint error (see :doc:`cli/study-py`).
 The tests in ``scripts/benchmarks/tests/`` fail if the design of the
 repository has a lint error.
