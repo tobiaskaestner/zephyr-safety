@@ -7,4 +7,6 @@ work in this way.
 .. toctree::
    :maxdepth: 1
 
+   purpose
+   method
    documentation-guidelines

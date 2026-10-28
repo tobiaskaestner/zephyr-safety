@@ -12,7 +12,7 @@ in a histogram on the target, not only a mean.
 
 All times are in counts of the stimulus timer. On the NUCLEO-G474RE, the
 stimulus timer runs at the core clock, so one count is one core cycle (see
-:doc:`hardware`). This guide uses "cycles" for these counts.
+:doc:`../hardware`). This guide uses "cycles" for these counts.
 
 The suite has four measurement points:
 
@@ -49,19 +49,3 @@ The suite has four measurement points:
 M4 is a plan. It needs a hook in the interrupt lock path of Zephyr. No app
 of the suite measures M4 today. The tail of M1 gives an indirect lower
 limit of the longest locked section that the stimulus hit.
-
-Why the stimulus comes from hardware
-------------------------------------
-
-If the measured software makes the stimulus itself, the CPU is never in
-a critical section at that moment. Then the measurement shows only the
-best case. The ``loopback_check`` app is an example: its main thread sets
-the pin and then waits in a busy loop, so all its samples have the same
-value.
-
-For this reason, the apps of the suite use a hardware timer as the
-stimulus. The timer sets the pin at a programmed time, which is
-asynchronous to the software. The edge can come while the kernel holds a
-lock, while the system timer ISR runs, or while the CPU sleeps. The time
-stamp of the edge is the compare value of the timer, so it does not
-depend on software.

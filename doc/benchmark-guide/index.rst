@@ -51,7 +51,6 @@ part answers a different question:
 .. toctree::
    :maxdepth: 2
 
-   purpose
    hardware
    apps
    common
