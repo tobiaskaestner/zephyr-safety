@@ -603,7 +603,12 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     if rev != d["repo"]["rev"] or dirty:
         raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
                             f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
-    take_lock(lab, rec.id, [e["board"] for e in d["experiments"] if e["state"] != SKIPPED] or [d.get("board") or "-"])
+    try:
+        take_lock(lab, rec.id, [e["board"] for e in d["experiments"] if e["state"] != SKIPPED] or [d.get("board") or "-"])
+    except CampaignError as x:
+        if d.get("status") == PLANNED and not d.get("started"):
+            rec.set(status=FAILED, finished=utc_now().isoformat(), stopped=f"not started: {x}")
+        raise
     # a resume runs the failed experiments again (and one that a crash left in running)
     for e in d["experiments"]:
         if e["state"] in (FAILED, RUNNING):
