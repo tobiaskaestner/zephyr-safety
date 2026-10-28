@@ -9,4 +9,5 @@ output format and the terms. Use it to look up one item.
 
    glossary
    apps
+   common-modules
    boards

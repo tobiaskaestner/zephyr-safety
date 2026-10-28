@@ -11,4 +11,5 @@ work in this way.
    method
    timing-diagrams
    apps
+   code-placement
    documentation-guidelines

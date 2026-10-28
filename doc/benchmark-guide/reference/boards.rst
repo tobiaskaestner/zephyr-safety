@@ -147,7 +147,7 @@ Other functions, in ``port.c``:
        ``buf``.
 
 The apps do not call the port directly, except ``port_debug_reset()``.
-They use the stimulus interface of ``stim.h`` (see :doc:`../common`).
+They use the stimulus interface of ``stim.h`` (see :doc:`common-modules`).
 
 Board ``nucleo_g474re``
 -----------------------
