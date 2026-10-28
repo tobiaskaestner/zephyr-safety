@@ -114,22 +114,29 @@ FILES = {
         """,
     "common/fake_limits.yaml": """
         limits:
-          - id: R1
+          - id: TDL-1
+            review: R1
             severity: high
             title: A wait result has no connection to a wake.
             applies:
               - fake: z_pend_curr
                 how: [value, sequence]
-          - id: R3
+          - id: TDL-3
             severity: high
             title: The waiting-threads model has no order.
             applies:
               - uses: kernel_unit_set_waiting_threads
-          - id: R4
+          - id: TDL-4
             severity: high
             title: The reschedule decision is not modeled.
             applies:
               - checks: z_reschedule
+          - id: TDL-5
+            severity: low
+            title: The wake value of the suite is fixed.
+            applies:
+              - fake: z_sched_wake
+                how: value
         """,
     "obj/CMakeLists.txt": """
         include(${ZEPHYR_SAFETY_MODULE_DIR}/cmake/kernel_unit.cmake)
@@ -301,31 +308,30 @@ def test_limits(harness):
         own = [u for u in unit.uses(t[name]) if u.origin == "test"]
         return [lim.id for lim in kud.limits_of(limits, unit, own)]
 
-    assert ids("test_sequence") == ["R1", "R4"]
-    assert ids("test_spy_and_model") == ["R3"]
+    assert ids("test_sequence") == ["TDL-1", "TDL-4"]
+    assert ids("test_spy_and_model") == ["TDL-3"]
     assert ids("test_nothing") == []
 
 
 def test_check_finds_a_stale_selector(harness):
-    errors, _ = kud.check(harness, kud.read_limits(harness))
+    errors, _, _ = kud.check(harness, kud.read_limits(harness))
     assert errors == []
-    stale = kud.Limit("R9", "low", "t", "", [{"fake": "z_valid", "how": "value"}])
-    bad = kud.Limit("R8", "low", "t", "", [{"fake": "no_such", "color": 1}])
-    errors, _ = kud.check(harness, [stale, bad])
-    assert any("R9" in e and "stale" in e for e in errors)
-    assert any("R8" in e and "unknown keys" in e for e in errors)
-    assert any("R8" in e and "is not a fake" in e for e in errors)
+    stale = kud.Limit("TDL-9", "low", "t", "", [{"fake": "z_valid", "how": "value"}])
+    bad = kud.Limit("TDL-8", "low", "t", "", [{"fake": "no_such", "color": 1}])
+    errors, _, _ = kud.check(harness, [stale, bad])
+    assert any("TDL-9" in e and "stale" in e for e in errors)
+    assert any("TDL-8" in e and "unknown keys" in e for e in errors)
+    assert any("TDL-8" in e and "is not a fake" in e for e in errors)
 
 
-def test_check_prose_and_comments(harness):
-    _, warnings = kud.check(harness, [], prose=True)
+def test_check_prose_runs_always_as_warning(harness):
+    errors, warnings, _ = kud.check(harness, [])
+    assert errors == []
     # The doc comments of the two tests do not name z_pend_curr(). The model
     # of wake_two() is a statement of a helper, not of the test body.
     assert any("test_sequence" in w and "z_pend_curr()" in w for w in warnings)
     assert any("test_spy_and_model" in w and "z_pend_curr()" in w for w in warnings)
     assert not any("z_sched_wake" in w for w in warnings)
-    _, warnings = kud.check(harness, [])
-    assert warnings == []
 
 
 def test_annotate_keeps_lines(harness):
@@ -338,7 +344,8 @@ def test_annotate_keeps_lines(harness):
     assert "<table" in line and "kunit_doubles_fake_z_pend_curr" in line
     seq = next(x for x in out.splitlines() if "kunit_doubles_test_obj_test_sequence" in x)
     assert seq.rstrip().endswith("*/")
-    assert "@kunit_doubles" in seq and "@kunit_limit{" in seq and "SET_RETURN_SEQ" in seq
+    assert "@kunit_doubles" in seq and "@kunit_limits <ul>" in seq and "SET_RETURN_SEQ" in seq
+    assert "@kunit_limit{" not in seq and "xrefitem" not in out
     nothing = next(x for x in out.splitlines() if "kunit_doubles_test_obj_test_nothing" in x)
     assert "None: each fake has its default" in nothing
 
@@ -351,10 +358,11 @@ def test_annotate_without_marker_is_unchanged(harness):
 def test_catalog_has_anchors(harness):
     text = kud.catalog_comment(harness, kud.read_limits(harness))
     for anchor in ("kunit_doubles_fake_z_pend_curr", "kunit_doubles_group_sched",
-                   "kunit_doubles_model_waiting_threads", "kunit_doubles_limit_R1",
+                   "kunit_doubles_model_waiting_threads", "kunit_doubles_limit_TDL_1",
                    "kunit_doubles_local_obj_pend_spy"):
         assert re.search(rf"@(anchor|subsection|section) {anchor}\b", text), anchor
-    assert "@ref kunit_doubles_test_obj_test_sequence" in text
+    assert '@ref kunit_doubles_test_obj_test_sequence "test_sequence"' in text
+    assert "History: finding R1 of the review" in text
 
 
 def test_real_harness():
@@ -364,10 +372,10 @@ def test_real_harness():
     t = {x.name: x for x in unit.tests}
     own = [u for u in unit.uses(t["test_take_returns_wait_result"]) if u.origin == "test"]
     assert [(u.fake, u.how) for u in own if u.what == "config"] == [("z_pend_curr", "sequence")]
-    assert "R1" in [lim.id for lim in kud.limits_of(kud.read_limits(h), unit, own)]
+    assert "TDL-1" in [lim.id for lim in kud.limits_of(kud.read_limits(h), unit, own)]
     assert h.ref["z_sched_wake"].custom == "ref_sched_wake"
     assert unit.uses_reference(unit.uses(t["test_ref_give_wakes_highest_priority_waiter"]))
-    errors, _ = kud.check(h, kud.read_limits(h))
+    errors, _, _ = kud.check(h, kud.read_limits(h))
     assert errors == []
 
 
@@ -420,3 +428,242 @@ def test_operator_of_is_the_first_paragraph():
     ref = kud.RefFake("z_x", "ref_x", "/*\n * z_x(): Op(a). The fake does this.\n *\n"
                       " * Difference: more text.\n */")
     assert kud.operator_of(ref) == "Op(a). The fake does this."
+
+
+# --------------------------------------------------------------------------
+# Decisions of 2026-10-28: TDL ids, suite-setup line, TLA+ links, unit
+# marker, limits grouped by unit, callbacks of a test descriptor.
+
+
+def test_limit_ids_of_the_repository():
+    """The ids are TDL-1 to TDL-16. The review finding is history."""
+    limits = kud.read_limits(kud.Harness())
+    assert [lim.id for lim in limits] == [f"TDL-{n}" for n in range(1, 17)]
+    review = {lim.id: lim.review for lim in limits}
+    assert review["TDL-1"] == "R1" and review["TDL-13"] == "R13"
+    assert review["TDL-14"].startswith("R14") and review["TDL-15"].startswith("R14")
+    assert review["TDL-16"] == "R15"
+    assert all(lim.severity in kud.SEVERITIES for lim in limits)
+    assert kud.limit_anchor("TDL-16") == "kunit_doubles_limit_TDL_16"
+
+
+def test_check_rejects_bad_limit_ids(harness):
+    sel = [{"fake": "z_pend_curr", "how": "sequence"}]
+    limits = [kud.Limit("R1", "high", "t", "", sel),
+              kud.Limit("TDL-2", "high", "t", "", sel),
+              kud.Limit("TDL-2", "high", "t", "", sel),
+              kud.Limit("TDL-03", "high", "t", "", sel),
+              kud.Limit("TDL-4", "severe", "t", "", sel, unknown=["source"])]
+    errors, _, _ = kud.check(harness, limits)
+    assert any("R1" in e and "not TDL-<n>" in e for e in errors)
+    assert any("TDL-03" in e and "not TDL-<n>" in e for e in errors)
+    assert any("TDL-2" in e and "two limits" in e for e in errors)
+    assert any("TDL-4" in e and "severity" in e for e in errors)
+    assert any("TDL-4" in e and "unknown keys ['source']" in e for e in errors)
+
+
+def test_suite_setup_line(harness):
+    """Each test of a suite whose setup has a limit gets one line with links."""
+    unit = kud.Unit(harness, "obj")
+    limits = kud.read_limits(harness)
+    t = {x.name: x for x in unit.tests}
+    for name in ("test_sequence", "test_nothing"):
+        text = kud.render_test(harness, unit, t[name], limits)
+        assert ('<li>Limits of the suite setup: @ref kunit_doubles_limit_TDL_5 "TDL-5" '
+                '(see @ref kernel_unit_obj "kernel/obj.c")</li>') in text
+    # The full text is once in the file group.
+    table = kud.render_unit(harness, unit, limits)
+    assert "TDL-5" in table and "The wake value of the suite is fixed." in table
+    # test_nothing has no limit of its own: the section has only the line.
+    text = kud.render_test(harness, unit, t["test_nothing"], limits)
+    section = text[text.index("@kunit_limits"):]
+    assert section.count("<li>") == 1 and "Limits of the suite setup" in section
+
+
+def test_suite_setup_line_of_mutex():
+    h = kud.Harness()
+    unit = kud.Unit(h, "mutex")
+    t = {x.name: x for x in unit.tests}
+    text = kud.render_test(h, unit, t["test_lock_free_mutex_takes_ownership"], kud.read_limits(h))
+    line = re.search(r"Limits of the suite setup: (.*?) \(see", text).group(1)
+    assert re.findall(r'"(TDL-\d+)"', line) == ["TDL-2", "TDL-6", "TDL-7", "TDL-11", "TDL-13",
+                                                 "TDL-16"]
+
+
+def test_catalog_groups_the_tests_of_a_limit_by_unit(harness):
+    text = kud.catalog_comment(harness, kud.read_limits(harness))
+    sect = text[text.index("@subsection kunit_doubles_limit_TDL_1 "):]
+    sect = sect[:sect.index("@subsection", 10)]
+    assert ('<li>@ref kernel_unit_obj "kernel/obj.c" (1): '
+            '@ref kunit_doubles_test_obj_test_sequence "test_sequence"</li>') in sect
+    sect = text[text.index("@subsection kunit_doubles_limit_TDL_5 "):]
+    assert ('<li>@ref kernel_unit_obj "kernel/obj.c": the 3 tests of the suite '
+            '<code>obj_unit</code> (<code>obj_before()</code>)</li>') in sect
+
+
+def test_marker_warning(harness, tmp_path):
+    """A unit test source in the INPUT of the document without a unit marker."""
+    other = tmp_path / "other/src/test_other.c"
+    other.parent.mkdir(parents=True)
+    other.write_text("/** @brief x */\nZTEST(s, test_x)\n{\n}\n")
+    doxyfile = tmp_path / "Doxyfile.in"
+    doxyfile.write_text("INPUT = @DOXY_SRC_DIR@/mainpage.md \\\n"
+                        "        @SAFETY_BASE@/tests/kernel/unit/obj/src/test_obj.c \\\n"
+                        "        @SAFETY_BASE@/tests/kernel/unit/other/src/test_other.c\n"
+                        "RECURSIVE = NO\n")
+    assert kud.doc_inputs(doxyfile, tmp_path) == {"obj": ["test_obj.c"],
+                                                  "other": ["test_other.c"]}
+    _, warnings, _ = kud.check(harness, kud.read_limits(harness), doxyfile=doxyfile)
+    marker = [w for w in warnings if kud.MARKER in w]
+    assert marker == [f"other: no test source has the marker {kud.MARKER} (test_other.c): "
+                      "the document shows no test doubles of this unit"]
+
+
+def test_marker_is_per_unit(harness):
+    """A second test source of a unit with the marker gets the test sections too."""
+    second = harness.root / "obj/src/test_obj_more.c"
+    second.write_text(src("""
+        /**
+         * @brief A test of the second source.
+         */
+        ZTEST(obj_unit, test_more)
+        {
+                z_pend_curr_fake.return_val = 1;
+        }
+        """))
+    out = kud.annotate(second.read_text(), second, kud.Harness(harness.root))
+    assert "kunit_doubles_test_obj_test_more" in out and "@kunit_doubles" in out
+
+
+def test_tla_anchor_is_the_rule_of_the_tla_domain():
+    pytest.importorskip("sphinx")
+    sys.path.insert(0, str(kud.SAFETY_BASE / "doc" / "_extensions"))
+    import tla_domain  # noqa: E402
+
+    for args in (("Scheduler", "WakeFirst"), ("WaitQueue", "Best"), ("Scheduler",),
+                 ("M", "x_y'"), ("M", "a!b")):
+        assert kud.tla_anchor(*args) == tla_domain.anchor_id(*args)
+
+
+def test_tla_refs():
+    tla = kud.Harness().tla
+    text = ("WakeFirst(o, ret, data). The return value is HasWaiters(o). The value F(t)[1] "
+            "of WakeFirstWith, WaitQueue!Best(o), WQ!Restamp, the check ArmedArePending, "
+            "Head(o), ISR and NULL. Release the lock.")
+    refs = [(r.text, r.anchor, r.found) for r in tla.refs(text)]
+    assert refs == [
+        ("WakeFirst", "tla-Scheduler-WakeFirst", True),
+        ("HasWaiters", "tla-Scheduler-HasWaiters", True),
+        ("WakeFirstWith", "tla-Scheduler-WakeFirstWith", True),
+        ("WaitQueue!Best", "tla-WaitQueue-Best", True),
+        ("WQ!Restamp", "tla-WaitQueue-Restamp", True),
+        ("ArmedArePending", "tla-Scheduler-ArmedArePending", True),
+        ("Head", "tla-Scheduler-Head", False),
+    ]
+
+
+def test_rich_links_operators_and_limits():
+    h = kud.Harness()
+    text = kud.rich(h, "WakeFirst(o, ret, data), Head(o) and the key (known limit TDL-8).")
+    assert ('<a href="../architecture/formal-model.html#tla-Scheduler-WakeFirst">WakeFirst</a>'
+            "(o, ret, data)") in text
+    assert "Head(o)" in text and "tla-Scheduler-Head" not in text
+    assert '@ref kunit_doubles_limit_TDL_8 "TDL-8"' in text
+
+
+def test_reference_test_links_into_the_formal_model():
+    h = kud.Harness()
+    unit = kud.Unit(h, "sem")
+    t = {x.name: x for x in unit.tests}
+    text = kud.render_test(h, unit, t["test_ref_give_wakes_highest_priority_waiter"],
+                           kud.read_limits(h))
+    assert ('<a href="../architecture/formal-model.html#tla-Scheduler-WakeFirst">WakeFirst</a>'
+            in text)
+
+
+def test_tla_link_check_against_the_sources(tmp_path):
+    h = kud.Harness()
+    errors, note = kud.tla_link_check(h)
+    assert errors == []
+    assert "checked against the tla directives of doc/specification/architecture/" in note
+    assert "tla-Scheduler-WakeFirst" in kud.rendered_anchors(h.tla, kud.MODEL_RST)
+    # A page without the module Timeout: the link Timeout!Cancel has no anchor.
+    rst = tmp_path / "formal-model.rst"
+    rst.write_text(".. tla:module:: Scheduler\n   :body:\n\n"
+                   ".. tla:definition:: WaitQueue!Best\n\n"
+                   ".. tla:module:: WaitQueue\n\n"
+                   ".. tla:definition:: Restamp\n")
+    ids = kud.rendered_anchors(h.tla, rst)
+    assert {"tla-WaitQueue-Best", "tla-WaitQueue-Restamp", "tla-module-WaitQueue"} <= ids
+    assert "tla-WaitQueue-W" not in ids
+    errors, _ = kud.tla_link_check(h, rst=rst)
+    assert errors == ["TLA+ link Timeout!Cancel: the page architecture/formal-model.html has no "
+                      "anchor #tla-Timeout-Cancel"]
+
+
+def test_tla_link_check_against_the_built_page(tmp_path):
+    h = kud.Harness()
+    page = tmp_path / kud.ARCH_DOC / kud.MODEL_PAGE
+    page.parent.mkdir()
+    page.write_text('<dt id="tla-Scheduler-WakeFirst">x</dt>')
+    errors, note = kud.tla_link_check(h, deploy=tmp_path)
+    assert f"checked against the built page {page}" in note
+    assert "TLA+ link PendCurr: the page architecture/formal-model.html has no anchor " \
+           "#tla-Scheduler-PendCurr" in errors
+    assert not any("WakeFirst:" in e for e in errors)
+    errors, note = kud.tla_link_check(h, deploy=tmp_path / "missing")
+    assert errors == [] and "is not built" in note
+
+
+def test_check_reports_an_operator_that_the_library_does_not_define(monkeypatch):
+    h = kud.Harness()
+    ref = h.ref["z_waitq_head"]
+    monkeypatch.setattr(ref, "comment", "/* z_waitq_head(): Head(o), see TDL-99. */")
+    errors, _, _ = kud.check(h, kud.read_limits(h))
+    assert any("z_waitq_head()" in e and "operator Head" in e for e in errors)
+    assert any("z_waitq_head()" in e and "TDL-99" in e for e in errors)
+
+
+def test_callbacks_of_a_test_descriptor(harness):
+    path = harness.root / "obj/src/test_obj.c"
+    path.write_text(path.read_text() + src("""
+        DEFINE_FAKE_VALUE_FUNC(int, unit_cb, int);
+        DEFINE_FAKE_VALUE_FUNC(int, z_below, int);
+
+        static struct obj_desc unit_desc = {
+                .name = "d",
+                .cb = unit_cb,
+        };
+
+        /**
+         * @brief A test with a callback of the descriptor.
+         */
+        ZTEST(obj_unit, test_callback)
+        {
+                unit_cb_fake.return_val = 2;
+                z_below_fake.return_val = 1;
+                zassert_equal(unit_cb_fake.call_count, 1);
+        }
+        """))
+    unit = kud.Unit(harness, "obj")
+    assert kud.is_callback(unit, "unit_cb") and not kud.is_callback(unit, "z_below")
+    t = {x.name: x for x in unit.tests}
+    text = kud.render_test(harness, unit, t["test_callback"], [])
+    assert ("<code>unit_cb()</code> (callback of the test descriptor <code>unit_desc</code>): "
+            "fixed value") in text
+    assert "<code>z_below()</code> (fake of <code>test_obj.c</code>)" in text
+    table = kud.render_unit(harness, unit, [])
+    assert ("<td>none: callback of the test descriptor <code>unit_desc</code> (FFF fake of "
+            "<code>test_obj.c</code>)</td>") in table
+    assert "A callback of a test descriptor is not a function below the unit." in table
+
+
+def test_obj_core_usage_group_and_callbacks():
+    h = kud.Harness()
+    assert h.groups["usage"] == ["z_kernel_stats_raw", "z_kernel_stats_query"]
+    assert h.fakes["z_kernel_stats_raw"].header == "fakes/usage.h"
+    unit = kud.Unit(h, "obj_core")
+    assert ("CONFIG_OBJ_CORE_STATS_SYSTEM", "usage") in unit.fake_groups
+    assert set(unit.local_fakes) == {f"unit_stats_{x}" for x in
+                                     ("raw", "query", "reset", "disable", "enable")}
+    assert all(f.descriptor == "unit_stats_desc" for f in unit.local_fakes.values())

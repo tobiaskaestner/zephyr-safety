@@ -8,12 +8,14 @@
 Usage:
   kernel_unit_doubles.py catalog            print the page "Test doubles" (Doxygen)
   kernel_unit_doubles.py unit <unit>        print the doubles of each test of a unit
-  kernel_unit_doubles.py check [--prose]    find drift, exit status 1 on an error
+  kernel_unit_doubles.py check [--deploy D] find drift, exit status 1 on an error
 
 The harness of the kernel unit tests (``tests/kernel/unit``) replaces each
 function below a unit with a test double. This script reads the doubles from
 the sources. Nothing in its output is written by hand, except the known limits
-(``common/fake_limits.yaml``).
+(``common/fake_limits.yaml``). Each known limit has a stable id ``TDL-<n>``
+("test double limit"). The number is not a rank: a new limit gets the next
+free number, and an id is never used again or changed.
 
 - The fakes: ``DEFINE_FAKE_*`` in ``common/fakes/<group>.c`` (the fake group)
   and ``DECLARE_FAKE_*`` in the shadow headers and in ``common/include/fakes``.
@@ -25,7 +27,14 @@ the sources. Nothing in its output is written by hand, except the known limits
   text of a section gives the assumption of the model.
 - The reference fake: ``kernel_unit_sched_ref_install()`` in
   ``common/fakes/sched_ref.c`` sets the custom fakes. The comment of each
-  custom fake names the operator of ``spec/tla/lib/Scheduler.tla``.
+  custom fake names the operator of ``spec/tla/lib/Scheduler.tla``. Each
+  operator name becomes a relative link to its definition on the page of
+  the formal model in the architecture document (``formal-model.rst``).
+  Both documents deploy below ``<build>/deploy/html``.
+- The callbacks of a test descriptor: an FFF fake of a test source that the
+  test source puts into the initializer of a structure (for example the
+  statistics descriptor of an object type). The unit calls it through the
+  descriptor. It is not a function of a layer below.
 - The fake groups of a unit: ``kernel_unit_fakes()`` and
   ``kernel_unit_fakes_ifdef()`` in ``<unit>/CMakeLists.txt``.
 - The use in a test: the statements of the test body, of the local functions
@@ -43,8 +52,15 @@ result is the set of doubles that a test can use. A double that a test gets
 only from a pointer that it reads at run time is not in the result.
 
 The Doxygen input filter of the Kernel Unit Test Specification
-(``doxygen_filter_kernel_unit.py``) calls this module. A test source with the
-marker ``@kunit_interfaces`` in a doc comment gets the generated sections.
+(``doxygen_filter_kernel_unit.py``) calls this module. A unit with the marker
+``@kunit_interfaces`` in the file group of one of its test sources gets the
+generated sections. The table of the unit goes after the marker.
+
+The check finds the drift of the hand-written parts: a selector of a known
+limit that matches no test, a bad limit id, a TLA+ link without its anchor,
+a local custom fake without a comment, a unit test source in the INPUT of
+the document without a unit marker, and a doc comment that does not name a
+fake that the test body configures. Only the errors fail the check.
 """
 
 import argparse
@@ -59,6 +75,16 @@ import yaml
 
 SAFETY_BASE = Path(__file__).resolve().parents[2]
 HARNESS = SAFETY_BASE / "tests" / "kernel" / "unit"
+DOXYFILE = SAFETY_BASE / "doc" / "dox" / "kernel-unit-testspec" / "Doxyfile.in"
+
+# The TLA+ library and the page of the architecture document that shows it.
+# The reference fake implements the module CONTRACT. A link goes from the
+# Doxygen page (deploy/html/<doxygen id>/) to deploy/html/<ARCH_DOC>/<page>.
+TLA_LIB = SAFETY_BASE / "spec" / "tla" / "lib"
+CONTRACT = "Scheduler"
+ARCH_DOC = "architecture"
+MODEL_RST = SAFETY_BASE / "doc" / "specification" / "architecture" / "formal-model.rst"
+MODEL_PAGE = "formal-model.html"
 
 # The marker of a test source that has the generated sections. It is an alias
 # of the Doxyfile (a heading), so that a doc comment with the marker is also
@@ -132,13 +158,13 @@ def blank_directives(code):
     return "\n".join(lines)
 
 
-def match_paren(code, i):
-    """The offset after the parenthesis that closes the one at offset i."""
+def match_paren(code, i, pair="()"):
+    """The offset after the parenthesis (or the other pair) that closes the one at offset i."""
     depth = 0
     for k in range(i, len(code)):
-        if code[k] == "(":
+        if code[k] == pair[0]:
             depth += 1
-        elif code[k] == ")":
+        elif code[k] == pair[1]:
             depth -= 1
             if depth == 0:
                 return k + 1
@@ -285,6 +311,7 @@ class Fake:
     returns: str = ""  # the C return type; "" for void
     default: str = ""  # the value after the reset, if the rule sets one
     hand_written: bool = False  # not a DEFINE_FAKE_* of FFF
+    descriptor: str = ""  # a fake of a test source: the structure that has it as a callback
 
     def default_text(self):
         if self.default:
@@ -331,11 +358,131 @@ REAL_BEGIN = re.compile(r"/\*\s*KERNEL_UNIT_REAL_COPY_BEGIN\s+(\S+)\s*\*/")
 STATIC_INLINE_NAME = re.compile(r"\b(\w+)\s*\(")
 
 
+def tla_anchor(module, name=None):
+    """The HTML id of a TLA+ module or definition.
+
+    This is the rule of anchor_id() in doc/_extensions/tla_domain.py. A copy,
+    so that the filter does not need Sphinx. A test compares the two."""
+
+    def clean(text):
+        return re.sub(r"[^A-Za-z0-9_]", lambda m: f"-x{ord(m.group(0)):x}-", text)
+
+    if name is None:
+        return f"tla-module-{clean(module)}"
+    return f"tla-{clean(module)}-{clean(name)}"
+
+
+@dataclass
+class TlaRef:
+    """A name of a TLA+ operator in the text of a comment."""
+    start: int
+    end: int
+    text: str  # as the comment writes it, for example WaitQueue!Best
+    module: str
+    name: str
+    found: bool  # the module of the library defines the name
+
+    @property
+    def anchor(self):
+        return tla_anchor(self.module, self.name)
+
+    def href(self):
+        return f"../{ARCH_DOC}/{MODEL_PAGE}#{self.anchor}"
+
+
+TLA_TOKEN = re.compile(r"\b(?:([A-Z]\w*)!)?([A-Za-z]\w*)\b(\()?")
+
+
+class Tla:
+    """The definitions of the modules of the TLA+ library."""
+
+    def __init__(self, lib=TLA_LIB):
+        self.lib = Path(lib)
+        self.defs = {}  # module: set of the names of its definitions
+        self.instances = {}  # name of an INSTANCE in CONTRACT: module
+        if not self.lib.is_dir():
+            return
+        sys.path.insert(0, str(SAFETY_BASE / "doc" / "_extensions"))
+        from tla_extract import parse_file  # noqa: E402
+
+        for p in sorted(self.lib.glob("*.tla")):
+            mod = parse_file(str(p))
+            self.defs[mod.name] = {u.name for u in mod.units if u.kind == "definition"}
+            if mod.name == CONTRACT:
+                text = p.read_text(encoding="utf-8")
+                self.instances = dict(re.findall(r"^(\w+)\s*==\s*INSTANCE\s+(\w+)", text, re.M))
+
+    def refs(self, text):
+        """The operator names in a text.
+
+        ``Module!Name`` is always an operator name. A name without a module
+        is an operator of CONTRACT if it has a lower-case letter and an
+        opening parenthesis follows it (``WakeFirst(o, ret, data)``), or if
+        CONTRACT defines it and it has two upper-case letters
+        (``ArmedArePending``). Other words are text."""
+        out = []
+        contract = self.defs.get(CONTRACT, set())
+        for m in TLA_TOKEN.finditer(text):
+            qual, name, call = m.groups()
+            if qual:
+                module = self.instances.get(qual, qual)
+                end = m.start(2) + len(name)
+                out.append(TlaRef(m.start(), end, text[m.start():end], module, name,
+                                  name in self.defs.get(module, set())))
+                continue
+            if not name[0].isupper() or not re.search(r"[a-z]", name):
+                continue
+            camel = sum(c.isupper() for c in name) >= 2
+            if call or (camel and name in contract):
+                out.append(TlaRef(m.start(), m.start() + len(name), name, CONTRACT, name,
+                                  name in contract))
+        return out
+
+
+def rendered_anchors(tla, rst):
+    """The anchors that the tla directives of a page give, read from the .rst.
+
+    ``tla:module`` gives the anchor of the module, and with ``:body:`` the
+    anchor of each definition. ``tla:module-body`` gives each definition
+    except ``:exclude:``. ``tla:definition`` and ``tla:property`` give one."""
+    ids = set()
+    lines = Path(rst).read_text(encoding="utf-8").splitlines()
+    current = None
+    k = 0
+    while k < len(lines):
+        m = re.match(r"\.\.\s+tla:(module|module-body|definition|property)::\s*(\S*)", lines[k])
+        k += 1
+        if not m:
+            continue
+        kind, arg = m.groups()
+        opts = {}
+        while k < len(lines) and re.match(r"\s+:", lines[k]):
+            o = re.match(r"\s+:([\w-]+):\s*(.*)", lines[k])
+            if o:
+                opts[o.group(1)] = o.group(2).strip()
+            k += 1
+        if kind == "module":
+            current = Path(arg).stem
+            ids.add(tla_anchor(current))
+            if "body" in opts:
+                ids |= {tla_anchor(current, n) for n in tla.defs.get(current, ())}
+        elif kind == "module-body":
+            mod = Path(arg or opts.get("module", current or "")).stem
+            skip = set(re.split(r"[\s,]+", opts.get("exclude", "")))
+            ids |= {tla_anchor(mod, n) for n in tla.defs.get(mod, ()) if n not in skip}
+        else:
+            mod, name = arg.split("!", 1) if "!" in arg else (opts.get("module", current), arg)
+            if mod:
+                ids.add(tla_anchor(Path(mod).stem, name))
+    return ids
+
+
 class Harness:
     """The fakes, models, real copies and the reference fake of the harness."""
 
-    def __init__(self, root=HARNESS):
+    def __init__(self, root=HARNESS, tla_lib=TLA_LIB):
         self.root = Path(root)
+        self.tla = Tla(tla_lib)
         self.common = self.root / "common"
         self.include = self.common / "include"
         self.fakes = {}
@@ -580,11 +727,21 @@ class Unit:
         # Fakes that a test source defines itself (DEFINE_FAKE_* of FFF).
         self.local_fakes = {}
         for src in self.sources:
-            for m in DEFINE.finditer(mask(src.read_text(encoding="utf-8"))[0]):
+            code_ = mask(src.read_text(encoding="utf-8"))[0]
+            for m in DEFINE.finditer(code_):
                 ret, vname, void_name = m.groups()
                 name = vname or void_name
                 self.local_fakes[name] = Fake(name, group="", header=src.name,
                                               returns=ret if vname else "")
+        # A fake of a test source in the initializer of a structure of the test
+        # source is a callback of a test descriptor, not a fake of a layer below.
+        for src in self.sources:
+            code_ = blank_directives(mask(src.read_text(encoding="utf-8"))[0])
+            for m in re.finditer(r"\b(\w+)\s*=\s*\{", code_):
+                init = code_[m.end() - 1:match_paren(code_, m.end() - 1, "{}")]
+                for name in re.findall(r"\.\w+\s*=\s*&?\s*(\w+)", init):
+                    if name in self.local_fakes and not self.local_fakes[name].descriptor:
+                        self.local_fakes[name].descriptor = m.group(1)
         self.kernel_source = ""
         for src in self.sources:
             m = INCLUDE_UNIT.search(src.read_text(encoding="utf-8"))
@@ -600,6 +757,7 @@ class Unit:
                 cond = words.pop(0) if m.group(1) else ""
                 self.fake_groups += [(cond, w) for w in words]
         self._uses = {}
+        self._suite_uses = {}
 
     def is_fake(self, name):
         return name in self.h.fakes or name in self.local_fakes
@@ -697,10 +855,14 @@ class Unit:
         return out
 
     def suite_uses(self, suite):
+        """The uses of the setup and the before function of a suite."""
+        if suite in self._suite_uses:
+            return self._suite_uses[suite]
         out = []
         for fn in self.suites.get(suite, ("NULL", "NULL")):
             if fn in self.local:
                 self._scan(self.local[fn].body, (fn,), "suite", {fn}, out)
+        self._suite_uses[suite] = out
         return out
 
     def uses_reference(self, uses):
@@ -733,12 +895,19 @@ class Unit:
 
 @dataclass
 class Limit:
-    id: str
+    id: str  # TDL-<n>: stable, not a rank
     severity: str
     title: str
     text: str
     applies: list
-    source: str = ""
+    review: str = ""  # history: the finding of the review that found the limit
+    unknown: list = field(default_factory=list)  # keys that a limit cannot have
+
+
+LIMIT_ID = re.compile(r"^TDL-[1-9]\d*$")
+LIMIT_IN_TEXT = re.compile(r"\bTDL-[1-9]\d*\b")
+LIMIT_KEYS = {"id", "severity", "title", "text", "applies", "review"}
+SEVERITIES = ("high", "medium", "low")
 
 
 def read_limits(harness):
@@ -746,9 +915,18 @@ def read_limits(harness):
     if not path.exists():
         return []
     data = yaml.safe_load(path.read_text(encoding="utf-8")) or {}
-    return [Limit(x["id"], x.get("severity", ""), x["title"], x.get("text", "").strip(),
-                  x.get("applies") or [], x.get("source", ""))
+    return [Limit(str(x["id"]), x.get("severity", ""), x["title"], x.get("text", "").strip(),
+                  x.get("applies") or [], str(x.get("review", "")), sorted(set(x) - LIMIT_KEYS))
             for x in data.get("limits", [])]
+
+
+def limit_anchor(lid):
+    """The Doxygen anchor of a limit on the page "Test doubles"."""
+    return f"{PAGE}_limit_{lid.replace('-', '_')}"
+
+
+def limit_ref(lid):
+    return f'@ref {limit_anchor(lid)} "{lid}"'
 
 
 SELECTOR_KEYS = {"fake", "how", "custom", "uses", "checks", "unit", "reference"}
@@ -811,8 +989,35 @@ def code(text):
     return f"<code>{html.escape(text, quote=False)}</code>"
 
 
+def rich(h, text):
+    """Plain text of a comment for Doxygen, with links.
+
+    Each TLA+ operator that the library defines links to its definition in
+    the architecture document. Each id of a known limit (TDL-<n>) links to
+    the limit on the page. A name that the library does not define stays
+    text: the check reports it."""
+    out, pos = [], 0
+    for r in h.tla.refs(text):
+        if not r.found:
+            continue
+        out.append(esc(text[pos:r.start]))
+        out.append(f'<a href="{r.href()}">{esc(r.text)}</a>')
+        pos = r.end
+    out.append(esc(text[pos:]))
+    return LIMIT_IN_TEXT.sub(lambda m: limit_ref(m.group(0)), "".join(out))
+
+
+def is_callback(unit, name):
+    """True for a fake of the test source that a test descriptor has as a callback."""
+    return (unit is not None and name in unit.local_fakes and name not in unit.h.fakes
+            and bool(unit.local_fakes[name].descriptor))
+
+
 def fake_ref(name, unit=None):
     """A link to the fake on the page, or the name of a fake of the test source."""
+    if is_callback(unit, name):
+        return (f"{code(name + '()')} (callback of the test descriptor "
+                f"{code(unit.local_fakes[name].descriptor)})")
     if unit is not None and name in unit.local_fakes and name not in unit.h.fakes:
         return f"{code(name + '()')} (fake of {code(unit.local_fakes[name].header)})"
     return f'@ref {PAGE}_fake_{name} "{name}()"'
@@ -908,7 +1113,7 @@ def render_test(h, unit, test, limits):
         setup = ""
         if api:
             setup = ". Setup: " + ", ".join(code(a + "()") for a in api)
-        ops = [f"{fake_ref(f)}: {esc(operator_of(h.ref[f]))}" for f in h.ref
+        ops = [f"{fake_ref(f)}: {rich(h, operator_of(h.ref[f]))}" for f in h.ref
                if f in unit.named()]
         opt = ""
         if ops:
@@ -966,10 +1171,15 @@ def render_test(h, unit, test, limits):
                       "return values of the unit.</li>")
     checked = "@kunit_checks <ul>" + "".join(citems) + "</ul>"
 
-    lims = limits_of(limits, unit, own)
-    ltext = " ".join(
-        f'@kunit_limit{{@ref {PAGE}_limit_{lim.id} "{lim.id}" ({esc(lim.severity)}): '
-        f"{esc(lim.title)}}}" for lim in lims)
+    litems = [f"<li>{limit_ref(lim.id)} ({esc(lim.severity)}): {esc(lim.title)}</li>"
+              for lim in limits_of(limits, unit, own)]
+    suite_lims = limits_of(limits, unit, unit.suite_uses(test.suite))
+    if suite_lims:
+        litems.append("<li>Limits of the suite setup: "
+                      + ", ".join(limit_ref(lim.id) for lim in suite_lims)
+                      + f' (see @ref kernel_unit_{unit.name} '
+                      f'"{esc(unit.kernel_source or unit.name)}")</li>')
+    ltext = ("@kunit_limits <ul>" + "".join(litems) + "</ul>") if litems else ""
     return (f"@anchor {test_anchor(unit.name, test.name)} @kunit_doubles "
             + " ".join(parts) + " " + checked + " " + ltext).rstrip()
 
@@ -1022,15 +1232,24 @@ def render_unit(h, unit, limits):
     order = {g: i for i, (_, g) in enumerate(unit.fake_groups)}
     names.sort(key=lambda f: (order.get(h.fakes[f].group, 99), f))
     cond = {g: c for c, g in unit.fake_groups}
-    head = (f"<tr><th>Function below</th><th>Fake group</th><th>Named in {code(unit.kernel_source)}</th>"
+    head = (f"<tr><th>Function</th><th>Fake group</th><th>Named in {code(unit.kernel_source)}</th>"
             "<th>Configured by tests</th><th>Checked by tests</th></tr>")
-    trs = []
+    trs, callbacks = [], []
     for f in sorted(unit.local_fakes):
         if f in h.fakes:
             continue
         r = rows.get(f, {"config": {}, "checked": 0})
         conf = ", ".join(f"{KIND_TEXT.get(k, k)} {r['config'][k]}"
                          for k in KIND_TEXT if k in r["config"])
+        if is_callback(unit, f):
+            # Not a function below the unit: the unit calls it through a
+            # descriptor that the test gives.
+            callbacks.append(
+                f"<tr><td>{code(f + '()')}</td><td>none: callback of the test descriptor "
+                f"{code(unit.local_fakes[f].descriptor)} (FFF fake of "
+                f"{code(unit.local_fakes[f].header)})</td><td>-</td><td>{conf or '-'}</td>"
+                f"<td>{r['checked'] or '-'}</td></tr>")
+            continue
         trs.append(f"<tr><td>{fake_ref(f, unit)}</td><td>test source</td><td>"
                    f"{'yes' if f in named else 'no'}</td><td>{conf or '-'}</td>"
                    f"<td>{r['checked'] or '-'}</td></tr>")
@@ -1045,7 +1264,7 @@ def render_unit(h, unit, limits):
         trs.append(f"<tr><td>{fake_ref(f)}</td><td>@ref {PAGE}_group_{fk.group} \"{fk.group}\""
                    f"{esc(g[len(fk.group):])}</td><td>{'yes' if f in named else 'no'}</td>"
                    f"<td>{conf or '-'}</td><td>{r['checked'] or '-'}</td></tr>")
-    table = f'<table class="doxtable">{head}{"".join(trs)}</table>'
+    table = f'<table class="doxtable">{head}{"".join(trs + callbacks)}</table>'
     real = []
     for rc in h.real:
         used = [n for n in rc.names if ktext and re.search(rf"\b{n}\b", ktext)]
@@ -1055,7 +1274,12 @@ def render_unit(h, unit, limits):
     text = [f"{len(unit.tests)} tests. The table has each fake that "
             f"{code(unit.kernel_source)} names, and each fake that a test configures or "
             f"checks. The counts are numbers of tests. See @ref {PAGE} "
-            f'"Test doubles" for the default and the source of each double.', table]
+            f'"Test doubles" for the default and the source of each double.']
+    if callbacks:
+        text.append("A callback of a test descriptor is not a function below the unit. "
+                    "The test source gives the unit a descriptor with this fake, and the "
+                    "unit calls it through the descriptor.")
+    text.append(table)
     if real:
         text.append("Real code (@ref " + PAGE + "_real \"real copies\"): " + ". ".join(real)
                     + ".")
@@ -1072,8 +1296,10 @@ def render_unit(h, unit, limits):
         lims = limits_of(limits, unit, su)
         ltext = ""
         if lims:
-            ltext = (" Known limits of these doubles: " + ", ".join(
-                f'@ref {PAGE}_limit_{lim.id} "{lim.id}"' for lim in lims) + ".")
+            ltext = ("Known limits of these doubles:<ul>" + "".join(
+                f"<li>{limit_ref(lim.id)} ({esc(lim.severity)}): {esc(lim.title)}</li>"
+                for lim in lims) + "</ul>Each test of the suite shows these ids in the line "
+                "\"Limits of the suite setup\".")
         suites.append(f"Before each test of the suite {code(suite)}, "
                       f"{code(before + '()')} configures:<ul>{items}</ul>{ltext}")
     text += suites
@@ -1089,13 +1315,15 @@ def units_of(harness):
                    if p.parent.parent.name != "common"})
 
 
+def marked_units(root):
+    """The units with the marker in one of their test sources."""
+    return sorted({p.parent.parent.name for p in Path(root).glob("*/src/*.c")
+                   if p.parent.parent.name != "common"
+                   and MARKER in p.read_text(encoding="utf-8")})
+
+
 def documented_units(harness):
-    out = []
-    for u in units_of(harness):
-        unit_dir = harness.root / u / "src"
-        if any(MARKER in p.read_text(encoding="utf-8") for p in unit_dir.glob("*.c")):
-            out.append(u)
-    return out
+    return marked_units(harness.root)
 
 
 def doc_text(lines):
@@ -1123,7 +1351,8 @@ def render_catalog(h, limits):
         "This page is generated from the sources of the harness "
         "(<code>tests/kernel/unit/common</code>) by <code>doc/_scripts/kernel_unit_doubles.py</code>.",
         "Only the known limits come from a file that is written by hand "
-        "(<code>common/fake_limits.yaml</code>).",
+        "(<code>common/fake_limits.yaml</code>). Each known limit has a stable id "
+        "TDL-&lt;n&gt; (\"test double limit\").",
         "",
         "A test double replaces a function below the unit under test. The harness has these kinds:",
         "",
@@ -1240,12 +1469,14 @@ def render_catalog(h, limits):
     out += doc_text(h.ref_text)
     out += ["", "kernel_unit_sched_ref_install() sets these custom fakes "
             "(<code>common/fakes/sched_ref.c</code>). The comment of each custom fake names "
-            "the operator of the contract and each difference from it:", "",
+            "the operator of the contract and each difference from it. Each operator name "
+            "links to its definition on the page \"Formal Design Model\" of the architecture "
+            "document.", "",
             '<table class="doxtable"><tr><th>Fake</th><th>Custom fake</th><th>Comment</th></tr>']
     for r in h.ref.values():
         body = plain(" ".join(x.strip() for x in comment_body(r.comment)))
         out.append(f"<tr><td>{fake_ref(r.fake)}</td><td>{code(r.custom + '()')}</td>"
-                   f"<td>{esc(body)}</td></tr>")
+                   f"<td>{rich(h, body)}</td></tr>")
     out += ["</table>", ""]
 
     # Local custom fakes.
@@ -1277,17 +1508,23 @@ def render_catalog(h, limits):
     # Known limits.
     out += [f"@section {PAGE}_limits Known limits", "",
             "The known limits of the test doubles, from <code>common/fake_limits.yaml</code>. "
-            "Each limit names the doubles that it applies to. The list of tests is generated: "
-            "it has each test of a unit with generated sections whose own statements use "
-            "such a double. A limit of a double that the suite configures before each test "
-            "is in the file group of the unit.", ""]
+            "This file is the only source of the limits. Each limit has a stable id "
+            "TDL-&lt;n&gt; (\"test double limit\"). The number is not a rank: the severity is a "
+            "field of its own. A new limit gets the next free number. An id is never used "
+            "again or changed.", "",
+            "Each limit names the doubles that it applies to. The lists of tests are "
+            "generated, one item for each unit with generated sections. The first list has "
+            "each test whose own statements use such a double. The second list has the "
+            "suites whose setup before each test uses such a double: each test of such a "
+            "suite has the line \"Limits of the suite setup\".", ""]
     for lim in limits:
-        out += [f"@subsection {PAGE}_limit_{lim.id} {lim.id} ({esc(lim.severity)}): "
+        out += [f"@subsection {limit_anchor(lim.id)} {lim.id} ({esc(lim.severity)}): "
                 f"{esc(lim.title)}", ""]
         if lim.text:
             out += [esc(lim.text), ""]
-        if lim.source:
-            out += [f"Source: {esc(lim.source)}.", ""]
+        if lim.review:
+            out += [f"History: finding {esc(lim.review)} of the review of the fakes against "
+                    "the scheduler contract.", ""]
         sels = []
         for s in lim.applies:
             sels.append(", ".join(f"{k} = {code(str(v))}" for k, v in s.items()))
@@ -1297,17 +1534,24 @@ def render_catalog(h, limits):
         suite_hits = []
         for uname in shown:
             unit = units[uname]
-            for t in unit.tests:
-                own = [u for u in unit.uses(t) if u.origin == "test"]
-                if lim in limits_of(limits, unit, own):
-                    hits.append(f'@ref {test_anchor(uname, t.name)} "{uname}: {t.name}"')
-            for suite in unit.suites:
+            utests = [t for t in unit.tests
+                      if lim in limits_of(limits, unit, [u for u in unit.uses(t)
+                                                         if u.origin == "test"])]
+            group = f'@ref kernel_unit_{uname} "{esc(unit.kernel_source or uname)}"'
+            if utests:
+                hits.append(f"<li>{group} ({len(utests)}): " + ", ".join(
+                    f'@ref {test_anchor(uname, t.name)} "{t.name}"' for t in utests) + "</li>")
+            for suite, (_, before) in unit.suites.items():
                 if lim in limits_of(limits, unit, unit.suite_uses(suite)):
-                    suite_hits.append(f'@ref kernel_unit_{uname} "{uname}"')
+                    n = sum(1 for t in unit.tests if t.suite == suite)
+                    suite_hits.append(f"<li>{group}: the {n} tests of the suite {code(suite)} "
+                                      f"({code(before + '()')})</li>")
         if hits:
-            out += [f"Tests ({len(hits)}): " + ", ".join(hits) + ".", ""]
+            out += ["Tests whose own statements use such a double:<ul>" + "".join(hits)
+                    + "</ul>", ""]
         if suite_hits:
-            out += ["Through the setup before each test: " + ", ".join(suite_hits) + ".", ""]
+            out += ["Suites whose setup before each test uses such a double:<ul>"
+                    + "".join(suite_hits) + "</ul>", ""]
         if not hits and not suite_hits:
             out += ["No test of a unit with generated sections uses such a double.", ""]
     return out
@@ -1326,12 +1570,14 @@ def catalog_comment(h, limits):
 def annotate(text, path, harness=None, limits=None):
     """Add the generated sections to a test source with the marker.
 
-    Each documented ZTEST gets the section on the closing line of its doc
-    comment. The marker in the file group gets the table of the unit. The
-    number of lines does not change."""
-    if MARKER not in text:
-        return text
+    Each documented ZTEST of a unit with the marker gets the section on the
+    closing line of its doc comment. The marker is in the file group of one
+    test source of the unit, and it gets the table of the unit. The number of
+    lines does not change."""
     path = Path(path)
+    root = HARNESS if harness is None else harness.root
+    if MARKER not in text and path.parent.parent.name not in marked_units(root):
+        return text
     h = harness or Harness()
     limits = read_limits(h) if limits is None else limits
     unit = Unit(h, path.parent.parent.name)
@@ -1364,9 +1610,64 @@ def annotate(text, path, harness=None, limits=None):
 # Drift check
 
 
-def check(h, limits, prose=False):
-    """Return (errors, warnings) as lists of text."""
-    errors, warnings = [], []
+def doc_inputs(doxyfile=DOXYFILE, root=HARNESS):
+    """The unit test sources in the INPUT of the document, as {unit: [file names]}."""
+    out = {}
+    text = Path(doxyfile).read_text(encoding="utf-8") if Path(doxyfile).exists() else ""
+    m = re.search(r"^INPUT\s*=((?:.*\\\n)*.*)$", text, re.M)
+    for word in (m.group(1).replace("\\\n", " ").split() if m else []):
+        w = re.search(r"tests/kernel/unit/(\w+)/src/([\w.]+\.c)$", word)
+        if w and (Path(root) / w.group(1) / "src" / w.group(2)).exists():
+            out.setdefault(w.group(1), []).append(w.group(2))
+    return out
+
+
+def rel(path):
+    """A path relative to the safety repository, if it is in it."""
+    try:
+        return Path(path).resolve().relative_to(SAFETY_BASE).as_posix()
+    except ValueError:
+        return str(path)
+
+
+def tla_link_check(h, deploy=None, rst=MODEL_RST):
+    """Each TLA+ link of the reference fake goes to an anchor of the page.
+
+    The anchors come from the built page <deploy>/<ARCH_DOC>/<MODEL_PAGE> if
+    it exists, else from the tla directives of the .rst of the page and the
+    .tla sources. Returns (errors, note); the note says which way."""
+    errors, refs = [], {}
+    for r in h.ref.values():
+        text = plain(" ".join(x.strip() for x in comment_body(r.comment)))
+        for t in h.tla.refs(text):
+            if t.found:
+                refs.setdefault(t.anchor, t)
+            else:
+                errors.append(f"reference fake {r.fake}(): the comment names the operator "
+                              f"{t.text}, which the TLA+ library ({rel(h.tla.lib)}) does not "
+                              "define")
+    page = Path(deploy) / ARCH_DOC / MODEL_PAGE if deploy else None
+    if page is not None and page.is_file():
+        ids = set(re.findall(r'\bid="([^"]+)"', page.read_text(encoding="utf-8")))
+        how = f"the built page {page}"
+    elif Path(rst).is_file():
+        ids = rendered_anchors(h.tla, rst)
+        how = f"the tla directives of {rel(rst)} and the .tla sources"
+        if page is not None:
+            how += f" ({page} is not built)"
+    else:
+        ids = set()
+        how = f"nothing: {rel(rst)} does not exist"
+    for anchor, t in sorted(refs.items()):
+        if anchor not in ids:
+            errors.append(f"TLA+ link {t.text}: the page {ARCH_DOC}/{MODEL_PAGE} has no "
+                          f"anchor #{anchor}")
+    return errors, f"TLA+ links: {len(refs)} anchors, checked against {how}"
+
+
+def check(h, limits, deploy=None, doxyfile=DOXYFILE, rst=MODEL_RST):
+    """Return (errors, warnings, notes) as lists of text."""
+    errors, warnings, notes = [], [], []
     units = {u: Unit(h, u) for u in units_of(h)}
     shown = documented_units(h)
     for name, f in h.fakes.items():
@@ -1374,7 +1675,18 @@ def check(h, limits, prose=False):
             errors.append(f"fake {name}() ({f.header}): no fake group defines it")
         if not f.header:
             errors.append(f"fake {name}() (group {f.group}): no header declares it")
+    seen = set()
     for lim in limits:
+        if not LIMIT_ID.match(lim.id):
+            errors.append(f"limit {lim.id}: the id is not TDL-<n>")
+        if lim.id in seen:
+            errors.append(f"limit {lim.id}: two limits have this id")
+        if lim.unknown:
+            errors.append(f"limit {lim.id}: unknown keys {lim.unknown}")
+        seen.add(lim.id)
+        if lim.severity not in SEVERITIES:
+            errors.append(f"limit {lim.id}: severity {lim.severity!r} is not one of "
+                          f"{', '.join(SEVERITIES)}")
         if not lim.applies:
             warnings.append(f"limit {lim.id}: no selector")
         for s in lim.applies:
@@ -1396,6 +1708,20 @@ def check(h, limits, prose=False):
                     break
             if not hit:
                 errors.append(f"limit {lim.id}: the selector {s} matches no test (stale)")
+    # A limit id in a comment of the reference fake links to the limit.
+    for r in h.ref.values():
+        for lid in LIMIT_IN_TEXT.findall(r.comment):
+            if lid not in seen:
+                errors.append(f"reference fake {r.fake}(): the comment names {lid}, which "
+                              "fake_limits.yaml does not define")
+    tla_errors, note = tla_link_check(h, deploy, rst)
+    errors += tla_errors
+    notes.append(note)
+    for uname, files in sorted(doc_inputs(doxyfile, h.root).items()):
+        if uname not in shown:
+            warnings.append(f"{uname}: no test source has the marker {MARKER} "
+                            f"({', '.join(files)}): the document shows no test doubles of "
+                            "this unit")
     for uname in shown:
         unit = units[uname]
         for t in unit.tests:
@@ -1407,21 +1733,20 @@ def check(h, limits, prose=False):
                         and h.kind_of_custom(u.detail, unit) == "local"
                         and not unit.local[u.detail].comment):
                     warnings.append(f"{uname}: local custom fake {u.detail}() has no comment")
-            if prose:
-                comment = _doc_of(t)
-                for u in unit.uses(t):
-                    # Only the statements of the test body: a helper names its
-                    # fakes in its own comment.
-                    if u.origin != "test" or u.what != "config" or u.via:
-                        continue
-                    if h.kind_of_custom(u.detail, unit) == "reference":
-                        continue
-                    shown_name = u.fake[5:] if u.fake.startswith("unit_") else u.fake
-                    if shown_name not in comment and u.fake not in comment:
-                        warnings.append(f"{uname}: {t.name}: the doc comment does not name "
-                                        f"{shown_name}(), which the test configures "
-                                        f"({u.how})")
-    return errors, list(dict.fromkeys(warnings))
+            # The prose: the doc comment names each fake that the test body
+            # configures. Only the statements of the test body: a helper names
+            # its fakes in its own comment.
+            comment = _doc_of(t)
+            for u in unit.uses(t):
+                if u.origin != "test" or u.what != "config" or u.via:
+                    continue
+                if h.kind_of_custom(u.detail, unit) == "reference":
+                    continue
+                shown_name = u.fake[5:] if u.fake.startswith("unit_") else u.fake
+                if shown_name not in comment and u.fake not in comment:
+                    warnings.append(f"{uname}: {t.name}: the doc comment does not name "
+                                    f"{shown_name}(), which the test configures ({u.how})")
+    return errors, list(dict.fromkeys(warnings)), notes
 
 
 def _doc_of(test):
@@ -1441,8 +1766,9 @@ def main(argv=None):
     u = sub.add_parser("unit")
     u.add_argument("unit")
     c = sub.add_parser("check")
-    c.add_argument("--prose", action="store_true",
-                   help="also warn if a doc comment does not name a fake that its test configures")
+    c.add_argument("--deploy", type=Path,
+                   help="the deploy/html folder of the documentation build: check the TLA+ "
+                        "links against the built page of the formal model, if it exists")
     ap.add_argument("--harness", type=Path, default=HARNESS)
     args = ap.parse_args(argv)
     h = Harness(args.harness)
@@ -1459,8 +1785,12 @@ def main(argv=None):
                       f"{x.detail} {'/'.join(x.via)}")
             for lim in limits_of(limits, unit, [x for x in unit.uses(t) if x.origin == "test"]):
                 print(f"  limit {lim.id}")
+            for lim in limits_of(limits, unit, unit.suite_uses(t.suite)):
+                print(f"  limit {lim.id} (suite setup)")
         return 0
-    errors, warnings = check(h, limits, prose=args.prose)
+    errors, warnings, notes = check(h, limits, deploy=args.deploy)
+    for n in notes:
+        print(f"note: {n}")
     for w in warnings:
         print(f"warning: {w}")
     for e in errors:

@@ -496,6 +496,12 @@ it must not link. The groups are:
   ``k_obj_core_stats_deregister()`` (``kernel/obj_core.c`` with
   ``CONFIG_OBJ_CORE_STATS``). Link it with
   ``kernel_unit_fakes_ifdef(CONFIG_OBJ_CORE_STATS obj_core_stats)``.
+- ``usage``: ``z_kernel_stats_raw()`` and ``z_kernel_stats_query()``
+  (``kernel/usage.c``, header ``fakes/usage.h``). With
+  ``CONFIG_OBJ_CORE_STATS_SYSTEM``, ``kernel/obj_core.c`` puts them into the
+  statistics descriptor of the kernel object type. Link it with
+  ``kernel_unit_fakes_ifdef(CONFIG_OBJ_CORE_STATS_SYSTEM usage)``, and
+  include ``fakes/usage.h`` before the unit under test.
 - ``kobject``: ``k_object_init()`` (``kernel/userspace/userspace.c``). Link
   it only with ``CONFIG_USERSPACE``.
 - ``syscall_handler``: the fakes of the shadow
@@ -878,7 +884,8 @@ reference fake is the C form of the scheduler contract
 ``common/include/kernel_unit_sched_ref.h``, the code is
 ``common/fakes/sched_ref.c`` (fake group ``sched_ref``). The review of the
 models against the contract is in the workspace notes
-(``claude/kernel-unit/reffake/review.md``).
+(``claude/kernel-unit/reffake/review.md``). The known limits that the review
+found are in ``common/fake_limits.yaml``, with the ids ``TDL-<n>``.
 
 - The fake has the threads of the test with their priorities, a wait queue
   for each ``_wait_q_t`` (a higher priority first, then the order of
@@ -1036,24 +1043,45 @@ of the document runs ``safety/doc/_scripts/kernel_unit_doubles.py``. The
 script reads the test source, the ``CMakeLists.txt`` of the application and
 the sources in ``common``. Thus the text changes together with the tests.
 
-- A test source with the marker ``@kunit_interfaces`` in its file group gets
-  the generated sections. Today ``sem`` and ``mutex`` have the marker. Put
-  the marker after the paragraph "Interfaces below <file>". The filter adds
-  a table there: each fake of the unit, its fake group, and the number of
-  tests that configure or check it.
-- Each test of such a source gets a section "Test doubles" and a section
-  "Checked calls". The doubles are a fixed value (``return_val``), a
-  sequence (``SET_RETURN_SEQ()``), a local custom fake, a shared model or
-  the reference fake. The statements of the ``before`` function of the
-  suite are in the file group, not at each test.
+- Each unit has the marker ``@kunit_interfaces`` in the file group of one
+  of its test sources. The marker stays there permanently: it also sets the
+  position of the table of the unit. Today ``sem`` and ``mutex`` have the
+  marker. Put the marker after the paragraph "Interfaces below <file>". The
+  filter adds a table there: each fake of the unit, its fake group, and the
+  number of tests that configure or check it.
+- Each test of each test source of a unit with the marker gets the sections
+  "Test doubles", "Checked calls" and "Known limits". The doubles are a
+  fixed value (``return_val``), a sequence (``SET_RETURN_SEQ()``), a local
+  custom fake, a shared model or the reference fake. The statements of the
+  ``before`` function of the suite are in the file group, not at each test.
+  If they have known limits, each test of the suite has the line "Limits of
+  the suite setup" with the ids of these limits.
+- An FFF fake of a test source that the test source puts into a structure
+  (for example ``unit_stats_raw()`` in the statistics descriptor of
+  ``obj_core``) is a callback of a test descriptor. The unit calls it
+  through the descriptor. The document does not show it as a function of a
+  layer below.
 - The page "Test doubles" (``safety/doc/dox/kernel-unit-testspec/doubles.dox``)
   has the fake groups, the defaults after the reset, the real copies, the
   models with their assumptions, the reference fake with the operators of
-  the contract, the local custom fakes and the known limits.
-- The known limits are in ``common/fake_limits.yaml``. This is the only
-  part that is written by hand. Each limit has selectors: the doubles that
-  it applies to. A test that uses such a double in its own statements shows
-  the limit.
+  the contract, the local custom fakes and the known limits. Each limit
+  lists its tests, grouped by unit.
+- Each operator of the contract that a comment of the reference fake names
+  (for example ``WakeFirst(o, ret, data)``) links to its definition on the
+  page "Formal Design Model" of the architecture document
+  (``safety/doc/specification/architecture/formal-model.rst``). The link is
+  relative, so it works when both documents are in the same
+  ``deploy/html`` folder.
+- The known limits are in ``common/fake_limits.yaml``. This file is the only
+  source of the limits, and the only part that is written by hand. Each
+  limit has selectors: the doubles that it applies to. A test that uses such
+  a double in its own statements shows the limit.
+
+Each known limit has a stable id ``TDL-<n>`` ("test double limit"). The
+number is not a rank: the field ``severity`` gives the severity. A new limit
+gets the next free number. Never use an id again, and never change the
+number of a limit, also when you remove a limit. The field ``review`` is
+history: the finding of the review that found the limit.
 
 Give each local custom fake a comment directly before the function. The
 page "Test doubles" shows the comment as the description of the fake.
@@ -1066,11 +1094,20 @@ change of the tests or of ``fake_limits.yaml``:
 
    python3 safety/doc/_scripts/kernel_unit_doubles.py check
 
-The check fails if a selector of a limit matches no test or names no fake.
-It warns if a local custom fake has no comment. With ``--prose``, it also
-warns if the doc comment of a test does not name a fake that the test body
-configures. The target ``kernel-unit-doubles-check`` of the documentation
-build runs the same check. To see the doubles of the tests of a unit as
+The check fails if a limit id is not ``TDL-<n>``, if two limits have the
+same id, if a selector of a limit matches no test or names no fake, or if a
+TLA+ link of the reference fake has no anchor. For the anchors, the check
+reads the built page of the formal model if you give the ``deploy/html``
+folder of the documentation build (``--deploy``). Without the built page,
+it reads the ``tla`` directives of ``formal-model.rst`` and the ``.tla``
+sources. The output tells which of the two the check used.
+
+The check warns if a unit test source in the ``INPUT`` of the document is
+in a unit without the marker, if a local custom fake has no comment, and
+if the doc comment of a test does not name a fake that the test body
+configures. A warning does not fail the check. The target
+``kernel-unit-doubles-check`` of the documentation build and a step after
+``all-docs`` run the same check. The test build does not run it. To see the doubles of the tests of a unit as
 text, run ``kernel_unit_doubles.py unit <unit>``.
 
 Tests for some configurations

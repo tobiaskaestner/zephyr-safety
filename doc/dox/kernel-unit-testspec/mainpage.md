@@ -61,14 +61,24 @@ from the harness at each build of the document.
   the scheduler contract and the known limits.
 - The group of a kernel source file has the section "Test doubles of this
   file": a table of the fakes of the unit, and the doubles that the suite
-  configures before each test.
+  configures before each test with their known limits.
 - Each test has the sections "Test doubles" (the fakes that the test
   configures, and how), "Checked calls" (the fakes whose calls the test
-  checks) and "Known limits" (the known limits of these doubles).
+  checks) and "Known limits" (the known limits of these doubles). If the
+  setup of the suite has known limits, the line "Limits of the suite setup"
+  gives their ids.
 
-Today the units `sem` and `mutex` have these sections. The page @ref
-kunit_limits "Known limits of the test doubles" lists each test with a
-known limit.
+Each known limit has a stable id `TDL-<n>` ("test double limit"). The
+number is not a rank: each limit also has a severity (high, medium or low).
+Each id links to its limit on the page "Test doubles". There, each limit
+lists its tests, grouped by unit.
+
+The reference fake names the operators of the scheduler contract. Each
+operator name links to its definition on the page "Formal Design Model" of
+the architecture document. The link is relative: it works when both
+documents are in one deployed folder.
+
+Today the units `sem` and `mutex` have these sections.
 
 ## Scope
 

@@ -45,9 +45,9 @@ USE_MDFILE_AS_MAINPAGE = @DOXY_SRC_DIR@/mainpage.md
 # @kconfig_depends to each test in such a block or with a Kconfig skip. Then
 # it opens the Z_MUTEX_PI_ENABLED conditionals with a test in the #else
 # branch, so the document has the tests without priority inheritance too.
-# In a test source with the marker @kunit_interfaces, it adds the test doubles
-# of the unit and of each test (kernel_unit_doubles.py). For doubles.dox, it
-# writes the page "Test doubles".
+# For a unit with the marker @kunit_interfaces in one of its test sources, it
+# adds the test doubles of the unit (after the marker) and of each test
+# (kernel_unit_doubles.py). For doubles.dox, it writes the page "Test doubles".
 FILTER_PATTERNS        = "*.h=@DOC_BASE@/_scripts/doxygen_filter_kernel_unit.py" \
                          "*.c=@DOC_BASE@/_scripts/doxygen_filter_kernel_unit.py" \
                          "*.dox=@DOC_BASE@/_scripts/doxygen_filter_kernel_unit.py"
@@ -60,7 +60,7 @@ ALIASES                = "kconfig{1}=\c \1" \
                          "kunit_interfaces=^^@par Test doubles of this file^^" \
                          "kunit_doubles=^^@par Test doubles^^" \
                          "kunit_checks=^^@par Checked calls^^" \
-                         "kunit_limit{1}=\xrefitem kunit_limits \"Known limits\" \"Known limits of the test doubles\" \1"
+                         "kunit_limits=^^@par Known limits^^"
 
 OPTIMIZE_OUTPUT_FOR_C  = YES
 EXTRACT_ALL            = NO

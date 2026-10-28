@@ -314,7 +314,7 @@ static struct kernel_unit_sched_ref_thread *first_armed(void)
 /*
  * Choices(c, ts, pr, cu) for one CPU: Candidates(c) is each ready thread.
  *
- * Difference from the contract (finding R15 of the review): after
+ * Difference from the contract (known limit TDL-16): after
  * z_thread_prio_set() of a ready thread, sched.c calls update_cache(1). The
  * next selection is then runq_best(): the first thread of the highest
  * priority in run queue order. A cooperative current thread does not keep
@@ -706,7 +706,7 @@ static bool ref_sched_wake(_wait_q_t *wait_q, int swap_retval, void *swap_data)
  * z_reschedule(): Release(a, "resched"). From a thread, the fake selects the
  * next thread now. In an ISR, the fake does not select: as in the C code
  * (resched() is false), the exit of the ISR selects. The fake does not read
- * the key (finding R8 of the review).
+ * the key (known limit TDL-8).
  */
 static void ref_reschedule(struct k_spinlock *lock, k_spinlock_key_t key)
 {
@@ -903,7 +903,7 @@ static bool ref_thread_prio_set(struct k_thread *thread, int prio)
 /*
  * z_waitq_head() and z_waitq_head_locked(): the first waiter in the order of the
  * contract (WaitQueue!Best(o)), or NULL. The contract has no query for it yet
- * (Head(o), proposal P3 of the review).
+ * (proposal P3 of the review: a new operator Head).
  */
 static struct k_thread *ref_waitq_head(_wait_q_t *wait_q)
 {

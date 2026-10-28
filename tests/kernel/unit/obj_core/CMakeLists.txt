@@ -14,8 +14,11 @@ include(${ZEPHYR_SAFETY_MODULE_DIR}/cmake/kernel_unit.cmake)
 #
 # The second test source includes kernel/sem.c. It calls the real object
 # core code, so it needs the groups of sem.c (arch, sched,
-# kernel_internal). obj_core.c reads _kernel (group init).
+# kernel_internal). obj_core.c reads _kernel (group init). With
+# CONFIG_OBJ_CORE_STATS_SYSTEM, obj_core.c refers to the statistics
+# functions of kernel/usage.c (group usage).
 kernel_unit_fakes(arch sched fatal kernel_internal init)
+kernel_unit_fakes_ifdef(CONFIG_OBJ_CORE_STATS_SYSTEM usage)
 kernel_unit_fakes_ifdef(CONFIG_ASSERT assert)
 kernel_unit_fakes_ifdef(CONFIG_SPIN_VALIDATE spinlock)
 kernel_unit_fakes_ifdef(CONFIG_USERSPACE syscall_handler kobject)

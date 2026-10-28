@@ -53,8 +53,7 @@
  *   k_spin_lock() and k_spin_unlock().
  * - The kernel object @c _kernel (fake group @c init).
  * - With @kconfig{CONFIG_OBJ_CORE_STATS_SYSTEM}: z_kernel_stats_raw() and
- *   z_kernel_stats_query() (@c kernel/usage.c). This test source defines
- *   their fakes.
+ *   z_kernel_stats_query() (@c kernel/usage.c, fake group @c usage).
  *
  * @par Kconfig options that change obj_core.c
  * - @kconfig{CONFIG_OBJ_CORE}: the unit itself. Each scenario enables it.
@@ -403,16 +402,10 @@
 
 #ifdef CONFIG_OBJ_CORE_STATS_SYSTEM
 /* Fakes of kernel/usage.c. obj_core.c refers to them in kernel_stats_desc. */
-DECLARE_FAKE_VALUE_FUNC(int, z_kernel_stats_raw, struct k_obj_core *, void *);
-DECLARE_FAKE_VALUE_FUNC(int, z_kernel_stats_query, struct k_obj_core *, void *);
+#include <fakes/usage.h>
 #endif /* CONFIG_OBJ_CORE_STATS_SYSTEM */
 
 #include <kernel/obj_core.c>
-
-#ifdef CONFIG_OBJ_CORE_STATS_SYSTEM
-DEFINE_FAKE_VALUE_FUNC(int, z_kernel_stats_raw, struct k_obj_core *, void *);
-DEFINE_FAKE_VALUE_FUNC(int, z_kernel_stats_query, struct k_obj_core *, void *);
-#endif /* CONFIG_OBJ_CORE_STATS_SYSTEM */
 
 /* Value that fills a structure before a test, to show the fields that the unit writes */
 #define FILL 0xA5
@@ -667,10 +660,6 @@ static void obj_core_unit_before(void *fixture)
 	RESET_FAKE(unit_stats_enable);
 	unit_type.stats_desc = NULL;
 #endif /* CONFIG_OBJ_CORE_STATS */
-#ifdef CONFIG_OBJ_CORE_STATS_SYSTEM
-	RESET_FAKE(z_kernel_stats_raw);
-	RESET_FAKE(z_kernel_stats_query);
-#endif /* CONFIG_OBJ_CORE_STATS_SYSTEM */
 
 	/* The history of the setup is not part of a test. */
 	FFF_RESET_HISTORY();

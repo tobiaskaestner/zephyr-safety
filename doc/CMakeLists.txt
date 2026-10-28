@@ -369,24 +369,32 @@ add_custom_command(
 
 # The test doubles of the kernel unit tests (Kernel Unit Test Specification).
 # The filter of dox-kernel-unit-testspec generates them at each build, so they
-# cannot drift. This check finds what is written by hand: a known limit
-# (tests/kernel/unit/common/fake_limits.yaml) whose selector matches no test,
-# and a local custom fake without a comment. A standalone target, and a
-# POST_BUILD step of `all-docs`.
+# cannot drift. This check finds the drift of what is written by hand. Errors
+# fail the build: a bad id or a stale selector of a known limit
+# (tests/kernel/unit/common/fake_limits.yaml), or a TLA+ link of the reference
+# fake without its anchor on the page of the formal model. The check reads the
+# anchors from the built architecture page in deploy/html if it exists, else
+# from the tla directives of formal-model.rst. Warnings do not fail the build:
+# a unit test source in the INPUT without a unit marker, a local custom fake
+# without a comment, and a doc comment that does not name a fake that its
+# test configures. A standalone target, and a POST_BUILD step of `all-docs`
+# (after the architecture HTML). The check is not part of the test build
+# (cmake/kernel_unit.cmake).
 set(kernel_unit_doubles_check_cmd
   ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/_scripts/kernel_unit_doubles.py check
+    --deploy ${CMAKE_CURRENT_BINARY_DIR}/deploy/html
 )
 add_custom_target(
   kernel-unit-doubles-check
   COMMAND ${kernel_unit_doubles_check_cmd}
-  COMMENT "Checking the known limits of the kernel unit test doubles..."
+  COMMENT "Checking the test doubles of the kernel unit tests..."
   USES_TERMINAL
 )
 add_custom_command(
   TARGET all-docs
   POST_BUILD
   COMMAND ${kernel_unit_doubles_check_cmd}
-  COMMENT "Checking the known limits of the kernel unit test doubles..."
+  COMMENT "Checking the test doubles of the kernel unit tests..."
   USES_TERMINAL
 )
 

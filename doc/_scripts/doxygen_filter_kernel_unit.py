@@ -18,10 +18,11 @@ so doxygen_filter_kconfig.py leaves it to Doxygen. The Doxyfile defines it as
 in the document without this filter. The doc comments of these tests say
 "Without priority inheritance".
 
-Then, for a test source with the marker ``@kunit_interfaces``, the filter
-adds the test doubles (kernel_unit_doubles.py): a table of the unit after the
-marker, and a section "Test doubles" at the end of the doc comment of each
-test. For the file ``doubles.dox``, the output is the page "Test doubles",
+Then, for each test source of a unit with the marker ``@kunit_interfaces``
+(in the file group of one of its test sources), the filter adds the test
+doubles (kernel_unit_doubles.py): a table of the unit after the marker, and
+the sections "Test doubles", "Checked calls" and "Known limits" at the end
+of the doc comment of each test. For the file ``doubles.dox``, the output is the page "Test doubles",
 generated from the sources of the harness.
 
 The output has as many lines as the input, so the line numbers of Doxygen

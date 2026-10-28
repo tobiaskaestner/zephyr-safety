@@ -5,14 +5,23 @@
 #
 # Each limit is a gap between a test double and the layer below that it
 # replaces: a defect of the unit that a test with this double cannot find.
-# The source is the review of the scheduler assumptions of the fakes
-# (workspace notes, claude/kernel-unit/reffake/review.md, findings R1 to R15).
-# R14 of the review has two limits here, R14a and R14b.
+# This file is the only source of the limits.
+#
+# The ids: each limit has a stable id TDL-<n> ("test double limit"). The
+# number is not a rank: the severity is the field "severity". A new limit
+# gets the next free number. Never use an id again, and never change the
+# number of a limit, also when a limit is removed.
+#
+# The field "review" is history: the finding of the review of the fakes
+# against the scheduler contract that found the limit (workspace notes,
+# claude/kernel-unit/reffake/review.md, findings R1 to R15). The review
+# finding R14 gave two limits, TDL-14 and TDL-15.
 #
 # doc/_scripts/kernel_unit_doubles.py reads this file. The Kernel Unit Test
 # Specification shows each limit on the page "Test doubles" and at each test
 # that uses such a double. The command "kernel_unit_doubles.py check" fails if
-# a selector matches no test.
+# an id is not TDL-<n>, if two limits have the same id, or if a selector
+# matches no test.
 #
 # A limit applies to a test if one of its selectors matches the test. All
 # keys of one selector must match:
@@ -28,7 +37,8 @@
 #              without it
 
 limits:
-  - id: R1
+  - id: TDL-1
+    review: R1
     severity: high
     title: A wait result has no connection to a wake.
     text: >-
@@ -44,7 +54,8 @@ limits:
       - fake: z_pend_curr
         custom: pend_spy
 
-  - id: R2
+  - id: TDL-2
+    review: R2
     severity: high
     title: A wait without a waker always ends as a timeout, also with K_FOREVER.
     text: >-
@@ -56,7 +67,8 @@ limits:
       - uses: set_other_thread
         unit: mutex
 
-  - id: R3
+  - id: TDL-3
+    review: R3
     severity: high
     title: The waiting-threads model has no thread identity and no order.
     text: >-
@@ -69,7 +81,8 @@ limits:
       - fake: z_sched_wake
         how: [value, sequence]
 
-  - id: R4
+  - id: TDL-4
+    review: R4
     severity: high
     title: The reschedule decision is not modeled.
     text: >-
@@ -80,7 +93,8 @@ limits:
       - checks: z_reschedule
         reference: false
 
-  - id: R5
+  - id: TDL-5
+    review: R5
     severity: medium
     title: The timeout state is not modeled.
     text: >-
@@ -92,7 +106,8 @@ limits:
         unit: mutex
       - checks: z_try_abort_thread_timeout
 
-  - id: R6
+  - id: TDL-6
+    review: R6
     severity: medium
     title: The mutex wake model wakes at the return value, not at the ready call.
     text: >-
@@ -106,7 +121,8 @@ limits:
       - uses: owner_unlocks
         unit: mutex
 
-  - id: R7
+  - id: TDL-7
+    review: R7
     severity: medium
     title: The mutex priority model does not move a waiter and returns a free hint.
     text: >-
@@ -119,7 +135,8 @@ limits:
       - checks: z_thread_prio_set
         unit: mutex
 
-  - id: R8
+  - id: TDL-8
+    review: R8
     severity: medium
     title: The reschedule contract ignores the interrupt state in the key.
     text: >-
@@ -129,7 +146,8 @@ limits:
     applies:
       - reference: true
 
-  - id: R9
+  - id: TDL-9
+    review: R9
     severity: medium
     title: The event walk model keeps the order of the test, not the wait queue order.
     applies:
@@ -137,7 +155,8 @@ limits:
         how: custom
         unit: event
 
-  - id: R10
+  - id: TDL-10
+    review: R10
     severity: medium
     title: The contract resets the swap data at a wait, msgq uses it as input.
     text: >-
@@ -147,7 +166,8 @@ limits:
       - fake: z_pend_curr
         unit: msgq
 
-  - id: R11
+  - id: TDL-11
+    review: R11
     severity: low
     title: Wait queue head queries return a fixed thread.
     applies:
@@ -158,7 +178,8 @@ limits:
       - custom: waitq_head_model
         unit: mutex
 
-  - id: R12
+  - id: TDL-12
+    review: R12
     severity: low
     title: The ISR refusal does not stop the scheduler state.
     text: >-
@@ -167,7 +188,8 @@ limits:
     applies:
       - uses: kernel_unit_expect_pend_refusal
 
-  - id: R13
+  - id: TDL-13
+    review: R13
     severity: low
     title: The lock spies and the lock model have no lock owner.
     text: >-
@@ -177,7 +199,8 @@ limits:
       - uses: kernel_unit_spy_on_lock
       - uses: kernel_unit_lock_model_install
 
-  - id: R14a
+  - id: TDL-14
+    review: R14 (first part)
     severity: low
     title: The plain fake z_waitq_init() cannot show the loss of waiters.
     text: >-
@@ -186,12 +209,12 @@ limits:
       plain fake records the call and has no waiters, so no test of the unit can
       find an init of a wait queue that is in use. The reference fake reports
       it as a misuse.
-    source: finding R14 of the review (first part)
     applies:
       - checks: z_waitq_init
         reference: false
 
-  - id: R14b
+  - id: TDL-15
+    review: R14 (second part)
     severity: low
     title: k_sched_current_thread_query() returns a thread that the test gives, not the current thread.
     text: >-
@@ -199,12 +222,12 @@ limits:
       This value has no connection to _current. A unit that uses the result of
       the query as the current thread passes with a value that the real
       scheduler does not give.
-    source: finding R14 of the review (second part)
     applies:
       - fake: k_sched_current_thread_query
         how: [value, sequence]
 
-  - id: R15
+  - id: TDL-16
+    review: R15
     severity: medium
     title: A priority change of a ready thread cancels the tie rule and the cooperative rule.
     text: >-
