@@ -629,3 +629,34 @@ def test_a_long_measured_text_is_short():
     out = ev({"experiment": "e", "metric": "irq", "stat": "p50", "expect": {"range": [0, 102]}}, pts)
     assert out["measured"].startswith("6 values, min 100, max 105; 3 outside the limit: FAIL ")
     assert len(out["measured_lines"]) == 6
+
+
+def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
+    from studylib import notebooks
+    design = make_design(tmp_path)
+    nb = tmp_path / "design" / "st-sub" / "report.ipynb"
+    nb.write_text('{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}\n')
+    res = tmp_path / "results"
+    monkeypatch.setattr(build, "Design", lambda: design)
+    monkeypatch.setattr(notebooks.trees, "REPO_DIR", tmp_path)
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    build.build(res / "top", log=lambda *a: None)
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    sj = json.loads((inst / "study.json").read_text())
+    sj["design"]["folder"] = "design/st-sub"
+    (inst / "study.json").write_text(json.dumps(sj))
+    calls = []
+
+    def fake(nb_file, folder, repo):
+        calls.append((nb_file.name, folder))
+        return "<html>ok</html>"
+    out = notebooks.run(res / "top", log=lambda *a: None, executor=fake)
+    assert [x[2] for x in out] == ["ran"] and calls == [("report.ipynb", inst)]
+    assert (inst / "notebooks" / "report.html").read_text() == "<html>ok</html>"
+    assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["the same inputs"]
+    assert len(calls) == 1
+
+    def broken(nb_file, folder, repo):
+        raise notebooks.NotebookError("cell 3: KeyError")
+    out = notebooks.run(res / "top", force=True, log=lambda *a: None, executor=broken)
+    assert out[0][2] == "FAILED: cell 3: KeyError"

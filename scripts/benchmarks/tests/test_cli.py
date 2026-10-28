@@ -25,6 +25,7 @@ COMMANDS = [
     ["analysis", "check", "r"],
     ["analysis", "show", "r", "--details"],
     ["analysis", "missing"],
+    ["analysis", "notebooks", "r", "--force"],
     ["instance", "exclude", "r", "--campaign", "c", "--reason", "x"],
     ["analysis", "html", "r"],
 ]

@@ -309,6 +309,22 @@ The links are relative, so you can copy the results tree or serve it from
 any place. The background build of a campaign writes the pages after each
 run.
 
+``analysis notebooks FOLDER [--force]`` runs the notebooks of the studies
+against their instances at and below the folder. A study has its
+notebooks in its design folder (``*.ipynb`` and ``notebooks/*.ipynb``,
+committed without outputs). They are for the questions that the standard
+plots cannot answer: comparisons over experiments, trees and boards. Each
+notebook runs (nbclient) with the environment variables
+``LATBENCH_INSTANCE`` (the instance folder) and ``LATBENCH_REPO`` (the
+safety repository; ``scripts/benchmarks/data.py`` loads the instance), in
+the safety repository. The output goes to ``<instance>/notebooks/<name>.html``,
+and ``notebooks.json`` has the digest of the inputs (the notebook and
+``study.json``): with the same digest, the notebook does not run again.
+The instance page links to the notebooks. The output is not byte-stable,
+so ``analysis check`` does not compare it. The packages are in
+``scripts/benchmarks/requirements-notebooks.lock``; the other commands do
+not need them.
+
 ``analysis show`` and ``analysis missing`` read the instances at and below
 the folder that you give (any folder of a results tree). They name each
 instance by its folder below the results folder. The one line of an

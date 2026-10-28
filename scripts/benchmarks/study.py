@@ -82,6 +82,9 @@ Analysis (ROOT is any folder of a results tree):
     study.py analysis show ROOT --explain [ID ...]
                                           how each central result is made: its
                                           definition, the rows and the sentences
+    study.py analysis notebooks FOLDER [--force]
+                                          run the notebooks of the studies (*.ipynb of the
+                                          design) against the instances: notebooks/*.html
     study.py analysis html FOLDER        index.html in each instance folder (with links to
                                           the parents and the sub-studies) and in each
                                           experiment folder (plots, runs) at and below FOLDER
@@ -581,6 +584,15 @@ def cmd_missing(args):
     return 0
 
 
+def cmd_notebooks(args):
+    from studylib import notebooks
+    res = notebooks.run(args.root, force=args.force)
+    bad = [r for r in res if r[2].startswith("FAILED")]
+    print(f"{len(res)} notebooks: {sum(r[2] == 'ran' for r in res)} ran, "
+          f"{sum(r[2] == 'the same inputs' for r in res)} with the same inputs, {len(bad)} failed")
+    return 1 if bad else 0
+
+
 def cmd_html(args):
     root = layout.find_root(args.root)
     with results_lock(root):
@@ -738,6 +750,10 @@ def parser():
     s = ana.add_parser("missing", help="the experiments without an evidence run that checks wait for")
     s.add_argument("root", nargs="?", default=".")
     s.set_defaults(func=cmd_missing)
+    s = ana.add_parser("notebooks", help="run the notebooks of the studies against the instances at and below ROOT")
+    s.add_argument("root")
+    s.add_argument("--force", action="store_true", help="run each notebook, also with the same inputs")
+    s.set_defaults(func=cmd_notebooks)
     s = ana.add_parser("html", help="index.html in each instance and experiment folder at and below ROOT")
     s.add_argument("root")
     s.set_defaults(func=cmd_html)

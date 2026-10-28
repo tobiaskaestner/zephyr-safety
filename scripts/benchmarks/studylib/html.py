@@ -143,6 +143,14 @@ def instance_page(folder, root, studies):
             out.append(f"<tr><td><a href='{layout.EXPERIMENT_PREFIX}{esc(e['name'])}/index.html'>{esc(e['name'])}</a>"
                        f"</td><td>{len([r for r in runs if r['id'].split('/')[0] == e['name']])}</td></tr>")
         out.append("</table>")
+    nbi = folder / "notebooks" / "notebooks.json"
+    if nbi.is_file():
+        nbs = json.loads(nbi.read_text()).get("notebooks", {})
+        out.append("<h2>Notebooks</h2><ul>")
+        for name, n in sorted(nbs.items()):
+            out.append(f"<li><a href='notebooks/{esc(n['html'])}'>{esc(name)}</a></li>" if n.get("html")
+                       else f"<li>{esc(name)}: <span class='wrong'>failed</span> {esc(n.get('error'))}</li>")
+        out.append("</ul>")
     subs = sorted(c for c in studies if c.parent == folder)
     if subs:
         out.append("<h2>Sub-studies</h2><table><tr><th>Sub-study</th><th>Verdicts</th></tr>")
