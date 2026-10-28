@@ -82,9 +82,9 @@ Analysis (ROOT is any folder of a results tree):
     study.py analysis show ROOT --explain [ID ...]
                                           how each central result is made: its
                                           definition, the rows and the sentences
-    study.py analysis html ROOT [--out FILE]
-                                          one HTML page with all study.json files
-                                          (default ROOT/index.html)
+    study.py analysis html FOLDER        index.html in each instance folder (with links to
+                                          the parents and the sub-studies) and in each
+                                          experiment folder (plots, runs) at and below FOLDER
 
 In a lab space, the tools of the design repo of the lab space run: another
 study.py starts the study.py of that repo with the same arguments.
@@ -576,10 +576,9 @@ def cmd_missing(args):
 
 def cmd_html(args):
     root = layout.find_root(args.root)
-    out = Path(args.out) if args.out else root / "index.html"
     with results_lock(root):
-        out.write_text(html.page(root))
-    print(out)
+        written = html.write_pages(root, args.root, Design())
+    print(f"{len(written)} pages, top: {root / 'index.html'}")
 
 
 # ------------------------------------------------------------ parser
@@ -732,9 +731,8 @@ def parser():
     s = ana.add_parser("missing", help="the experiments without an evidence run that checks wait for")
     s.add_argument("root", nargs="?", default=".")
     s.set_defaults(func=cmd_missing)
-    s = ana.add_parser("html", help="one HTML page with all study.json files")
+    s = ana.add_parser("html", help="index.html in each instance and experiment folder at and below ROOT")
     s.add_argument("root")
-    s.add_argument("--out")
     s.set_defaults(func=cmd_html)
     return p
 

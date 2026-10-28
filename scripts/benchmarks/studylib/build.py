@@ -23,7 +23,11 @@ provisional: study.json says so in the entry and in "state".
 """
 
 import json
+import subprocess
+import sys
 from pathlib import Path
+
+import trees
 
 from . import central, checks, instance, jsonout, layout, runfiles, seal, stats
 from .design import Design, repo_rel, repo_rev
@@ -262,6 +266,10 @@ class Tree:
             ej = self.experiment_json(folder, exp, runs)
             sha = self.writer.write(folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "experiment.json", ej)
             experiments.append({"name": exp, "file": f"{layout.EXPERIMENT_PREFIX}{exp}/experiment.json", "sha256": sha})
+            if not self.writer.dry:
+                why = self.plot(folder, exp, runs)
+                if why:
+                    notes.append(f"{exp}: the plots failed: {why}")
             if ej.get("code_differs"):
                 notes.append(f"{exp}: the evidence runs have different code at {len(ej['code_differs'])} points "
                              f"({', '.join(ej['code_differs'][:4])}); a check over these runs mixes two code versions")
@@ -363,6 +371,24 @@ class Tree:
         self.results[folder] = sj
         self.writer.write(folder / "study.json", sj)
 
+    def plot(self, folder, exp, runs):
+        """The standard plots of an experiment of an instance (the plot.py of its app), from the app data
+        of the evidence runs, in ex-<exp>/plots/; None, or the reason why they failed."""
+        ev = sorted((r for r in runs if r["role"] == "evidence"), key=lambda r: r["id"].split("/")[-1])
+        if not ev:
+            return None
+        app = self.loaded[(folder, ev[0]["id"])][0]["run"]["app"]
+        script = plot_script(app)
+        if not script.is_file():
+            return None
+        args = []
+        for r in ev:
+            run_dir = folder / layout.run_folder(r["id"])
+            args.append(f"{r['id']}={run_dir.parent / f'{run_dir.name}.{app}.json'}")
+        out = folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "plots"
+        res = subprocess.run([sys.executable, str(script), str(out), *args], capture_output=True, text=True)
+        return None if res.returncode == 0 else (res.stderr.strip().splitlines() or ["?"])[-1][:300]
+
     def experiment_json(self, folder, exp, runs):
         rows, axes_all, core = [], set(), set()
         for r in runs:
@@ -433,6 +459,10 @@ def has_todo(x):
     if isinstance(x, list):
         return any(has_todo(v) for v in x)
     return False
+
+
+def plot_script(app):
+    return trees.BENCH_DIR / app / "scripts" / "plot.py"
 
 
 def hypothesis_entry(h, out_checks):

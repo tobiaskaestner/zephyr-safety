@@ -234,6 +234,30 @@ characters as zeros, so the same code gives the same code digest. The app data c
 tick phase tables, the M4 sites, and a check of the ``LAT CFG`` values
 against ``.config``.
 
+The standard plots of an experiment come from the plot script of its app,
+``tests/benchmarks/<app>/scripts/plot.py`` (the common part is
+``tests/benchmarks/common/scripts/latplot.py``, like the extractor). The
+build runs it for each experiment of an instance, with the app data of
+the evidence runs, and it writes ``ex-<experiment>/plots/`` of the
+instance:
+
+- ``overview-<metric>.svg``: the exceedance probability (the share of
+  samples at or above x) of each point of the newest run, at most 8 points
+  in one chart;
+- ``ccdf-<metric>-<tree>-<point>.svg``: the exceedance probability of one
+  point, one line for each run (the newest 8);
+- ``hist-<metric>-<tree>-<point>.svg``: the histogram of one point of the
+  newest run;
+- ``plots.json``: the list of the plots and the digest of their inputs (the
+  app data and the plot scripts). With the same digest, the build does not
+  draw again.
+
+The metric is the main metric of the app (``irq``, ``isr2thr``, ``t2t``).
+The SVG files have no date, so the same inputs and the same matplotlib
+give the same bytes. A failed plot gives a note in ``study.json``, not a
+failed build. In a campaign, the background build draws the plots of an
+experiment as soon as its run is done.
+
 ``experiment.json`` has one row for each run, tree, point, repetition and
 metric, with the percentiles. ``study.json`` has the acceptance checks,
 the rebuild checks, the hypotheses with each check (measured value,
@@ -266,12 +290,22 @@ lab space, a campaign makes the instances and adds each run (see
    scripts/benchmarks/study.py analysis show <folder>             # one line for each instance
    scripts/benchmarks/study.py analysis show <folder> --details   # each check and central result
    scripts/benchmarks/study.py analysis missing [<folder>]        # the runs that checks wait for
-   scripts/benchmarks/study.py analysis html <results>/kernel-latency   # one HTML page: index.html
+   scripts/benchmarks/study.py analysis html <folder>             # index.html at each level
    # how each central result is made: definition, rows, sentences
    scripts/benchmarks/study.py analysis show <results>/kernel-latency --explain [ID ...]
    # a manual verdict (a person, or a proposal that says so in --by)
    scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
        --verdict wrong --by "<name>" --text "<why>"
+
+``analysis html`` writes ``index.html`` in each instance folder at and
+below the folder: the links up to each parent instance, the content of
+``study.json``, the experiments (with a link to their pages) and the
+direct sub-studies with their verdicts in one line. Each experiment
+folder gets ``ex-<experiment>/index.html``: the standard plots and the
+runs (role, reason, digest, campaign, acceptance), and the failed runs.
+The links are relative, so you can copy the results tree or serve it from
+any place. The background build of a campaign writes the pages after each
+run.
 
 ``analysis show`` and ``analysis missing`` read the instances at and below
 the folder that you give (any folder of a results tree). They name each

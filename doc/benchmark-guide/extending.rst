@@ -161,6 +161,13 @@ Add an app
 #. Write ``testcase.yaml`` with ``build_only: true``,
    ``platform_allow`` with the four board targets of ``boards.yaml``, and one scenario for each important
    variant. Use the tags ``benchmark`` and ``latency``.
+#. Write ``scripts/extract.py`` and ``scripts/plot.py`` in the app folder,
+   from those of an existing app. The extractor calls
+   ``latextract.main("<app>")``; the plot script calls
+   ``latplot.main("<app>", ["<main metric>"])`` (both in
+   ``common/scripts/``). The results build needs both: the extractor for the
+   app data, the plot script for the standard plots (see :doc:`studies`).
+   A value or a plot that only this app gives goes into these files.
 #. Add the app to the table in ``tests/benchmarks/README.md`` and to
    :doc:`apps` in this guide.
 #. Add an experiment for the app (see above).

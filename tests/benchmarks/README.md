@@ -47,6 +47,7 @@ paths are relative to the root of the repo:
 | `scripts/benchmarks/study.py` | Design lint and templates, lab spaces, pinned trees, campaigns, study instances (run lists, seals), and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide pages "Studies and their results" and "Lab spaces and campaigns") |
 | `scripts/benchmarks/data.py` | Loads a built instance for a notebook |
 | `tests/benchmarks/<app>/scripts/extract.py` | The data of a run of the app as JSON (common part: `common/scripts/latextract.py`) |
+| `tests/benchmarks/<app>/scripts/plot.py` | The standard plots of an experiment of the app (common part: `common/scripts/latplot.py`) |
 | `scripts/benchmarks/requirements.txt` | Python packages for the scripts |
 | `scripts/benchmarks/tests/` | pytest modules for the scripts and the experiment files |
 

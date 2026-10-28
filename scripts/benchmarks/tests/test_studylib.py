@@ -326,8 +326,14 @@ def test_build_small_tree(tmp_path, monkeypatch):
     t, w = build.build(res / "top", dry=True, log=lambda *a: None)
     assert w.differ == []
     from studylib import html
-    page = html.page(res / "top")
-    assert "b is slower" in page and page == html.page(res / "top")
+    files = html.write_pages(res / "top", design=design)
+    sub = (inst / "index.html").read_text()
+    assert "b is slower" in sub and "<a href='../index.html'>top</a>" in sub
+    top_page = (res / "top" / "index.html").read_text()
+    assert "<a href='st-sub@nucleo_g474re/index.html'>sub@nucleo_g474re</a>" in top_page
+    exp_page = (inst / "ex-exp1" / "index.html").read_text()
+    assert "exp1/20260101T000000Z" in exp_page and "<a href='../../index.html'>top</a>" in exp_page
+    assert [f.read_bytes() for f in files] == [f.read_bytes() for f in html.write_pages(res / "top", design=design)]
     # a changed raw file breaks the build
     (inst / "ex-exp1" / "20260101T000000Z" / "ws-up" / "a" / "rep1.log").write_text("x")
     with pytest.raises(seal.SealError):
