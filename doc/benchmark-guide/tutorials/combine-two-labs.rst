@@ -6,9 +6,9 @@ Combine two lab spaces
    The lab space of the tutorials before, with its runs. Disk space for a
    second lab space; no board is necessary for it.
 
-One host seldom has all boards of a study, and a second host can make a
+One host has only some boards of a study, and a second host makes a
 study faster. Two lab spaces give each other their runs with an export
-file. In this tutorial you make a second lab space on the same host,
+file (see :doc:`../explanation/lab-exchange`). In this tutorial you make a second lab space on the same host,
 ``/wrk/z/lab-tutorial-b``, and you import the runs of the first one.
 
 Export
@@ -31,6 +31,14 @@ A second lab space
 The second lab space has its own clone of the safety repository, on its
 main branch: it does not have the study of :doc:`your-own-study`.
 
+Go to the parent folder of the first lab space:
+
+.. code-block:: console
+
+   $ cd ..
+
+Make the second lab space there:
+
 .. code-block:: console
 
    $ mkdir lab-tutorial-b && cd lab-tutorial-b && git clone -q <safety repository> safety && python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/benchmarks/requirements.lock && .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety
@@ -42,7 +50,7 @@ main branch: it does not have the study of :doc:`your-own-study`.
      hardware map /wrk/z/lab-tutorial-b/hw-map.yml (missing: make it with twister)
    next: cd /wrk/z/lab-tutorial-b && /wrk/z/lab-tutorial-b/safety/scripts/benchmarks/study.py trees setup <tree>
 
-A lab space for analysis needs no trees and no hardware map.
+A lab space for analysis only needs no trees and no hardware map.
 
 Import
 ------
@@ -92,7 +100,8 @@ The same verdicts
 
 The second lab space gives the same verdicts as the first one from the
 same run. In real work, the export file goes to another host (``scp``),
-and each host adds the runs of its boards.
+and each host adds the runs of its boards. :doc:`../howto/combine-lab-spaces`
+gives the steps.
 
 You have done the full cycle: a lab space, an experiment, a campaign, a
 study of your own, an audit, and a second lab space. The
