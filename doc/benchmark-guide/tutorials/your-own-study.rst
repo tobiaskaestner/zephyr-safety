@@ -11,8 +11,8 @@ level of the compiler change the IRQ entry latency of the direct path?**
 You make a study with one experiment (one Kconfig factor, two values), you
 write a hypothesis before the run, and you let a campaign decide it.
 
-Your study goes on a branch of the clone of your lab space. It does not go
-into the safety repository.
+Your study goes on a local branch of the :term:`design repository`. Do
+not push this branch.
 
 Make a branch and the files
 ---------------------------
@@ -39,14 +39,15 @@ Make a branch and the files
    0 errors, 5 warnings
 
 ``scaffold study`` also added ``use: tutorial`` to the top
-``study.yaml``. The templates pass the lint without errors; each
+``study.yaml``. The templates pass the lint without errors. Each
 ``TODO`` text is a warning until you replace it.
 
 Write the design
 ----------------
 
 Replace the templates with the content of your study. The experiment has
-one axis, ``opt``, with two values; all points use the direct IRQ path:
+one axis, ``opt``, with two values. All points use the direct IRQ path
+(see :doc:`../reference/files/experiment-yaml`):
 
 .. code-block:: yaml
    :caption: st-tutorial/ex-irq-opt/experiment.yaml
@@ -71,8 +72,8 @@ one axis, ``opt``, with two values; all points use the direct IRQ path:
        expect: {equals: 0}
        basis: No negative differences, so the stimulus and the time stamps work.
 
-Write the hypothesis and its limit **before** the run. That is the point
-of a hypothesis: the data can make it wrong.
+Write the hypothesis and its limit **before** the run. A hypothesis is
+useful only if the data can make it wrong.
 
 .. code-block:: yaml
    :caption: st-tutorial/hypotheses.yaml
@@ -84,7 +85,7 @@ of a hypothesis: the data can make it wrong.
          With speed optimizations, the median IRQ entry latency of the direct
          path is not more than with size optimizations.
        basis: >
-         Speed optimizations inline more and keep the ISR code short; the
+         Speed optimizations inline more and keep the ISR code short. The
          direct path runs no Zephyr code before the ISR body.
        wrong_if: "speed optimizations make the entry slower"
        checks:
@@ -98,9 +99,10 @@ of a hypothesis: the data can make it wrong.
            basis: "speed - size <= 0 cycles: the claim of H1."
 
 The check takes the median (``p50``) of the point ``speed`` and its
-difference to the point ``size``; the limit is 0 cycles or less (see
-:doc:`../reference/check-forms`). The study also gets a central result: one
-sentence for each point.
+difference to the point ``size``. The limit is 0 cycles or less (see
+:doc:`../reference/check-forms`). The study also gets a central result,
+with one sentence for each point (see :doc:`../reference/files/study-yaml`
+and :doc:`../reference/central-results`).
 
 .. code-block:: yaml
    :caption: st-tutorial/study.yaml
