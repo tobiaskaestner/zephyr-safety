@@ -186,13 +186,14 @@ name) that pins ``zephyr`` and the modules of the board and that the lab
 space set up (``ok``). Then it flashes
 the board with the ``flash`` commands of ``boards.yaml`` and reads the
 console until ``RESULT: OK`` or ``RESULT: FAIL``, for 60 s or less. The
-exit code is 0 for ``OK``, 1 for ``FAIL``, and 2 if the check cannot run
-(build, flash, board, hardware map, tree, SDK, console). The check takes
-the board lock, as a campaign does (a check that a campaign runs uses the
-lock of the campaign), and opens the console exclusively.
+exit code is 0 for ``OK``, 1 for ``FAIL``, and 2 if the wire check cannot
+run (build, flash, board, hardware map, tree, SDK, console). The wire
+check takes the board lock, as a campaign does. A wire check that a
+campaign runs uses the lock of the campaign. The wire check opens the
+console exclusively.
 
-Each check writes its own record,
-``.lab/hwcheck/history/<board>/<UTC>.json``, also a check that cannot run
+Each wire check writes its own record,
+``.lab/hwcheck/history/<board>/<UTC>.json``, also a wire check that cannot run
 (``result: error`` and the ``error``), and a copy of the newest record as
 ``.lab/hwcheck/<board>.json``. A record has:
 
