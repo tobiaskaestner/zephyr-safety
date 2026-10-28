@@ -6,7 +6,6 @@
 #   ex-<experiment>/experiment.md     its description
 #   st-<sub-study>/study.yaml         a sub-study
 #   wp3-variants.md                   the variants of the three experiments
-#   <sub-study>/                   a sub-study (folder with a study.yaml)
 #
 # This study owns the three experiments. It has no hypotheses. Each
 # sub-study has the hypotheses of one question and imports the
