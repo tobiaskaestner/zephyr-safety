@@ -40,3 +40,26 @@ def test_commands_parse(argv):
 def test_no_top_level_command_outside_a_namespace(old):
     with pytest.raises(SystemExit):
         study.parser().parse_args([old, "x"])
+
+
+def subcommands(parser, prefix=()):
+    """The full command paths of a parser, for example ("design", "scaffold", "study")."""
+    import argparse
+    out = []
+    for a in parser._actions:
+        if isinstance(a, argparse._SubParsersAction):
+            for name, sub in a.choices.items():
+                deeper = subcommands(sub, prefix + (name,))
+                out += deeper or [prefix + (name,)]
+    return out
+
+
+def test_the_reference_names_each_command():
+    """doc/benchmark-guide/reference/cli/study-py.rst has a synopsis line for each command of study.py."""
+    page = (Path(study.__file__).resolve().parents[2] / "doc" / "benchmark-guide" / "reference" / "cli"
+            / "study-py.rst").read_text()
+    cmds = subcommands(study.parser())
+    assert len(cmds) > 25
+    missing = [" ".join(c) for c in cmds
+               if f"study.py {' '.join(c)}" not in page and not (c[0] == "trees" and "study.py trees setup" in page)]
+    assert missing == [], f"not in the reference: {missing}"

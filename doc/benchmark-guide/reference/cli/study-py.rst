@@ -1,94 +1,110 @@
 The tool study.py
 =================
 
-In this page, ``study.py`` is ``<repo>/scripts/benchmarks/study.py`` and
-``<repo>`` is the safety repository.
+``study.py`` (``<repo>/scripts/benchmarks/study.py``) has all commands of
+the studies, the lab spaces and the results, in six namespaces. In a lab
+space, each ``study.py`` runs the ``study.py`` of the design repository of
+the lab space with the Python of the lab space, so ``safety/scripts/benchmarks/study.py``
+and any other copy give the same result there. ``study.py --help`` and
+``study.py <namespace> <command> --help`` give the options.
 
-The commands that change a run list are below ``study.py instance``. In a
-lab space, a campaign makes the instances and adds each run (see
-:doc:`../../explanation/campaigns`). Without a campaign, use these commands:
+.. list-table::
+   :header-rows: 1
+   :widths: 20 80
+
+   * - Namespace
+     - Commands
+   * - ``design``
+     - ``lint``, ``scaffold study``, ``scaffold experiment``: the design
+       files.
+   * - ``lab``
+     - ``init``, ``status``, ``hwcheck``, ``export``, ``import``: the lab
+       space.
+   * - ``trees``
+     - ``setup``, ``check``, ``show``: the pinned trees.
+   * - ``campaign``
+     - ``prepare``, ``check``, ``run``, ``status``, ``resume``: runs of
+       experiments.
+   * - ``instance``
+     - ``new``, ``add``, ``exclude``, ``reference``, ``verdict``,
+       ``merge``, ``seal``, ``verify``: the run lists.
+   * - ``analysis``
+     - ``build``, ``check``, ``show``, ``missing``, ``notebooks``,
+       ``html``: the aggregates, the verdicts and the pages.
+
+The exit code is 0 for success, 1 for a failure or a refusal, and 2 for a
+``lab hwcheck`` that cannot run. An error gives one line ``error: ...``.
+
+Design
+------
+
+``design lint``
+~~~~~~~~~~~~~~~
 
 .. code-block:: console
 
-   # once: the instance folders of a study for a board
-   scripts/benchmarks/study.py instance new <results> load-scaling --board nucleo_g474re
-   # a run goes into its instance folder and into its run list (run.py adds it)
-   scripts/benchmarks/run.py <experiment.yaml> --out <instance folder> [--role R --reason TEXT]
-   # an old run from another place: copy it in (the original stays)
-   scripts/benchmarks/study.py instance add <instance folder> <old run folder> --copy
-   # the aggregates, and a check that they come again from the same inputs
-   scripts/benchmarks/study.py analysis build <results>/kernel-latency
-   scripts/benchmarks/study.py analysis check <results>/kernel-latency
-   scripts/benchmarks/study.py analysis show <folder>             # one line for each instance
-   scripts/benchmarks/study.py analysis show <folder> --details   # each check and central result
-   scripts/benchmarks/study.py analysis missing [<folder>]        # the runs that checks wait for
-   scripts/benchmarks/study.py analysis html <folder>             # index.html at each level
-   # how each central result is made: definition, rows, sentences
-   scripts/benchmarks/study.py analysis show <results>/kernel-latency --explain [ID ...]
-   # a manual verdict (a person, or a proposal that says so in --by)
-   scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
-       --verdict wrong --by "<name>" --text "<why>"
+   scripts/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
 
-``analysis html`` writes ``index.html`` in each instance folder at and
-below the folder: the links up to each parent instance, the content of
-``study.json``, the experiments (with a link to their pages) and the
-direct sub-studies with their verdicts in one line. Each experiment
-folder gets ``ex-<experiment>/index.html``: the standard plots and the
-runs (role, reason, digest, campaign, acceptance), and the failed runs.
-The links are relative, so you can copy the results tree or serve it from
-any place. The background build of a campaign writes the pages after each
-run.
+The lint reads the design files below ``validation/empirical/latencies/``.
+It needs no build and no board. It prints one line for each problem,
+``<severity>: <file>: <text>``, and then the number of errors and
+warnings. With ``FOLDER``, it prints only the problems of the files below
+that folder, and the problems of its parent folders (for example "the
+design does not load"). The tree manifests and ``boards.yaml`` are checked
+only without ``FOLDER``.
 
-``analysis notebooks FOLDER [--force]`` runs the notebooks of the studies
-against their instances at and below the folder. A study has its
-notebooks in its design folder (``*.ipynb`` and ``notebooks/*.ipynb``,
-committed without outputs). They are for the questions that the standard
-plots cannot answer: comparisons over experiments, trees and boards. Each
-notebook runs (nbclient) with the environment variables
-``LATBENCH_INSTANCE`` (the instance folder) and ``LATBENCH_REPO`` (the
-safety repository; ``scripts/benchmarks/data.py`` loads the instance), in
-the safety repository. The output goes to ``<instance>/notebooks/<name>.html``,
-and ``notebooks.json`` has the digest of the inputs (the notebook and
-``study.json``): with the same digest, the notebook does not run again.
-The instance page links to the notebooks. The output is not byte-stable,
-so ``analysis check`` does not compare it. The packages are in
-``scripts/benchmarks/requirements-notebooks.lock``; the other commands do
-not need them.
+The rules are in :doc:`../lint-rules`.
 
-``analysis show`` and ``analysis missing`` read the instances at and below
-the folder that you give (any folder of a results tree). They name each
-instance by its folder below the results folder. The one line of an
-instance gives the hypotheses in numbers (confirmed, wrong, open, and the
-``draft`` checks), the central results with a sentence, the acceptance
-checks that are not confirmed, the notes, the failed runs (a
-``<UTC>.failed.json`` in the instance) and ``PROVISIONAL``. ``--details``
-gives each check with its measured text, each central result with its
-sentences or the reason why it has none, the failed runs, and for an open
-manual check its statement and the ``instance verdict`` command that
-closes it. ``analysis missing`` lists each experiment without an evidence
-run in an instance, with the checks and central results that wait for it:
-the runs to make next.
+.. _benchguide-scaffold:
 
-Other commands: ``instance add --role excluded --reason <text>``,
-``instance exclude ROOT --campaign ID --reason TEXT`` (the role
-``excluded`` for all runs of a campaign, for example a test of the tools;
-the entry keeps the earlier role in ``role_before``),
-``instance reference`` (a run of another instance that a check reads),
-``instance seal``, ``instance verify``, and ``instance merge OTHER ROOT``: it adds the runs
-of another results tree that ROOT does not have, with their roles, after
-it checks their seals and digests. Use ``instance merge`` for a results
-tree that is not in a lab space. Between two lab spaces, use ``study.py
-lab export`` and ``study.py lab import`` (see :doc:`../../explanation/lab-exchange`). If OTHER is a
-local copy, ``--origin HOST:PATH`` records the original tree in
-``copied_from``.
+``design scaffold``
+~~~~~~~~~~~~~~~~~~~
 
-``analysis build`` writes only derived files; it does not change a raw run or
-``instance.json``. The same inputs and the same revision of the tools
-give the same bytes: ``analysis check`` builds again and compares the JSON
-files (``run.json``, the app data, ``experiment.json``, ``study.json``; not
-the plots, the pages or the notebooks). Each aggregate
-records the safety revision of the tools (``made_by``); ``dirty: true``
-means that the tools had changes that were not committed.
+.. code-block:: console
+
+   scripts/benchmarks/study.py design scaffold study PARENT/st-NAME
+   scripts/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
+
+``scaffold study`` makes a new sub-study ``st-NAME/`` of the study
+``PARENT``, with these files:
+
+- ``study.yaml``: the name, a ``question``, no ``experiments`` and an
+  empty ``central_results``.
+- ``study.md``: the sections Background, Experiments and References.
+- ``hypotheses.yaml``: one template hypothesis ``H1`` without checks.
+
+The command also adds ``use: NAME`` to ``substudies`` of the parent
+``study.yaml``. The new study has no experiment and its hypothesis has no
+check: write each check when the experiment that it reads exists. A
+template check would give a verdict from a limit that nobody wrote.
+
+``scaffold experiment`` makes the experiment ``ex-NAME/`` and adds it to
+``experiments`` of ``STUDY/study.yaml``, and a line for it to the section
+Experiments of ``STUDY/study.md``. The edits are text edits, so the
+comments of the files stay.
+
+The template ``experiment.yaml`` has the app, the board (only with
+``--board``), the first tree of ``validation/trees/`` (by name), one axis
+``variant`` with the value ``default``, and the acceptance check ``A1``
+(no invalid samples). The metric of ``A1`` is the main metric of the app:
+``irq`` for ``irq_latency``, ``isr2thr`` for ``wake_latency``, ``t2t``
+for ``thread_latency``. A name has only lower case letters, digits and
+``-``. An experiment name must be unique over all studies.
+
+.. _benchguide-lab-commands:
+
+Lab space
+---------
+
+.. code-block:: console
+
+   study.py lab init [FOLDER] --repo REPO [--name N] [--trees-root DIR] [--trees-source DIR]
+                     [--sdk DIR] [--results DIR] [--hw-map FILE]
+   study.py lab status
+   study.py lab hwcheck BOARD [--tree TREE]
+   study.py lab export [FOLDER] -o FILE [--campaign ID ...] [--all]
+   study.py lab import FILE [--dry-run]
+   study.py lab import --close ID@LAB
 
 ``lab init``
 ------------
@@ -174,6 +190,13 @@ experiment; the experiment gets the record of its check (``hwcheck``). If
 the check fails, the experiment is ``failed`` (the note says why) and the
 campaign goes on with the next one. From the cache, a check takes 10 s to
 20 s.
+
+``lab export`` and ``lab import``
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+See :doc:`../../explanation/lab-exchange` for the content of an export and
+the checks of an import, and :doc:`../../howto/combine-lab-spaces` for the
+steps.
 
 .. _benchguide-lab-trees:
 
@@ -293,55 +316,113 @@ instances of the campaign.
 
 :doc:`../../howto/resume-a-campaign` describes ``resume``.
 
-Design lint (``study.py design lint``)
---------------------------------------
+Instances
+---------
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
+   study.py instance new RESULTS STUDY --board B
+   study.py instance add INSTANCE RUN [--role R --reason TEXT] [--copy]
+   study.py instance exclude ROOT --campaign ID --reason TEXT
+   study.py instance reference INSTANCE OTHER RUN_ID --reason TEXT
+   study.py instance verdict INSTANCE --verdict V --by NAME [--text T]
+                    (--hypothesis H --check C | --central-result ID)
+   study.py instance merge OTHER ROOT [--origin HOST:PATH]
+   study.py instance seal RUN ...
+   study.py instance verify RUN ...
 
-The lint reads the design files below ``validation/empirical/latencies/``.
-It needs no build and no board. It prints one line for each problem,
-``<severity>: <file>: <text>``, and then the number of errors and
-warnings. With ``FOLDER``, it prints only the problems of the files below
-that folder, and the problems of its parent folders (for example "the
-design does not load"). The tree manifests and ``boards.yaml`` are checked
-only without ``FOLDER``.
-
-The rules are in :doc:`../lint-rules`.
-
-.. _benchguide-scaffold:
-
-New study or experiment (``study.py design scaffold``)
-------------------------------------------------------
+The run list of an instance is hand-made data. In a lab space, a campaign
+makes the instances and ``run.py`` adds each run. Without a campaign, use
+these commands:
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py design scaffold study PARENT/st-NAME
-   scripts/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
+   # once: the instance folders of a study for a board
+   scripts/benchmarks/study.py instance new <results> load-scaling --board nucleo_g474re
+   # a run goes into its instance folder and into its run list (run.py adds it)
+   scripts/benchmarks/run.py <experiment.yaml> --out <instance folder> [--role R --reason TEXT]
+   # an old run from another place: copy it in (the original stays)
+   scripts/benchmarks/study.py instance add <instance folder> <old run folder> --copy
+   # a manual verdict (a person, or a proposal that says so in --by)
+   scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
+       --verdict wrong --by "<name>" --text "<why>"
 
-``scaffold study`` makes a new sub-study ``st-NAME/`` of the study
-``PARENT``, with these files:
+Other commands: ``instance add --role excluded --reason <text>``,
+``instance exclude ROOT --campaign ID --reason TEXT`` (the role
+``excluded`` for all runs of a campaign, for example a test of the tools;
+the entry keeps the earlier role in ``role_before``),
+``instance reference`` (a run of another instance that a check reads),
+``instance seal``, ``instance verify``, and ``instance merge OTHER ROOT``: it adds the runs
+of another results tree that ROOT does not have, with their roles, after
+it checks their seals and digests. Use ``instance merge`` for a results
+tree that is not in a lab space. Between two lab spaces, use ``study.py
+lab export`` and ``study.py lab import`` (see :doc:`../../explanation/lab-exchange`). If OTHER is a
+local copy, ``--origin HOST:PATH`` records the original tree in
+``copied_from``.
 
-- ``study.yaml``: the name, a ``question``, no ``experiments`` and an
-  empty ``central_results``.
-- ``study.md``: the sections Background, Experiments and References.
-- ``hypotheses.yaml``: one template hypothesis ``H1`` without checks.
+Analysis
+--------
 
-The command also adds ``use: NAME`` to ``substudies`` of the parent
-``study.yaml``. The new study has no experiment and its hypothesis has no
-check: write each check when the experiment that it reads exists. A
-template check would give a verdict from a limit that nobody wrote.
+.. code-block:: console
 
-``scaffold experiment`` makes the experiment ``ex-NAME/`` and adds it to
-``experiments`` of ``STUDY/study.yaml``, and a line for it to the section
-Experiments of ``STUDY/study.md``. The edits are text edits, so the
-comments of the files stay.
+   study.py analysis build ROOT
+   study.py analysis check ROOT
+   study.py analysis show FOLDER [--details] [--explain [ID ...]]
+   study.py analysis missing [FOLDER]
+   study.py analysis notebooks FOLDER [--force]
+   study.py analysis html FOLDER
 
-The template ``experiment.yaml`` has the app, the board (only with
-``--board``), the first tree of ``validation/trees/`` (by name), one axis
-``variant`` with the value ``default``, and the acceptance check ``A1``
-(no invalid samples). The metric of ``A1`` is the main metric of the app:
-``irq`` for ``irq_latency``, ``isr2thr`` for ``wake_latency``, ``t2t``
-for ``thread_latency``. A name has only lower case letters, digits and
-``-``. An experiment name must be unique over all studies.
+``ROOT`` and ``FOLDER`` are folders of a results tree; ``build`` and
+``check`` always work on the whole tree of ``ROOT``.
+
+``analysis build`` writes only derived files; it does not change a raw run or
+``instance.json``. The same inputs and the same revision of the tools
+give the same bytes: ``analysis check`` builds again and compares the JSON
+files (``run.json``, the app data, ``experiment.json``, ``study.json``; not
+the plots, the pages or the notebooks). Each aggregate
+records the safety revision of the tools (``made_by``); ``dirty: true``
+means that the tools had changes that were not committed.
+
+``analysis show`` and ``analysis missing`` read the instances at and below
+the folder that you give (any folder of a results tree). They name each
+instance by its folder below the results folder. The one line of an
+instance gives the hypotheses in numbers (confirmed, wrong, open, and the
+``draft`` checks), the central results with a sentence, the acceptance
+checks that are not confirmed, the notes, the failed runs (a
+``<UTC>.failed.json`` in the instance) and ``PROVISIONAL``. ``--details``
+gives each check with its measured text, each central result with its
+sentences or the reason why it has none, the failed runs, and for an open
+manual check its statement and the ``instance verdict`` command that
+closes it. ``analysis missing`` lists each experiment without an evidence
+run in an instance, with the checks and central results that wait for it:
+the runs to make next.
+
+``analysis show ROOT --explain [ID ...]`` prints, for each central result (or
+for the given IDs) of each instance: the definition, each row, and the
+sentence of each row (see :doc:`../central-results`).
+
+``analysis html`` writes ``index.html`` in each instance folder at and
+below the folder: the links up to each parent instance, the content of
+``study.json``, the experiments (with a link to their pages) and the
+direct sub-studies with their verdicts in one line. Each experiment
+folder gets ``ex-<experiment>/index.html``: the standard plots and the
+runs (role, reason, digest, campaign, acceptance), and the failed runs.
+The links are relative, so you can copy the results tree or serve it from
+any place. The background build of a campaign writes the pages after each
+run.
+
+``analysis notebooks FOLDER [--force]`` runs the notebooks of the studies
+against their instances at and below the folder. A study has its
+notebooks in its design folder (``*.ipynb`` and ``notebooks/*.ipynb``,
+committed without outputs). They are for the questions that the standard
+plots cannot answer: comparisons over experiments, trees and boards. Each
+notebook runs (nbclient) with the environment variables
+``LATBENCH_INSTANCE`` (the instance folder) and ``LATBENCH_REPO`` (the
+safety repository; ``scripts/benchmarks/data.py`` loads the instance), in
+the safety repository. The output goes to ``<instance>/notebooks/<name>.html``,
+and ``notebooks.json`` has the digest of the inputs (the notebook and
+``study.json``): with the same digest, the notebook does not run again.
+The instance page links to the notebooks. The output is not byte-stable,
+so ``analysis check`` does not compare it. The packages are in
+``scripts/benchmarks/requirements-notebooks.lock``; the other commands do
+not need them.
