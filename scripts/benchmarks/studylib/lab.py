@@ -159,6 +159,23 @@ def require(start=None):
     return lab
 
 
+def restart_with_lab_python(script, argv, env_var="LATBENCH_PYTHON_RESTART"):
+    """Start script again with the Python of the lab space of the current folder (its venv), if this
+    Python is another one. Only the standard library is needed here: the caller has not imported
+    PyYAML yet."""
+    if os.environ.get(env_var):
+        return
+    lab = find()
+    if lab is None or lab.venv is None:
+        return
+    if Path(sys.prefix).resolve() == lab.venv.resolve():
+        return
+    if not lab.python.exists():
+        sys.exit(f"error: the lab space {lab.folder} has the Python environment {lab.venv}, which has no {lab.python}")
+    os.environ[env_var] = "1"
+    os.execv(str(lab.python), [str(lab.python), str(script), *argv])
+
+
 def in_venv():
     return sys.prefix != getattr(sys, "base_prefix", sys.prefix)
 

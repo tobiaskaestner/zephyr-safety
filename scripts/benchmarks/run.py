@@ -88,9 +88,14 @@ import subprocess
 import sys
 from pathlib import Path
 
-import yaml
-
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+if __name__ == "__main__":
+    # in a lab space: the Python of the lab space (before PyYAML and the other packages)
+    from studylib import lab as _lab  # noqa: E402
+    _lab.restart_with_lab_python(Path(__file__).resolve(), sys.argv[1:])
+
+import yaml  # noqa: E402
+
 import hwmap  # noqa: E402
 import latbench  # noqa: E402
 import trees  # noqa: E402

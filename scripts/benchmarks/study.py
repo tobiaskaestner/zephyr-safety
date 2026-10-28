@@ -98,11 +98,10 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import trees  # noqa: E402
-from studylib import build, html, instance, layout, seal  # noqa: E402
+# The lab space and the restart come first: studylib.lab needs no package outside the standard
+# library, so a study.py that the system Python starts can restart with the Python of the lab
+# space before it imports PyYAML and the other packages.
 from studylib import lab as labmod  # noqa: E402
-from studylib import campaign, lint, scaffold  # noqa: E402
-from studylib.design import Design, DesignError  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
 
@@ -130,6 +129,14 @@ def reexec_in_lab_repo(argv):
     os.environ[REEXEC_ENV] = str(Path(__file__).resolve())
     os.execv(exe, [exe, str(target), *argv])
 
+
+if __name__ == "__main__":
+    reexec_in_lab_repo(sys.argv[1:])
+
+import trees  # noqa: E402
+from studylib import build, html, instance, layout, seal  # noqa: E402
+from studylib import campaign, lint, scaffold  # noqa: E402
+from studylib.design import Design, DesignError  # noqa: E402
 
 # ------------------------------------------------------------ design
 def cmd_lint(args):
