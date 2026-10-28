@@ -2,8 +2,8 @@ Kconfig reference
 =================
 
 This page lists the Kconfig options of the suite. The common options are
-in ``common/Kconfig``. Each measurement app sources that file from its own
-``Kconfig`` and adds its own options. In an experiment file, write an
+in ``common/Kconfig``. Each measurement :term:`app` sources that file from its own
+``Kconfig`` and adds its own options. In an :term:`experiment` file, write an
 option without the ``CONFIG_`` prefix (see
 :ref:`benchguide-experiment-file`).
 
@@ -19,7 +19,7 @@ Common options
      - Meaning
    * - ``LATBENCH_SAMPLES``
      - 100000
-     - Number of samples in one repetition
+     - Number of :term:`samples <Sample>` in one :term:`repetition`
    * - ``LATBENCH_WARMUP``
      - 16
      - Number of samples that the app discards at the start
@@ -34,7 +34,7 @@ Common options
    * - ``LATBENCH_CODE_RAM``
      - n
      - Choice ``LATBENCH_CODE_PLACE``: the hot code in RAM. Set it on the
-       command line (an experiment does this), because the board port adds
+       command line (an experiment does this), because the :term:`board port` adds
        its overlay before Kconfig runs.
    * - ``LATBENCH_CODE_PAD_BYTES``
      - 0
@@ -281,7 +281,7 @@ Settings in ``prj.conf``
 ------------------------
 
 Each measurement app sets ``CONFIG_ASSERT=n`` and
-``CONFIG_SPIN_VALIDATE=n`` in its ``prj.conf``, because the two trees have
+``CONFIG_SPIN_VALIDATE=n`` in its ``prj.conf``, because the two :term:`trees <Tree>` have
 different defaults for these options (see :doc:`../explanation/measurement-effects`).
 ``wake_latency`` and ``thread_latency`` set
 ``CONFIG_MAIN_THREAD_PRIORITY=10``, so that the main thread does not compete

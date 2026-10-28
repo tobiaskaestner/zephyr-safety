@@ -1,7 +1,7 @@
 Common modules
 ==============
 
-The folder ``common/`` has the code that all measurement apps share.
+The folder ``common/`` has the code that all measurement :term:`apps <App>` share.
 
 .. list-table::
    :header-rows: 1
@@ -10,7 +10,7 @@ The folder ``common/`` has the code that all measurement apps share.
    * - File
      - Content
    * - ``latbench_board.cmake``
-     - Selects the board port. See :ref:`benchguide-latbench-cmake`.
+     - Selects the :term:`board port`. See :ref:`benchguide-latbench-cmake`.
    * - ``latbench.cmake``
      - Adds the common code to the ``app`` target. See
        :ref:`benchguide-latbench-cmake`.
@@ -35,7 +35,7 @@ The folder ``common/`` has the code that all measurement apps share.
      - Kconfig fragment: ``USE_SWITCH=y`` (``arch_switch`` at the exception
        exit, not PendSV)
 
-To use a Kconfig fragment, add it to ``conf_files`` of a point (see
+To use a Kconfig fragment, add it to ``conf_files`` of a :term:`point` (see
 :ref:`benchguide-experiment-file`).
 
 .. _benchguide-hist:
@@ -43,7 +43,7 @@ To use a Kconfig fragment, add it to ``conf_files`` of a point (see
 Histogram
 ---------
 
-``struct lat_hist`` records the samples of one quantity. Define it with
+``struct lat_hist`` records the :term:`samples <Sample>` of one quantity. Define it with
 ``LAT_HIST_DEFINE(var, name)``. The name is the key of the histogram in
 the output and in the host tools. Thus each histogram of an app must have
 its own name.

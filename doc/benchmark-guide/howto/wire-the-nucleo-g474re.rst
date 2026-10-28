@@ -1,51 +1,47 @@
-Hardware setup on the NUCLEO-G474RE
-===================================
+Wire the NUCLEO-G474RE
+======================
 
-:doc:`../reference/boards` gives the pins and the wire of the other boards.
+You need:
 
 - One NUCLEO-G474RE board.
 - One USB cable to the ST-LINK connector of the board. The ST-LINK gives
-  the flash interface and the console (``/dev/ttyACM0``, 115200 baud).
-- One wire from D2 to A3 on the Arduino header.
+  the flash interface and the console (115200 baud).
+- One wire.
 
-.. list-table::
-   :header-rows: 1
-   :widths: 15 15 70
+:ref:`benchguide-board-nucleo` gives the pins, the stimulus timer and the
+other facts of the board port.
 
-   * - Header pin
-     - MCU pin
-     - Function
-   * - D2
-     - PA10
-     - Stimulus pin. PA10 is also TIM2 channel 4. TIM2 is the stimulus
-       timer.
-   * - A3
-     - PB0
-     - Response pin. PB0 is on EXTI line 0, which has its own interrupt
-       vector (``EXTI0_IRQn``).
+#. Connect the wire from D2 to A3 on the Arduino header. D2 (PA10) is the
+   stimulus pin. A3 (PB0) is the response pin.
+#. Connect the USB cable to the host.
+#. Find the console of the board. Its name has the form
+   ``usb-STMicroelectronics_STLINK-V3_<serial>-if02``:
 
-The port sets up TIM2 as follows (``common/boards/nucleo_g474re/port.c``):
+   .. code-block:: console
 
-- The prescaler is 0, and the auto-reload value is ``UINT32_MAX``. TIM2
-  counts each cycle of its clock and wraps after 2\ :sup:`32` cycles.
-- TIM2 runs at the core clock. A ``BUILD_ASSERT`` makes sure that the AHB
-  prescaler and the APB1 prescaler are 1.
-- Channel 4 is in output compare mode, without preload, with active-high
-  polarity.
+      /bin/ls -l /dev/serial/by-id/
 
-Make sure that the wire is connected before you start a run. Each app with
-the stimulus does a static check at start-up (see
-:ref:`benchguide-static-check`). If the static check fails, the app prints
-``LAT ERROR`` and stops.
+#. Add the board to the hardware map, with the fixture
+   ``latbench_loopback`` (see :doc:`make-a-hardware-map`).
+#. In a lab space, do the :term:`wire check`:
 
-To do a test of the wire alone, build and flash ``loopback_check``. Use
-these commands in the root folder of the safety repository, in a west
-workspace:
+   .. code-block:: console
+
+      safety/scripts/benchmarks/study.py lab hwcheck nucleo_g474re
+
+   If the wire is good, the console shows ``RESULT: OK``.
+
+Each app with the stimulus also does a static check of the wire at
+start-up (see :ref:`benchguide-static-check`). If the static check fails,
+the app prints ``LAT ERROR`` and stops.
+
+Outside a lab space, you can do a test of the wire alone with
+``loopback_check``. Use these commands in the root folder of the safety
+repository, in a west workspace:
 
 .. code-block:: console
 
    west build -b nucleo_g474re -d build/loopback_check tests/benchmarks/loopback_check
    west flash -d build/loopback_check -r openocd
 
-If the wire is good, the console shows ``RESULT: OK``. The
-``loopback_check`` app is also a Twister test with a console harness.
+The ``loopback_check`` app is also a Twister test with a console harness.

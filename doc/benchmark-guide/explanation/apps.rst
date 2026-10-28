@@ -1,7 +1,7 @@
 What the apps measure
 =====================
 
-The suite has four apps. Three apps measure latencies with the hardware
+The suite has four :term:`apps <App>`. Three apps measure latencies with the hardware
 stimulus. The fourth app does a test of the wire.
 
 .. list-table::
@@ -30,12 +30,12 @@ The three measurement apps have the same frame:
 #. ``main()`` calls ``port_debug_reset()`` and prints the metadata (see
    :ref:`benchguide-meta`).
 #. ``stim_init()`` sets up the stimulus timer and the pins through the
-   board port, and prints the stimulus settings.
+   :term:`board port`, and prints the stimulus settings.
 #. ``stim_static_check()`` does the static check of the wire.
 #. The app connects its ISR to the response IRQ ``STIM_RESP_IRQN`` (or a
    GPIO callback) and starts the load generators (``load_start()``).
 #. The app arms the first edge. It discards the first
-   ``LATBENCH_WARMUP`` samples, and then records ``LATBENCH_SAMPLES``
+   ``LATBENCH_WARMUP`` :term:`samples <Sample>`, and then records ``LATBENCH_SAMPLES``
    samples.
 #. The main thread polls a ``done`` flag every ``LATBENCH_POLL_MS``
    milliseconds.

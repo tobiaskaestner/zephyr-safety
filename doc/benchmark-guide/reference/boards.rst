@@ -1,7 +1,7 @@
 Board support
 =============
 
-The board-specific code of the stimulus is in a board port. The apps,
+The board-specific code of the stimulus is in a :term:`board port`. The :term:`apps <App>`,
 ``stim.c``, the histograms, the load generators and the host tools are the
 same on each board.
 
@@ -20,7 +20,7 @@ Boards
      - ``tested``: data points exist.
    * - ``nrf52840dk/nrf52840``
      - ``nrf52840dk``
-     - ``untested``: builds on both trees, not run on hardware.
+     - ``untested``: builds on both :term:`trees <Tree>`, not run on hardware.
    * - ``nrf54l15dk/nrf54l15/cpuapp``
      - ``nrf54l15dk``
      - ``untested``: builds on both trees, not run on hardware.
@@ -29,7 +29,7 @@ Boards
      - ``untested``: builds on both trees, not run on hardware.
 
 For each ``untested`` board, the section of the board lists what to
-examine first on the hardware. The ``port-smoke-<port>`` experiments are
+examine first on the hardware. The ``port-smoke-<port>`` :term:`experiments <Experiment>` are
 the first runs for these boards.
 
 Structure of a port
@@ -149,8 +149,13 @@ Other functions, in ``port.c``:
 The apps do not call the port directly, except ``port_debug_reset()``.
 They use the stimulus interface of ``stim.h`` (see :doc:`common-modules`).
 
+.. _benchguide-board-nucleo:
+
 Board ``nucleo_g474re``
 -----------------------
+
+:doc:`../howto/wire-the-nucleo-g474re` gives the steps to connect the
+board.
 
 .. list-table::
    :widths: 30 70
@@ -162,15 +167,19 @@ Board ``nucleo_g474re``
    * - Stimulus timer
      - TIM2 (32 bits), prescaler 0, at the core clock (170 MHz by default).
        A ``BUILD_ASSERT`` makes sure that the AHB and APB1 prescalers are 1.
+       The auto-reload value is ``UINT32_MAX``: TIM2 counts each cycle of
+       its clock and wraps after 2\ :sup:`32` cycles.
    * - Counts per core cycle
      - 1 (one count is one core cycle)
    * - Interconnect
      - None. The output compare of TIM2 channel 4 drives the pin
-       ("forced inactive", then "active on match").
+       ("forced inactive", then "active on match"). Channel 4 has no
+       preload and an active-high polarity (``port.c``).
    * - Stimulus pin
-     - D2 (PA10), pin function ``tim2_ch4_pa10``
+     - D2 (PA10), pin function ``tim2_ch4_pa10``. PA10 is TIM2 channel 4.
    * - Response pin
-     - A3 (PB0), EXTI line 0. ``PORT_RESP_IRQN`` is ``EXTI0_IRQn``.
+     - A3 (PB0), EXTI line 0, which has its own interrupt vector.
+       ``PORT_RESP_IRQN`` is ``EXTI0_IRQn``.
        ``PORT_RESP_PIN`` is 0.
    * - Wire
      - D2 to A3. D2 drives, A3 reads.
@@ -199,7 +208,7 @@ Board ``nucleo_g474re``
      - ``clocks/`` (85 MHz and 16 MHz, see :ref:`benchguide-clock-overlays`), ``systick/``
        (see :ref:`benchguide-systick-wrap`).
    * - ``boards.yaml``
-     - Modules ``cmsis_6``, ``hal_stm32``. Flash with OpenOCD; ``adapter serial``
+     - Modules ``cmsis_6``, ``hal_stm32``. Flash with OpenOCD. ``adapter serial``
        selects the ST-LINK. ``status: tested``.
 
 .. _benchguide-clock-overlays:
@@ -269,7 +278,7 @@ Board ``nrf52840dk``
        (``C_DEBUGEN``) is 1 while a debugger is connected.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nordic``. Flash with ``nrfutil`` (the
-       ``.hex``); ``--serial-number`` selects the probe.
+       ``.hex``). ``--serial-number`` selects the probe.
        ``status: untested``.
 
 Examine these items first on the hardware:
@@ -331,7 +340,7 @@ Board ``nrf54l15dk``
      - ``dhcsr=<value>``, as on the nRF52840 DK.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nordic``. Flash with ``nrfutil`` (the
-       ``.hex``); ``--serial-number`` selects the probe. The console
+       ``.hex``). ``--serial-number`` selects the probe. The console
        (``uart20``) is on the second VCOM of the DK (interface ``if02``
        of the J-Link OB). ``status: untested``.
 
@@ -393,7 +402,7 @@ Board ``mimxrt1060_evk``
        ``CCM_CLPCR`` instead.
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_nxp``. Flash with ``pyocd`` (the
-       ``.elf``, because the build makes no ``.hex``); ``-u`` selects the
+       ``.elf``, because the build makes no ``.hex``). ``-u`` selects the
        probe. ``status: untested``.
 
 Examine these items first on the hardware:

@@ -26,8 +26,8 @@ in hardware. The software only reads the time of its reaction.
 Results
 -------
 
-- Each board needs a board port with a timer output, a capture and a wire
+- Each board needs a :term:`board port` with a timer output, a capture and a wire
   (see :doc:`../../reference/boards`).
-- The wire check (``lab hwcheck``) is part of each campaign.
+- The :term:`wire check` (``lab hwcheck``) is part of each :term:`campaign`.
 - The method can see the effect of WFI, of locked sections and of the
   tick (see :doc:`../method`).

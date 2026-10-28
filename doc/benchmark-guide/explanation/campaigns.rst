@@ -3,11 +3,11 @@
 Lab spaces and campaigns
 ========================
 
-A lab space holds everything of one host that a study needs and that the
-repository must not hold: the pinned trees, the Zephyr SDK, the results
-tree, the hardware map, the build cache and the campaign records. A
-campaign runs all experiments below a folder of the design, adds each run
-to its instance and builds the results after each run.
+A :term:`lab space` holds everything of one host that a :term:`study` needs (see
+:doc:`decisions/0006-lab-space`). A :term:`campaign` runs all
+:term:`experiments <Experiment>` below a folder of the design, adds each run to its
+:term:`instance` and builds the results after each run.
+:doc:`../reference/cli/study-py` gives the commands.
 
 Campaigns
 ---------
@@ -28,26 +28,28 @@ experiment as ``skipped``.
 
 ``run`` makes the campaign record and runs the campaign:
 
-#. The design repository must be clean. The campaign id is the UTC time
+#. The :term:`design repository` must be clean. The campaign id is the UTC time
    (``20261026T223523Z``).
 #. It takes the lock and sets the ref ``refs/latbench/campaign/<id>`` of
    the design repository to the commit of the campaign.
-#. It does the pre-flight check. If an item is ``fail``, nothing runs,
-   and the status of the campaign is ``failed``.
+#. It does the :term:`pre-flight check`. If an item is ``fail``,
+   nothing runs, and the status of the campaign is ``failed``.
 #. For each experiment that is not ``done`` or ``skipped``: it makes sure
    that the design repository is clean and at the commit of the
    campaign. It makes the instance if there is none (``instance new`` at
    the level that fixes the board). Then it runs ``run.py <experiment.yaml>
    --out <instance folder> --campaign <id> --role R``.
-#. ``run.py`` adds the run to the run list of the instance, with the role
-   of the campaign (``--role``, default ``evidence``; ``adjustment`` or
-   ``excluded`` need ``--reason``) and the campaign id. The experiment is
+#. ``run.py`` adds the :term:`run` to the run list of the instance, with the :term:`role`
+   of the campaign and the campaign id. The default role is ``evidence``.
+   The roles ``adjustment`` and ``excluded`` need ``--reason``. The experiment is
    ``done``. The log has one line for it, for example ``done (rc 0) in
    6 min, 5/5 images from the build cache, run irq-smoke/20261027T175848Z``.
 #. After each ``done`` experiment, a background process builds the
    results tree (``study.py analysis build`` and ``study.py analysis html``).
 
-Failure rules:
+Failure rules
+~~~~~~~~~~~~~
+
 
 - A failed experiment does not stop the campaign. The next experiment
   starts. The record gives the reason in ``note``: the step and the error
@@ -58,10 +60,33 @@ Failure rules:
 - ``SIGTERM`` or Ctrl-C stops the campaign. The running experiment is
   ``failed``, and the campaign is ``aborted``.
 
+.. _benchguide-resume-rules:
+
+Resume rules
+~~~~~~~~~~~~
+
+``campaign resume`` continues a campaign record. It runs the
+experiments that are not ``done`` or ``skipped``:
+
+- The design repository must be clean and at the commit of the
+  campaign. Else the command stops and names the ref
+  ``refs/latbench/campaign/<id>``.
+- At the start, ``resume`` looks at each experiment that is ``failed``,
+  or ``running`` after a crash. The ``run.py`` of the stopped campaign
+  can have completed and added a run with this campaign id to the run
+  list. Then the experiment becomes ``done`` with that run. The note says so. This
+  occurs when ``run.py`` continued after its campaign stopped, because
+  ``run.py`` holds the board lock until it ends.
+- Else the experiment becomes ``planned`` again, and ``attempts``
+  increases by 1. Thus a failed experiment runs again, and the :term:`verdicts <Verdict>`
+  that wait for it are :term:`provisional` until it runs.
+- Then ``resume`` does the pre-flight check and runs the planned
+  experiments, as ``run`` does.
+
 The background build runs with ``nice 10``, one build at a time. If a run
 ends while a build runs, one more build follows. At the end, the campaign
-sets its status and asks for one more build: after the build that runs
-at that time, if there is one. That last build starts after the end of
+sets its status and asks for one more build. This build starts after
+the build that runs at that time, if there is one. That last build starts after the end of
 the campaign, so it makes the verdicts final. The builds write
 ``.lab/campaigns/<id>/post.log``. While the campaign runs, the build
 marks the verdicts that wait for an experiment of the campaign as
@@ -72,8 +97,8 @@ Lock and ref
 
 A campaign holds one lock for each board of its plan: an ``flock`` on
 ``.lab/locks/board-<board>.lock``. Two campaigns on different boards run
-at the same time; a second campaign on a board that a campaign uses
-stops at once and names the holder. A campaign takes all its locks or
+at the same time. A second campaign on a board that a campaign uses stops
+at once and names the holder. A campaign takes all its locks or
 none. The kernel releases a lock when the process ends, so a crash or a
 kill leaves no stale lock. The file has the campaign id, the process id,
 the host and the board of the holder, for information. A campaign of this
@@ -84,12 +109,12 @@ The results build has a lab-wide lock, ``.lab/locks/results.lock``:
 ``analysis build`` and ``analysis html`` wait for it, so the background
 builds of two campaigns (and a build by hand) run one after the other.
 
-The campaign record names the Python and the versions of the packages of
-``requirements.txt`` (``python``); the manifest of each run has them too
-(``tools.python_packages``).
+The campaign record names the Python and the installed versions of the
+packages of ``requirements.txt`` and ``requirements.lock`` (``python``).
+The manifest of each run has them too (``tools.python_packages``).
 
 The ref ``refs/latbench/campaign/<id>`` keeps the commit of the campaign
 in the design repository, also after a rebase of the branch. It is a
-local ref. Do not push it. ``run.py --rebuild`` needs this commit. Each
+local ref. ``run.py --rebuild`` needs this commit. Each
 run also gets the ref ``refs/latbench/run/<experiment>/<UTC>`` (manifest
 ``safety.ref``), also without a campaign.

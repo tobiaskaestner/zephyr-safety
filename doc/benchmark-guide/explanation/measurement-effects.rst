@@ -16,16 +16,16 @@ Thus a tick phase that the code calculates from a reference at the start
 of the run moves away from the real tick grid. ``stim_arm()`` reads
 the stimulus timer and ``k_cycle_get_64()`` again for each edge, and
 calculates the phase from this fresh pair. ``clock_drift_cyc`` in the
-output shows the drift of a run. The experiment ``clock-drift`` measures
+output shows the drift of a run. The :term:`experiment` ``clock-drift`` measures
 it. The experiment ``clock-drift-fix`` examines a change of the SysTick
-driver on the tree ``ws-safety-driftfix``.
+driver on the :term:`tree` ``ws-safety-driftfix``.
 
 .. _benchguide-systick-wrap:
 
 The SysTick driver sees at most one counter wrap
 ------------------------------------------------
 
-Know this property of the SysTick driver when you read
+This property of the SysTick driver changes the meaning of
 ``clock_drift_cyc``. Between two reads of SysTick, the driver adds at most
 one wrap of the counter to the kernel time. It programs a reload of at
 least 10 us by default. This is correct only if the SysTick IRQ never
@@ -48,8 +48,8 @@ Late edges
 An ISR can run between the read of the counter and the write of the
 compare value. If it runs for longer than the delay to the edge, the
 compare value is in the past. Then the timer reaches it only after a full
-wrap of the 32-bit counter (25 s at 170 MHz). A repetition with many
-samples can time out.
+wrap of the 32-bit counter (25 s at 170 MHz). A :term:`repetition` with many
+:term:`samples <Sample>` can time out.
 
 ``stim_arm()`` writes the compare value with interrupts locked, after it
 compares the edge time with a fresh count. It moves a late edge to 1000

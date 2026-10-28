@@ -1,8 +1,8 @@
 Architecture
 ============
 
-The suite has four parts: the design repository, the lab space of a host,
-the board, and the results tree. The tools run in the lab space; the
+The suite has four parts: the :term:`design repository`, the :term:`lab space` of a host,
+the board, and the results tree. The tools run in the lab space. The
 design repository is a clone in it.
 
 .. graphviz::
@@ -52,17 +52,17 @@ The parts
 ---------
 
 Design repository
-   The safety repository at one commit. It has the study designs (the
-   studies, the experiments, the hypotheses), the pins of the trees, the
-   apps with their board ports, extractors and plot scripts, and the
+   The :term:`safety repository` at one commit. It has the :term:`study` designs (the
+   studies, the :term:`experiments <Experiment>`, the :term:`hypotheses <Hypothesis>`), the pins of the :term:`trees <Tree>`, the
+   apps with their :term:`board ports <Board port>`, extractors and plot scripts, and the
    tools. A run builds from a clean clone at one commit, and the commit
    stays reachable with a local ref (see :doc:`reproducibility`).
 
 Lab space
    One folder of one host (see :doc:`../reference/files/lab-config`). It
    has the clone of the design repository, the Python environment, a west
-   workspace for each pinned tree, the build cache, the campaign records,
-   the locks and the wire checks, and the results tree. Nothing of a host
+   workspace for each pinned tree, the :term:`build cache`, the :term:`campaign` records,
+   the locks and the :term:`wire checks <Wire check>`, and the results tree. Nothing of a host
    goes into the design repository.
 
 Board
@@ -71,10 +71,10 @@ Board
    (a lock for each board).
 
 Results tree
-   The instances (a study for one board), each with its run list and its
+   The :term:`instances <Instance>` (a study for one board), each with its run list and its
    sealed runs, and the derived files: ``run.json``, the app data,
    ``experiment.json``, ``study.json``, the plots and the pages. The run
-   folders never change; the derived files come again from them at any
+   folders never change. The derived files come again from them at any
    time (``analysis check``).
 
 The flow of one campaign
@@ -85,11 +85,11 @@ The flow of one campaign
    wire works.
 #. For each experiment, ``run.py`` takes each image from the build cache
    or builds it with ``west build`` in the workspace of the tree, flashes
-   the board, reads the samples from the console, and seals the run.
+   the board, reads the :term:`samples <Sample>` from the console, and seals the :term:`run`.
 #. ``run.py`` adds the run to the run list of its instance.
 #. In the background, ``analysis build`` makes the derived files, the
    plots and the pages, while the next experiment runs.
-#. ``lab export`` and ``lab import`` give the runs to another lab space;
+#. ``lab export`` and ``lab import`` give the runs to another lab space.
    the import checks that both lab spaces have the same experiments.
 
 The reasons for these parts are in :doc:`decisions/index`.

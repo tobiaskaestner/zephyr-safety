@@ -7,7 +7,7 @@ M4 measures how long the CPU masks the interrupts, for each place in the
 code that masks them. It also measures the time of each ISR body. The
 values are in DWT cycles (core clock cycles).
 
-M4 needs a Zephyr tree with the hooks of the branch
+M4 needs a Zephyr :term:`tree` with the hooks of the branch
 ``tkaestner/latency-irqoff-hook``. In ``validation/trees/`` this tree is
 ``ws-up-irqoff``. The hooks are only for Cortex-M with BASEPRI (ARMv7-M,
 ARMv8-M Mainline) and the legacy context switch (``USE_SWITCH=n``).

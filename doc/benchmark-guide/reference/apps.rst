@@ -1,7 +1,7 @@
 The apps and their variants
 ===========================
 
-This page gives the options, the variants and the output of each app.
+This page gives the options, the :term:`variants <Variant>` and the output of each :term:`app`.
 :doc:`../explanation/apps` tells what each app measures.
 
 ``irq_latency`` (M1)
@@ -156,7 +156,7 @@ The Kconfig choice ``LATBENCH_T2T_PRIMITIVE`` selects the primitive:
 - ``y`` (``preempt``): the taker has priority 1 and preempts the giver in
   the wake call.
 - ``n`` (``nopreempt``): the taker has priority 3. It runs when the giver
-  blocks again. The giver records the sample one edge later, so the run
+  blocks again. The giver records the :term:`sample` one edge later, so the run
   has one sample less.
 
 The variant name is ``<primitive>-<mode>``, for example ``sem-preempt``.

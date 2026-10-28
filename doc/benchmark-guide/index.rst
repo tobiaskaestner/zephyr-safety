@@ -6,6 +6,9 @@ suite in ``tests/benchmarks/`` of the safety repository. It tells you what
 the suite measures and how to set up the hardware. It also tells you how
 to run a reproducible experiment and how to extend the suite.
 
+:doc:`explanation/purpose` tells what the suite measures, and
+:doc:`explanation/architecture` shows its parts and the flow of the data.
+
 The guide describes the code. It does not give measurement results,
 because results change with each tree and each experiment. The results of
 a run are in its result folder (see :ref:`benchguide-result-folder`). The

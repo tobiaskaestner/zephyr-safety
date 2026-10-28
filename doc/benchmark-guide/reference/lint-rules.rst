@@ -3,7 +3,7 @@
 Lint rules
 ==========
 
-An error makes the design unusable, or it makes a check wrong. A warning
+An error makes the design unusable, or it makes a :term:`check` wrong. A warning
 is a rule of good practice. ``study.py design lint`` exits with 1 if it finds an
 error. With ``--warn-as-error``, a warning also gives exit code 1.
 
@@ -16,16 +16,16 @@ Errors:
   ``schema: (top): unknown key 'repat' (did you mean 'repeat'?)``. The
   tools that read a design file (``run.py``, the design of ``study.py``,
   ``boards.yaml``) stop at the first violation. The copies of
-  ``experiment.yaml`` in sealed runs are history; the tools do not check
+  ``experiment.yaml`` in sealed runs are history. The tools do not check
   them against the current schemas.
 - A folder with ``experiment.yaml`` that is not ``ex-<name>``, a folder
   with ``study.yaml`` that is not ``st-<name>``, a ``name`` in
   ``study.yaml`` that is not the folder name, or a folder with neither
   file.
 - The design does not load.
-- An experiment without ``experiment.md``, with an ``app`` that is not a
+- An :term:`experiment` without ``experiment.md``, with an ``app`` that is not a
   folder of ``tests/benchmarks/``, or without an axis.
-- An experiment file that ``run.py`` cannot expand into points (for
+- An experiment file that ``run.py`` cannot expand into :term:`points <Point>` (for
   example an axis value name that YAML reads as a Boolean).
 - A point without a value on each axis, or an axis ``value`` that is not
   a number.
@@ -35,10 +35,10 @@ Errors:
   ``LATBENCH_CODE_PAD_BYTES`` without ``LATBENCH_CODE_FLASH_PAD`` or
   ``LATBENCH_CODE_RAM``, or with a value that is not a multiple of 4.
   ``LATBENCH_CODE_RAM`` without a RAM region from the point or the port.
-- A check (acceptance or hypothesis) in a form that the tools do not
+- A check (acceptance or :term:`hypothesis`) in a form that the tools do not
   know: no ``expect``, no ``stat``, a metric with a stat that the tools
   cannot calculate, or a manual check without ``statement``.
-- A check or a central result that reads an experiment that its study
+- A check or a :term:`central result` that reads an experiment that its :term:`study`
   does not own or import. A ``diff_to`` experiment that does not exist.
 - A ``select`` (or a ``point`` of a central result) that names a point,
   an axis or an axis value that the experiment does not have.
@@ -61,6 +61,6 @@ Warnings:
 ``run.py`` runs the lint for its experiment and for the study that owns
 it before it builds. It prints each problem and continues. With
 ``--warn-as-error``, each problem (error or warning) stops the run. The
-pre-flight check of a campaign fails on a lint error (see :doc:`cli/study-py`).
+:term:`pre-flight check` of a :term:`campaign` fails on a lint error (see :doc:`cli/study-py`).
 The tests in ``scripts/benchmarks/tests/`` fail if the design of the
 repository has a lint error.

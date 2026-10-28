@@ -13,8 +13,10 @@ This guide uses these terms with one meaning each:
       ``irq_latency``.
 
    Variant
-      One build of an app with a set of Kconfig options, for example the
-      ``direct`` IRQ path of ``irq_latency``.
+      A value of the axis ``variant`` of an experiment: the label of one
+      variation of the app, for example ``baseline``. An experiment that
+      changes one factor at a time has this one axis (see
+      :doc:`files/experiment-yaml`).
 
    Sample
       One latency value in core cycles.
@@ -33,15 +35,13 @@ This guide uses these terms with one meaning each:
       as a west manifest in ``validation/trees/<tree>.yml``.
 
    Experiment
-      A folder ``ex-<name>/`` in the folder of the study that owns it,
-      below ``validation/empirical/latencies/``, with the file
-      ``experiment.yaml``. It
-      names an app, one or more trees, and a list of points.
-
-      A folder ``ex-<name>/`` with ``experiment.yaml`` (the input of
-      ``run.py``, see :doc:`files/experiment-yaml`) and ``experiment.md`` (question,
-      method, references). The study that holds the folder owns the
-      experiment. Another study can import it (``imports:``).
+      A folder ``ex-<name>/`` in the folder of a study, below
+      ``validation/empirical/latencies/``. It has ``experiment.yaml``, the
+      input of ``run.py``: an app, one or more trees and the points (see
+      :doc:`files/experiment-yaml`). It also has ``experiment.md``: what
+      it measures, the method and the axes. The study that holds the
+      folder owns the experiment. Another study can import it
+      (``imports:``).
 
    Point
       One build configuration of an experiment, with an ID.
@@ -50,14 +50,10 @@ This guide uses these terms with one meaning each:
       One flash and one capture of the serial output of a point.
 
    Run
-      One execution of ``scripts/benchmarks/run.py`` for one experiment. A
-      run makes one result folder.
-
-      One raw run folder of ``run.py``: ``ex-<experiment>/<UTC>/`` in the
-      folder of its instance. The run folder does not change after the run.
-      Its seal ``<UTC>.sha256`` is beside it: one line ``<sha256>  <path>``
-      for each file. The digest of the run is ``sha256:`` + the sha256 of
-      the seal file.
+      One execution of ``scripts/benchmarks/run.py`` for one experiment,
+      and the raw run folder that it makes: ``ex-<experiment>/<UTC>/`` in
+      the folder of its instance. The run id is ``<experiment>/<UTC>``. The
+      run folder does not change after its seal.
 
    Study
       A folder with ``study.yaml``. The top study is
@@ -72,10 +68,32 @@ This guide uses these terms with one meaning each:
 
    Lab space
       A folder with ``.lab/config`` that holds everything of one host that a
-      study needs and that the repository must not hold: the design
-      repository (a clone), the Python environment, the pinned trees, the
-      hardware map, the results tree, the build cache and the campaign
-      records (see :doc:`files/lab-config`).
+      study needs and that the safety repository must not hold: the design
+      repository, the Python environment, the pinned trees, the hardware
+      map, the results tree, the build cache and the campaign records (see
+      :doc:`files/lab-config`).
+
+   Design repository
+      The clone of the safety repository in a lab space (``[design]
+      repo`` of ``.lab/config``). It has the study designs, the tree pins,
+      the apps and the tools. The tools of the lab space come from it. A
+      study of your own goes on a local branch of it.
+
+   Safety repository
+      The shared origin repository of the suite. Each design repository is
+      a clone of it.
+
+   Pre-flight check
+      The examination before a campaign runs: the design repository, the
+      lint, the SDK, the trees, the images, the hardware map, the boards,
+      the wire check, the disk and the duration (see
+      :ref:`benchguide-preflight`). ``campaign check`` does only this
+      examination.
+
+   Wire check
+      A test of the loopback wire of a board: ``study.py lab hwcheck``
+      builds and flashes ``loopback_check`` and reads ``RESULT: OK`` or
+      ``RESULT: FAIL``. The pre-flight check includes it.
 
    Campaign
       One command that runs the experiments below a study folder, adds each
@@ -85,13 +103,14 @@ This guide uses these terms with one meaning each:
    Hypothesis
       A claim about a mechanism, in the ``hypotheses.yaml`` of a study,
       written before the runs. It is wrong if one of its checks is wrong,
-      and confirmed if all its checks are confirmed.
+      and confirmed if all its checks are confirmed. A wrong hypothesis is
+      a result, not a failure of the tools.
 
    Check
       A comparison of measured values with a limit (see
-      :doc:`check-forms`). An acceptance check belongs to an experiment and
-      decides if a run can be evidence; the checks of a hypothesis decide
-      its verdict.
+      :doc:`check-forms`). An acceptance check belongs to an experiment.
+      It decides if a run can be evidence. The checks of a hypothesis
+      decide its verdict.
 
    Verdict
       The result of a check or a hypothesis: ``confirmed``, ``wrong``,
@@ -104,13 +123,14 @@ This guide uses these terms with one meaning each:
 
    Role
       The place of a run in the run list of an instance: ``evidence`` (the
-      checks read it), ``adjustment`` (a run to adjust or test something;
-      in the plots, not in the checks) or ``excluded``.
+      checks read it), ``adjustment`` (a run to adjust or test something,
+      in the plots but not in the checks) or ``excluded``.
 
    Seal
-      The file ``<UTC>.sha256`` beside a run folder: one SHA-256 line for
-      each file of the run. The digest of the run is the SHA-256 of the
-      seal. A run folder never changes after its seal.
+      The file ``<UTC>.sha256`` beside a run folder: one line ``<sha256>
+      <path>`` for each file of the run. The digest of the run is
+      ``sha256:`` and the SHA-256 of the seal file. A run folder never
+      changes after its seal.
 
    Provisional
       A verdict or a central result that waits for an experiment of a

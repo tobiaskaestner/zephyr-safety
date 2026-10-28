@@ -1,9 +1,9 @@
-Unit tests
-==========
+Run the unit tests
+==================
 
-The unit tests find errors in the histogram code, in the code placement,
-in the host scripts and in the experiment files. They do not use the
-board. ``unit/README.md`` gives the full commands.
+The unit tests find errors in these parts: the histogram code, the code
+placement, the M4 site table, the host scripts and the design files. They
+do not use the board. ``unit/README.md`` gives the full commands.
 
 .. list-table::
    :header-rows: 1
@@ -16,14 +16,12 @@ board. ``unit/README.md`` gives the full commands.
        ``common/src/hist.c``
    * - ``unit/code_place/``
      - A ztest app for the code placement (``LATBENCH_CODE_PLACE``)
-   * - ``scripts/benchmarks/tests/test_latbench.py``
-     - A pytest module for ``scripts/benchmarks/latbench.py`` and ``scripts/benchmarks/plot.py``
-   * - ``scripts/benchmarks/tests/test_run.py``
-     - A pytest module for the rebuild functions of ``scripts/benchmarks/run.py``
-   * - ``scripts/benchmarks/tests/test_experiments.py``
-     - A pytest module that checks the experiment files
-   * - ``scripts/benchmarks/tests/fixtures/hist_*.log``
-     - The console output of the ztest app, one log for each scenario
+   * - ``unit/irqmask/``
+     - A ztest app for the M4 site table
+   * - ``scripts/benchmarks/tests/test_*.py``
+     - The pytest modules of the host tools (list below)
+   * - ``scripts/benchmarks/tests/fixtures/``
+     - The console output of the ztest apps, one log for each scenario
 
 The ztest app
 -------------
@@ -105,37 +103,62 @@ Twister).
 The pytest modules
 ------------------
 
-Run pytest in the ``scripts/benchmarks`` folder. It needs the packages in
-``scripts/benchmarks/requirements.txt`` and ``pytest``:
+#. Install ``pytest`` into the Python environment that has the packages
+   of ``scripts/benchmarks/requirements.txt``. In a lab space, this is the
+   environment of the lab space.
+#. In the root folder of the safety repository, run pytest:
 
-.. code-block:: console
+   .. code-block:: console
 
-   cd scripts/benchmarks
-   python3 -m pytest tests
+      python3 -m pytest scripts/benchmarks/tests -q
 
-``test_latbench.py`` has tests of the parser, the percentiles, the standard
-deviation, the mean without invalid samples, and the plot values. Its
-round-trip tests read the fixtures. They make the same pseudo-random
-samples as the ztest app, and compare the parsed log with values from
-these samples.
+The folder ``scripts/benchmarks/tests/`` has these modules:
 
-``test_experiments.py`` reads each experiment file below
-``validation/empirical/latencies/``. Each name must be in one file only. A code pad must have
-``LATBENCH_CODE_FLASH_PAD`` or ``LATBENCH_CODE_RAM``, and must be a
-multiple of 4. A point must select at most one code placement.
-``LATBENCH_CODE_RAM`` needs a port with ``Kconfig.port``. Kconfig only
-warns about such errors, and ``run.py`` finds them only after the build.
+- ``test_buildcache.py``: the build cache (``studylib/buildcache.py``).
+- ``test_campaign.py``: the plan of a campaign, the instances that it
+  makes and the experiments that wait.
+- ``test_cli.py``: the command line of ``study.py``. Each command of
+  ``study.py`` must have a synopsis line in
+  :doc:`../reference/cli/study-py`.
+- ``test_exchange.py``: the export and the import of runs.
+- ``test_experiments.py``: the design of the repository has no lint
+  errors, and the code pad of ``code-layout`` is correct.
+- ``test_hwmap.py``: the hardware map and its use in ``run.py``.
+- ``test_latbench.py``: the parser, the percentiles, the standard
+  deviation, the mean without invalid samples, and the plot values of
+  ``latbench.py`` and ``plot.py``. Its round-trip tests read the fixtures
+  ``hist_*.log``. They make the same pseudo-random samples as the ztest
+  app, and compare the parsed log with values from these samples.
+- ``test_lint.py``: the design lint on small designs.
+- ``test_loadmodel.py``: ``loadmodel.py``.
+- ``test_m4.py``: ``m4.py``, with the fixtures ``m4_*.log`` (the output
+  of ``unit/irqmask`` on ``native_sim/native/64``).
+- ``test_run.py``: the rebuild functions of ``run.py``.
+- ``test_studylib.py``: seals, values, check forms, central results and a
+  build.
+- ``test_trees.py``: ``trees setup`` with local git repositories.
 
 If you change the output format or the sample generator
 ``fixture_sample()`` of the ztest app, make the fixtures again.
 ``unit/README.md`` gives the procedure.
 
-M4 unit tests
--------------
+The M4 ztest app
+----------------
 
-``unit/irqmask/`` is a ztest app for the site table (bins, entries, full
-table, print format). ``scripts/benchmarks/tests/test_m4.py`` tests
-``m4.py`` with the fixtures
-``scripts/benchmarks/tests/fixtures/m4_*.log`` (the output of the ztest
-app on ``native_sim/native/64``). Run them as the other unit tests (see
-the sections above), with ``-T tests/benchmarks/unit/irqmask``.
+``unit/irqmask/`` tests the site table: the bins, the entries, a full
+table and the print format. Run it as the other ztest apps, with
+``-T tests/benchmarks/unit/irqmask``.
+
+Known gaps
+----------
+
+A test for a known defect asserts the correct behavior. While the defect
+is in the code, the test is an expected failure:
+
+- In the ztest app, ``KNOWN_GAP()`` skips the test and prints
+  ``KNOWN GAP:`` with the input and the result. If the result becomes
+  correct, the test fails. Then remove ``KNOWN_GAP()`` from the test.
+- In pytest, the test has ``xfail(strict=True)``. If the test passes,
+  pytest reports a failure. Then remove the marker.
+
+``unit/README.md`` lists the open gaps.

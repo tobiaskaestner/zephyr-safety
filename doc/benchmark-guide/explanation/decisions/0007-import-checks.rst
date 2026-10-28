@@ -4,21 +4,22 @@
 Status
 ------
 
-Accepted, 2026-10-27; the parsed compare and the bundle on 2026-10-28.
+Accepted, 2026-10-27. The parsed comparison and the bundle came on
+2026-10-28.
 
 Problem
 -------
 
-One host seldom has all boards of a study, so lab spaces give each other
-their runs. A run can join a study only if both lab spaces mean the same
-experiment, and the importing host must be able to build the run again.
+One host has only some boards of a :term:`study`. Thus :term:`lab spaces <Lab space>` give each
+other their runs. A run can join a study only if both lab spaces mean the same
+:term:`experiment`, and the importing host must be able to build the run again.
 
 Decision
 --------
 
 - An export is one tar file with a digest file: the sealed runs, the
-  campaign records, the design files, the references and the manual
-  verdicts of the instances, and a git bundle of the commits of the runs.
+  :term:`campaign` records, the design files, the references and the manual
+  :term:`verdicts <Verdict>` of the :term:`instances <Instance>`, and a git bundle of the commits of the runs.
 - The import refuses a run of an experiment whose content differs between
   the two lab spaces. The content is the parsed YAML without comments,
   ``name`` and ``renamed_from``, so a comment or a rename is no

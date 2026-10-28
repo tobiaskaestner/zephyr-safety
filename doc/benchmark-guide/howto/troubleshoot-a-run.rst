@@ -35,11 +35,24 @@ The run does not start
    * - ``the campaign <id> runs on <board>``
      - Another campaign (or its ``run.py``) holds the board. Wait, or look
        at ``study.py campaign status``. A campaign whose process is gone
-       says so; its ``run.py`` can still hold the board until it ends.
+       says so. Its ``run.py`` can still hold the board until it ends.
    * - ``No module named 'yaml'`` (or another package)
      - The command does not run with the Python of the lab space. Run it
-       in the lab folder; check ``[python] venv`` with ``study.py lab
+       in the lab folder. Check ``[python] venv`` with ``study.py lab
        status``, and install ``requirements.lock`` into that venv.
+   * - ``no hardware map ...``
+     - The lab space has no hardware map. Write it (see
+       :doc:`make-a-hardware-map`).
+   * - ``no connected entry for board ...``, ``has no fixture
+       'latbench_loopback'``
+     - The hardware map has no usable entry for the board. Set
+       ``connected: true``, the board target in ``platform`` and the
+       fixture ``latbench_loopback`` (see :doc:`../reference/files/hw-map`).
+   * - ``RESULT: FAIL`` (wire check)
+     - The loopback wire does not connect the stimulus pin and the
+       response pin. Look at the wire and at the pins of the board (see
+       :doc:`../reference/boards`). The record of the wire check in
+       ``.lab/hwcheck/`` has all console lines.
    * - ``a run of some points (--only) into an instance needs --role``
      - Name the role of the partial run: ``--role adjustment --reason
        TEXT`` (or ``evidence``).
@@ -48,8 +61,8 @@ The run stops
 -------------
 
 A run that stops before its seal writes ``<UTC>.failed.json`` beside its
-folder: the step, the error and the end of the log of that step (see
-:doc:`../reference/cli/run-py`). ``study.py analysis show --details``
+folder. This file has the step, the error and the end of the log of that
+step (see :doc:`../reference/cli/run-py`). ``study.py analysis show --details``
 lists such runs as ``FAILED RUN``.
 
 .. list-table::
@@ -115,9 +128,10 @@ The results look wrong
      - A campaign that runs still has to run an experiment that the check
        reads. The build after the end makes it final.
    * - ``analysis check``: ``FAIL: ... files differ``
-     - Usually a new input since the last build (a rebuild record, a run,
-       a verdict): the check names it. Run ``study.py analysis build``
-       and check again.
+     - The tree has a new input since the last build, for example a
+       rebuild record, a run or a verdict. ``analysis check`` names the
+       newer files. Run ``study.py analysis build``, then run ``study.py
+       analysis check`` again.
    * - ``instance of study ... for board ...: 2 found``
      - The results tree has two instances of one study for one board (made
        with ``instance new`` at two levels). Keep one.

@@ -67,7 +67,7 @@ and all are on by default:
      - The libraries ``drivers__timer``, ``drivers__gpio`` and
        ``drivers__interrupt_controller``, if the build has them
    * - ``LATBENCH_CODE_RAM_APP``
-     - The library ``app``: the app, ``common/src`` and the board port
+     - The library ``app``: the app, ``common/src`` and the :term:`board port`
 
 The build relocates the code and the read-only data of these files
 (``LOCATION <region>_TEXT_RODATA``). Data and bss stay in their normal
@@ -88,7 +88,7 @@ file without an error if it does not find its object. A linker check
 (``latbench_code_ram.ld`` in the build folder) stops the build in these
 cases:
 
-- the pad is not the first relocated function;
+- the pad is not the first relocated function.
 - one function of a group is not in the relocated code
   (``lat_meta_print``, ``z_setup_new_thread``, ``_isr_wrapper``,
   ``z_arm_mpu_init``, ``sys_clock_isr``).
@@ -123,45 +123,46 @@ unrelated part of the build can move all the code after it. For
 example, a different number of load threads changes the size of
 ``load.c``.
 
-In wake-threads-1m, builds that differ only in the number of load
-threads gave an IRQ p50 of 82 or 86 cycles, and a clock drift of 8.0 or
-9.7 cycles per wake. The difference between the two trees in the ISR to
-thread p50 was from 0 to 190 cycles, by build.
+In the :term:`experiment` ``wake-threads-1m``, builds that differ only in the
+number of load threads give different IRQ latencies and a different
+clock drift. The difference between the two :term:`trees <Tree>` in the ISR to thread
+latency also changes from build to build.
 
-The experiment ``code-layout`` moved all code with a code pad of 0 to 28
-bytes. The IRQ p50, the drift and the ISR to thread p50 with time slicing
-change with a period of 8 bytes, the width of a flash read. The ISR to
-thread p50 without time slicing changes by up to 35 cycles. A pad moves
-all code by the same amount, but two builds also have a different order
-of functions. Thus a pad explains only a part of the difference between
-two builds.
+The experiment ``code-layout`` moves all code with a code pad of 0 to 28
+bytes. The :term:`study` ``code-placement`` examines how the latencies change with
+the pad. The width of a flash read on the NUCLEO-G474RE is 8 bytes, so a
+period of 8 bytes in the pad is the expected pattern. A pad moves all code
+by the same amount, but two builds also have a different order of
+functions. Thus a pad explains only a part of the difference between two
+builds.
 
-Thus do not compare single builds in flash when the difference is small.
-Use the choice ``LATBENCH_CODE_PLACE`` (see
-:ref:`benchguide-code-placement`) as follows:
+Thus a comparison of single builds in flash is not valid when the
+difference is small. The choice ``LATBENCH_CODE_PLACE`` (see
+:ref:`benchguide-code-placement`) gives these methods:
 
-- To compare two builds (two trees, two Kconfig values), use
+- A comparison of two builds (two trees, two Kconfig values) uses
   ``LATBENCH_CODE_RAM``. The hot code then runs from RAM with no wait
   states, and its address has no effect on the latency.
-- To give an absolute number for an application in flash, use
-  ``LATBENCH_CODE_FLASH_PAD`` with a set of pads, and give the range over
-  the pads. The pad set is an axis of the experiment, not a Kconfig value.
-- ``LATBENCH_CODE_FLASH`` gives the number of one build. Use it only
+- An absolute number for an application in flash uses
+  ``LATBENCH_CODE_FLASH_PAD`` with a set of pads, and gives the range
+  over the pads. The pad set is an axis of the experiment, not a Kconfig
+  value.
+- ``LATBENCH_CODE_FLASH`` gives the number of one build. It is valid only
   together with a range from a pad set, or for a smoke test.
 
-The experiments ``code-place-q4`` and ``code-place-q4-up`` checked this
-rule on ``nucleo_g474re`` (50000 samples for each point). With
-``LATBENCH_CODE_RAM`` the 8 pads gave the same IRQ p50 (48), the same
-ISR to thread p50 (1145 with time slicing, 523 without) and the same
-drift (8.04 cycles per wake). The difference between the trees
-(ws-up - ws-safety) was -40 and -42 cycles at the pads 0 and 4. In flash
-the same difference was -121 and -10 cycles (time slicing).
+The experiments ``code-place-q4`` and ``code-place-q4-up`` examine this
+rule on ``nucleo_g474re``. Their :term:`hypotheses <Hypothesis>` predict that with
+``LATBENCH_CODE_RAM`` all pads give the same latencies and the same
+drift, and that the difference between the trees does not depend on the
+pad. In flash, the difference between the trees can change with the pad.
+The results are in the results tree (see
+:ref:`benchguide-result-folder`).
 
-Any change of the code size before the hot code also moves it. An
-example: ``LATBENCH_SAMPLES`` = 50000 fits in one instruction (``movw``),
-200000 needs a literal word. Thus two flash builds that differ only in
-the number of samples have a different code layout, and their ISR to
-thread p50 without time slicing differs by up to 17 cycles.
+Any change of the code size before the hot code also moves it. For
+example, ``LATBENCH_SAMPLES`` = 50000 fits in one instruction
+(``movw``), but 200000 needs a literal word. Thus two flash builds that
+differ only in the number of :term:`samples <Sample>` have a different code layout, and
+their latencies can differ.
 
 The pad set must cover each position of the code in the line of the
 cache or of the flash read, in steps of 4 bytes:

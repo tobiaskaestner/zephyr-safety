@@ -7,7 +7,7 @@ What the suite measures
 The suite measures the distributions of interrupt latencies and
 scheduling latencies of Zephyr. A distribution shows the floor, the modes
 and the tail of a latency. An average hides the tail, and a safety
-argument needs the tail. For this reason, each app records every sample
+argument needs the tail. For this reason, each :term:`app` records every :term:`sample`
 in a histogram on the target, not only a mean.
 
 All times are in counts of the stimulus timer. On the NUCLEO-G474RE, the
@@ -41,11 +41,15 @@ The suite has four measurement points:
      - The time stamp of the taker thread, after its wait call returns
      - ``thread_latency``
    * - M4
-     - Time with interrupts locked
-     - The lock (nesting 0 to 1)
-     - The unlock (nesting 1 to 0)
-     - Not implemented
+     - Time with interrupts masked, for each call site, and the time of
+       each ISR body
+     - The start of a mask section (a hook in the mask path of Zephyr)
+     - The end of the mask section (a second hook)
+     - ``wake_latency`` and ``thread_latency`` with
+       ``CONFIG_ARM_IRQ_MASK_HOOKS``
 
-M4 is a plan. It needs a hook in the interrupt lock path of Zephyr. No app
-of the suite measures M4 today. The tail of M1 gives an indirect lower
-limit of the longest locked section that the stimulus hit.
+M4 needs the :term:`tree` ``ws-up-irqoff``, which has the hooks. The hooks make
+each mask section longer, so the latency histograms of an M4 run are not
+data. The :term:`experiments <Experiment>` ``m4-sweep`` and ``m4-thread`` of the :term:`study`
+``mask-time`` measure M4. :doc:`mask-time` describes the method and its
+limits.

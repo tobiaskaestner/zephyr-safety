@@ -67,7 +67,7 @@ Add an app
    variant. Use the tags ``benchmark`` and ``latency``.
 #. Write ``scripts/extract.py`` and ``scripts/plot.py`` in the app folder,
    from those of an existing app. The extractor calls
-   ``latextract.main("<app>")``; the plot script calls
+   ``latextract.main("<app>")``. The plot script calls
    ``latplot.main("<app>", ["<main metric>"])`` (both in
    ``common/scripts/``). The results build needs both: the extractor for the
    app data, the plot script for the standard plots (see :doc:`../reference/files/results-tree`).
@@ -77,4 +77,5 @@ Add an app
 #. Add an experiment for the app (see :doc:`add-an-experiment`).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in
-``scripts/benchmarks/latbench.py`` and to :doc:`../reference/log-format` in this guide.
+``scripts/benchmarks/latbench.py``. Also add it to
+:doc:`../reference/log-format` in this guide.

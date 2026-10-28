@@ -6,23 +6,23 @@ Boards (``boards.yaml``)
 ``boards.yaml`` has these keys:
 
 ``default``
-   The board target of an experiment without ``board:``
+   The :term:`board target` of an :term:`experiment` without ``board:``
    (``nucleo_g474re``).
 
 ``boards.<board target>``
    One entry for each board target, with these keys:
 
    ``port``
-      The folder of the board port in ``common/boards/``.
+      The folder of the :term:`board port` in ``common/boards/``.
 
    ``modules``
-      The repositories of the tree that the build needs. The build gets
+      The repositories of the :term:`tree` that the build needs. The build gets
       exactly these as ``ZEPHYR_MODULES``.
 
    ``flash``
       A list of commands that program the board and reset it. ``run.py``
       runs them in order. In each argument, ``{zephyr}`` is the Zephyr of
-      the tree, ``{elf}`` and ``{hex}`` are the images of the point, and
+      the tree, ``{elf}`` and ``{hex}`` are the images of the :term:`point`, and
       ``{probe}`` is the probe ID from the hardware map. Each command must
       select the probe with ``{probe}``: a host can have more than one
       probe.

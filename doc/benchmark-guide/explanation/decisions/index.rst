@@ -3,7 +3,7 @@ Decisions
 
 A decision record gives the reason of one design decision of the suite:
 the problem, the decision, and its results. The other pages give the
-current facts; these records give the reasons. A record that a later
+current facts. These records give the reasons. A record that a later
 decision replaces stays, with the status "replaced by".
 
 .. toctree::

@@ -2,7 +2,7 @@ Measurement method
 ==================
 
 This page describes the measurement method. The method is the same on
-each board. The board port supplies the hardware
+each board. The :term:`board port` supplies the hardware
 parts (see :doc:`../reference/boards`). The examples on this page are for the
 NUCLEO-G474RE, the only board with data points today.
 
@@ -11,8 +11,8 @@ Why the stimulus comes from hardware
 
 If the measured software makes the stimulus itself, the CPU is never in
 a critical section at that moment. Then the measurement shows only the
-best case. The ``loopback_check`` app is an example: its main thread sets
-the pin and then waits in a busy loop, so all its samples have the same
+best case. The ``loopback_check`` :term:`app` is an example: its main thread sets
+the pin and then waits in a busy loop, so all its :term:`samples <Sample>` have the same
 value.
 
 For this reason, the apps of the suite use a hardware timer as the
@@ -20,7 +20,7 @@ stimulus. The timer sets the pin at a programmed time, which is
 asynchronous to the software. The edge can come while the kernel holds a
 lock, while the system timer ISR runs, or while the CPU sleeps. The time
 stamp of the edge is the compare value of the timer, so it does not
-depend on software.
+depend on software (see :doc:`decisions/0001-stimulus-from-hardware`).
 
 The method
 ----------
@@ -80,7 +80,7 @@ The check for a late edge is necessary because an ISR can run between the
 read of ``now`` and the write of the compare value. If the ISR takes more
 time than the delay to the edge, the compare value is in the past. Then
 the timer reaches it only after a full wrap of the 32-bit counter (25 s at
-170 MHz), and a repetition can time out. ``stim_late`` other than 0 shows
+170 MHz), and a :term:`repetition` can time out. ``stim_late`` other than 0 shows
 that this occurred (see :doc:`measurement-effects`).
 
 The wire takes the rising edge to the response pin, and its interrupt

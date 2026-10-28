@@ -17,45 +17,53 @@ Results tree
            20261026T155715Z.rebuild-<UTC>.json     a rebuild check (run.py --rebuild)
 
 The board is in the folder name only at the level that fixes it
-(``@<port>``); the sub-instances inherit it.
+(``@<port>``). The sub-instances inherit it.
 
-``run.json`` has the run identity and provenance, and for each point its
-axes, the digests of ``.config``, ``zephyr.dts``, the images
-(``<app>-<tree>-<point>.elf`` and ``.hex``, or ``zephyr.elf`` and
-``zephyr.hex`` in an older run) and ``build.log``, the image digest (the loadable
-segments of the ELF) and the code digest. The image has the
-``LATBENCH_SRC_REV`` of the build: for the runs since 2026-10-27 this is the
-content hash of the firmware files (kind ``firmware/1``), so the same
-firmware at two commits gives the same image; older runs have the safety
-revision or a git tree hash there. The code digest counts these 40
-characters as zeros, so the same code gives the same code digest also
-over these kinds. The app data come from the extractor of the app,
+``run.json`` has the :term:`run` identity and provenance. For each :term:`point`, it
+has:
+
+- The axes.
+- The digests of ``.config``, ``zephyr.dts``, the images
+  (``<app>-<tree>-<point>.elf`` and ``.hex``, or ``zephyr.elf`` and
+  ``zephyr.hex`` in an older run) and ``build.log``.
+- The image digest (the loadable segments of the ELF).
+- The code digest.
+
+The image has the ``LATBENCH_SRC_REV`` of the build. For the runs since
+2026-10-27, this is the firmware hash (see
+:ref:`benchguide-firmware-hash`). Thus the same firmware at two commits
+gives the same image. Older runs have the safety revision or a git tree
+hash there. The code digest counts these 40 characters as zeros. Thus
+the same code gives the same code digest over these kinds of
+``LATBENCH_SRC_REV``.
+
+The :term:`app` data come from the extractor of the app,
 ``tests/benchmarks/<app>/scripts/extract.py``: META, the histograms, the
 tick phase tables, the M4 sites, and a check of the ``LAT CFG`` values
 against ``.config``.
 
-The standard plots of an experiment come from the plot script of its app,
+The standard plots of an :term:`experiment` come from the plot script of its app,
 ``tests/benchmarks/<app>/scripts/plot.py`` (the common part is
 ``tests/benchmarks/common/scripts/latplot.py``, like the extractor). The
-build runs it for each experiment of an instance, with the app data of
+build runs it for each experiment of an :term:`instance`, with the app data of
 the runs that are not excluded (evidence and adjustment, so a smoke
-campaign shows its graphs too; the legend names the role of an
+:term:`campaign` shows its graphs too. The legend names the role of an
 adjustment run), and it writes ``ex-<experiment>/plots/`` of the
 instance:
 
 - ``overview-<metric>.svg``: the exceedance probability (the share of
-  samples at or above x) of each point of the newest run, at most 8 points
-  in one chart (with more points: ``overview-<metric>-<k>.svg``);
+  :term:`samples <Sample>` at or above x) of each point of the newest run, at most 8 points
+  in one chart (with more points: ``overview-<metric>-<k>.svg``).
 - ``ccdf-<metric>-<tree>-<point>.svg``: the exceedance probability of one
-  point, one line for each run (the newest 8);
+  point, one line for each run (the newest 8).
 - ``hist-<metric>-<tree>-<point>.svg``: the histogram of one point of the
-  newest run;
+  newest run.
 - ``plots.json``: the list of the plots and the digest of their inputs (the
   app data and the plot scripts). With the same digest, the build does not
   draw again.
 
 The metric is the main metric of the app (``irq``, ``isr2thr``, ``t2t``).
-The plots show repetition 1 of each point. A run that failed an
+The plots show :term:`repetition` 1 of each point. A run that failed an
 acceptance check is in the plots, with ``acceptance failed`` in its label
 (it is not evidence for the checks).
 The SVG files have no date, so the same inputs and the same matplotlib
@@ -63,11 +71,11 @@ give the same bytes. A failed plot gives a note in ``study.json``, not a
 failed build. In a campaign, the background build draws the plots of an
 experiment as soon as its run is done.
 
-``experiment.json`` has one row for each run, tree, point, repetition and
+``experiment.json`` has one row for each run, :term:`tree`, point, repetition and
 metric, with the percentiles. ``study.json`` has the acceptance checks,
-the rebuild checks, the hypotheses with each check (measured value,
-limit, verdict) and the central results as filled sentences. The
-``measured`` text of a check has all values if there are 4 or fewer; else
+the rebuild checks, the :term:`hypotheses <Hypothesis>` with each check (measured value,
+limit, :term:`verdict`) and the :term:`central results <Central result>` as filled sentences. The
+``measured`` text of a check has all values if there are 4 or fewer. Else
 it has a short form (``6 values, min 100, max 105; 3 outside the limit:
 ...``), and ``measured_lines`` has all of them (``values`` has them as
 data). A check or a central result that waits for a run has
@@ -101,7 +109,7 @@ instance (it has ``instance.json``), the folder is
 
 The image names, for example ``irq_latency-ws-safety-stock-idle.elf``,
 say what the image is also outside its folder. The runs before
-2026-10-28 have ``zephyr.elf`` and ``zephyr.hex``; their seals cover the
+2026-10-28 have ``zephyr.elf`` and ``zephyr.hex``. Their :term:`seals <Seal>` cover the
 names, so they keep them. The tools find the image by either name.
 
 A run of an older ``run.py`` also has ``src/``, a copy of the safety
@@ -113,11 +121,11 @@ repository (``git archive``). Its builds used this copy.
   ``experiment_sha256``: the name, the path in the repository, the full
   text and the SHA-256 of the experiment file.
 - ``command``, ``started``, ``finished``, ``host``.
-- ``lab``: the lab space (``id``, ``name``, ``folder``), or ``null``
+- ``lab``: the :term:`lab space` (``id``, ``name``, ``folder``), or ``null``
   outside a lab space.
-- ``safety``: the path and the revision of the safety repository, the
+- ``safety``: the path and the revision of the :term:`safety repository`, the
   local ref of the run (``ref``), the firmware hash (``bench_tree``, the
-  ``LATBENCH_SRC_REV`` of the app, kind ``bench_tree_kind``; the first
+  ``LATBENCH_SRC_REV`` of the app, kind ``bench_tree_kind``. The first
   runs of 2026-10-27 have the git tree hash of ``tests/benchmarks`` and
   no kind) and the git tree hash of the module folder ``zephyr/``
   (``module_tree``). A run of an older ``run.py`` has instead the
@@ -130,10 +138,10 @@ repository (``git archive``). Its builds used this copy.
 - ``toolchain``: the SDK version and path.
 - ``tools``: the versions of CMake, Ninja, Python, pyserial, and of each
   tool in the ``flash`` commands of the board (for example ``openocd``,
-  ``nrfutil`` or ``pyocd``); ``builder`` (``west <version>`` or
-  ``cmake``); ``python_packages`` (the versions of the packages of
+  ``nrfutil`` or ``pyocd``), ``builder`` (``west <version>`` or
+  ``cmake``), and ``python_packages`` (the versions of the packages of
   ``requirements.txt`` and ``requirements.lock``).
-- ``board``, ``board_cfg``, ``console``: the board target, its entry from
+- ``board``, ``board_cfg``, ``console``: the :term:`board target`, its entry from
   ``boards.yaml``, and the serial port.
 - ``probe_serial``: the serial number of the debug probe of the console
   port (from ``udevadm``).
@@ -182,7 +190,7 @@ record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
      - The command, its folder, the ``FOLDER`` of the campaign and the
        board (or ``null``).
    * - ``repo``, ``ref``
-     - The design repository (``path``, ``rev``) and the ref of the
+     - The :term:`design repository` (``path``, ``rev``) and the ref of the
        campaign.
    * - ``status``
      - ``planned``, ``running``, ``done``, ``failed`` or ``aborted``.
@@ -191,7 +199,7 @@ record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
    * - ``stopped``
      - The reason why the campaign stopped early.
    * - ``preflight``
-     - The items of the pre-flight check: ``status``, ``what``, ``text``.
+     - The items of the :term:`pre-flight check`: ``status``, ``what``, ``text``.
    * - ``post``
      - The background builds: ``n``, ``rc``, ``noticed`` (the time when
        the campaign saw the end of the build).
@@ -199,7 +207,7 @@ record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
      - The Python of the campaign: ``executable``, ``prefix``,
        ``version`` and the ``packages`` with their versions.
    * - ``role``, ``reason``, ``hwcheck_each``
-     - The role of the runs (``--role``, ``--reason``) and
+     - The :term:`role` of the runs (``--role``, ``--reason``) and
        ``--hwcheck-each``.
    * - ``experiments``
      - One entry for each experiment: ``experiment``, ``study``,
@@ -207,5 +215,5 @@ record. Each experiment has its log in ``.lab/campaigns/<id>/<experiment>.log``.
        (``planned``, ``running``, ``done``, ``failed``, ``skipped``),
        ``instance``, ``started``, ``finished``, ``log``, ``rc``, ``run``
        (the run id), ``note``, ``attempts`` (after a resume) and
-       ``hwcheck`` (the record of its wire check, with
+       ``hwcheck`` (the record of its :term:`wire check`, with
        ``--hwcheck-each``).

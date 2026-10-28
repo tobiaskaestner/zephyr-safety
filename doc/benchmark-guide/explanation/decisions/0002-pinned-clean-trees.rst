@@ -11,18 +11,18 @@ Problem
 -------
 
 A latency value depends on the exact code of Zephyr, of its modules and of
-the apps. A value from a tree with changes that nobody committed cannot be
+the apps. A value from a :term:`tree` with changes that nobody committed cannot be
 made again, and a value of an unknown revision cannot be compared.
 
 Decision
 --------
 
 - Each tree is pinned: one revision for each repository, in
-  ``validation/trees/<tree>.yml``. A pin never changes; another revision
+  ``validation/trees/<tree>.yml``. A pin never changes. Another revision
   is another tree.
 - ``run.py`` refuses a tree that is not at its pins or not clean, a
-  design repository that is not clean, and an SDK of another version.
-- A Zephyr patch for a study goes on a branch, and its commit is the pin
+  :term:`design repository` that is not clean, and an SDK of another version.
+- A Zephyr patch for a :term:`study` goes on a branch, and its commit is the pin
   of a new tree.
 
 Results
@@ -30,4 +30,4 @@ Results
 
 - Each data point names its trees, its SDK and its design commit
   (``manifest.json``).
-- A manual build is for development only; its values are not data points.
+- A manual build is for development only. Its values are not data points.

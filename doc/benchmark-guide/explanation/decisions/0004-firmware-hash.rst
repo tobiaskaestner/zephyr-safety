@@ -10,9 +10,9 @@ Problem
 -------
 
 Each app prints the revision of its source (``LATBENCH_SRC_REV``), and the
-image contains the string. With the commit of the safety repository as
+image contains the string. With the commit of the :term:`safety repository` as
 this revision, each commit gave other images, also a commit that changed
-only a study design or a host script. Thus the build cache was empty after
+only a :term:`study` design or a host script. Thus the :term:`build cache` was empty after
 each commit, and two images of the same firmware looked different.
 
 Decision

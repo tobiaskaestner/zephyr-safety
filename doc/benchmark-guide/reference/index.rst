@@ -18,6 +18,7 @@ output format and the terms. Use it to look up one item.
    files/experiment-yaml
    files/study-yaml
    files/results-tree
+   files/export
    check-forms
    central-results
    lint-rules

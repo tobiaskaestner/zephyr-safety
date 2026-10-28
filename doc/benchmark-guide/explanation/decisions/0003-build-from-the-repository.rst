@@ -10,21 +10,21 @@ Accepted, 2026-10-27. It replaces the copy of the repository in each run
 Problem
 -------
 
-A run had a copy of the whole safety repository in ``src/``, and its
+A run had a copy of the whole :term:`safety repository` in ``src/``, and its
 builds used the copy. The copy made each run large and had many files that
-the experiment does not use, which was confusing.
+the :term:`experiment` does not use, which was confusing.
 
 Decision
 --------
 
-- A run builds from the clone of the lab space. Before each point and
+- A run builds from the clone of the :term:`lab space`. Before each point and
   after each build, ``run.py`` makes sure that the clone is clean and at
   the commit of the start of the run.
 - The commit stays reachable with a local ref,
   ``refs/latbench/run/<experiment>/<UTC>`` (and
   ``refs/latbench/campaign/<id>``). The refs are never pushed.
 - ``run.py --rebuild`` exports that commit into a temporary folder and
-  builds there; it never builds in the sealed run folder.
+  builds there. It never builds in the sealed run folder.
 
 Results
 -------

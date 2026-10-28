@@ -1,7 +1,7 @@
 Output format
 =============
 
-The measurement apps print their results on the console as text lines
+The measurement :term:`apps <App>` print their results on the console as text lines
 that start with ``LAT``. The functions in ``common/src/hist.c`` and
 ``common/src/meta.c`` print most of the lines.
 ``scripts/benchmarks/latbench.py`` parses them. Lines without the
@@ -17,7 +17,7 @@ Line types
    * - Line
      - Meaning
    * - ``LAT BEGIN``
-     - Start of a run on the target. The parser starts a new record at each
+     - Start of a :term:`run` on the target. The parser starts a new record at each
        ``BEGIN`` and keeps only the last record of a log.
    * - ``LAT META <key>=<value>``
      - One metadata value. The value is the text after the first ``=``.
@@ -30,7 +30,7 @@ Line types
        continues with an empty phase histogram.
    * - ``LAT HIST <name> n=<n> min=<min> max=<max> mean=<m>.<mm> overflow=<k> invalid=<i>``
      - Start of a histogram. The mean has two decimal places. ``n``,
-       ``min``, ``max`` and ``mean`` do not include the invalid samples.
+       ``min``, ``max`` and ``mean`` do not include the invalid :term:`samples <Sample>`.
        ``invalid`` is the last field, so that an old parser can read the
        line. A log from before this field has the invalid samples in ``n``,
        ``max``, ``mean`` and in the overflow bin 31.
@@ -184,7 +184,7 @@ Metadata keys
      - Wakes for which the taker did not run exactly once
    * - ``port``
      - stimulus
-     - Name of the board port, for example
+     - Name of the :term:`board port`, for example
        ``nucleo_g474re/tim2_ch4-exti0``
    * - ``stim_timer_hz``, ``sys_timer_hz``
      - stimulus
@@ -265,4 +265,4 @@ thread or ``e<n>`` for exception number n (14 PendSV, 15 SysTick, 16 + n
 IRQ n). The ``LAT HIST`` blocks have the normal format, so
 ``latbench.py summary`` also reads them. ``m4_unmatched_end`` counts an
 end without an open section, ``m4_begin_open`` a start while a section is
-open; both must be 0 after the start.
+open. Both must be 0 after the start.

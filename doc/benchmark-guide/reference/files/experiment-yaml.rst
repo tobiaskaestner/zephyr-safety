@@ -3,14 +3,12 @@
 Experiment file
 ===============
 
-An experiment is a folder ``ex-<name>/`` in the folder of the study that
-owns it, below ``validation/empirical/latencies/``. A sub-study is a
-folder ``st-<name>/``. The prefixes are only in the folder names; the
-names in the files have no prefix. The experiment folder holds the
-experiment file ``experiment.yaml`` and the description
-``experiment.md``. The schema ``scripts/benchmarks/schemas/experiment.schema.yaml``
-gives the keys and their types; ``run.py`` stops on a key that it does not
-know. The keys of the experiment file are:
+An :term:`experiment` folder ``ex-<name>/`` holds the experiment file
+``experiment.yaml`` and the description ``experiment.md`` (see
+:ref:`benchguide-experiment-md`). The schema
+``scripts/benchmarks/schemas/experiment.schema.yaml`` gives the keys and
+their types. ``run.py`` stops on a key that it does not know. The keys of
+the experiment file are:
 
 .. list-table::
    :header-rows: 1
@@ -23,37 +21,50 @@ know. The keys of the experiment file are:
        The experiment folder must be ``ex-<name>``.
    * - ``renamed_from``
      - Optional. The earlier names of a renamed experiment (a name or a
-       list). The runs, refs and imports with an earlier name stay valid:
+       list). The :term:`runs <Run>`, refs and imports with an earlier name stay valid:
        the run ids do not change (``<earlier name>/<UTC>``, folder
        ``ex-<earlier name>/<UTC>``), and the tools map the earlier name to
        ``name``. An earlier name must not be the name of another
        experiment.
    * - ``app``
-     - The app folder in ``tests/benchmarks/``.
+     - The :term:`app` folder in ``tests/benchmarks/``.
    * - ``trees``
-     - List of tree names (the files of ``validation/trees/``).
+     - List of :term:`tree` names (the files of ``validation/trees/``).
    * - ``board``
-     - Optional. A board target of ``boards.yaml``. The default is
+     - Optional. A :term:`board target` of ``boards.yaml``. The default is
        ``default`` of ``boards.yaml``.
    * - ``repeat``
-     - Number of repetitions of each point (default 1).
+     - Number of :term:`repetitions <Repetition>` of each point (default 1).
    * - ``timeout``
      - Maximum time of one repetition in seconds (default 600).
    * - ``common``
      - Settings for all points.
    * - ``axes``
-     - A map of axes. Each axis is a map from a value name to settings.
-       ``run.py`` makes one point for each combination of the values
-       (Cartesian product). An experiment has one axis or more. An
-       experiment that changes one factor at a time has one axis,
-       ``variant``.
+     - Optional. A map of axes. Each axis is a map from a value name to
+       settings. ``run.py`` makes one :term:`point` for each combination of
+       the values (Cartesian product). An experiment that changes one
+       factor at a time has one axis, ``variant`` (see :term:`variant`).
    * - ``extra_axes``
      - Optional. A map from an axis name to a value name: axes that only
        the explicit points change. All points of ``axes`` get this value.
    * - ``points``
      - Optional. A list of explicit points, each with an ``id`` and with
        ``axes``, a map that gives a value on each axis (also on each of
-       ``extra_axes``). You can use ``axes`` and ``points`` together.
+       ``extra_axes``).
+   * - ``acceptance``
+     - Optional. The acceptance checks of each run (see below).
+
+An experiment has ``axes``, ``points``, or both. The design lint gives
+these errors:
+
+- The experiment has no axis name: ``axes`` and ``extra_axes`` are both
+  empty or missing.
+- A point does not have a value on each axis of ``axes`` and
+  ``extra_axes``, or it has a value on another axis.
+
+An experiment with only ``points`` names its axes in ``extra_axes``, for
+example ``ex-irq-smoke``. An experiment without points stops ``run.py``
+(``no points to run``).
 
 Each set of settings (in ``common``, in an axis value or in a point) can
 have these keys:
@@ -67,7 +78,7 @@ have these keys:
 
 ``dtc_overlays``
    A list of devicetree overlays, relative to ``tests/benchmarks/``. The
-   board port adds its own overlays. Do not list them here.
+   :term:`board port` adds its own overlays. Do not list them here.
 
 ``value``
    Only in an axis value. The number of the value, for example ``16`` for
@@ -134,12 +145,32 @@ The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
 experiment. ``run.py`` puts their Kconfig value on the CMake command line,
 and the port then adds its ``resp_irq_own.overlay`` (see :doc:`../apps`).
 
-The experiment folders in the study folders below
-``validation/empirical/latencies/`` are the current experiments. The
-description ``experiment.md`` in each folder gives the question of the
-experiment.
+Acceptance
+----------
 
-``experiment.yaml`` can have ``acceptance``: checks of each run, for
-example ``{id: A1, metric: [irq, isr2thr], stat: invalid, expect:
-{equals: 0}}``. A run that fails one is not evidence: the hypotheses
-and the central results do not read it.
+``acceptance`` is a list of checks of each run, for example ``{id: A1,
+metric: [irq, isr2thr], stat: invalid, expect: {equals: 0}}`` (see
+:doc:`../check-forms`). A run that fails one is not evidence: the
+:term:`hypotheses <Hypothesis>` and the :term:`central results <Central result>` do not read it.
+
+.. _benchguide-experiment-md:
+
+The description ``experiment.md``
+---------------------------------
+
+``experiment.md`` describes the experiment in Markdown. The template of
+``study.py design scaffold experiment`` has these sections:
+
+``What it measures``
+   The app, the metric, and what the experiment measures.
+
+``Method``
+   How it measures: the stimulus, the :term:`samples <Sample>`, the load and the clock.
+
+``Axes``
+   One line for each axis: what the axis varies, and why.
+
+The design lint gives an error if ``experiment.md`` is missing. It gives
+a warning if the file does not name an axis of the experiment, or if it
+has ``TODO`` texts of a template. The experiment folders below
+``validation/empirical/latencies/`` are the current experiments.
