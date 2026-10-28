@@ -3,13 +3,16 @@
 
 """Read the hardware map of the host: which board is on which probe and console.
 
-The file has the format of a twister hardware map, so twister makes it:
+The file has the format of a twister hardware map. Write one entry for each
+board: the console as its /dev/serial/by-id name, the probe ID (for an
+ST-LINK, the hex serial in that name), "platform" set to the board target
+(as in boards.yaml), and the fixture "latbench_loopback" if the board has
+the wire. In a west workspace, twister can write the first version:
 
     west twister --generate-hardware-map hw-map.yml --persistent-hardware-map
 
-Then set "platform" of each entry to the board target (as in boards.yaml)
-and add the fixture "latbench_loopback" to each board that has the wire.
-The file belongs to the host and is not checked in (.gitignore).
+The file belongs to the host and is not checked in (.gitignore). See the
+benchmark guide, howto/make-a-hardware-map.
 """
 
 from pathlib import Path
@@ -47,8 +50,9 @@ def load(path, schema_file=None):
     path = Path(path)
     if not path.is_file():
         raise HwMapError(
-            f"no hardware map {path}; make it with 'west twister --generate-hardware-map {path.name}"
-            " --persistent-hardware-map' (see the benchmark guide, howto/make-a-hardware-map)"
+            f"no hardware map {path}; write it with the /dev/serial/by-id name of the console and the"
+            " probe ID of each board, or in a west workspace with 'west twister --generate-hardware-map"
+            f" {path.name} --persistent-hardware-map' (see the benchmark guide, howto/make-a-hardware-map)"
         )
     entries = yaml.safe_load(path.read_text())
     if not isinstance(entries, list):
