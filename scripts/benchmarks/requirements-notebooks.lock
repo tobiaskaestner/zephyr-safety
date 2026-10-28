@@ -1,0 +1,44 @@
+# The exact versions of the packages for "study.py analysis notebooks" (optional;
+# the other commands do not need them), for a lab space venv: the resolution of
+# pip (dry run) for nbclient nbconvert ipykernel pandas plotly in the venv of
+# cos-workstation, 2026-10-28, Python 3.14, on top of requirements.lock.
+#   .venv/bin/pip install -r safety/scripts/benchmarks/requirements-notebooks.lock
+asttokens==3.0.2
+beautifulsoup4==4.15.0
+bleach==6.4.0
+comm==0.2.3
+debugpy==1.8.22
+defusedxml==0.7.1
+executing==2.3.0
+fastjsonschema==2.22.2
+ipykernel==7.4.0
+ipython==9.17.1
+ipython_pygments_lexers==1.1.1
+jedi==0.20.1
+jupyter_client==8.10.0
+jupyter_core==5.9.1
+jupyterlab_pygments==0.3.0
+matplotlib-inline==0.2.2
+mistune==3.4.0
+narwhals==2.28.0
+nbclient==0.11.0
+nbconvert==7.17.2
+nbformat==5.11.1
+nest-asyncio2==1.7.4
+pandas==3.1.0
+pandocfilters==1.5.1
+parso==0.8.7
+pexpect==4.9.0
+platformdirs==4.13.6
+plotly==7.1.0
+prompt_toolkit==3.0.53
+ptyprocess==0.7.0
+pure_eval==0.2.4
+Pygments==2.21.0
+pyzmq==27.2.0
+soupsieve==3.0.4
+stack-data==0.6.3
+tinycss2==1.5.1
+tornado==6.6
+traitlets==5.16.1
+webencodings==0.6.1
