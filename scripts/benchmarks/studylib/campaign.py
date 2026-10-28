@@ -609,10 +609,15 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         if d.get("status") == PLANNED and not d.get("started"):
             rec.set(status=FAILED, finished=utc_now().isoformat(), stopped=f"not started: {x}")
         raise
-    # a resume runs the failed experiments again (and one that a crash left in running)
+    # a resume runs the failed experiments again (and one that a crash left in running), unless
+    # the run.py of the dead campaign ended and added its run (it holds the board lock to its end)
     for e in d["experiments"]:
         if e["state"] in (FAILED, RUNNING):
-            e.update(state=PLANNED, attempts=e.get("attempts", 1) + 1)
+            done = run_of_campaign(lab, e, rec.id)
+            if done:
+                e.update(state=DONE, run=done, note="the run.py of the stopped campaign added this run")
+            else:
+                e.update(state=PLANNED, attempts=e.get("attempts", 1) + 1)
     rec.set(pid=os.getpid())
     rec.log_dir.mkdir(parents=True, exist_ok=True)
     stop = {"why": None}
@@ -716,6 +721,22 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         signal.signal(signal.SIGTERM, old)
         signal.signal(signal.SIGHUP, old_hup)
         drop_lock(lab, rec.id)
+
+
+def run_of_campaign(lab, e, cid):
+    """The id of a run of the experiment e that the campaign cid added to the run list of its
+    instance after e started, or None."""
+    if not e.get("instance"):
+        return None
+    folder = lab.results / e["instance"]
+    if not (folder / "instance.json").is_file():
+        return None
+    started = (e.get("started") or "")[:19].replace("-", "").replace(":", "")
+    for r in instance.load(folder).get("runs", []):
+        exp, utc = r["id"].split("/")
+        if r.get("campaign") == cid and exp == e["experiment"] and utc[:15] >= started[:15]:
+            return r["id"]
+    return None
 
 
 def final_build(post, log):
