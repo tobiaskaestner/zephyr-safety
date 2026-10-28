@@ -189,3 +189,30 @@ def test_an_imported_running_campaign_can_be_closed(two_labs):
     assert campaign.Record(b, name).data["status"] == "closed"
     exchange.import_(b, f, log=lambda *x: None)                       # the old export does not open it again
     assert campaign.Record(b, name).data["status"] == "closed"
+
+
+def test_manual_verdicts_and_references_go_along(two_labs):
+    a, b, root, tmp = two_labs
+    inst_a = a.results / "top" / "st-sub@nucleo_g474re"
+    instance.add_verdict(inst_a, "confirmed", "tester", hypothesis="H1", check="b")
+    d = instance.load(inst_a)
+    d["references"].append({"instance": "top/other@nucleo_g474re", "id": "x/20260101T000000Z", "digest": "sha256:0",
+                            "role": "reference", "reason": "a fixed value"})
+    instance.save(inst_a, d)
+    f = tmp / "a.tar.gz"
+    exchange.export(a, f, log=lambda *x: None)
+    exchange.import_(b, f, log=lambda *x: None)
+    db = instance.load(b.results / "top" / "st-sub@nucleo_g474re")
+    assert [(m["hypothesis"], m["check"], m["verdict"], m["copied_from"]) for m in db["manual_verdicts"]] == [
+        ("H1", "b", "confirmed", f"lab {a.id}")]
+    assert [r["id"] for r in db["references"]] == ["x/20260101T000000Z"]
+    exchange.import_(b, f, log=lambda *x: None)                     # again: nothing twice
+    db = instance.load(b.results / "top" / "st-sub@nucleo_g474re")
+    assert len(db["manual_verdicts"]) == 1 and len(db["references"]) == 1
+    # instance merge (a results tree that is not a lab space) brings them too
+    c = labmod.init(tmp / "lab-c", tmp / "safety", name="lab-c")
+    design = Design(root)
+    instance.new(design, c.results, "top", "sub", "nucleo_g474re")
+    instance.merge(design, a.results / "top", c.results / "top", log=lambda *x: None)
+    dc = instance.load(c.results / "top" / "st-sub@nucleo_g474re")
+    assert len(dc["manual_verdicts"]) == 1 and len(dc["references"]) == 1 and len(dc["runs"]) == 1

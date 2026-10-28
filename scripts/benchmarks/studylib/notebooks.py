@@ -70,7 +70,9 @@ def execute(nb_file, instance_folder, repo):
         nbclient.NotebookClient(nb, timeout=TIMEOUT, kernel_name="python3",
                                 resources={"metadata": {"path": str(repo)}}).execute()
     except Exception as e:      # a cell error: nbclient names the cell
-        raise NotebookError(f"{nb_file.name}: {type(e).__name__}: {str(e).strip().splitlines()[-1][:300]}") from None
+        import re
+        text = re.sub(r"\x1b\[[0-9;]*m", "", str(e)).strip().splitlines()
+        raise NotebookError(f"{nb_file.name}: {type(e).__name__}: {(text or [''])[-1][:300]}") from None
     finally:
         for k, v in old.items():
             if v is None:

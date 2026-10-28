@@ -316,12 +316,43 @@ def _set_verdict(folder, verdict, by, text, hypothesis, check, central_result, d
     save(folder, data)
 
 
+def verdict_key(m):
+    return ("h", m.get("hypothesis"), m.get("check")) if m.get("hypothesis") else ("c", m.get("central_result"))
+
+
+def merge_hand_data(folder, other, source, log=print):
+    """Add the references and the manual verdicts of the instance data `other` that the instance
+    folder does not have (they are hand-made data, like the run list). A manual verdict of the same
+    check with another content stays as it is here, with a warning. Return the number of additions."""
+    n = 0
+    with locked(folder):
+        data = load(folder)
+        refs = {(r["instance"], r["id"]) for r in data.get("references", [])}
+        for r in other.get("references", []):
+            if (r["instance"], r["id"]) not in refs:
+                data.setdefault("references", []).append(dict(r))
+                n += 1
+        have = {verdict_key(m): m for m in data.get("manual_verdicts", [])}
+        for m in other.get("manual_verdicts", []):
+            k = verdict_key(m)
+            if k not in have:
+                data.setdefault("manual_verdicts", []).append({**m, "copied_from": source})
+                n += 1
+            elif {x: y for x, y in have[k].items() if x != "copied_from"} != m:
+                log(f"warning: {data['instance']}: the manual verdict {k[1:]} of {source} differs from the one "
+                    "here; the one here stays")
+        if n:
+            save(folder, data)
+    return n
+
+
 def merge(design, other_root, root, log=print, origin=None):
     """Add to the tree root the runs that the run lists of the tree other_root have and root does not.
 
     For each instance of other_root that root also has, each new run is
     copied (run folder and seal), its seal and its digest are checked, and
-    it is added with the role and the reason of other_root. copied_from is
+    it is added with the role and the reason of other_root; the references and
+    the manual verdicts that root does not have come too. copied_from is
     the run folder below origin (for example "host:/path/of/the/tree") if
     other_root is a local copy of that tree. Return the run ids.
     """
@@ -334,6 +365,9 @@ def merge(design, other_root, root, log=print, origin=None):
             log(f"skip {rel}: no such instance in {root}")
             continue
         have = {r["id"] for r in load(folder)["runs"]}
+        n = merge_hand_data(folder, load(of), origin or str(other_root), log=log)
+        if n:
+            log(f"{rel}: {n} references and manual verdicts added")
         for r in load(of)["runs"]:
             if r["id"] in have:
                 continue

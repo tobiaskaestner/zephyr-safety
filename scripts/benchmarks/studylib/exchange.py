@@ -9,7 +9,9 @@ An export is one tar file and its digest file <file>.sha256. The tar has:
                          the design repo commit, the design files of the
                          exporting lab (each experiment: its file, sha256,
                          parsed content and earlier names; study.yaml and
-                         hypotheses.yaml of each instance, with sha256), and
+                         hypotheses.yaml of each instance, with sha256),
+                         the references and the manual verdicts of each
+                         instance (the import adds those it does not have), and
                          for each run: the instance path, the run-list entry,
                          the experiment, the board, the tree pins
     runs/<instance folder>/ex-<experiment>/<UTC>/ and <UTC>.sha256
@@ -154,7 +156,10 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
             if (m.get("safety") or {}).get("rev"):
                 revs.add(m["safety"]["rev"])
             index["instances"][ipath] = {"design": data["design"]["folder"],
-                                         "files": design.study(study_path(ipath)).files()}
+                                         "files": design.study(study_path(ipath)).files(),
+                                         # hand-made data of the instance, like the run list
+                                         "references": data.get("references", []),
+                                         "manual_verdicts": data.get("manual_verdicts", [])}
             index["runs"].append({"instance": ipath, "entry": {k: r[k] for k in ("id", "digest", "role", "reason",
                                                                                 "campaign") if k in r},
                                   "board": m.get("board"), "campaign": cid, "experiment": exp,
@@ -369,6 +374,14 @@ def import_(lab, in_file, log=print, dry=False):
                 instance.save(folder, data)
             added.append(rid)
             have[rid] = (folder, new)
+        if not dry:
+            for ipath, ref in index["instances"].items():
+                folder = lab.results / instance_rel(ipath)
+                if (folder / "instance.json").is_file() and (ref.get("references") or ref.get("manual_verdicts")):
+                    n = instance.merge_hand_data(folder, ref, f"lab {other['id']}",
+                                                 log=lambda m: warnings.append(m.removeprefix("warning: ")))
+                    if n:
+                        log(f"{ipath}: {n} references and manual verdicts added")
         for w in dict.fromkeys(warnings):
             log(f"warning: {w}")
         for r in refused:
