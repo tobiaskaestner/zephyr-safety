@@ -810,6 +810,8 @@ def status_lines(rec):
     status = d["status"]
     if "@" in rec.id and status in (PLANNED, RUNNING):
         status = f"imported, not complete ({status} at the export of {d.get('running_at_export', '?')})"
+    elif status in (PLANNED, RUNNING) and d.get("host") == platform.node() and d.get("pid") and not alive(d["pid"]):
+        status = f"{status}, but its process {d['pid']} is gone ('campaign resume {rec.id}' goes on)"
     elif "@" in rec.id and status == "closed":
         status = f"imported, closed here at {d.get('closed', '?')} (it was {d.get('status_at_import')})"
     out = [f"campaign {rec.id}: {status}" + (f" ({d['stopped']})" if d.get("stopped") else ""),
