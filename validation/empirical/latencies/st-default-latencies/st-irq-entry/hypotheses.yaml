@@ -30,7 +30,7 @@
 #   written    date, and the run that came after it
 #   experiment, select, metric, stat: the data that the check reads
 #              (new stat mode_share(k): the share of the samples in mode k of the histogram, mode 1 is the fastest)
-#   expect     the comparison (forms: doc/benchmark-guide/studies.rst)
+#   expect     the comparison (forms: doc/benchmark-guide/reference/check-forms.rst)
 #   manual     true: a person gives the verdict
 #   basis      where the number of the check comes from
 
