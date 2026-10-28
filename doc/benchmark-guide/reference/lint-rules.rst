@@ -55,6 +55,9 @@ Warnings:
 - A study without ``study.md``.
 - A study without experiments, imports and sub-studies.
 - An axis that ``experiment.md`` does not name.
+- An experiment name that does not start with its app: the part of the
+  app name before ``_``, then ``-`` (``irq-`` for ``irq_latency``,
+  ``loopback-`` for ``loopback_check``).
 - More than 4 hypotheses in a study.
 - A hypothesis without checks (it stays open).
 

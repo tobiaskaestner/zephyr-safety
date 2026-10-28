@@ -97,7 +97,8 @@ for ``thread_latency``. The template ``experiment.md`` has the sections
 of :ref:`benchguide-experiment-md`.
 
 A name has only lower case letters, digits and ``-``. An experiment name
-must be unique over all studies. The templates pass the lint without
+must be unique over all studies, and it starts with its app (for example
+``irq-`` for ``irq_latency``; see :doc:`../lint-rules`). The templates pass the lint without
 errors. Each ``TODO`` text gives a lint warning until you replace it. The
 command prints the new files and the line ``replace the TODO texts;
 'study.py design lint' lists them``.

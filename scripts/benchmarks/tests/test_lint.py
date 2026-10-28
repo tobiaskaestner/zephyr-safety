@@ -33,6 +33,8 @@ def test_small_design_has_only_warnings(tmp_path):
     warn = texts(root, lint.WARNING)
     assert "a study has a description study.md" in warn
     assert any("['variant'] are not named in experiment.md" in w for w in warn)
+    app = yaml.safe_load((root / "st-sub" / "ex-exp1" / "experiment.yaml").read_text())["app"]
+    assert f"the name of an experiment starts with the app: {app.split('_')[0]}-exp1" in warn
 
 
 def test_errors_of_checks(tmp_path):

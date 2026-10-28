@@ -110,6 +110,9 @@ def lint_experiment(e, out):
         out.append(Problem(ERROR, md, "each experiment has a description experiment.md"))
     if not (trees.BENCH_DIR / str(exp.get("app"))).is_dir():
         out.append(Problem(ERROR, f, f"app {exp.get('app')!r} is not a folder of tests/benchmarks"))
+    prefix = str(exp.get("app")).split("_")[0] + "-"
+    if not e.name.startswith(prefix):
+        out.append(Problem(WARNING, f, f"the name of an experiment starts with the app: {prefix}{e.name}"))
     names = [*(exp.get("axes") or {}), *(exp.get("extra_axes") or {})]
     if not names:
         out.append(Problem(ERROR, f, "an experiment has one axis or more"))
