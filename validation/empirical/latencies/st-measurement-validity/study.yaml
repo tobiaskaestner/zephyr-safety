@@ -12,10 +12,6 @@ substudies:
   - use: code-placement
   - use: mask-instrumentation
   - use: reproducibility
-  # One instance for each board port (board-ports@<port> in the results).
-  # The board is not fixed at this level: each instance of a sub-study
-  # names its board.
-  - {use: board-ports, instances: per-board}
 
 # The answer of this study: the central results of its sub-studies.
 central_results:

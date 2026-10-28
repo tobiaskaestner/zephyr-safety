@@ -5,12 +5,11 @@
 This study checks the measurement method. The question of the study is
 in `study.yaml`: do the benchmark apps measure the latency of the
 kernel, and not an effect of the measurement method, the code layout or
-the host? The study has no experiments of its own. Its six sub-studies
+the host? The study has no experiments of its own. Its five sub-studies
 give the answer.
 
 The board is not fixed at this level. Each instance of a sub-study
-names its board. The sub-study `board-ports` has one instance for each
-board port (`board-ports@<port>` in the results).
+names its board.
 
 ## Experiments
 
@@ -32,12 +31,9 @@ board port (`board-ports@<port>` in the results).
   another host, does a rebuild give the same image, and does a new
   safety revision give the old data? It gives the central result
   `same-image-same-data`.
-- `board-ports`: does the port of the benchmark to a board build,
-  flash, read the console and give plausible data?
 
 ## References
 
 - `st-stimulus-sampling/study.md`, `st-clock-drift/study.md`,
   `st-code-placement/study.md`, `st-mask-instrumentation/study.md`,
-  `st-reproducibility/study.md`, `st-board-ports/study.md`: the
-  sub-studies.
+  `st-reproducibility/study.md`: the sub-studies.

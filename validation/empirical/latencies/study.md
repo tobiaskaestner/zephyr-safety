@@ -19,8 +19,9 @@ Zephyr) and the trees with patches on it (`ws-up-irqoff`,
 `ws-up-driftfix`). A comparison of versions is the sub-study
 `zephyr-versions`.
 
-The board is not fixed at this level. The instances of the sub-studies
-name the board. Each experiment is in the folder of the study that owns
+The study measures one board, the NUCLEO-G474RE (`nucleo_g474re`). The
+board is not fixed at this level: the instances of the sub-studies name
+it. Each experiment is in the folder of the study that owns
 it. Other studies refer to an experiment by its name, which is unique.
 
 ## Experiments

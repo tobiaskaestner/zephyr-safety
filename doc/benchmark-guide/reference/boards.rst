@@ -29,8 +29,10 @@ Boards
      - ``untested``: builds, not run on hardware.
 
 For each ``untested`` board, the section of the board lists what to
-examine first on the hardware. The ``wake-port-smoke-<port>`` :term:`experiments <Experiment>` are
-the first runs for these boards.
+examine first on the hardware. A smoke :term:`experiment` with ``board:
+<board target>`` is the first run for such a board (see
+:doc:`../howto/add-a-board`). The study ``kernel-latency`` has no
+experiment for these boards.
 
 Structure of a port
 -------------------
