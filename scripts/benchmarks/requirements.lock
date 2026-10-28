@@ -1,7 +1,9 @@
-# The exact versions of the packages of requirements.txt for a lab space
-# (the venv of cos-workstation, 2026-10-28, Python 3.14). Make the venv of
-# a lab space with: python3 -m venv .venv && .venv/bin/pip install -r
+# The exact versions of the Python packages of a lab space (the venv of
+# cos-workstation, 2026-10-28, Python 3.14). Make the venv of a lab space
+# with: python3 -m venv .venv && .venv/bin/pip install -r
 # safety/scripts/benchmarks/requirements.lock
+#
+# The scripts (requirements.txt):
 pyserial==3.5
 PyYAML==6.0.3
 matplotlib==3.11.2
@@ -9,3 +11,21 @@ jsonschema==4.26.0
 referencing==0.37.0
 packaging==26.3
 west==1.5.0
+# The build of the apps: zephyr/scripts/requirements-base.txt of the
+# pinned trees (gen_kobject_list.py needs pyelftools, and so on).
+pyelftools==0.33
+pykwalify==1.8.0
+anytree==2.13.0
+intelhex==2.3.0
+canopen==2.4.1
+patool==4.1.0
+psutil==7.2.2
+pylink-square==1.7.0
+requests==2.34.2
+semver==3.1.0
+tqdm==4.70.1
+reuse==6.2.0
+spdx-python-model==0.0.6
+# The flash tool of mimxrt1060_evk (boards.yaml); openocd and nrfutil are
+# programs of the host.
+pyocd==0.46.0
