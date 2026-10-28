@@ -33,8 +33,9 @@ four IRQ paths run on an idle CPU, and the direct path also on a busy CPU.
 Run it
 ------
 
-``--out`` names the folder of the run. The run takes about five minutes:
-it builds each point, flashes the board and reads 100000 samples:
+``--out`` names the parent folder of the run: the run folder is
+``<out>/<experiment>/<UTC time>/``. The run takes about five minutes. It
+builds each point, flashes the board and reads 100000 samples:
 
 .. code-block:: console
 
@@ -124,5 +125,7 @@ Plot the distributions
 
 A run with ``--out`` outside a study is a try-out: no study reads it. The
 next tutorial runs the same experiment as part of its study.
+:doc:`../reference/cli/run-py` gives all options of ``run.py``, and
+:doc:`../reference/cli/scripts` those of ``plot.py`` and ``latbench.py``.
 
 Next: :doc:`first-campaign`.
