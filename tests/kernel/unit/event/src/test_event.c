@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_event Event unit (kernel/events.c)
+ * @defgroup kernel_unit_event kernel/events.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/events.c, written as unit tests.
  *
@@ -139,6 +139,278 @@
  *   post of "another thread", and returns the value that the post gave to
  *   arch_thread_return_value_set(), or -EAGAIN (timeout) if the post did
  *   not wake the thread.
+ *
+ * @par Structure of the tests
+ * Each public function of events.c has one group below this group. A system
+ * call has one group for z_impl_k_event_*() and z_vrfy_k_event_*(). The
+ * static functions and the data of events.c have the last group. Each test
+ * is in the group of the function under test. The static functions
+ * k_event_post_internal() and k_event_wait_internal() do the work of the
+ * public functions. Thus a test of a public function is also a test of
+ * one of these static functions, and the static group describes them. The
+ * rules below (locking, system call verification, object core) apply to
+ * more than one function. Their tests are in the group of the function
+ * that they call.
+ *
+ * @par Locking
+ * Each operation that reads or changes the set locks the spinlock of the
+ * event object and releases it exactly once, with its key, as its last
+ * call.
+ * The lock of the event object protects the set and the wait queue. It
+ * also protects the request in each waiting thread: a wait writes the
+ * request under the lock, and the post reads it during the walk under the
+ * same lock. The walk itself holds also the scheduler lock (inside
+ * z_sched_waitq_walk()).
+ *
+ * The tests of the locking assert the lock invariant: one lock, one
+ * release with the key of the lock, and the release is the last call.
+ * Before the lock, a wait only reads its context (arch_is_in_isr() for the
+ * assertion and k_sched_current_thread_query()).
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks the event
+ * object before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_event_*(). This
+ * function checks that the pointer is an event object of the kernel that
+ * the thread has access to. z_vrfy_k_event_init() uses
+ * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet.
+ * Thus a user thread cannot initialize an event object again while other
+ * threads use it. The other functions use K_SYSCALL_OBJ(): the object must
+ * be initialized. If the check fails, K_OOPS() stops the thread. Otherwise
+ * the function calls z_impl_k_event_*() with the same arguments and
+ * returns its result.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that
+ * the oops occurs before the implementation locks or changes the event.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_EVENT, events.c defines the object type of the
+ * event objects and links each event object to it.
+ * events.c defines the object type @c obj_type_event. K_OBJ_TYPE_DEFINE()
+ * puts one descriptor of this type into the iterable section
+ * @c k_obj_core_desc. At boot, the object core code initializes the type
+ * from the descriptor and links the event objects that K_EVENT_DEFINE()
+ * defines (the section @c k_event). k_event_init() links each event
+ * object that it initializes.
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_init k_event_init()
+ * @ingroup kernel_unit_event
+ * @brief k_event_init() makes the set empty and initializes the other parts of the event object.
+ *
+ * k_event_init() clears the set, sets the lock to its initial value, and
+ * initializes the wait queue, the kernel object and the object core. It
+ * does not lock the event: until k_event_init() returns, only the caller
+ * uses the event object. k_event_init() is not for an ISR. With
+ * @kconfig{CONFIG_ASSERT}, it asserts this.
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_init()
+ * - z_vrfy_k_event_init(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_post k_event_post()
+ * @ingroup kernel_unit_event
+ * @brief k_event_post() adds events to the set, wakes the waiting threads that the new set
+ * satisfies, and returns the old value of the posted bits.
+ *
+ * k_event_post() calls k_event_post_internal() with mask = events. The
+ * post, the wake of the waiting threads and the consumed events are
+ * described in @ref kernel_unit_event_static. Most tests of the wake and of
+ * the consumed events use k_event_post(), so they are in this group.
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_post()
+ * - z_vrfy_k_event_post(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_set k_event_set()
+ * @ingroup kernel_unit_event
+ * @brief k_event_set() replaces the set, wakes the waiting threads that the new set satisfies,
+ * and returns the old set.
+ *
+ * k_event_set() calls k_event_post_internal() with mask = all bits (see
+ * @ref kernel_unit_event_static).
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_set()
+ * - z_vrfy_k_event_set(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_set_masked k_event_set_masked()
+ * @ingroup kernel_unit_event
+ * @brief k_event_set_masked() changes the bits of the set in the mask of the caller, and returns
+ * the old value of these bits.
+ *
+ * k_event_set_masked() calls k_event_post_internal() with the events and
+ * the mask of the caller (see @ref kernel_unit_event_static).
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_set_masked()
+ * - z_vrfy_k_event_set_masked(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_clear k_event_clear()
+ * @ingroup kernel_unit_event
+ * @brief k_event_clear() removes events from the set, and returns the old value of these bits.
+ *
+ * k_event_clear() calls k_event_post_internal() with events = 0 and
+ * mask = the events to clear (see @ref kernel_unit_event_static). It also
+ * walks the wait queue.
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_clear()
+ * - z_vrfy_k_event_clear(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_wait k_event_wait()
+ * @ingroup kernel_unit_event
+ * @brief k_event_wait() waits for any one event of a request, and returns the matching events.
+ *
+ * k_event_wait() calls k_event_wait_internal() without K_EVENT_WAIT_ALL
+ * and without K_EVENT_OPTION_CLEAR. The argument @c reset gives
+ * K_EVENT_OPTION_RESET. The wait is described in
+ * @ref kernel_unit_event_static. Most tests of the wait use k_event_wait(),
+ * so they are in this group.
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_wait()
+ * - z_vrfy_k_event_wait(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_wait_all k_event_wait_all()
+ * @ingroup kernel_unit_event
+ * @brief k_event_wait_all() waits for all events of a request, and returns them.
+ *
+ * k_event_wait_all() calls k_event_wait_internal() with K_EVENT_WAIT_ALL
+ * and without K_EVENT_OPTION_CLEAR. The argument @c reset gives
+ * K_EVENT_OPTION_RESET (see @ref kernel_unit_event_static).
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_wait_all()
+ * - z_vrfy_k_event_wait_all(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_wait_safe k_event_wait_safe()
+ * @ingroup kernel_unit_event
+ * @brief k_event_wait_safe() waits for any one event of a request, and consumes the events that
+ * it receives.
+ *
+ * k_event_wait_safe() calls k_event_wait_internal() with
+ * K_EVENT_OPTION_CLEAR and without K_EVENT_WAIT_ALL. The argument @c reset
+ * gives K_EVENT_OPTION_RESET (see @ref kernel_unit_event_static).
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_wait_safe()
+ * - z_vrfy_k_event_wait_safe(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_k_event_wait_all_safe k_event_wait_all_safe()
+ * @ingroup kernel_unit_event
+ * @brief k_event_wait_all_safe() waits for all events of a request, and consumes them.
+ *
+ * k_event_wait_all_safe() calls k_event_wait_internal() with
+ * K_EVENT_WAIT_ALL and K_EVENT_OPTION_CLEAR. The argument @c reset gives
+ * K_EVENT_OPTION_RESET (see @ref kernel_unit_event_static).
+ *
+ * @par Functions in kernel/events.c
+ * - z_impl_k_event_wait_all_safe()
+ * - z_vrfy_k_event_wait_all_safe(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_event_static Static functions and data
+ * @ingroup kernel_unit_event
+ * @brief The static functions of events.c, and the data that events.c defines.
+ *
+ * @par Wait conditions
+ * are_wait_conditions_met() gives the events of a request that a set
+ * satisfies.
+ * The function has three inputs: the desired events of a request, the
+ * current set, and the wait condition (any or all). It returns the
+ * matching events (desired AND current), or 0 if the condition is not met.
+ * The result is the value that a wait returns. The post walk and the wait
+ * functions both use this function, so both apply the same condition.
+ *
+ * @par Post, set and clear
+ * The four post operations change the bits in a mask and return the old
+ * value of these bits.
+ * k_event_post(), k_event_set(), k_event_set_masked() and k_event_clear()
+ * are calls of k_event_post_internal() with different values of events
+ * and mask (see @ref kernel_unit_event). The new set is
+ * (old AND NOT mask) OR (events AND mask). Each operation then walks the
+ * wait queue, also if the set did not change. The tests of this rule have
+ * no waiting thread.
+ *
+ * @par Wake of waiting threads
+ * A post wakes each waiting thread whose condition the new set satisfies,
+ * and gives it the matching events.
+ * The walk callback event_walk_op() examines one waiting thread. If the
+ * new set satisfies the condition of the thread, the callback writes the
+ * matching events into @c thread->events and stops the timeout of the
+ * thread with z_try_abort_thread_timeout(). Then the thread gets the
+ * return value 0 (arch_thread_return_value_set()) and is made ready
+ * (z_sched_wake_thread_locked()). With @kconfig{CONFIG_WAITQ_SCALABLE},
+ * these two calls occur in event_post_walk_op() after the walk.
+ *
+ * The callback always returns 0, so the walk examines all waiting
+ * threads. A thread whose condition is not met stays in the wait queue
+ * without a change.
+ *
+ * @par Consumed events
+ * A thread with the option K_EVENT_OPTION_CLEAR consumes the events that
+ * it receives.
+ * k_event_wait_safe() and k_event_wait_all_safe() set the option
+ * K_EVENT_OPTION_CLEAR. If the set already satisfies the condition, the
+ * wait removes the matching events from the set before it releases the
+ * lock. If the thread waits, the post that wakes the thread collects the
+ * matching events in @c clear_events of the walk data, and removes them
+ * from the set after the walk. Thus all threads that one post wakes see
+ * the same set. A consumed event can wake more than one thread in the same
+ * post.
+ *
+ * @par Wait
+ * A wait returns the matching events at once, returns 0, or lets the
+ * current thread wait.
+ * k_event_wait_internal() first returns 0 for an empty request. Then it
+ * gets the current thread, locks the event, applies the option RESET and
+ * checks the condition. If the condition is met, it returns the matching
+ * events. If not, and the timeout is K_NO_WAIT, it returns 0. Else it
+ * writes the request (@c events, @c event_options) into the current thread
+ * and calls z_pend_curr(). After a wake with the result 0, it returns
+ * @c thread->events, which the post wrote. After a timeout, it returns 0.
+ *
+ * A wait in an ISR must use K_NO_WAIT. With @kconfig{CONFIG_ASSERT}, the
+ * wait asserts this. In an ISR, a wait with a timeout reaches z_pend_curr(),
+ * and the scheduler refuses it with a panic in every build. Without
+ * @kconfig{CONFIG_ASSERT}, events.c has no earlier check of its own.
+ *
+ * @par Functions in kernel/events.c
+ * - are_wait_conditions_met()
+ * - event_post_walk_op(), with @kconfig{CONFIG_WAITQ_SCALABLE}
+ * - event_walk_op()
+ * - k_event_post_internal()
+ * - k_event_wait_internal()
+ *
+ * The tests in this group call are_wait_conditions_met(), event_walk_op()
+ * or event_post_walk_op() directly, or they call more than one public
+ * function to show a rule of k_event_post_internal() or
+ * k_event_wait_internal().
+ *
+ * @par Data in kernel/events.c
+ * - @c obj_type_event and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_EVENT}. The tests of the descriptor are in this
+ *   group.
  */
 
 #include <string.h>
@@ -429,16 +701,10 @@ static void event_unit_before(void *fixture)
 
 ZTEST_SUITE(event_unit, NULL, NULL, event_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_event_init Initialization
- * @ingroup kernel_unit_event
- * @brief k_event_init() makes the set empty and initializes the other parts of the event object.
- *
- * k_event_init() clears the set, sets the lock to its initial value, and
- * initializes the wait queue, the kernel object and the object core. It
- * does not lock the event: until k_event_init() returns, only the caller
- * uses the event object. k_event_init() is not for an ISR. With
- * @kconfig{CONFIG_ASSERT}, it asserts this.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -449,7 +715,7 @@ ZTEST_SUITE(event_unit, NULL, NULL, event_unit_before, NULL, NULL);
  * - Action: z_impl_k_event_init().
  * - Expected: the set of events is 0.
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_clears_events)
@@ -472,7 +738,7 @@ ZTEST(event_unit, test_init_clears_events)
  * - Expected: all bytes of the lock are 0 (the value of an unlocked
  *   spinlock).
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_resets_lock)
@@ -494,7 +760,7 @@ ZTEST(event_unit, test_init_resets_lock)
  * - Action: z_impl_k_event_init().
  * - Expected: one call of z_waitq_init() with the wait queue of the event.
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_initializes_wait_queue)
@@ -516,7 +782,7 @@ ZTEST(event_unit, test_init_initializes_wait_queue)
  * - Action: z_impl_k_event_init().
  * - Expected: one call of k_object_init() with the event object.
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_initializes_kernel_object)
@@ -541,7 +807,7 @@ ZTEST(event_unit, test_init_initializes_kernel_object)
  *   k_obj_core_init_and_link() (with CONFIG_OBJ_CORE_EVENT). No other
  *   call, in particular no lock.
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_call_order)
@@ -567,7 +833,7 @@ ZTEST(event_unit, test_init_call_order)
  * - Expected: one failed assertion, before z_waitq_init(). In a thread
  *   (arch_is_in_isr() returns false), no failed assertion.
  *
- * @ingroup kernel_unit_event_init
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_init_asserts_not_in_isr)
@@ -588,16 +854,10 @@ ZTEST(event_unit, test_init_asserts_not_in_isr)
 }
 #endif /* CONFIG_ASSERT */
 
-/**
- * @defgroup kernel_unit_event_match Wait conditions
- * @ingroup kernel_unit_event
- * @brief are_wait_conditions_met() gives the events of a request that a set satisfies.
- *
- * The function has three inputs: the desired events of a request, the
- * current set, and the wait condition (any or all). It returns the
- * matching events (desired AND current), or 0 if the condition is not met.
- * The result is the value that a wait returns. The post walk and the wait
- * functions both use this function, so both apply the same condition.
+/*
+ * Tests: Wait conditions. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -608,7 +868,7 @@ ZTEST(event_unit, test_init_asserts_not_in_isr)
  * - Action: are_wait_conditions_met(A|B|C, A|C|D, K_EVENT_WAIT_ANY).
  * - Expected: A|C. D is in the set, but not desired.
  *
- * @ingroup kernel_unit_event_match
+ * @ingroup kernel_unit_event_static
  * @see are_wait_conditions_met()
  */
 ZTEST(event_unit, test_match_any_returns_matching_events)
@@ -625,7 +885,7 @@ ZTEST(event_unit, test_match_any_returns_matching_events)
  * - Action: are_wait_conditions_met(A|B, C|D, K_EVENT_WAIT_ANY).
  * - Expected: 0.
  *
- * @ingroup kernel_unit_event_match
+ * @ingroup kernel_unit_event_static
  * @see are_wait_conditions_met()
  */
 ZTEST(event_unit, test_match_any_without_overlap_is_zero)
@@ -641,7 +901,7 @@ ZTEST(event_unit, test_match_any_without_overlap_is_zero)
  * - Action: are_wait_conditions_met(A|D, A|C|D, K_EVENT_WAIT_ALL).
  * - Expected: A|D. C is in the set, but not desired.
  *
- * @ingroup kernel_unit_event_match
+ * @ingroup kernel_unit_event_static
  * @see are_wait_conditions_met()
  */
 ZTEST(event_unit, test_match_all_returns_desired_events)
@@ -658,7 +918,7 @@ ZTEST(event_unit, test_match_all_returns_desired_events)
  * - Action: are_wait_conditions_met(A|B|D, A|D, K_EVENT_WAIT_ALL).
  * - Expected: 0 (B is missing), not A|D.
  *
- * @ingroup kernel_unit_event_match
+ * @ingroup kernel_unit_event_static
  * @see are_wait_conditions_met()
  */
 ZTEST(event_unit, test_match_all_partial_is_zero)
@@ -676,7 +936,7 @@ ZTEST(event_unit, test_match_all_partial_is_zero)
  * - Expected: 0 in both cases. For "all", the match (0) is equal to the
  *   desired set, but the result is the match, so it is 0.
  *
- * @ingroup kernel_unit_event_match
+ * @ingroup kernel_unit_event_static
  * @see are_wait_conditions_met()
  */
 ZTEST(event_unit, test_match_empty_request_is_zero)
@@ -685,18 +945,10 @@ ZTEST(event_unit, test_match_empty_request_is_zero)
 	zassert_equal(are_wait_conditions_met(0U, UINT32_MAX, K_EVENT_WAIT_ALL), 0U);
 }
 
-/**
- * @defgroup kernel_unit_event_post Post, set and clear
- * @ingroup kernel_unit_event
- * @brief The four post operations change the bits in a mask and return the old value of these
- * bits.
- *
- * k_event_post(), k_event_set(), k_event_set_masked() and k_event_clear()
- * are calls of k_event_post_internal() with different values of events
- * and mask (see @ref kernel_unit_event). The new set is
- * (old AND NOT mask) OR (events AND mask). Each operation then walks the
- * wait queue, also if the set did not change. The tests in this group have
- * no waiting thread.
+/*
+ * Tests: Post, set and clear. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -708,7 +960,7 @@ ZTEST(event_unit, test_match_empty_request_is_zero)
  * - Action: z_impl_k_event_post(B|C).
  * - Expected: return value C (of B|C, only C was set). The set is A|B|C.
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_k_event_post
  * @see z_impl_k_event_post()
  */
 ZTEST(event_unit, test_post_adds_events)
@@ -729,7 +981,7 @@ ZTEST(event_unit, test_post_adds_events)
  * - Action: z_impl_k_event_set(B|D).
  * - Expected: return value A|C. The set is B|D.
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_k_event_set
  * @see z_impl_k_event_set()
  */
 ZTEST(event_unit, test_set_replaces_events)
@@ -753,7 +1005,7 @@ ZTEST(event_unit, test_set_replaces_events)
  *   is set (both in the mask). C stays (not in the mask). D is not set (not
  *   in the mask). The set is B|C.
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_k_event_set_masked
  * @see z_impl_k_event_set_masked()
  */
 ZTEST(event_unit, test_set_masked_changes_only_masked_events)
@@ -775,7 +1027,7 @@ ZTEST(event_unit, test_set_masked_changes_only_masked_events)
  * - Action: z_impl_k_event_clear(B|C).
  * - Expected: return value C. The set is A|D.
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_k_event_clear
  * @see z_impl_k_event_clear()
  */
 ZTEST(event_unit, test_clear_removes_events)
@@ -802,7 +1054,7 @@ ZTEST(event_unit, test_clear_removes_events)
  *   is event_post_walk_op() with CONFIG_WAITQ_SCALABLE, else NULL. The set
  *   is A.
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_static
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_post_always_walks_wait_queue)
@@ -839,7 +1091,7 @@ ZTEST(event_unit, test_post_always_walks_wait_queue)
  * - Expected: the set is D, then all bits (return value D), then 0
  *   (return value all bits).
  *
- * @ingroup kernel_unit_event_post
+ * @ingroup kernel_unit_event_k_event_post
  * @see z_impl_k_event_post()
  * @see z_impl_k_event_set()
  * @see z_impl_k_event_clear()
@@ -858,23 +1110,10 @@ ZTEST(event_unit, test_post_uses_all_32_bits)
 	zassert_equal(event.events, 0U);
 }
 
-/**
- * @defgroup kernel_unit_event_wake Wake of waiting threads
- * @ingroup kernel_unit_event
- * @brief A post wakes each waiting thread whose condition the new set satisfies, and gives it the
- * matching events.
- *
- * The walk callback event_walk_op() examines one waiting thread. If the
- * new set satisfies the condition of the thread, the callback writes the
- * matching events into @c thread->events and stops the timeout of the
- * thread with z_try_abort_thread_timeout(). Then the thread gets the
- * return value 0 (arch_thread_return_value_set()) and is made ready
- * (z_sched_wake_thread_locked()). With @kconfig{CONFIG_WAITQ_SCALABLE},
- * these two calls occur in event_post_walk_op() after the walk.
- *
- * The callback always returns 0, so the walk examines all waiting
- * threads. A thread whose condition is not met stays in the wait queue
- * without a change.
+/*
+ * Tests: Wake of waiting threads. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -888,7 +1127,8 @@ ZTEST(event_unit, test_post_uses_all_32_bits)
  *   z_try_abort_thread_timeout(), arch_thread_return_value_set() with 0,
  *   z_sched_wake_thread_locked(). The set is B|C.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  * @see event_walk_op()
  */
@@ -923,7 +1163,8 @@ ZTEST(event_unit, test_wake_any_gives_matching_events)
  *   arch_thread_return_value_set() or z_sched_wake_thread_locked().
  *   t1->events is A|B and t1->event_options is unchanged. The set is C.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_not_for_unmatched_thread)
@@ -954,7 +1195,8 @@ ZTEST(event_unit, test_wake_not_for_unmatched_thread)
  *   A|B. After the second post (the set is A|B|C), t1 is woken and
  *   t1->events is A|B, without C.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_all_needs_all_events)
@@ -986,7 +1228,8 @@ ZTEST(event_unit, test_wake_all_needs_all_events)
  * - Expected: t1 is woken with A, t3 is woken with D. t2 is not woken and
  *   stays in the wait queue. One walk and one z_reschedule().
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_set
+ * @see z_impl_k_event_set()
  * @see k_event_post_internal()
  * @see event_walk_op()
  */
@@ -1023,7 +1266,7 @@ ZTEST(event_unit, test_wake_all_satisfied_threads)
  * - Action: event_walk_op() for t1 (match) and for t2 (no match).
  * - Expected: both calls return 0.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_static
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_walk_never_stops)
@@ -1047,7 +1290,8 @@ ZTEST(event_unit, test_wake_walk_never_stops)
  * - Action: z_impl_k_event_post(A).
  * - Expected: t1 is woken with the return value 0 and the events A.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_ignores_timeout_abort_result)
@@ -1075,7 +1319,7 @@ ZTEST(event_unit, test_wake_ignores_timeout_abort_result)
  * - Action: event_walk_op() for t1 and t2.
  * - Expected: t1 matches with A ("any"). t2 does not match ("all").
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_static
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_condition_from_option_bit)
@@ -1110,7 +1354,8 @@ ZTEST(event_unit, test_wake_condition_from_option_bit)
  *   z_sched_wake_thread_locked(). All between the walk and
  *   z_reschedule().
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_simple_in_wait_queue_order)
@@ -1150,7 +1395,8 @@ ZTEST(event_unit, test_wake_simple_in_wait_queue_order)
  *   z_sched_wake_thread_locked() for t3, then t2, then t1 (in the
  *   post-walk callback). Then z_reschedule().
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  * @see event_post_walk_op()
  */
@@ -1190,7 +1436,7 @@ ZTEST(event_unit, test_wake_scalable_in_reverse_order)
  *   t1->next_event_link NULL). No call of arch_thread_return_value_set()
  *   or z_sched_wake_thread_locked().
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_static
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_wake_scalable_walk_builds_list)
@@ -1225,7 +1471,7 @@ ZTEST(event_unit, test_wake_scalable_walk_builds_list)
  *   z_sched_wake_thread_locked(t2), then the same for t1. The empty list
  *   gives no call.
  *
- * @ingroup kernel_unit_event_wake
+ * @ingroup kernel_unit_event_static
  * @see event_post_walk_op()
  */
 ZTEST(event_unit, test_wake_scalable_post_walk_wakes_list)
@@ -1254,19 +1500,10 @@ ZTEST(event_unit, test_wake_scalable_post_walk_wakes_list)
 }
 #endif /* CONFIG_WAITQ_SCALABLE */
 
-/**
- * @defgroup kernel_unit_event_consume Consumed events
- * @ingroup kernel_unit_event
- * @brief A thread with the option K_EVENT_OPTION_CLEAR consumes the events that it receives.
- *
- * k_event_wait_safe() and k_event_wait_all_safe() set the option
- * K_EVENT_OPTION_CLEAR. If the set already satisfies the condition, the
- * wait removes the matching events from the set before it releases the
- * lock. If the thread waits, the post that wakes the thread collects the
- * matching events in @c clear_events of the walk data, and removes them
- * from the set after the walk. Thus all threads that one post wakes see
- * the same set. A consumed event can wake more than one thread in the same
- * post.
+/*
+ * Tests: Consumed events. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -1279,7 +1516,8 @@ ZTEST(event_unit, test_wake_scalable_post_walk_wakes_list)
  * - Expected: t1 is woken with A. Return value 0 (no posted event was set
  *   before). The set is C: A is consumed, C stays.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  * @see event_walk_op()
  */
@@ -1305,7 +1543,8 @@ ZTEST(event_unit, test_consume_by_woken_thread)
  * - Action: z_impl_k_event_post(A).
  * - Expected: t1 is woken with A. The set is A.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see event_walk_op()
  */
 ZTEST(event_unit, test_consume_not_without_clear_option)
@@ -1332,7 +1571,8 @@ ZTEST(event_unit, test_consume_not_without_clear_option)
  * - Expected: t1 and t2 are woken with A. t3 is woken with A|B, also if
  *   t1 consumed A before t3 in the walk. The set is B.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_consume_after_walk_for_all_threads)
@@ -1366,7 +1606,8 @@ ZTEST(event_unit, test_consume_after_walk_for_all_threads)
  *   callback reads the new set A|B|C from the walk data. After the post,
  *   the set is B|C.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_consume_set_written_after_walk)
@@ -1393,7 +1634,7 @@ ZTEST(event_unit, test_consume_set_written_after_walk)
  * - Action: z_impl_k_event_wait_safe(A|B, no reset, K_NO_WAIT).
  * - Expected: return value A. The set is C.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_wait_safe
  * @see z_impl_k_event_wait_safe()
  */
 ZTEST(event_unit, test_consume_by_wait_safe_without_wait)
@@ -1415,7 +1656,7 @@ ZTEST(event_unit, test_consume_by_wait_safe_without_wait)
  * - Action: z_impl_k_event_wait_all_safe(A|B, no reset, K_NO_WAIT).
  * - Expected: return value A|B. The set is C.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_wait_all_safe
  * @see z_impl_k_event_wait_all_safe()
  */
 ZTEST(event_unit, test_consume_by_wait_all_safe_without_wait)
@@ -1438,7 +1679,7 @@ ZTEST(event_unit, test_consume_by_wait_all_safe_without_wait)
  * - Expected: return value 0. The set is A: the partial match is not
  *   consumed.
  *
- * @ingroup kernel_unit_event_consume
+ * @ingroup kernel_unit_event_k_event_wait_all_safe
  * @see z_impl_k_event_wait_all_safe()
  */
 ZTEST(event_unit, test_consume_not_on_failed_wait)
@@ -1451,23 +1692,10 @@ ZTEST(event_unit, test_consume_not_on_failed_wait)
 	zassert_equal(event.events, EV_A);
 }
 
-/**
- * @defgroup kernel_unit_event_wait Wait
- * @ingroup kernel_unit_event
- * @brief A wait returns the matching events at once, returns 0, or lets the current thread wait.
- *
- * k_event_wait_internal() first returns 0 for an empty request. Then it
- * gets the current thread, locks the event, applies the option RESET and
- * checks the condition. If the condition is met, it returns the matching
- * events. If not, and the timeout is K_NO_WAIT, it returns 0. Else it
- * writes the request (@c events, @c event_options) into the current thread
- * and calls z_pend_curr(). After a wake with the result 0, it returns
- * @c thread->events, which the post wrote. After a timeout, it returns 0.
- *
- * A wait in an ISR must use K_NO_WAIT. With @kconfig{CONFIG_ASSERT}, the
- * wait asserts this. In an ISR, a wait with a timeout reaches z_pend_curr(),
- * and the scheduler refuses it with a panic in every build. Without
- * @kconfig{CONFIG_ASSERT}, events.c has no earlier check of its own.
+/*
+ * Tests: Wait. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -1482,7 +1710,7 @@ ZTEST(event_unit, test_consume_not_on_failed_wait)
  *   CONFIG_ASSERT): no current thread query, no lock, no wait. The set is
  *   still A.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_static
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_empty_request_returns_zero)
@@ -1513,7 +1741,7 @@ ZTEST(event_unit, test_wait_empty_request_returns_zero)
  * - Expected: return value A. No call of z_pend_curr(). The set is A|C
  *   (not consumed).
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
  * @see z_impl_k_event_wait()
  */
 ZTEST(event_unit, test_wait_any_met_returns_at_once)
@@ -1537,7 +1765,7 @@ ZTEST(event_unit, test_wait_any_met_returns_at_once)
  * - Expected: return value A|B. No call of z_pend_curr(). The set is
  *   A|B|C.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait_all
  * @see z_impl_k_event_wait_all()
  */
 ZTEST(event_unit, test_wait_all_met_returns_at_once)
@@ -1564,7 +1792,7 @@ ZTEST(event_unit, test_wait_all_met_returns_at_once)
  *   match A. No call of z_pend_curr(). The fields of the current thread
  *   are unchanged. The set is A.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_static
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_no_wait_returns_zero)
@@ -1596,7 +1824,8 @@ ZTEST(event_unit, test_wait_no_wait_returns_zero)
  *   and TEST_TIMEOUT. At this call, current_thread.events is A|B and
  *   current_thread.event_options is K_EVENT_WAIT_ALL.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait_all
+ * @see z_impl_k_event_wait_all()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_pends_with_request)
@@ -1625,7 +1854,8 @@ ZTEST(event_unit, test_wait_pends_with_request)
  * - Action: z_impl_k_event_wait(A|B|C, no reset, K_FOREVER).
  * - Expected: return value A|C.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_returns_events_from_waker)
@@ -1649,7 +1879,8 @@ ZTEST(event_unit, test_wait_returns_events_from_waker)
  * - Action: z_impl_k_event_wait(A, no reset, TEST_TIMEOUT).
  * - Expected: return value 0.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_timeout_returns_zero)
@@ -1671,7 +1902,8 @@ ZTEST(event_unit, test_wait_timeout_returns_zero)
  * - Expected: return value 0, although A was in the set. The set is 0,
  *   also without C, which the wait did not request.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_reset_clears_set_before_check)
@@ -1697,7 +1929,7 @@ ZTEST(event_unit, test_wait_reset_clears_set_before_check)
  *   WAIT_ALL|RESET. k_event_wait_safe(): CLEAR and CLEAR|RESET.
  *   k_event_wait_all_safe(): CLEAR|WAIT_ALL and CLEAR|RESET|WAIT_ALL.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
  * @see z_impl_k_event_wait()
  * @see z_impl_k_event_wait_all()
  * @see z_impl_k_event_wait_safe()
@@ -1743,7 +1975,8 @@ ZTEST(event_unit, test_wait_functions_set_options)
  * - Expected: one call of k_sched_current_thread_query(), before
  *   arch_irq_lock(). The request is in the thread that the query returned.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_queries_current_thread_before_lock)
@@ -1770,7 +2003,7 @@ ZTEST(event_unit, test_wait_queries_current_thread_before_lock)
  *   with K_NO_WAIT).
  * - Expected: return value A. No call of z_pend_curr(). The set is A|C.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
  * @see z_impl_k_event_wait()
  */
 ZTEST(event_unit, test_wait_event_test_reads_set)
@@ -1795,7 +2028,8 @@ ZTEST(event_unit, test_wait_event_test_reads_set)
  * - Expected: the post wakes the current thread with the return value 0.
  *   The wait returns A|B. The set is A|B|C|D.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  * @see k_event_post_internal()
  */
@@ -1821,7 +2055,7 @@ ZTEST(event_unit, test_wait_handover_from_post)
  * - Action: z_impl_k_event_wait_all_safe(A|C, no reset, K_FOREVER).
  * - Expected: return value A|C. The set is 0.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait_all_safe
  * @see z_impl_k_event_wait_all_safe()
  * @see k_event_post_internal()
  */
@@ -1849,7 +2083,8 @@ ZTEST(event_unit, test_wait_handover_consumes_for_safe_wait)
  * - Expected: return value 0. The current thread is not woken. The set
  *   is A.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait_all
+ * @see z_impl_k_event_wait_all()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_handover_not_for_unmet_condition)
@@ -1879,7 +2114,8 @@ ZTEST(event_unit, test_wait_handover_not_for_unmet_condition)
  * z_pend_curr(), and the scheduler refuses it with a second failed
  * assertion and a panic (see test_wait_isr_with_timeout_refused_by_scheduler).
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_isr_with_timeout_asserts)
@@ -1909,7 +2145,8 @@ ZTEST(event_unit, test_wait_isr_with_timeout_asserts)
  *   TEST_TIMEOUT) in a thread.
  * - Expected: no failed assertion. The ISR wait returns A.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_isr_no_wait_allowed)
@@ -1948,7 +2185,8 @@ ZTEST(event_unit, test_wait_isr_no_wait_allowed)
  *   the interrupted thread. After the panic, the fake returns
  *   KERNEL_UNIT_PEND_REFUSED (a timeout), and the wait returns 0.
  *
- * @ingroup kernel_unit_event_wait
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_wait_isr_with_timeout_refused_by_scheduler)
@@ -1975,22 +2213,10 @@ ZTEST(event_unit, test_wait_isr_with_timeout_refused_by_scheduler)
 #endif
 }
 
-/**
- * @defgroup kernel_unit_event_locking Locking
- * @ingroup kernel_unit_event
- * @brief Each operation that reads or changes the set locks the spinlock of the event object and
- * releases it exactly once, with its key, as its last call.
- *
- * The lock of the event object protects the set and the wait queue. It
- * also protects the request in each waiting thread: a wait writes the
- * request under the lock, and the post reads it during the walk under the
- * same lock. The walk itself holds also the scheduler lock (inside
- * z_sched_waitq_walk()).
- *
- * The tests of this group assert the lock invariant: one lock, one
- * release with the key of the lock, and the release is the last call.
- * Before the lock, a wait only reads its context (arch_is_in_isr() for the
- * assertion and k_sched_current_thread_query()).
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /**
@@ -2002,7 +2228,8 @@ ZTEST(event_unit, test_wait_isr_with_timeout_refused_by_scheduler)
  * - Expected calls: arch_irq_lock(), z_sched_waitq_walk(), z_reschedule()
  *   with the lock of the event and the key. The lock invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_lock_post_without_waiters_reschedules)
@@ -2028,7 +2255,8 @@ ZTEST(event_unit, test_lock_post_without_waiters_reschedules)
  *   Calls: arch_irq_lock(), z_sched_waitq_walk(), the wake calls,
  *   z_reschedule(). The lock invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_lock_post_wakes_under_lock)
@@ -2059,7 +2287,7 @@ ZTEST(event_unit, test_lock_post_wakes_under_lock)
  * - Expected for each: calls arch_irq_lock(), z_sched_waitq_walk(),
  *   z_reschedule(). The lock invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_set
  * @see z_impl_k_event_set()
  * @see z_impl_k_event_set_masked()
  * @see z_impl_k_event_clear()
@@ -2105,7 +2333,8 @@ ZTEST(event_unit, test_lock_set_and_clear_reschedule)
  *   k_sched_current_thread_query(), arch_irq_lock(), arch_irq_unlock()
  *   with the key. The lock invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_wait_safe
+ * @see z_impl_k_event_wait_safe()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_lock_wait_met_unlocks)
@@ -2132,7 +2361,8 @@ ZTEST(event_unit, test_lock_wait_met_unlocks)
  *   k_sched_current_thread_query(), arch_irq_lock(), arch_irq_unlock()
  *   with the key. The lock invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_lock_wait_no_wait_unlocks)
@@ -2161,7 +2391,8 @@ ZTEST(event_unit, test_lock_wait_no_wait_unlocks)
  *   the lock of the event and the key. No arch_irq_unlock(). The lock
  *   invariant holds.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_wait_all
+ * @see z_impl_k_event_wait_all()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_lock_wait_pend_releases)
@@ -2187,7 +2418,8 @@ ZTEST(event_unit, test_lock_wait_pend_releases)
  * - Action: z_impl_k_event_set(B).
  * - Expected: at the lock, the set is A. At the release, the set is B.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_set
+ * @see z_impl_k_event_set()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_lock_post_changes_set_under_lock)
@@ -2214,7 +2446,7 @@ ZTEST(event_unit, test_lock_post_changes_set_under_lock)
  * - Expected: first wait: at the lock A|B, at the release B. Second wait:
  *   at the lock B, at the release 0.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_static
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_lock_wait_changes_set_under_lock)
@@ -2244,7 +2476,8 @@ ZTEST(event_unit, test_lock_wait_changes_set_under_lock)
  * - Expected: the two calls of z_reschedule() have the lock of the
  *   respective event object.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_post
+ * @see z_impl_k_event_post()
  * @see k_event_post_internal()
  */
 ZTEST(event_unit, test_lock_per_event_object)
@@ -2274,7 +2507,8 @@ ZTEST(event_unit, test_lock_per_event_object)
  * - Expected: one call of z_spin_lock_valid() and one call of
  *   z_spin_unlock_valid(), each with the lock of the event object.
  *
- * @ingroup kernel_unit_event_locking
+ * @ingroup kernel_unit_event_k_event_wait
+ * @see z_impl_k_event_wait()
  * @see k_event_wait_internal()
  */
 ZTEST(event_unit, test_lock_validation_sees_event_lock)
@@ -2293,25 +2527,10 @@ ZTEST(event_unit, test_lock_validation_sees_event_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_event_syscall System call verification
- * @ingroup kernel_unit_event
- * @brief With CONFIG_USERSPACE, each verification function checks the event object before it
- * calls the implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_event_*(). This
- * function checks that the pointer is an event object of the kernel that
- * the thread has access to. z_vrfy_k_event_init() uses
- * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet.
- * Thus a user thread cannot initialize an event object again while other
- * threads use it. The other functions use K_SYSCALL_OBJ(): the object must
- * be initialized. If the check fails, K_OOPS() stops the thread. Otherwise
- * the function calls z_impl_k_event_*() with the same arguments and
- * returns its result.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that
- * the oops occurs before the implementation locks or changes the event.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 /* Assert one object check of event with the type K_OBJ_EVENT and init state, and no oops. */
@@ -2338,7 +2557,7 @@ static void assert_object_check(struct k_event *event, enum _obj_init_check init
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_FALSE,
  *   before z_waitq_init(). No oops. The set is 0.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_vrfy_k_event_init()
  */
 ZTEST(event_unit, test_syscall_init_checks_new_object)
@@ -2365,7 +2584,7 @@ ZTEST(event_unit, test_syscall_init_checks_new_object)
  * - Action: z_vrfy_k_event_init().
  * - Expected: one oops, before z_waitq_init().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_vrfy_k_event_init()
  */
 ZTEST(event_unit, test_syscall_init_oops_on_bad_object)
@@ -2389,7 +2608,7 @@ ZTEST(event_unit, test_syscall_init_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A. The set is A|B.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_post
  * @see z_vrfy_k_event_post()
  */
 ZTEST(event_unit, test_syscall_post_checks_initialized_object)
@@ -2415,7 +2634,7 @@ ZTEST(event_unit, test_syscall_post_checks_initialized_object)
  * - Action: z_vrfy_k_event_post(A).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_post
  * @see z_vrfy_k_event_post()
  */
 ZTEST(event_unit, test_syscall_post_oops_on_bad_object)
@@ -2440,7 +2659,7 @@ ZTEST(event_unit, test_syscall_post_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A. The set is B.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_set
  * @see z_vrfy_k_event_set()
  */
 ZTEST(event_unit, test_syscall_set_checks_initialized_object)
@@ -2466,7 +2685,7 @@ ZTEST(event_unit, test_syscall_set_checks_initialized_object)
  * - Action: z_vrfy_k_event_set(A).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_set
  * @see z_vrfy_k_event_set()
  */
 ZTEST(event_unit, test_syscall_set_oops_on_bad_object)
@@ -2491,7 +2710,7 @@ ZTEST(event_unit, test_syscall_set_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A. The set is B|C.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_set_masked
  * @see z_vrfy_k_event_set_masked()
  */
 ZTEST(event_unit, test_syscall_set_masked_checks_initialized_object)
@@ -2517,7 +2736,7 @@ ZTEST(event_unit, test_syscall_set_masked_checks_initialized_object)
  * - Action: z_vrfy_k_event_set_masked(A, A).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_set_masked
  * @see z_vrfy_k_event_set_masked()
  */
 ZTEST(event_unit, test_syscall_set_masked_oops_on_bad_object)
@@ -2542,7 +2761,7 @@ ZTEST(event_unit, test_syscall_set_masked_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A. The set is B.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_clear
  * @see z_vrfy_k_event_clear()
  */
 ZTEST(event_unit, test_syscall_clear_checks_initialized_object)
@@ -2568,7 +2787,7 @@ ZTEST(event_unit, test_syscall_clear_checks_initialized_object)
  * - Action: z_vrfy_k_event_clear(A).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_clear
  * @see z_vrfy_k_event_clear()
  */
 ZTEST(event_unit, test_syscall_clear_oops_on_bad_object)
@@ -2595,7 +2814,7 @@ ZTEST(event_unit, test_syscall_clear_oops_on_bad_object)
  *   the lock. No oops. z_pend_curr() with TEST_TIMEOUT, and the options
  *   RESET in the thread. Return value 0. The set is 0 (reset).
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait
  * @see z_vrfy_k_event_wait()
  */
 ZTEST(event_unit, test_syscall_wait_checks_initialized_object)
@@ -2625,7 +2844,7 @@ ZTEST(event_unit, test_syscall_wait_checks_initialized_object)
  * - Action: z_vrfy_k_event_wait(A, no reset, K_NO_WAIT).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait
  * @see z_vrfy_k_event_wait()
  */
 ZTEST(event_unit, test_syscall_wait_oops_on_bad_object)
@@ -2650,7 +2869,7 @@ ZTEST(event_unit, test_syscall_wait_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A|B.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_all
  * @see z_vrfy_k_event_wait_all()
  */
 ZTEST(event_unit, test_syscall_wait_all_checks_initialized_object)
@@ -2676,7 +2895,7 @@ ZTEST(event_unit, test_syscall_wait_all_checks_initialized_object)
  * - Action: z_vrfy_k_event_wait_all(A, no reset, K_NO_WAIT).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_all
  * @see z_vrfy_k_event_wait_all()
  */
 ZTEST(event_unit, test_syscall_wait_all_oops_on_bad_object)
@@ -2701,7 +2920,7 @@ ZTEST(event_unit, test_syscall_wait_all_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_EVENT and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value A. The set is C (A consumed).
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_safe
  * @see z_vrfy_k_event_wait_safe()
  */
 ZTEST(event_unit, test_syscall_wait_safe_checks_initialized_object)
@@ -2727,7 +2946,7 @@ ZTEST(event_unit, test_syscall_wait_safe_checks_initialized_object)
  * - Action: z_vrfy_k_event_wait_safe(A, no reset, K_NO_WAIT).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_safe
  * @see z_vrfy_k_event_wait_safe()
  */
 ZTEST(event_unit, test_syscall_wait_safe_oops_on_bad_object)
@@ -2753,7 +2972,7 @@ ZTEST(event_unit, test_syscall_wait_safe_oops_on_bad_object)
  *   the lock. No oops. Return value 0 (the reset cleared the set). The set
  *   is 0.
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_all_safe
  * @see z_vrfy_k_event_wait_all_safe()
  */
 ZTEST(event_unit, test_syscall_wait_all_safe_checks_initialized_object)
@@ -2779,7 +2998,7 @@ ZTEST(event_unit, test_syscall_wait_all_safe_checks_initialized_object)
  * - Action: z_vrfy_k_event_wait_all_safe(A, no reset, K_NO_WAIT).
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_event_syscall
+ * @ingroup kernel_unit_event_k_event_wait_all_safe
  * @see z_vrfy_k_event_wait_all_safe()
  */
 ZTEST(event_unit, test_syscall_wait_all_safe_oops_on_bad_object)
@@ -2796,18 +3015,10 @@ ZTEST(event_unit, test_syscall_wait_all_safe_oops_on_bad_object)
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_EVENT
-/**
- * @defgroup kernel_unit_event_obj_core Object core
- * @ingroup kernel_unit_event
- * @brief With CONFIG_OBJ_CORE_EVENT, events.c defines the object type of the event objects and
- * links each event object to it.
- *
- * events.c defines the object type @c obj_type_event. K_OBJ_TYPE_DEFINE()
- * puts one descriptor of this type into the iterable section
- * @c k_obj_core_desc. At boot, the object core code initializes the type
- * from the descriptor and links the event objects that K_EVENT_DEFINE()
- * defines (the section @c k_event). k_event_init() links each event
- * object that it initializes.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_event, at the top of this file.
  */
 
 #ifdef CONFIG_WAITQ_SCALABLE
@@ -2855,7 +3066,7 @@ static const struct k_obj_core_desc *obj_core_desc(struct k_obj_type *type, int 
  * - Expected: one call of k_obj_core_init_and_link() with the object core
  *   of the event object and @c obj_type_event, after z_waitq_init().
  *
- * @ingroup kernel_unit_event_obj_core
+ * @ingroup kernel_unit_event_k_event_init
  * @see z_impl_k_event_init()
  */
 ZTEST(event_unit, test_obj_core_init_links_event)
@@ -2882,7 +3093,7 @@ ZTEST(event_unit, test_obj_core_init_links_event)
  *   offset is the offset of @c obj_core. Its object range is the section
  *   @c k_event.
  *
- * @ingroup kernel_unit_event_obj_core
+ * @ingroup kernel_unit_event_static
  */
 ZTEST(event_unit, test_obj_core_type_descriptor)
 {
@@ -2909,7 +3120,7 @@ ZTEST(event_unit, test_obj_core_type_descriptor)
  * - Expected: the event object is in the range, at a multiple of the
  *   object size from the start.
  *
- * @ingroup kernel_unit_event_obj_core
+ * @ingroup kernel_unit_event_static
  */
 ZTEST(event_unit, test_obj_core_descriptor_covers_static_events)
 {

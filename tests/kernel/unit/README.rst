@@ -911,7 +911,7 @@ with the lock spies or the lock model, because all three replace the
 ``custom_fake`` of ``z_reschedule()``.
 
 An application that uses the fake links the groups ``init`` and
-``sched_ref``. Today ``sem`` uses it (group ``kernel_unit_sem_ref``). The
+``sched_ref``. Today ``sem`` uses it (the tests ``test_ref_*``). The
 application ``sched_ref`` tests the fake against the example values of
 ``mc/SchedulerTest.tla`` and against the misuses of ``mc/MCScheduler.tla``.
 
@@ -960,11 +960,38 @@ Doxygen comments
 ================
 
 The Doxygen group ``kernel_unit_tests`` (in ``kernel_unit.h``) is the root
-of the kernel unit tests. Each application defines one group for its unit
-with ``@ingroup kernel_unit_tests``. The introduction of this group
-describes the design of the unit as a whole. It covers the object, the
-locks, the interfaces below the unit and the Kconfig options. Each design topic (for
-example one function, or the locking) has a subgroup.
+of the kernel unit tests. The groups have the structure of the kernel
+sources. There is only one grouping: each test is in exactly one group.
+
+- File group: each application defines one group for its kernel source
+  file, ``kernel_unit_<unit>``, with ``@ingroup kernel_unit_tests``. Its
+  title is the file, for example ``kernel/sem.c``. The introduction of this
+  group describes the design of the file as a whole. It covers the object,
+  the locks, the interfaces below the file and the Kconfig options. A design
+  rule that applies to more than one function (for example the locking, or
+  the system call verification) is a ``@par`` section of this introduction.
+- Function group: each public function of the file has one group below
+  the file group, ``kernel_unit_<unit>_<function>``. Its title is the
+  function, for example ``k_sem_give()``. A public function is a function
+  with external linkage in the source file. A system call has one group for
+  its ``z_impl_`` and its ``z_vrfy_`` function, also if the ``z_vrfy_``
+  function is static inline. The group has the name of the system call, for
+  example ``kernel_unit_sem_k_sem_give`` for ``z_impl_k_sem_give()`` and
+  ``z_vrfy_k_sem_give()``. The group describes the design of the function.
+  Its section "Functions in kernel/<file>.c" names the functions and their
+  Kconfig conditions. A function also has a group if no test is in that
+  group. Its brief description then starts with "No unit test covers" or,
+  if tests of other groups call the function, with "No test of its own".
+  The text names these tests.
+- Static group: the group ``kernel_unit_<unit>_static`` ("Static functions
+  and data") has the tests of the static functions of the file, for
+  example ``sem_handle_poll_events()``. It also has the tests of the data
+  that the file defines, for example the object type descriptor of
+  ``K_OBJ_TYPE_DEFINE()``. It is the last group of the file group.
+
+Define the function groups and the static group at the top of the test
+source, after the file group, in the order of the kernel source file. With
+``SORT_GROUP_NAMES = NO``, Doxygen keeps this order.
 
 Each test has a Doxygen comment:
 
@@ -972,10 +999,32 @@ Each test has a Doxygen comment:
   not increment the count above the limit."
 - ``@details``: a short list with the setup, the action and the expected
   result.
-- ``@ingroup``: the subgroup of the design topic.
-- ``@see``: the function or functions of the unit under test.
+- ``@ingroup``: the group of the function under test. This is the function
+  that the action of the test calls. If the action calls more than one
+  function, use the group of the function whose rule the test states. If
+  the action reaches a static function through one public function, use
+  the group of the public function. If the test calls a static function
+  directly, or reaches it through more than one public function, use the
+  static group.
+- ``@see``: the function under test first, then the other functions of the
+  unit that the test calls.
 
 The tests have no ``@testid`` and no ``@verifies`` yet.
+
+The application ``sched_ref`` is not a unit of a kernel source file. Its
+group ``kernel_unit_sched_ref_tests`` keeps its subgroups by design topic.
+
+The Doxygen document ``dox-kernel-unit-testspec`` ("Kernel Unit Test
+Specification", ``safety/doc/dox/kernel-unit-testspec``) shows these groups.
+Its input is the test sources of the units and ``kernel_unit.h``. If you add
+a test application, add its test sources to the ``INPUT`` of its
+``Doxyfile.in``. To build the document, configure the documentation of the
+safety repository and build the target ``dox-kernel-unit-testspec``:
+
+.. code-block:: console
+
+   cmake -S safety/doc -B build-doc
+   cmake --build build-doc --target dox-kernel-unit-testspec
 
 Tests for some configurations
 =============================
@@ -1016,8 +1065,13 @@ Add a test application
    ``common/kernel_unit.ld`` (see `Linker sections`_).
 #. Add one scenario to ``testcase.yaml`` for each configuration option
    that the unit examines with ``#ifdef``.
-#. Add a Doxygen group for the unit with ``@ingroup kernel_unit_tests``
-   (see `Doxygen comments`_).
+#. Add the Doxygen groups of the unit (see `Doxygen comments`_): the file
+   group with ``@ingroup kernel_unit_tests``, one group for each public
+   function of the kernel source file, in the order of the file, and the
+   static group. Put each test in the group of its function under test.
+#. Add the test sources to the ``INPUT`` of
+   ``safety/doc/dox/kernel-unit-testspec/Doxyfile.in``. Build the target
+   ``dox-kernel-unit-testspec`` and make sure that it gives no warning.
 #. Add the application to the table in `Test applications`_ and its
    options to `Configurations`_.
 #. Make the expected sets of the test inventory (see `Regenerate the

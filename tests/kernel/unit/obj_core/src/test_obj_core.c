@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_obj_core Object core unit (kernel/obj_core.c)
+ * @defgroup kernel_unit_obj_core kernel/obj_core.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/obj_core.c, written as unit tests.
  *
@@ -70,8 +70,8 @@
  * is already in a list. Seven kernel init functions call
  * k_obj_core_init_and_link() on each call, for example k_sem_init(). Thus a
  * second init of a linked object appends its node a second time. The tests
- * of the group @ref kernel_unit_obj_core_reinit state the correct behavior,
- * and ZTEST_EXPECT_FAIL() marks each of them. The suite passes while the
+ * of the second init (see "Second init of a linked object" below) state the
+ * correct behavior, and ZTEST_EXPECT_FAIL() marks each of them. The suite passes while the
  * defect is in the code. If a change of obj_core.c fixes the defect, the
  * test passes, ztest reports an unexpected pass, and the suite fails. Then
  * remove the ZTEST_EXPECT_FAIL() line.
@@ -84,6 +84,315 @@
  * walk of @c obj_core_list.h, or a walk function that stops the walk after a
  * limit. The second test source (@c test_obj_core_sem.c) includes
  * @c kernel/sem.c and shows the second init through k_sem_init().
+ *
+ * @par Structure of the tests
+ * Each public function of obj_core.c has one group below this group. The
+ * static functions and the data of obj_core.c have the last group. Each
+ * test is in the group of the function under test. The rules below (object
+ * types, object core link, walks, statistics, second init) apply to more
+ * than one function. Their tests are in the group of the function that they
+ * call. The tests of the second init are in the group of
+ * k_obj_core_init_and_link(), also if their action is a walk or an unlink
+ * that shows the effect of the second init.
+ *
+ * @par Object types
+ * z_obj_type_init() registers an object type, and k_obj_type_find() finds
+ * it by its ID.
+ * The global list @c z_obj_type_list holds the types in the order of
+ * their registration. The boot init registers the types of the section
+ * @c k_obj_core_desc. Other code can register a type later, for example
+ * the socket code (@c subsys/net/lib/sockets/socket_obj_core.c).
+ *
+ * @par Object core link
+ * k_obj_core_init() prepares an object core, k_obj_core_link() and
+ * k_obj_core_unlink() change the list of its type.
+ * The list of a type holds the objects in the order of their link.
+ * k_obj_core_link() and k_obj_core_unlink() lock @c obj_core_lock.
+ * k_obj_core_init() does not lock it: it writes only the object core.
+ *
+ * @par Walks
+ * k_obj_type_walk_locked() and k_obj_type_walk_unlocked() call a function
+ * for each object of a type.
+ * Both walks go from the head to the tail. Each walk stops at the first
+ * call that returns a value that is not 0, and returns this value. The
+ * locked walk holds @c obj_core_lock (interrupts locked) during all calls.
+ * The unlocked walk takes no lock. It reads the next node before the call,
+ * so the function can unlink the object of the call.
+ *
+ * @par Statistics
+ * With CONFIG_OBJ_CORE_STATS, obj_core.c checks each statistics request and
+ * forwards it to the descriptor of the type.
+ * The statistics descriptor of a type gives the size of the raw statistics
+ * (@c raw_size), the size of the reported statistics (@c query_size) and
+ * up to five functions. A request returns:
+ * - -ENOTSUP if the type has no descriptor or the descriptor has no
+ *   function for the request.
+ * - -EINVAL if the buffer size is not the size of the descriptor, or the
+ *   object has no registered statistics buffer.
+ * - Else the return value of the function of the descriptor.
+ *
+ * Each request locks @c obj_core_lock once and calls the function of the
+ * descriptor with the lock held. The tests that send each request are in
+ * the group of k_obj_core_stats_raw().
+ *
+ * @par Second init of a linked object (finding F-1)
+ * A second init of a linked object keeps each object in the list of its
+ * type exactly one time.
+ * The tests of the second init state the correct behavior. obj_core.c does
+ * not have it today: k_obj_core_init() sets the next pointer of the node to
+ * NULL, and k_obj_core_link() appends the node again. ZTEST_EXPECT_FAIL()
+ * marks each test. The output of each test prints the list that the unit
+ * made.
+ *
+ * The effect depends on the position of the object in the list:
+ * - Tail or only object: the tail points to itself. The list has a cycle,
+ *   and a walk does not end. k_obj_type_walk_locked() then holds
+ *   @c obj_core_lock with interrupts locked, without end.
+ * - Head or middle: the next pointer of the object becomes NULL. The objects
+ *   after it are no longer in the list. A walk does not find them.
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_z_obj_type_init z_obj_type_init()
+ * @ingroup kernel_unit_obj_core
+ * @brief z_obj_type_init() initializes an object type and appends it to the global type list.
+ *
+ * See "Object types" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - z_obj_type_init()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_init k_obj_core_init()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_init() sets the type of an object core and clears its node.
+ *
+ * See "Object core link" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_init(). It clears the statistics buffer pointer only with
+ *   @kconfig{CONFIG_OBJ_CORE_STATS}.
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_link k_obj_core_link()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_link() appends the object core to the list of its type.
+ *
+ * See "Object core link" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_link()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_init_and_link k_obj_core_init_and_link()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_init_and_link() does k_obj_core_init() and k_obj_core_link().
+ *
+ * This group also has the tests of the second init of a linked object
+ * (finding F-1, see "Second init of a linked object" in
+ * @ref kernel_unit_obj_core), and the tests of the second init through
+ * k_sem_init() below.
+ *
+ * @par Second init through k_sem_init()
+ * k_sem_init() of a linked semaphore keeps each semaphore in the list of
+ * the semaphore type exactly one time.
+ * The test source @c test_obj_core_sem.c includes @c kernel/sem.c. Its calls
+ * into the object core go to the real obj_core.c of the other test source,
+ * not to fakes. The scheduler and the wait queue are fakes (fake group
+ * @c sched), as in the @c sem application.
+ *
+ * k_sem_init() calls k_obj_core_init_and_link() on each call
+ * (sem.c:69). It does not unlink the semaphore first. Thus a second
+ * k_sem_init() of a linked semaphore has the effects of finding F-1.
+ * A semaphore of K_SEM_DEFINE() is linked at boot, so its first
+ * k_sem_init() is already a second link. With @kconfig{CONFIG_USERSPACE},
+ * z_vrfy_k_sem_init() checks the object with K_SYSCALL_OBJ_INIT()
+ * (@c _OBJ_INIT_ANY), so a user thread can also init a semaphore again.
+ *
+ * The tests that state the correct behavior have ZTEST_EXPECT_FAIL().
+ * The test of the boot link of the static semaphores is in the group
+ * @ref kernel_unit_obj_core_static.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_init_and_link()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_unlink k_obj_core_unlink()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_unlink() removes the object core from the list of its type.
+ *
+ * See "Object core link" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_unlink()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_type_find k_obj_type_find()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_type_find() finds a registered object type by its ID.
+ *
+ * See "Object types" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_type_find()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_type_walk_locked k_obj_type_walk_locked()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_type_walk_locked() calls a function for each object of a type, with the lock held.
+ *
+ * See "Walks" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_type_walk_locked()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_type_walk_unlocked k_obj_type_walk_unlocked()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_type_walk_unlocked() calls a function for each object of a type, without a lock.
+ *
+ * See "Walks" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_type_walk_unlocked()
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_register k_obj_core_stats_register()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_stats_register() sets the statistics buffer of an object.
+ *
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_register(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_deregister k_obj_core_stats_deregister()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_stats_deregister() clears the statistics buffer of an object.
+ *
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_deregister(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_raw k_obj_core_stats_raw()
+ * @ingroup kernel_unit_obj_core
+ * @brief k_obj_core_stats_raw() checks the raw statistics request and calls the function of the
+ * descriptor.
+ *
+ * See "Statistics" in @ref kernel_unit_obj_core. The tests of this group
+ * that send each statistics request (raw, query, reset, disable and enable)
+ * are also the tests of the other request functions.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_raw(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_query k_obj_core_stats_query()
+ * @ingroup kernel_unit_obj_core
+ * @brief No test of its own: the statistics request tests of
+ * k_obj_core_stats_raw() cover k_obj_core_stats_query().
+ *
+ * No test is in this group. The tests of k_obj_core_stats_raw() also call
+ * k_obj_core_stats_query() (the statistics requests), and the boot test of
+ * the kernel statistics in @ref kernel_unit_obj_core_static calls it.
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_query(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_reset k_obj_core_stats_reset()
+ * @ingroup kernel_unit_obj_core
+ * @brief No test of its own: the statistics request tests of
+ * k_obj_core_stats_raw() cover k_obj_core_stats_reset().
+ *
+ * No test is in this group. The tests of k_obj_core_stats_raw() also call
+ * k_obj_core_stats_reset() (the statistics requests), and the boot test of
+ * the kernel statistics in @ref kernel_unit_obj_core_static calls it.
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_reset(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_disable k_obj_core_stats_disable()
+ * @ingroup kernel_unit_obj_core
+ * @brief No test of its own: the statistics request tests of
+ * k_obj_core_stats_raw() cover k_obj_core_stats_disable().
+ *
+ * No test is in this group. The tests of k_obj_core_stats_raw() also call
+ * k_obj_core_stats_disable() (the statistics requests), and the boot test of
+ * the kernel statistics in @ref kernel_unit_obj_core_static calls it.
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_disable(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_k_obj_core_stats_enable k_obj_core_stats_enable()
+ * @ingroup kernel_unit_obj_core
+ * @brief No test of its own: the statistics request tests of
+ * k_obj_core_stats_raw() cover k_obj_core_stats_enable().
+ *
+ * No test is in this group. The tests of k_obj_core_stats_raw() also call
+ * k_obj_core_stats_enable() (the statistics requests), and the boot test of
+ * the kernel statistics in @ref kernel_unit_obj_core_static calls it.
+ * See "Statistics" in @ref kernel_unit_obj_core.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - k_obj_core_stats_enable(), with @kconfig{CONFIG_OBJ_CORE_STATS}
+ */
+
+/**
+ * @defgroup kernel_unit_obj_core_static Static functions and data
+ * @ingroup kernel_unit_obj_core
+ * @brief The static functions of obj_core.c, and the data that obj_core.c defines.
+ *
+ * @par Boot init
+ * At boot, obj_core.c initializes the types of the section k_obj_core_desc
+ * and links their static objects.
+ * K_OBJ_TYPE_DEFINE() puts one descriptor for each type into the section.
+ * z_obj_core_init_all() registers each type and links each static object of
+ * the type, in address order. With @kconfig{CONFIG_OBJ_CORE_STATS}, it also
+ * sets the statistics descriptor of the type and registers the statistics
+ * buffer of each static object. K_KERNEL_INIT_PRE() runs both init
+ * functions of the unit before the kernel starts.
+ *
+ * @par Functions in kernel/obj_core.c
+ * - z_obj_core_init_all(), static, the boot init (K_KERNEL_INIT_PRE()). The
+ *   statistics part is only in the code with
+ *   @kconfig{CONFIG_OBJ_CORE_STATS}.
+ * - init_kernel_obj_core_list(), static, the boot init of the kernel object
+ *   (K_KERNEL_INIT_PRE()), with @kconfig{CONFIG_OBJ_CORE_SYSTEM}. The
+ *   statistics part is only in the code with
+ *   @kconfig{CONFIG_OBJ_CORE_STATS_SYSTEM}.
+ *
+ * @par Data in kernel/obj_core.c
+ * - @c obj_core_lock, static: the one spinlock of all lists.
+ * - @c z_obj_type_list: the global list of the object types (external
+ *   linkage).
+ * - @c obj_type_kernel, static, with @kconfig{CONFIG_OBJ_CORE_SYSTEM}: the
+ *   type of the kernel object.
+ * - @c kernel_stats_desc, static, with
+ *   @kconfig{CONFIG_OBJ_CORE_STATS_SYSTEM}: the statistics descriptor of the
+ *   kernel object.
  */
 
 #include <string.h>
@@ -387,15 +696,10 @@ static void forget_setup_calls(void)
 	unit_arch_irq_lock_fake.return_val = KERNEL_UNIT_IRQ_KEY;
 }
 
-/**
- * @defgroup kernel_unit_obj_core_types Object types
- * @ingroup kernel_unit_obj_core
- * @brief z_obj_type_init() registers an object type, and k_obj_type_find() finds it by its ID.
- *
- * The global list @c z_obj_type_list holds the types in the order of
- * their registration. The boot init registers the types of the section
- * @c k_obj_core_desc. Other code can register a type later, for example
- * the socket code (@c subsys/net/lib/sockets/socket_obj_core.c).
+/*
+ * Tests: Object types. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_obj_core, at the top of this file.
  */
 
 /**
@@ -407,7 +711,7 @@ static void forget_setup_calls(void)
  * - Expected: the return value is the type. The type has the ID and the
  *   offset. Its object list is empty.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_z_obj_type_init
  * @see z_obj_type_init()
  */
 ZTEST(obj_core_unit, test_type_init_sets_fields)
@@ -438,7 +742,7 @@ ZTEST(obj_core_unit, test_type_init_sets_fields)
  * gets a statistics descriptor from old data, and a statistics request then
  * calls a function from this data.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_z_obj_type_init
  * @see z_obj_type_init()
  */
 ZTEST(obj_core_unit, test_type_init_keeps_stats_desc)
@@ -462,7 +766,7 @@ ZTEST(obj_core_unit, test_type_init_keeps_stats_desc)
  * - Expected: @c z_obj_type_list holds the two types in the order of the
  *   calls.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_z_obj_type_init
  * @see z_obj_type_init()
  */
 ZTEST(obj_core_unit, test_type_init_appends_to_type_list)
@@ -489,7 +793,7 @@ ZTEST(obj_core_unit, test_type_init_appends_to_type_list)
  * at the first socket init after boot (socket_obj_core.c:64). A concurrent
  * k_obj_type_find() on another CPU then reads a list that changes.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_z_obj_type_init
  * @see z_obj_type_init()
  */
 ZTEST(obj_core_unit, test_type_init_does_not_lock)
@@ -509,7 +813,7 @@ ZTEST(obj_core_unit, test_type_init_does_not_lock)
  * - Expected: the return value is the type with the ID. Each call locks
  *   @c obj_core_lock once and releases it.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_k_obj_type_find
  * @see k_obj_type_find()
  */
 ZTEST(obj_core_unit, test_type_find_returns_type)
@@ -533,7 +837,7 @@ ZTEST(obj_core_unit, test_type_find_returns_type)
  * - Expected: NULL each time. The call locks @c obj_core_lock once and
  *   releases it.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_k_obj_type_find
  * @see k_obj_type_find()
  */
 ZTEST(obj_core_unit, test_type_find_returns_null_for_unknown_id)
@@ -556,7 +860,7 @@ ZTEST(obj_core_unit, test_type_find_returns_null_for_unknown_id)
  * - Expected: the first type. z_obj_type_init() does not reject a second
  *   type with the same ID, so the second type is not found.
  *
- * @ingroup kernel_unit_obj_core_types
+ * @ingroup kernel_unit_obj_core_k_obj_type_find
  * @see k_obj_type_find(), z_obj_type_init()
  */
 ZTEST(obj_core_unit, test_type_find_returns_first_of_same_id)
@@ -567,15 +871,10 @@ ZTEST(obj_core_unit, test_type_find_returns_first_of_same_id)
 	zassert_equal_ptr(k_obj_type_find(UNIT_TYPE_A_ID), &unit_type);
 }
 
-/**
- * @defgroup kernel_unit_obj_core_link Object core link
- * @ingroup kernel_unit_obj_core
- * @brief k_obj_core_init() prepares an object core, k_obj_core_link() and k_obj_core_unlink()
- * change the list of its type.
- *
- * The list of a type holds the objects in the order of their link.
- * k_obj_core_link() and k_obj_core_unlink() lock @c obj_core_lock.
- * k_obj_core_init() does not lock it: it writes only the object core.
+/*
+ * Tests: Object core link. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_obj_core, at the top of this file.
  */
 
 /**
@@ -588,7 +887,7 @@ ZTEST(obj_core_unit, test_type_find_returns_first_of_same_id)
  *   node is NULL. With CONFIG_OBJ_CORE_STATS, the statistics pointer is
  *   NULL. The list of the type stays empty, and no lock occurs.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_init
  * @see k_obj_core_init()
  */
 ZTEST(obj_core_unit, test_core_init_sets_type_and_clears_node)
@@ -612,7 +911,7 @@ ZTEST(obj_core_unit, test_core_init_sets_type_and_clears_node)
  *   and c.
  * - Expected: the list of the type is a, b, c. The tail is c.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_link
  * @see k_obj_core_link()
  */
 ZTEST(obj_core_unit, test_link_appends_in_order)
@@ -638,7 +937,7 @@ ZTEST(obj_core_unit, test_link_appends_in_order)
  * - Expected: one arch_irq_lock() as the first call, one arch_irq_unlock()
  *   with the key as the last call.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_link
  * @see k_obj_core_link()
  */
 ZTEST(obj_core_unit, test_link_locks_once)
@@ -659,7 +958,7 @@ ZTEST(obj_core_unit, test_link_locks_once)
  * - Expected: each object core has the type. The list is a, b. The second
  *   call locks @c obj_core_lock once and releases it.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_init_and_link_links_object)
@@ -687,7 +986,7 @@ ZTEST(obj_core_unit, test_init_and_link_links_object)
  *   order, and the tail is the last object. The next pointer of each
  *   removed node is NULL. Each call locks @c obj_core_lock once.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_unlink
  * @see k_obj_core_unlink()
  */
 ZTEST(obj_core_unit, test_unlink_removes_object)
@@ -719,7 +1018,7 @@ ZTEST(obj_core_unit, test_unlink_removes_object)
  * - Action: k_obj_core_unlink() for a.
  * - Expected: the list is empty. Head and tail are NULL.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_unlink
  * @see k_obj_core_unlink()
  */
 ZTEST(obj_core_unit, test_unlink_of_only_object_empties_list)
@@ -742,7 +1041,7 @@ ZTEST(obj_core_unit, test_unlink_of_only_object_empties_list)
  * - Expected: the list is a, b. The call locks @c obj_core_lock once and
  *   releases it.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_unlink
  * @see k_obj_core_unlink()
  */
 ZTEST(obj_core_unit, test_unlink_of_unlinked_object_changes_nothing)
@@ -768,7 +1067,7 @@ ZTEST(obj_core_unit, test_unlink_of_unlinked_object_changes_nothing)
  * - Expected: the list holds a, b, c, each one time, and has no cycle. This
  *   is the sequence that a correct second init must have.
  *
- * @ingroup kernel_unit_obj_core_link
+ * @ingroup kernel_unit_obj_core_k_obj_core_unlink
  * @see k_obj_core_unlink(), k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_unlink_then_link_again_keeps_list)
@@ -787,17 +1086,10 @@ ZTEST(obj_core_unit, test_unlink_then_link_again_keeps_list)
 			   node_name);
 }
 
-/**
- * @defgroup kernel_unit_obj_core_walk Walks
- * @ingroup kernel_unit_obj_core
- * @brief k_obj_type_walk_locked() and k_obj_type_walk_unlocked() call a function for each object
- * of a type.
- *
- * Both walks go from the head to the tail. Each walk stops at the first
- * call that returns a value that is not 0, and returns this value. The
- * locked walk holds @c obj_core_lock (interrupts locked) during all calls.
- * The unlocked walk takes no lock. It reads the next node before the call,
- * so the function can unlink the object of the call.
+/*
+ * Tests: Walks. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_obj_core, at the top of this file.
  */
 
 /**
@@ -809,7 +1101,7 @@ ZTEST(obj_core_unit, test_unlink_then_link_again_keeps_list)
  * - Expected: three calls, with a, b and c, and the data pointer. The
  *   return value is 0.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_locked
  * @see k_obj_type_walk_locked()
  */
 ZTEST(obj_core_unit, test_walk_locked_visits_each_object)
@@ -838,7 +1130,7 @@ ZTEST(obj_core_unit, test_walk_locked_visits_each_object)
  * @note The function runs with interrupts locked. The time of the walk
  * grows with the number of objects of the type: one call per object.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_locked
  * @see k_obj_type_walk_locked()
  */
 ZTEST(obj_core_unit, test_walk_locked_holds_lock)
@@ -865,7 +1157,7 @@ ZTEST(obj_core_unit, test_walk_locked_holds_lock)
  * - Expected: two calls. The return value is 7. The walk releases the lock
  *   once.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_locked
  * @see k_obj_type_walk_locked()
  */
 ZTEST(obj_core_unit, test_walk_locked_stops_at_status)
@@ -889,7 +1181,7 @@ ZTEST(obj_core_unit, test_walk_locked_stops_at_status)
  * - Action: k_obj_type_walk_locked().
  * - Expected: no call, return value 0, one lock and one release.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_locked
  * @see k_obj_type_walk_locked()
  */
 ZTEST(obj_core_unit, test_walk_locked_of_empty_type)
@@ -911,7 +1203,7 @@ ZTEST(obj_core_unit, test_walk_locked_of_empty_type)
  * - Expected: three calls, with a, b and c. The return value is 0. No
  *   lock occurs.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_unlocked
  * @see k_obj_type_walk_unlocked()
  */
 ZTEST(obj_core_unit, test_walk_unlocked_visits_each_object)
@@ -940,7 +1232,7 @@ ZTEST(obj_core_unit, test_walk_unlocked_visits_each_object)
  * - Expected: one call and the return value -5. The walk of the empty
  *   type calls no function and returns 0.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_unlocked
  * @see k_obj_type_walk_unlocked()
  */
 ZTEST(obj_core_unit, test_walk_unlocked_stops_at_status)
@@ -968,7 +1260,7 @@ ZTEST(obj_core_unit, test_walk_unlocked_stops_at_status)
  * - Expected: three calls, with a, b and c. The list is empty after the
  *   walk.
  *
- * @ingroup kernel_unit_obj_core_walk
+ * @ingroup kernel_unit_obj_core_k_obj_type_walk_unlocked
  * @see k_obj_type_walk_unlocked()
  */
 ZTEST(obj_core_unit, test_walk_unlocked_permits_unlink)
@@ -984,18 +1276,10 @@ ZTEST(obj_core_unit, test_walk_unlocked_permits_unlink)
 	zassert_list_holds(&unit_type.list, NULL, 0U, node_name);
 }
 
-/**
- * @defgroup kernel_unit_obj_core_boot Boot init
- * @ingroup kernel_unit_obj_core
- * @brief At boot, obj_core.c initializes the types of the section k_obj_core_desc and links their
- * static objects.
- *
- * K_OBJ_TYPE_DEFINE() puts one descriptor for each type into the section.
- * z_obj_core_init_all() registers each type and links each static object of
- * the type, in address order. With @kconfig{CONFIG_OBJ_CORE_STATS}, it also
- * sets the statistics descriptor of the type and registers the statistics
- * buffer of each static object. K_KERNEL_INIT_PRE() runs both init
- * functions of the unit before the kernel starts.
+/*
+ * Tests: Boot init. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_obj_core, at the top of this file.
  */
 
 /**
@@ -1008,7 +1292,7 @@ ZTEST(obj_core_unit, test_walk_unlocked_permits_unlink)
  *   @c _kernel_init_pre_init_kernel_obj_core_list calls
  *   init_kernel_obj_core_list().
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see z_obj_core_init_all()
  */
 ZTEST(obj_core_unit, test_boot_init_entries)
@@ -1029,7 +1313,7 @@ ZTEST(obj_core_unit, test_boot_init_entries)
  * - Expected: k_obj_type_find() finds each type with its ID. Each type has
  *   the offset of @c obj_core in @c struct @c unit_obj.
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see z_obj_core_init_all()
  */
 ZTEST(obj_core_unit, test_boot_registers_types)
@@ -1054,7 +1338,7 @@ ZTEST(obj_core_unit, test_boot_registers_types)
  * - Expected: the list of each type holds its static objects in address
  *   order. Each object core has its type. The list of type D is empty.
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see z_obj_core_init_all()
  */
 ZTEST(obj_core_unit, test_boot_links_static_objects)
@@ -1089,7 +1373,7 @@ ZTEST(obj_core_unit, test_boot_links_static_objects)
  *   Each object of type A has its own buffer @c stats as statistics. The
  *   objects of the types B and C have no statistics (NULL).
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see z_obj_core_init_all()
  */
 ZTEST(obj_core_unit, test_boot_registers_static_statistics)
@@ -1126,7 +1410,7 @@ static const char *kernel_node_name(const sys_snode_t *node)
  *   kernel type. Its offset is the offset of @c obj_core in
  *   @c struct @c z_kernel. Its list holds only @c _kernel.
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see init_kernel_obj_core_list()
  */
 ZTEST(obj_core_unit, test_boot_links_kernel_object)
@@ -1159,7 +1443,7 @@ ZTEST(obj_core_unit, test_boot_links_kernel_object)
  *   core and the buffer. The kernel descriptor has no reset, disable and
  *   enable functions: these requests return -ENOTSUP.
  *
- * @ingroup kernel_unit_obj_core_boot
+ * @ingroup kernel_unit_obj_core_static
  * @see init_kernel_obj_core_list(), k_obj_core_stats_raw(), k_obj_core_stats_query()
  */
 ZTEST(obj_core_unit, test_boot_kernel_statistics)
@@ -1190,23 +1474,10 @@ ZTEST(obj_core_unit, test_boot_kernel_statistics)
 #endif /* CONFIG_OBJ_CORE_STATS_SYSTEM */
 
 #ifdef CONFIG_OBJ_CORE_STATS
-/**
- * @defgroup kernel_unit_obj_core_stats Statistics
- * @ingroup kernel_unit_obj_core
- * @brief With CONFIG_OBJ_CORE_STATS, obj_core.c checks each statistics request and forwards it to
- * the descriptor of the type.
- *
- * The statistics descriptor of a type gives the size of the raw statistics
- * (@c raw_size), the size of the reported statistics (@c query_size) and
- * up to five functions. A request returns:
- * - -ENOTSUP if the type has no descriptor or the descriptor has no
- *   function for the request.
- * - -EINVAL if the buffer size is not the size of the descriptor, or the
- *   object has no registered statistics buffer.
- * - Else the return value of the function of the descriptor.
- *
- * Each request locks @c obj_core_lock once and calls the function of the
- * descriptor with the lock held.
+/*
+ * Tests: Statistics. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_obj_core, at the top of this file.
  */
 
 /* The five requests that forward to a function of the descriptor */
@@ -1287,7 +1558,7 @@ static void prepare_registered(struct k_obj_core_stats_desc *desc)
  * - Expected: return value 0. The statistics pointer is the buffer. The call
  *   locks @c obj_core_lock once and releases it.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_register
  * @see k_obj_core_stats_register()
  */
 ZTEST(obj_core_unit, test_stats_register_sets_buffer)
@@ -1312,7 +1583,7 @@ ZTEST(obj_core_unit, test_stats_register_sets_buffer)
  * - Expected: -ENOTSUP, then -EINVAL. The statistics pointer stays NULL.
  *   Each call releases the lock once.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_register
  * @see k_obj_core_stats_register()
  */
 ZTEST(obj_core_unit, test_stats_register_rejects_request)
@@ -1342,7 +1613,7 @@ ZTEST(obj_core_unit, test_stats_register_rejects_request)
  *   type without descriptor: -ENOTSUP, and the pointer does not change.
  *   Each call releases the lock once.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_deregister
  * @see k_obj_core_stats_deregister()
  */
 ZTEST(obj_core_unit, test_stats_deregister_clears_buffer)
@@ -1372,7 +1643,7 @@ ZTEST(obj_core_unit, test_stats_deregister_clears_buffer)
  *   gets the object core, and the raw and the query function also get the
  *   buffer. The call history is: lock, function, release with the key.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_raw
  * @see k_obj_core_stats_raw(), k_obj_core_stats_query(), k_obj_core_stats_reset(),
  * k_obj_core_stats_disable(), k_obj_core_stats_enable()
  */
@@ -1412,7 +1683,7 @@ ZTEST(obj_core_unit, test_stats_request_forwards_to_descriptor)
  * - Expected: -ENOTSUP. No descriptor function runs. Each request releases
  *   the lock once.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_raw
  * @see k_obj_core_stats_raw(), k_obj_core_stats_query(), k_obj_core_stats_reset(),
  * k_obj_core_stats_disable(), k_obj_core_stats_enable()
  */
@@ -1439,7 +1710,7 @@ ZTEST(obj_core_unit, test_stats_request_without_descriptor)
  * - Action: each request with the correct buffer size.
  * - Expected: -ENOTSUP for each request.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_raw
  * @see k_obj_core_stats_raw(), k_obj_core_stats_query(), k_obj_core_stats_reset(),
  * k_obj_core_stats_disable(), k_obj_core_stats_enable()
  */
@@ -1462,7 +1733,7 @@ ZTEST(obj_core_unit, test_stats_request_without_function)
  * - Action: each request with the correct buffer size.
  * - Expected: -EINVAL. No descriptor function runs.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_raw
  * @see k_obj_core_stats_raw(), k_obj_core_stats_query(), k_obj_core_stats_reset(),
  * k_obj_core_stats_disable(), k_obj_core_stats_enable()
  */
@@ -1488,7 +1759,7 @@ ZTEST(obj_core_unit, test_stats_request_without_buffer)
  *   with the raw size.
  * - Expected: -EINVAL for both. No descriptor function runs.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_stats_raw
  * @see k_obj_core_stats_raw(), k_obj_core_stats_query()
  */
 ZTEST(obj_core_unit, test_stats_request_rejects_wrong_size)
@@ -1510,7 +1781,7 @@ ZTEST(obj_core_unit, test_stats_request_rejects_wrong_size)
  *   -EINVAL. The caller of a second init must register the buffer again,
  *   as k_mem_slab_init() does.
  *
- * @ingroup kernel_unit_obj_core_stats
+ * @ingroup kernel_unit_obj_core_k_obj_core_init
  * @see k_obj_core_init(), k_obj_core_stats_raw()
  */
 ZTEST(obj_core_unit, test_stats_second_init_clears_buffer)
@@ -1524,24 +1795,11 @@ ZTEST(obj_core_unit, test_stats_second_init_clears_buffer)
 }
 #endif /* CONFIG_OBJ_CORE_STATS */
 
-/**
- * @defgroup kernel_unit_obj_core_reinit Second init of a linked object (finding F-1)
- * @ingroup kernel_unit_obj_core
- * @brief A second init of a linked object keeps each object in the list of its type exactly one
- * time.
- *
- * The tests of this group state the correct behavior. obj_core.c does not
- * have it today: k_obj_core_init() sets the next pointer of the node to
- * NULL, and k_obj_core_link() appends the node again. ZTEST_EXPECT_FAIL()
- * marks each test. The output of each test prints the list that the unit
- * made.
- *
- * The effect depends on the position of the object in the list:
- * - Tail or only object: the tail points to itself. The list has a cycle,
- *   and a walk does not end. k_obj_type_walk_locked() then holds
- *   @c obj_core_lock with interrupts locked, without end.
- * - Head or middle: the next pointer of the object becomes NULL. The objects
- *   after it are no longer in the list. A walk does not find them.
+/*
+ * Tests: Second init of a linked object (finding F-1). Each test is in the
+ * group of the function that it tests. The design text is in that group, or
+ * in the introduction of the group kernel_unit_obj_core, at the top of this
+ * file.
  */
 
 /**
@@ -1557,7 +1815,7 @@ ZTEST(obj_core_unit, test_stats_second_init_clears_buffer)
  * the list is a -> b -> c -> c (a cycle). If this test passes, the defect is
  * fixed: remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_reinit_of_tail_keeps_list_acyclic)
@@ -1586,7 +1844,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_tail_keeps_list_acyclic);
  * the next pointer of a points to a (a cycle). If this test passes, the
  * defect is fixed: remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_reinit_of_only_object_keeps_list_acyclic)
@@ -1614,7 +1872,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_only_object_keeps_list_acyclic);
  * (b -> c -> a). If this test passes, the defect is fixed: remove
  * ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_reinit_of_head_keeps_other_objects)
@@ -1641,7 +1899,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_head_keeps_other_objects);
  * the list is a -> b. c and d are no longer in the list (c -> d -> b). If
  * this test passes, the defect is fixed: remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link()
  */
 ZTEST(obj_core_unit, test_reinit_of_middle_keeps_later_objects)
@@ -1674,7 +1932,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_middle_keeps_later_objects);
  * the interrupts of the CPU stay locked. If this test passes, the defect is
  * fixed: remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link(), k_obj_type_walk_locked()
  */
 ZTEST(obj_core_unit, test_reinit_of_tail_locked_walk_ends)
@@ -1707,7 +1965,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_tail_locked_walk_ends);
  * (return value -ELOOP). If this test passes, the defect is fixed: remove
  * ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link(), k_obj_type_walk_unlocked()
  */
 ZTEST(obj_core_unit, test_reinit_of_tail_unlocked_walk_ends)
@@ -1744,7 +2002,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_reinit_of_tail_unlocked_walk_ends);
  * list. If this test passes, the defect is fixed: remove
  * ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
  * @see k_obj_core_init_and_link(), k_obj_core_unlink()
  */
 ZTEST(obj_core_unit, test_unlink_after_reinit_of_tail_removes_object)
@@ -1774,7 +2032,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_unlink_after_reinit_of_tail_removes_object
  * K_OBJ_CORE_LINK() on each call. If this test passes, the defect is fixed:
  * remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_k_obj_core_link
  * @see k_obj_core_link()
  */
 ZTEST(obj_core_unit, test_second_link_of_tail_keeps_list_acyclic)
@@ -1806,7 +2064,7 @@ ZTEST_EXPECT_FAIL(obj_core_unit, test_second_link_of_tail_keeps_list_acyclic);
  * registration with a flag (socket_obj_core.c:60-68). If this test passes,
  * the defect is fixed: remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_reinit
+ * @ingroup kernel_unit_obj_core_z_obj_type_init
  * @see z_obj_type_init(), k_obj_type_find()
  */
 ZTEST(obj_core_unit, test_second_type_init_keeps_type_list_acyclic)

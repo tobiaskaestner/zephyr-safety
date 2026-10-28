@@ -1,0 +1,96 @@
+# Kernel Unit Test Specification (Doxygen).
+#
+# Reads the test sources of the kernel unit tests (tests/kernel/unit) and the
+# root group kernel_unit_tests (common/include/kernel_unit.h). Each kernel
+# source file has one group. Below it, each public function of the file has
+# one group, and the static functions of the file have one group. Each test is
+# in exactly one of these groups (see tests/kernel/unit/README.rst, "Doxygen
+# comments").
+#
+# The application sched_ref is not in the input: it tests a fake, not a kernel
+# source file. The headers kernel_unit_models.h and kernel_unit_sched_ref.h
+# are not in the input.
+#
+# Everything not set here is the default of Doxygen. Output paths, XML, tag
+# files and the theme are owned by zdocs and appended after this file.
+
+DOXYFILE_ENCODING      = UTF-8
+PROJECT_NAME           = "Kernel Unit Test Specification"
+PROJECT_BRIEF          = "Unit tests of the kernel source files, by file and by function"
+OUTPUT_DIRECTORY       = @DOXY_OUT@
+
+# The order of the files is the order of the file groups below the root
+# group. The order of the function groups in a file group is the order of
+# their definitions at the top of each test source (the order of the kernel
+# source file, the static group last).
+INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
+                         @SAFETY_BASE@/tests/kernel/unit/common/include/kernel_unit.h \
+                         @SAFETY_BASE@/tests/kernel/unit/condvar/src/test_condvar.c \
+                         @SAFETY_BASE@/tests/kernel/unit/event/src/test_event.c \
+                         @SAFETY_BASE@/tests/kernel/unit/mem_slab/src/test_mem_slab.c \
+                         @SAFETY_BASE@/tests/kernel/unit/msgq/src/test_msgq.c \
+                         @SAFETY_BASE@/tests/kernel/unit/mutex/src/test_mutex.c \
+                         @SAFETY_BASE@/tests/kernel/unit/obj_core/src/test_obj_core.c \
+                         @SAFETY_BASE@/tests/kernel/unit/obj_core/src/test_obj_core_sem.c \
+                         @SAFETY_BASE@/tests/kernel/unit/queue/src/test_queue.c \
+                         @SAFETY_BASE@/tests/kernel/unit/sem/src/test_sem.c \
+                         @SAFETY_BASE@/tests/kernel/unit/stack/src/test_stack.c
+RECURSIVE              = NO
+USE_MDFILE_AS_MAINPAGE = @DOXY_SRC_DIR@/mainpage.md
+
+# The filter runs the filter of the test specification of the Zephyr tests:
+# it evaluates the Kconfig conditionals (#ifdef CONFIG_X is true) and adds a
+# @kconfig_depends to each test in such a block or with a Kconfig skip. Then
+# it opens the Z_MUTEX_PI_ENABLED conditionals with a test in the #else
+# branch, so the document has the tests without priority inheritance too.
+FILTER_PATTERNS        = "*.h=@DOC_BASE@/_scripts/doxygen_filter_kernel_unit.py" \
+                         "*.c=@DOC_BASE@/_scripts/doxygen_filter_kernel_unit.py"
+
+ALIASES                = "kconfig{1}=\c \1" \
+                         "kconfig_depends{1}=\xrefitem kconfig_depends \"Depends on\" \"Kconfig dependencies\" \1"
+
+OPTIMIZE_OUTPUT_FOR_C  = YES
+EXTRACT_ALL            = NO
+EXTRACT_STATIC         = YES
+
+# A test is in the group of its comment only. The ZTEST expansion adds no
+# group (the Zephyr test specification adds the suite group).
+# Z_MUTEX_PI_ENABLED (zephyr/kernel/thread.h) is 1 in the default
+# configuration. It is not a Kconfig symbol, so the Kconfig filter does not
+# evaluate it.
+ENABLE_PREPROCESSING   = YES
+MACRO_EXPANSION        = YES
+EXPAND_ONLY_PREDEF     = YES
+SEARCH_INCLUDES        = NO
+PREDEFINED             = __DOXYGEN__ \
+                         Z_MUTEX_PI_ENABLED=1 \
+                         "__aligned(x)=" \
+                         "ZTEST(suite, fn)=static void fn(void)" \
+                         "ZTEST_SUITE(...)=" \
+                         "ZTEST_EXPECT_FAIL(...)="
+
+# The source order of the groups and of the tests is the order of the
+# specification.
+SORT_GROUP_NAMES       = NO
+SORT_MEMBER_DOCS       = NO
+SORT_BRIEF_DOCS        = NO
+
+SOURCE_BROWSER         = YES
+SHOW_FILES             = YES
+SHOW_USED_FILES        = NO
+GENERATE_TODOLIST      = NO
+GENERATE_TESTLIST      = NO
+GENERATE_BUGLIST       = NO
+GENERATE_DEPRECATEDLIST= NO
+
+GENERATE_LATEX         = NO
+HAVE_DOT               = NO
+QUIET                  = YES
+# The structures and helpers of the test sources are not part of the
+# specification. Many have a doc comment without member comments.
+WARN_IF_UNDOCUMENTED   = NO
+WARN_IF_DOC_ERROR      = YES
+WARN_IF_INCOMPLETE_DOC = YES
+WARN_NO_PARAMDOC       = NO
+WARN_AS_ERROR          = NO
+WARN_FORMAT            = "$file:$line: $text"

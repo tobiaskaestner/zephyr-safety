@@ -20,8 +20,11 @@
  * examines their calls. Thus each test states one design rule of the unit
  * as a fact about its state and about its calls into the layers below it.
  *
- * Each application has a Doxygen group below this group. The introduction
- * of that group describes the design of its unit as a whole.
+ * Each application of a kernel source file has a Doxygen group below this
+ * group, with the kernel source file as its title. The introduction of that group describes the
+ * design of its unit as a whole. Below it, each public function of the file
+ * has one group, and the static functions of the file have the last group.
+ * Each test is in the group of the function under test.
  *
  * See @c tests/kernel/unit/README.rst for the design of the harness.
  */

@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_sem Semaphore unit (kernel/sem.c)
+ * @defgroup kernel_unit_sem kernel/sem.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/sem.c, written as unit tests.
  *
@@ -88,12 +88,187 @@
  * below sem.c go to FFF fakes. The fake unit_arch_irq_lock() returns
  * KERNEL_UNIT_IRQ_KEY. Thus a test can follow the key to the call that
  * releases the lock. The FFF call history gives the order of the calls.
- * The tests of @ref kernel_unit_sem_ref install the reference fake of the
- * scheduler contract (@ref kernel_unit_sched_ref) in place of scripted return
- * values. Then the scheduler has threads with priorities and wait queues.
+ * The tests with the prefix @c test_ref_ install the reference fake of the
+ * scheduler contract in place of scripted return values (see "Tests on the
+ * reference scheduler" below). Then the scheduler has threads with
+ * priorities and wait queues.
  * The scenarios in @c testcase.yaml build the tests once for each Kconfig
  * option above. A test that applies only to some configurations is in an
  * @c \#ifdef block, or it calls ztest_test_skip().
+ *
+ * @par Structure of the tests
+ * Each public function of sem.c has one group below this group. A system
+ * call has one group for z_impl_k_sem_*() and z_vrfy_k_sem_*(). The static
+ * functions and the data of sem.c have the last group. Each test is in the
+ * group of the function under test. The rules below (locking, system call
+ * verification, object core, reference scheduler) apply to more than one
+ * function. Their tests are in the group of the function that they call.
+ *
+ * @par Locking
+ * One spinlock, @c sem_lock, protects all semaphores. Each path releases it
+ * exactly once.
+ * Each path of k_sem_give(), k_sem_take() and k_sem_reset() locks
+ * @c sem_lock once, as its first call to the layers below. The only call
+ * before it is arch_is_in_isr() in the assertion of k_sem_take(). Each path
+ * releases the lock once, as its last call, with the key of the lock. The
+ * release is k_spin_unlock() (seen as arch_irq_unlock()), z_reschedule() or
+ * z_pend_curr(). The count changes only while the lock is held.
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks the semaphore
+ * object before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_sem_*(). This function
+ * checks with K_SYSCALL_OBJ() that the pointer is a semaphore object of the
+ * kernel that the thread has access to. z_vrfy_k_sem_init() uses
+ * K_SYSCALL_OBJ_INIT(): the object can be initialized or not. The other
+ * functions use K_SYSCALL_OBJ(): the object must be initialized. If the
+ * check fails, K_OOPS() stops the thread. Otherwise the function calls
+ * z_impl_k_sem_*() with the same arguments and returns its result.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that the
+ * oops occurs before the implementation changes the semaphore, not that
+ * the implementation does not run.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_SEM, sem.c registers the semaphore object type and
+ * links each semaphore to it.
+ * K_OBJ_TYPE_DEFINE() puts a descriptor of the type @c obj_type_sem into the
+ * iterable section @c k_obj_core_desc. At boot, the object core code
+ * initializes the type from the descriptor and links the semaphores that
+ * K_SEM_DEFINE() defines (the section @c k_sem). k_sem_init() links each
+ * semaphore that it initializes.
+ *
+ * @par Tests on the reference scheduler
+ * The tests with the prefix @c test_ref_ run k_sem_give(), k_sem_take() and
+ * k_sem_reset() with the reference fake of the scheduler.
+ * These tests install the reference fake of the scheduler contract (group
+ * @c kernel_unit_sched_ref in @c kernel_unit_sched_ref.h) in place of
+ * scripted return values. The threads
+ * of a test have priorities, and the wait queue of the semaphore has the
+ * order of the contract: a higher priority first, then the order of arrival.
+ * A wait of k_sem_take() runs the environment of the test (another thread, an
+ * ISR or a timeout) and returns the value that the waker gave. Thus a test
+ * runs both halves of a hand-over, the give and the take, through the
+ * scheduler. Each test ends with kernel_unit_sched_ref_assert_ok(): the
+ * invariants of the contract hold, also the rule that the CPU runs a thread
+ * with the highest priority.
+ *
+ * Priorities in these tests are Zephyr priorities: a lower number is a higher
+ * priority.
+ */
+
+/**
+ * @defgroup kernel_unit_sem_k_sem_init k_sem_init()
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_init() sets the count and the limit and initializes the parts of the semaphore.
+ *
+ * k_sem_init() first checks its arguments with CHECKIF(). The Kconfig
+ * options of CHECKIF() change what an invalid argument causes. Then
+ * k_sem_init() writes the count and the limit. It initializes the wait
+ * queue, the poll events and the kernel object. Its last step is the link of
+ * the object core. It does not lock @c sem_lock: until k_sem_init()
+ * returns, only the caller uses the semaphore.
+ *
+ * @par Functions in kernel/sem.c
+ * - z_impl_k_sem_init()
+ * - z_vrfy_k_sem_init(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_sem_k_sem_give k_sem_give()
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_give() hands the semaphore to a waiting thread, or increments the count.
+ *
+ * k_sem_give() first tries to wake one thread from the wait queue with
+ * z_sched_wake(). If a thread wakes, the semaphore goes to this thread: its
+ * k_sem_take() returns 0, and the count does not change. If no thread
+ * wakes, k_sem_give() increments the count, but not above the limit, and
+ * signals the poll events (see @ref kernel_unit_sem_static).
+ *
+ * @par Functions in kernel/sem.c
+ * - z_impl_k_sem_give()
+ * - z_vrfy_k_sem_give(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_sem_k_sem_take k_sem_take()
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_take() decrements the count, returns -EBUSY, or waits.
+ *
+ * If the count is not 0, k_sem_take() decrements it and returns 0 at once,
+ * for each timeout. If the count is 0 and the timeout is K_NO_WAIT, it
+ * returns -EBUSY. Otherwise it waits on the wait queue with z_pend_curr()
+ * and returns the result of the wait: 0 if k_sem_give() woke the thread,
+ * -EAGAIN at the timeout or after k_sem_reset(). An ISR must not wait, so
+ * with CONFIG_ASSERT, k_sem_take() asserts that an ISR gives K_NO_WAIT. In an
+ * ISR, a wait reaches z_pend_curr(), and the scheduler refuses it with a
+ * panic in every build. Without CONFIG_ASSERT, k_sem_take() has no earlier
+ * check of its own.
+ *
+ * @par Functions in kernel/sem.c
+ * - z_impl_k_sem_take()
+ * - z_vrfy_k_sem_take(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_sem_k_sem_reset k_sem_reset()
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_reset() sets the count to 0 and makes all waiting threads stop their wait with
+ * -EAGAIN.
+ *
+ * k_sem_reset() wakes the threads of the wait queue one by one with
+ * z_sched_wake() until the queue is empty. Each woken thread gets the
+ * return value -EAGAIN. Then k_sem_reset() sets the count to 0 and signals
+ * the poll events (see @ref kernel_unit_sem_static). It reschedules once if
+ * it woke a thread or if the poll subsystem made a thread ready.
+ *
+ * @par Functions in kernel/sem.c
+ * - z_impl_k_sem_reset()
+ * - z_vrfy_k_sem_reset(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_sem_k_sem_count_get k_sem_count_get()
+ * @ingroup kernel_unit_sem
+ * @brief k_sem_count_get() returns the count without a lock.
+ *
+ * z_impl_k_sem_count_get() is static inline in @c zephyr/kernel.h. It reads
+ * one word, so it needs no lock. The value can be old when the caller uses
+ * it.
+ *
+ * @par Functions in kernel/sem.c
+ * - z_vrfy_k_sem_count_get(), static inline, with @kconfig{CONFIG_USERSPACE}.
+ *   sem.c has no z_impl_k_sem_count_get().
+ */
+
+/**
+ * @defgroup kernel_unit_sem_static Static functions and data
+ * @ingroup kernel_unit_sem
+ * @brief The static functions of sem.c, and the data that sem.c defines.
+ *
+ * @par Poll events
+ * With CONFIG_POLL, k_sem_give() and k_sem_reset() signal
+ * K_POLL_STATE_SEM_AVAILABLE to the poll events.
+ * The static function sem_handle_poll_events() calls
+ * z_handle_obj_poll_events() with the list @c poll_events and the state
+ * K_POLL_STATE_SEM_AVAILABLE. It returns true if a polling thread became
+ * ready. Then the caller reschedules. Without CONFIG_POLL, the function
+ * returns false.
+ *
+ * k_sem_give() signals the poll events only if it did not wake a waiting
+ * thread. k_sem_reset() always signals them, also after it set the count
+ * to 0. The tests of these two rules are in the groups of k_sem_give() and
+ * k_sem_reset().
+ *
+ * @par Functions in kernel/sem.c
+ * - sem_handle_poll_events(), static inline. It has no test of its own.
+ *   The tests of k_sem_give() and k_sem_reset() call it.
+ *
+ * @par Data in kernel/sem.c
+ * - @c obj_type_sem and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_SEM}. The tests of the descriptor are in this
+ *   group.
  */
 
 #include <string.h>
@@ -209,17 +384,10 @@ static void sem_unit_before(void *fixture)
 
 ZTEST_SUITE(sem_unit, NULL, NULL, sem_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_sem_init Initialization
- * @ingroup kernel_unit_sem
- * @brief k_sem_init() sets the count and the limit and initializes the parts of the semaphore.
- *
- * k_sem_init() first checks its arguments with CHECKIF(). The Kconfig
- * options of CHECKIF() change what an invalid argument causes. Then
- * k_sem_init() writes the count and the limit. It initializes the wait
- * queue, the poll events and the kernel object. Its last step is the link of
- * the object core. It does not lock @c sem_lock: until k_sem_init()
- * returns, only the caller uses the semaphore.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -230,7 +398,7 @@ ZTEST_SUITE(sem_unit, NULL, NULL, sem_unit_before, NULL, NULL);
  * - Action: z_impl_k_sem_init() with count 2 and limit 5.
  * - Expected: return value 0, count 2, limit 5.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_sets_count_and_limit)
@@ -254,7 +422,7 @@ ZTEST(sem_unit, test_init_sets_count_and_limit)
  * - Expected: return value 0 each time. The count and the limit have the
  *   given values.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_accepts_boundary_values)
@@ -282,7 +450,7 @@ ZTEST(sem_unit, test_init_accepts_boundary_values)
  * - Expected: one call of z_waitq_init() with the wait queue of the
  *   semaphore.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_initializes_wait_queue)
@@ -304,7 +472,7 @@ ZTEST(sem_unit, test_init_initializes_wait_queue)
  * - Action: z_impl_k_sem_init() with count 0 and limit 1.
  * - Expected: the list @c poll_events is a valid, empty list.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_empties_poll_events)
@@ -329,7 +497,7 @@ ZTEST(sem_unit, test_init_empties_poll_events)
  *   call, the object checks of the other system calls accept the
  *   semaphore.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_initializes_kernel_object)
@@ -353,7 +521,7 @@ ZTEST(sem_unit, test_init_initializes_kernel_object)
  *   CONFIG_OBJ_CORE_SEM). There are no other calls. The object core link
  *   makes the semaphore visible to other code, so it is the last step.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_call_order)
@@ -376,7 +544,7 @@ ZTEST(sem_unit, test_init_call_order)
  * - Expected: return value -EINVAL. The semaphore has the pattern. No
  *   calls to the layers below.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_rejects_zero_limit)
@@ -407,7 +575,7 @@ ZTEST(sem_unit, test_init_rejects_zero_limit)
  * - Expected: return value -EINVAL. The semaphore has the pattern. No
  *   calls to the layers below.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_rejects_count_above_limit)
@@ -440,7 +608,7 @@ ZTEST(sem_unit, test_init_rejects_count_above_limit)
  *   count and limit. See test_give_count_above_limit_grows() for the
  *   result.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_no_runtime_checks_accepts_invalid)
@@ -476,7 +644,7 @@ ZTEST(sem_unit, test_init_no_runtime_checks_accepts_invalid)
  * (CONFIG_ASSERT_TEST). Then k_sem_init() continues and returns 0. In a
  * real build, the hook does not return.
  *
- * @ingroup kernel_unit_sem_init
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_init_assert_on_errors)
@@ -495,16 +663,10 @@ ZTEST(sem_unit, test_init_assert_on_errors)
 }
 #endif /* CONFIG_ASSERT_ON_ERRORS */
 
-/**
- * @defgroup kernel_unit_sem_give Give
- * @ingroup kernel_unit_sem
- * @brief k_sem_give() hands the semaphore to a waiting thread, or increments the count.
- *
- * k_sem_give() first tries to wake one thread from the wait queue with
- * z_sched_wake(). If a thread wakes, the semaphore goes to this thread: its
- * k_sem_take() returns 0, and the count does not change. If no thread
- * wakes, k_sem_give() increments the count, but not above the limit, and
- * signals the poll events (see @ref kernel_unit_sem_poll).
+/*
+ * Tests: Give. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -515,7 +677,7 @@ ZTEST(sem_unit, test_init_assert_on_errors)
  * - Action: z_impl_k_sem_give() two times.
  * - Expected: count 1, then count 2. The limit does not change.
  *
- * @ingroup kernel_unit_sem_give
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_give_increments_count)
@@ -541,7 +703,7 @@ ZTEST(sem_unit, test_give_increments_count)
  * - Expected: count 3. k_sem_give() has no error return, so the extra give
  *   is lost without a report.
  *
- * @ingroup kernel_unit_sem_give
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_give_saturates_at_limit)
@@ -566,7 +728,7 @@ ZTEST(sem_unit, test_give_saturates_at_limit)
  *   semaphore, the return value 0 for the woken thread and no swap data.
  *   Thus the k_sem_take() of the woken thread returns 0. The count stays 0.
  *
- * @ingroup kernel_unit_sem_give
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_give_hands_over_to_waiting_thread)
@@ -594,7 +756,7 @@ ZTEST(sem_unit, test_give_hands_over_to_waiting_thread)
  * - Action: z_impl_k_sem_give().
  * - Expected: one call of z_sched_wake().
  *
- * @ingroup kernel_unit_sem_give
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_give_wakes_one_thread_only)
@@ -621,7 +783,7 @@ ZTEST(sem_unit, test_give_wakes_one_thread_only)
  * - Action: z_impl_k_sem_give().
  * - Expected: count 4.
  *
- * @ingroup kernel_unit_sem_give
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_give_count_above_limit_grows)
@@ -639,20 +801,10 @@ ZTEST(sem_unit, test_give_count_above_limit_grows)
 	zassert_equal(sem.count, 4U);
 }
 
-/**
- * @defgroup kernel_unit_sem_take Take
- * @ingroup kernel_unit_sem
- * @brief k_sem_take() decrements the count, returns -EBUSY, or waits.
- *
- * If the count is not 0, k_sem_take() decrements it and returns 0 at once,
- * for each timeout. If the count is 0 and the timeout is K_NO_WAIT, it
- * returns -EBUSY. Otherwise it waits on the wait queue with z_pend_curr()
- * and returns the result of the wait: 0 if k_sem_give() woke the thread,
- * -EAGAIN at the timeout or after k_sem_reset(). An ISR must not wait, so
- * with CONFIG_ASSERT, k_sem_take() asserts that an ISR gives K_NO_WAIT. In an
- * ISR, a wait reaches z_pend_curr(), and the scheduler refuses it with a
- * panic in every build. Without CONFIG_ASSERT, k_sem_take() has no earlier
- * check of its own.
+/*
+ * Tests: Take. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -663,7 +815,7 @@ ZTEST(sem_unit, test_give_count_above_limit_grows)
  * - Action: z_impl_k_sem_take() with K_NO_WAIT, two times.
  * - Expected: return value 0, count 1, then return value 0, count 0.
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_decrements_count)
@@ -687,7 +839,7 @@ ZTEST(sem_unit, test_take_decrements_count)
  * - Action: z_impl_k_sem_take() with K_FOREVER.
  * - Expected: return value 0, count 0. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_available_does_not_wait)
@@ -710,7 +862,7 @@ ZTEST(sem_unit, test_take_available_does_not_wait)
  * - Action: z_impl_k_sem_take() with K_NO_WAIT.
  * - Expected: return value -EBUSY, count 0. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_unavailable_no_wait_returns_ebusy)
@@ -736,7 +888,7 @@ ZTEST(sem_unit, test_take_unavailable_no_wait_returns_ebusy)
  * - Expected: each time, one call of z_pend_curr() with the wait queue of
  *   the semaphore and the given timeout. The count stays 0.
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_unavailable_waits)
@@ -768,7 +920,7 @@ ZTEST(sem_unit, test_take_unavailable_waits)
  * - Expected: return value 0, then -EAGAIN. The count stays 0: k_sem_give()
  *   handed the semaphore over without the count.
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_returns_wait_result)
@@ -794,7 +946,7 @@ ZTEST(sem_unit, test_take_returns_wait_result)
  * - Expected: return value 0, then -EBUSY. No failed assertion (with
  *   CONFIG_ASSERT). No call of z_pend_curr().
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_in_isr_without_wait)
@@ -837,7 +989,7 @@ ZTEST(sem_unit, test_take_in_isr_without_wait)
  * first hook does not return. Without CONFIG_ASSERT, k_sem_take() has no
  * check of its own, and only the panic of the scheduler stops the wait.
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_asserts_isr_does_not_wait)
@@ -883,7 +1035,7 @@ ZTEST(sem_unit, test_take_asserts_isr_does_not_wait)
  *   KERNEL_UNIT_PEND_REFUSED, and k_sem_take() gives this value to the
  *   caller.
  *
- * @ingroup kernel_unit_sem_take
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_take_in_isr_with_wait_refused_by_scheduler)
@@ -910,17 +1062,10 @@ ZTEST(sem_unit, test_take_in_isr_with_wait_refused_by_scheduler)
 #endif
 }
 
-/**
- * @defgroup kernel_unit_sem_reset Reset
- * @ingroup kernel_unit_sem
- * @brief k_sem_reset() sets the count to 0 and makes all waiting threads stop their wait with
- * -EAGAIN.
- *
- * k_sem_reset() wakes the threads of the wait queue one by one with
- * z_sched_wake() until the queue is empty. Each woken thread gets the
- * return value -EAGAIN. Then k_sem_reset() sets the count to 0 and signals
- * the poll events (see @ref kernel_unit_sem_poll). It reschedules once if
- * it woke a thread or if the poll subsystem made a thread ready.
+/*
+ * Tests: Reset. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -931,7 +1076,7 @@ ZTEST(sem_unit, test_take_in_isr_with_wait_refused_by_scheduler)
  * - Action: z_impl_k_sem_reset().
  * - Expected: count 0, limit 5.
  *
- * @ingroup kernel_unit_sem_reset
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_reset_sets_count_to_zero)
@@ -957,7 +1102,7 @@ ZTEST(sem_unit, test_reset_sets_count_to_zero)
  *   the semaphore, the return value -EAGAIN and no swap data. The count is
  *   0.
  *
- * @ingroup kernel_unit_sem_reset
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_reset_wakes_all_waiting_threads)
@@ -979,14 +1124,10 @@ ZTEST(sem_unit, test_reset_wakes_all_waiting_threads)
 	zassert_equal(sem.count, 0U);
 }
 
-/**
- * @defgroup kernel_unit_sem_count Count query
- * @ingroup kernel_unit_sem
- * @brief k_sem_count_get() returns the count without a lock.
- *
- * z_impl_k_sem_count_get() is static inline in @c zephyr/kernel.h. It reads
- * one word, so it needs no lock. The value can be old when the caller uses
- * it.
+/*
+ * Tests: Count query. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -997,7 +1138,7 @@ ZTEST(sem_unit, test_reset_wakes_all_waiting_threads)
  * - Action: z_impl_k_sem_count_get().
  * - Expected: return value 4. No calls to the layers below.
  *
- * @ingroup kernel_unit_sem_count
+ * @ingroup kernel_unit_sem_k_sem_count_get
  * @see z_impl_k_sem_count_get()
  */
 ZTEST(sem_unit, test_count_get_returns_count_without_lock)
@@ -1011,21 +1152,10 @@ ZTEST(sem_unit, test_count_get_returns_count_without_lock)
 	zassert_equal(kernel_unit_history_len(), 0);
 }
 
-/**
- * @defgroup kernel_unit_sem_poll Poll events
- * @ingroup kernel_unit_sem
- * @brief With CONFIG_POLL, k_sem_give() and k_sem_reset() signal K_POLL_STATE_SEM_AVAILABLE to the
- * poll events.
- *
- * The static function sem_handle_poll_events() calls
- * z_handle_obj_poll_events() with the list @c poll_events and the state
- * K_POLL_STATE_SEM_AVAILABLE. It returns true if a polling thread became
- * ready. Then the caller reschedules. Without CONFIG_POLL, the function
- * returns false.
- *
- * k_sem_give() signals the poll events only if it did not wake a waiting
- * thread. k_sem_reset() always signals them, also after it set the count
- * to 0.
+/*
+ * Tests: Poll events. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 #ifdef CONFIG_POLL
@@ -1040,7 +1170,7 @@ ZTEST(sem_unit, test_count_get_returns_count_without_lock)
  *   count is 1. Thus a polling thread that wakes finds the semaphore
  *   available.
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  * @see sem_handle_poll_events()
  */
@@ -1072,7 +1202,7 @@ ZTEST(sem_unit, test_poll_give_signals_after_increment)
  *   count is 0. Thus a polling thread wakes, but the semaphore is not
  *   available.
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  * @see sem_handle_poll_events()
  */
@@ -1103,7 +1233,7 @@ ZTEST(sem_unit, test_poll_reset_signals_after_clear)
  * - Expected: count 3. One call of z_handle_obj_poll_events(), although
  *   the count did not change.
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_poll_give_signals_at_limit)
@@ -1132,7 +1262,7 @@ ZTEST(sem_unit, test_poll_give_signals_at_limit)
  * - Action: z_impl_k_sem_give().
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_poll_give_no_signal_after_wake)
@@ -1159,7 +1289,7 @@ ZTEST(sem_unit, test_poll_give_no_signal_after_wake)
  * - Expected: one call of z_handle_obj_poll_events(), after the last call
  *   of z_sched_wake().
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_poll_reset_signals_after_wake)
@@ -1191,7 +1321,7 @@ ZTEST(sem_unit, test_poll_reset_signals_after_wake)
  * - Expected: no call of z_handle_obj_poll_events(). The static function
  *   sem_handle_poll_events() returns false.
  *
- * @ingroup kernel_unit_sem_poll
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  * @see z_impl_k_sem_reset()
  * @see sem_handle_poll_events()
@@ -1210,17 +1340,10 @@ ZTEST(sem_unit, test_poll_not_called_without_config)
 }
 #endif /* !CONFIG_POLL */
 
-/**
- * @defgroup kernel_unit_sem_locking Locking
- * @ingroup kernel_unit_sem
- * @brief One spinlock, sem_lock, protects all semaphores. Each path releases it exactly once.
- *
- * Each path of k_sem_give(), k_sem_take() and k_sem_reset() locks
- * @c sem_lock once, as its first call to the layers below. The only call
- * before it is arch_is_in_isr() in the assertion of k_sem_take(). Each path
- * releases the lock once, as its last call, with the key of the lock. The
- * release is k_spin_unlock() (seen as arch_irq_unlock()), z_reschedule() or
- * z_pend_curr(). The count changes only while the lock is held.
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /**
@@ -1234,7 +1357,7 @@ ZTEST(sem_unit, test_poll_not_called_without_config)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key. No reschedule.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_lock_give_no_ready_thread_unlocks)
@@ -1260,7 +1383,7 @@ ZTEST(sem_unit, test_lock_give_no_ready_thread_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_reschedule() with
  *   @c sem_lock and the key.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_lock_give_wake_reschedules)
@@ -1288,7 +1411,7 @@ ZTEST(sem_unit, test_lock_give_wake_reschedules)
  *   z_handle_obj_poll_events(), z_reschedule() with @c sem_lock and the
  *   key. The count is 1.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_lock_give_poll_ready_reschedules)
@@ -1319,7 +1442,7 @@ ZTEST(sem_unit, test_lock_give_poll_ready_reschedules)
  * - Expected calls: arch_is_in_isr() (with CONFIG_ASSERT), arch_irq_lock(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_lock_take_available_unlocks)
@@ -1344,7 +1467,7 @@ ZTEST(sem_unit, test_lock_take_available_unlocks)
  * - Expected calls: arch_is_in_isr() (with CONFIG_ASSERT), arch_irq_lock(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_lock_take_busy_unlocks)
@@ -1371,7 +1494,7 @@ ZTEST(sem_unit, test_lock_take_busy_unlocks)
  *   z_pend_curr() with @c sem_lock and the key. No arch_irq_unlock() after
  *   the wait.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_lock_take_wait_hands_lock_to_pend)
@@ -1398,7 +1521,7 @@ ZTEST(sem_unit, test_lock_take_wait_hands_lock_to_pend)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_lock_reset_no_ready_thread_unlocks)
@@ -1428,7 +1551,7 @@ ZTEST(sem_unit, test_lock_reset_no_ready_thread_unlocks)
  *   @c sem_lock and the key. All wakes occur under one lock, so no thread
  *   runs before all threads are woken.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_lock_reset_wake_reschedules)
@@ -1459,7 +1582,7 @@ ZTEST(sem_unit, test_lock_reset_wake_reschedules)
  *   z_handle_obj_poll_events(), z_reschedule() with @c sem_lock and the
  *   key.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_lock_reset_poll_ready_reschedules)
@@ -1492,7 +1615,7 @@ ZTEST(sem_unit, test_lock_reset_poll_ready_reschedules)
  * - k_sem_reset(), count 1: count 1 at the lock, 0 at the release.
  * - Expected: the count after the operation is the count at the release.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  * @see z_impl_k_sem_take()
  * @see z_impl_k_sem_reset()
@@ -1531,7 +1654,7 @@ ZTEST(sem_unit, test_lock_protects_count)
  * - Expected: z_reschedule() and z_pend_curr() get the address of
  *   @c sem_lock both times, and the wait queue of the correct semaphore.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  * @see z_impl_k_sem_take()
  */
@@ -1562,7 +1685,7 @@ ZTEST(sem_unit, test_lock_shared_by_all_semaphores)
  * - Action: z_impl_k_sem_init() with count 0 and limit 1.
  * - Expected: no call of arch_irq_lock() and arch_irq_unlock().
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_lock_not_used_by_init)
@@ -1588,7 +1711,7 @@ ZTEST(sem_unit, test_lock_not_used_by_init)
  * - Expected: z_spin_lock_valid(), z_spin_lock_set_owner() and
  *   z_spin_unlock_valid() each get the address of @c sem_lock once.
  *
- * @ingroup kernel_unit_sem_locking
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_lock_validation_sees_sem_lock)
@@ -1609,24 +1732,10 @@ ZTEST(sem_unit, test_lock_validation_sees_sem_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_sem_syscall System call verification
- * @ingroup kernel_unit_sem
- * @brief With CONFIG_USERSPACE, each verification function checks the semaphore object before it
- * calls the implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_sem_*(). This function
- * checks with K_SYSCALL_OBJ() that the pointer is a semaphore object of the
- * kernel that the thread has access to. z_vrfy_k_sem_init() uses
- * K_SYSCALL_OBJ_INIT(): the object can be initialized or not. The other
- * functions use K_SYSCALL_OBJ(): the object must be initialized. If the
- * check fails, K_OOPS() stops the thread. Otherwise the function calls
- * z_impl_k_sem_*() with the same arguments and returns its result.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that the
- * oops occurs before the implementation changes the semaphore, not that
- * the implementation does not run.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 static unsigned int count_at_oops;
@@ -1662,7 +1771,7 @@ static void fail_object_check(struct k_sem *sem)
  *   semaphore, K_OBJ_SEM and _OBJ_INIT_ANY, before z_waitq_init(). No oops.
  *   Return value 0, count 1, limit 2.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_vrfy_k_sem_init()
  */
 ZTEST(sem_unit, test_syscall_init_checks_any_object)
@@ -1689,7 +1798,7 @@ ZTEST(sem_unit, test_syscall_init_checks_any_object)
  * - Expected: one oops. At the oops, the count has the pattern. The oops
  *   comes before z_waitq_init().
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_vrfy_k_sem_init()
  */
 ZTEST(sem_unit, test_syscall_init_oops_on_bad_object)
@@ -1717,7 +1826,7 @@ ZTEST(sem_unit, test_syscall_init_oops_on_bad_object)
  *   semaphore, K_OBJ_SEM and _OBJ_INIT_TRUE, before the lock. No oops.
  *   Count 1.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_vrfy_k_sem_give()
  */
 ZTEST(sem_unit, test_syscall_give_checks_initialized_object)
@@ -1744,7 +1853,7 @@ ZTEST(sem_unit, test_syscall_give_checks_initialized_object)
  * - Expected: one oops. At the oops, the count is 0. The oops comes before
  *   the lock of @c sem_lock.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_vrfy_k_sem_give()
  */
 ZTEST(sem_unit, test_syscall_give_oops_on_bad_object)
@@ -1773,7 +1882,7 @@ ZTEST(sem_unit, test_syscall_give_oops_on_bad_object)
  *   semaphore, K_OBJ_SEM and _OBJ_INIT_TRUE, before the lock. No oops.
  *   z_pend_curr() gets the timeout. Return value -EAGAIN.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_vrfy_k_sem_take()
  */
 ZTEST(sem_unit, test_syscall_take_checks_initialized_object)
@@ -1801,7 +1910,7 @@ ZTEST(sem_unit, test_syscall_take_checks_initialized_object)
  * - Expected: one oops. At the oops, the count is 1. The oops comes before
  *   the lock of @c sem_lock.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_vrfy_k_sem_take()
  */
 ZTEST(sem_unit, test_syscall_take_oops_on_bad_object)
@@ -1829,7 +1938,7 @@ ZTEST(sem_unit, test_syscall_take_oops_on_bad_object)
  *   semaphore, K_OBJ_SEM and _OBJ_INIT_TRUE, before the lock. No oops.
  *   Count 0.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_vrfy_k_sem_reset()
  */
 ZTEST(sem_unit, test_syscall_reset_checks_initialized_object)
@@ -1856,7 +1965,7 @@ ZTEST(sem_unit, test_syscall_reset_checks_initialized_object)
  * - Expected: one oops. At the oops, the count is 2. The oops comes before
  *   the lock of @c sem_lock.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_vrfy_k_sem_reset()
  */
 ZTEST(sem_unit, test_syscall_reset_oops_on_bad_object)
@@ -1883,7 +1992,7 @@ ZTEST(sem_unit, test_syscall_reset_oops_on_bad_object)
  * - Expected: k_object_find() and k_object_validation_check() with the
  *   semaphore, K_OBJ_SEM and _OBJ_INIT_TRUE. No oops. Return value 4.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_count_get
  * @see z_vrfy_k_sem_count_get()
  */
 ZTEST(sem_unit, test_syscall_count_get_checks_initialized_object)
@@ -1906,7 +2015,7 @@ ZTEST(sem_unit, test_syscall_count_get_checks_initialized_object)
  * - Action: z_vrfy_k_sem_count_get().
  * - Expected: one oops.
  *
- * @ingroup kernel_unit_sem_syscall
+ * @ingroup kernel_unit_sem_k_sem_count_get
  * @see z_vrfy_k_sem_count_get()
  */
 ZTEST(sem_unit, test_syscall_count_get_oops_on_bad_object)
@@ -1923,17 +2032,10 @@ ZTEST(sem_unit, test_syscall_count_get_oops_on_bad_object)
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_SEM
-/**
- * @defgroup kernel_unit_sem_obj_core Object core
- * @ingroup kernel_unit_sem
- * @brief With CONFIG_OBJ_CORE_SEM, sem.c registers the semaphore object type and links each
- * semaphore to it.
- *
- * K_OBJ_TYPE_DEFINE() puts a descriptor of the type @c obj_type_sem into the
- * iterable section @c k_obj_core_desc. At boot, the object core code
- * initializes the type from the descriptor and links the semaphores that
- * K_SEM_DEFINE() defines (the section @c k_sem). k_sem_init() links each
- * semaphore that it initializes.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 K_SEM_DEFINE(unit_static_sem, 1, 2);
@@ -1963,7 +2065,7 @@ static const struct k_obj_core_desc *sem_obj_core_desc(int *count)
  * - Expected: one call of k_obj_core_init_and_link() with the object core
  *   of the semaphore and @c obj_type_sem.
  *
- * @ingroup kernel_unit_sem_obj_core
+ * @ingroup kernel_unit_sem_k_sem_init
  * @see z_impl_k_sem_init()
  */
 ZTEST(sem_unit, test_obj_core_init_links_semaphore)
@@ -1988,7 +2090,7 @@ ZTEST(sem_unit, test_obj_core_init_links_semaphore)
  *   size is the size of @c struct @c k_sem, and its object core offset is
  *   the offset of @c obj_core. Its object range is the section @c k_sem.
  *
- * @ingroup kernel_unit_sem_obj_core
+ * @ingroup kernel_unit_sem_static
  */
 ZTEST(sem_unit, test_obj_core_type_descriptor)
 {
@@ -2016,7 +2118,7 @@ ZTEST(sem_unit, test_obj_core_type_descriptor)
  * - Expected: the semaphore is in the range, at a multiple of the object
  *   size from the start.
  *
- * @ingroup kernel_unit_sem_obj_core
+ * @ingroup kernel_unit_sem_static
  */
 ZTEST(sem_unit, test_obj_core_descriptor_covers_static_semaphores)
 {
@@ -2035,24 +2137,10 @@ ZTEST(sem_unit, test_obj_core_descriptor_covers_static_semaphores)
 }
 #endif /* CONFIG_OBJ_CORE_SEM */
 
-/**
- * @defgroup kernel_unit_sem_ref Semaphore on the reference scheduler
- * @ingroup kernel_unit_sem
- * @brief k_sem_give(), k_sem_take() and k_sem_reset() with the reference fake of the scheduler.
- *
- * These tests install the reference fake of the scheduler contract (see
- * @ref kernel_unit_sched_ref) in place of scripted return values. The threads
- * of a test have priorities, and the wait queue of the semaphore has the
- * order of the contract: a higher priority first, then the order of arrival.
- * A wait of k_sem_take() runs the environment of the test (another thread, an
- * ISR or a timeout) and returns the value that the waker gave. Thus a test
- * runs both halves of a hand-over, the give and the take, through the
- * scheduler. Each test ends with kernel_unit_sched_ref_assert_ok(): the
- * invariants of the contract hold, also the rule that the CPU runs a thread
- * with the highest priority.
- *
- * Priorities in these tests are Zephyr priorities: a lower number is a higher
- * priority.
+/*
+ * Tests: Semaphore on the reference scheduler. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_sem, at the top of this file.
  */
 
 /* The threads of the tests on the reference scheduler. */
@@ -2122,7 +2210,7 @@ static void env_resets(void)
  *   (its k_sem_take() returns 0) and runs, because its priority is higher than
  *   the priority of ref_main. ref_a still waits. The count stays 0.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_ref_give_wakes_highest_priority_waiter)
@@ -2157,7 +2245,7 @@ ZTEST(sem_unit, test_ref_give_wakes_highest_priority_waiter)
  *   one gets 0. ref_main keeps the CPU (its priority is higher). The count
  *   stays 0.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_ref_give_wakes_equal_priority_in_wait_order)
@@ -2194,7 +2282,7 @@ ZTEST(sem_unit, test_ref_give_wakes_equal_priority_in_wait_order)
  *   switches back to ref_main. k_sem_take() returns 0. The count stays 0, and
  *   no thread waits.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  * @see z_impl_k_sem_give()
  */
@@ -2227,7 +2315,7 @@ ZTEST(sem_unit, test_ref_take_waits_for_give_of_other_thread)
  *   not switch. At the exit of the ISR, the CPU selects ref_main.
  *   k_sem_take() returns 0, and the count stays 0.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  * @see z_impl_k_sem_give()
  */
@@ -2258,7 +2346,7 @@ ZTEST(sem_unit, test_ref_take_waits_for_give_of_isr)
  * - Expected: the timeout expires, and k_sem_take() returns -EAGAIN. ref_main
  *   is not in the wait queue and has no armed timeout. The count stays 0.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  */
 ZTEST(sem_unit, test_ref_take_timeout_returns_eagain)
@@ -2287,7 +2375,7 @@ ZTEST(sem_unit, test_ref_take_timeout_returns_eagain)
  *   timeout cannot end a later wait of ref_a. ref_main keeps the CPU, because
  *   ref_a has a lower priority.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_give
  * @see z_impl_k_sem_give()
  */
 ZTEST(sem_unit, test_ref_give_ends_timed_wait)
@@ -2320,7 +2408,7 @@ ZTEST(sem_unit, test_ref_give_ends_timed_wait)
  *   thread waits. After the one reschedule, ref_b runs (the highest
  *   priority). The count is 0.
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_reset
  * @see z_impl_k_sem_reset()
  */
 ZTEST(sem_unit, test_ref_reset_wakes_all_waiters_with_eagain)
@@ -2360,7 +2448,7 @@ ZTEST(sem_unit, test_ref_reset_wakes_all_waiters_with_eagain)
  * - Expected: k_sem_take() returns -EAGAIN, the value of the reset. The
  *   count is 0. Without the reset, this wait never ends (K_FOREVER).
  *
- * @ingroup kernel_unit_sem_ref
+ * @ingroup kernel_unit_sem_k_sem_take
  * @see z_impl_k_sem_take()
  * @see z_impl_k_sem_reset()
  */

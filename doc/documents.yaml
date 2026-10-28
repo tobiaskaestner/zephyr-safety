@@ -187,6 +187,20 @@ documents:
     prefix: dox_testspec
     doc_dir: dox/zephyr-safety-testspec
 
+  # The specification of the kernel unit tests (safety/tests/kernel/unit),
+  # with one group for each kernel source file and, below it, one group for
+  # each function of the file. Not a link peer (crossref: false): the test
+  # functions and helpers of the unit tests have names like the ones of the
+  # Zephyr tests, and Doxygen projects that import each other's tag files
+  # leave shared symbols to the other project (see dox-zephyr).
+  dox-kernel-unit-testspec:
+    title: "Kernel Unit Test Specification"
+    kind: doxygen
+    group: specification
+    prefix: dox_unit
+    doc_dir: dox/kernel-unit-testspec
+    crossref: false
+
   # The requirements as Doxygen `\requirement` blocks. Its tag file is what
   # makes `\verifies` / `\satisfies` resolve in the other Doxygen documents —
   # and warn on a UID that does not exist. Not a deliverable: the requirements

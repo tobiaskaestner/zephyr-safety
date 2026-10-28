@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_queue Queue unit (kernel/queue.c)
+ * @defgroup kernel_unit_queue kernel/queue.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/queue.c, written as unit tests.
  *
@@ -118,6 +118,369 @@
  * scenarios in @c testcase.yaml build the tests once for each Kconfig
  * option above. A test that applies only to some configurations is in an
  * @c \#ifdef block, or it calls ztest_test_skip().
+ *
+ * @par Structure of the tests
+ * Each public function of queue.c has one group below this group. A system
+ * call has one group for z_impl_k_queue_*() and z_vrfy_k_queue_*(). The
+ * static functions and the data of queue.c have the last group. Each test
+ * is in the group of the function under test. The rules below (insert,
+ * hand-over, allocated nodes, locking, system call verification, object
+ * core, FIFO and LIFO) apply to more than one function. Their tests are in
+ * the group of the function that they call.
+ *
+ * @par Insert
+ * The insert functions put an item into the list, if no thread waits.
+ * k_queue_append(), k_queue_prepend(), k_queue_insert() and
+ * k_queue_unique_append() share the static function queue_insert(). The
+ * list node of the item is the first word of the item. queue_insert()
+ * writes this word with the pointer to the next node and the flags 0. It
+ * does not write the other words of the item. These functions do not
+ * allocate memory. If a thread waits, see "Hand-over of an inserted item"
+ * below.
+ *
+ * @par Hand-over of an inserted item
+ * If a thread waits, an insert function gives the item to this thread and
+ * not to the list.
+ * Before queue_insert() changes the list, it calls z_sched_wake() with the
+ * wait queue, the return value 0 and the item. If a thread waits, the
+ * scheduler makes it ready with the item as its @c swap_data, and
+ * queue_insert() releases the lock with z_reschedule(). The item does not
+ * go into the list, and queue_insert() does not write to it. The
+ * allocating functions then do not allocate a node.
+ *
+ * @par Allocated nodes
+ * The alloc functions put a wrapper node for the item into the list, and the
+ * get and remove functions free it.
+ * k_queue_alloc_append() and k_queue_alloc_prepend() allocate a
+ * @c struct @c alloc_node with z_thread_malloc() from the resource pool of
+ * the current thread. The node has flag 1 and points to the item. The
+ * item does not change. If no memory is available, the functions return
+ * -ENOMEM and change nothing. k_queue_get() and k_queue_remove() free the
+ * node with k_free() and give the item to the caller. The peek functions
+ * give the item and do not free the node.
+ *
+ * @par Locking
+ * The spinlock of the queue protects the list and the wait queue. Each path
+ * releases it exactly once.
+ * Each path of the queue operations, except k_queue_init() and
+ * k_queue_is_empty(), locks the spinlock of its queue once, as its first
+ * call to the layers below. Each path releases the lock once, as its last
+ * call, with the key of the lock. The release is k_spin_unlock() (seen as
+ * arch_irq_unlock()), z_reschedule() or z_pend_curr(). k_queue_insert(),
+ * k_queue_append(), k_queue_prepend(), k_queue_unique_append() and the
+ * alloc functions give the lock key to queue_insert(), which releases the
+ * lock. The list changes only while the lock is held. z_thread_malloc()
+ * and k_free() run while the lock is held.
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks the queue object
+ * before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_queue_*(). This
+ * function checks that the pointer is a queue object of the kernel that the
+ * thread has access to. z_vrfy_k_queue_init() uses
+ * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet. Thus
+ * a user thread cannot initialize a queue again while other threads use
+ * it. The other functions use K_SYSCALL_OBJ(): the object must be
+ * initialized. If the check fails, K_OOPS() stops the thread. Otherwise
+ * the function calls z_impl_k_queue_*() with the same arguments and
+ * returns its result.
+ *
+ * k_queue_append(), k_queue_prepend(), k_queue_insert(),
+ * k_queue_append_list(), k_queue_merge_slist(), k_queue_remove() and
+ * k_queue_unique_append() are not system calls. A user thread can only
+ * add items with the alloc functions, which do not write to the item.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that
+ * the oops occurs before the implementation locks or changes the queue.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_FIFO and CONFIG_OBJ_CORE_LIFO, queue.c defines the
+ * object types of the FIFO and the LIFO.
+ * A plain queue has no object core. queue.c defines the object types
+ * @c _obj_type_fifo and @c _obj_type_lifo. K_OBJ_TYPE_DEFINE() puts one
+ * descriptor of each type into the iterable section @c k_obj_core_desc.
+ * At boot, the object core code initializes the type from the descriptor
+ * and links the FIFOs and LIFOs that K_FIFO_DEFINE() and K_LIFO_DEFINE()
+ * define (the sections @c k_fifo and @c k_lifo). The macros k_fifo_init()
+ * and k_lifo_init() in @c zephyr/kernel.h link each FIFO or LIFO that they
+ * initialize to the type of queue.c. The tests of the descriptors are in
+ * the group @ref kernel_unit_queue_static. The tests of the link by
+ * k_fifo_init() and k_lifo_init() are in the group of k_queue_init().
+ *
+ * @par FIFO and LIFO
+ * The FIFO and the LIFO are queues: a FIFO appends at the tail, a LIFO
+ * prepends at the head, and both get from the head.
+ * The FIFO and LIFO functions are macros in @c zephyr/kernel.h. Each one
+ * calls a function of queue.c with the queue @c _queue of the FIFO or
+ * LIFO. These tests show that the order of the items comes from the choice
+ * of the queue function. Each test is in the group of the queue function
+ * that its first FIFO or LIFO macro calls.
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_init k_queue_init()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_init() makes the queue empty and initializes its parts.
+ *
+ * k_queue_init() makes the list empty, sets the lock to its initial value,
+ * and initializes the wait queue, the poll events and the kernel object.
+ * It does not lock the queue: until k_queue_init() returns, only the
+ * caller uses the queue. It does not link an object core. The FIFO and
+ * LIFO macros do this (see "Object core" in @ref kernel_unit_queue).
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_init()
+ * - z_vrfy_k_queue_init(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_cancel_wait k_queue_cancel_wait()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_cancel_wait() makes one waiting thread return NULL from k_queue_get().
+ *
+ * k_queue_cancel_wait() calls z_sched_wake() with the return value 0 and
+ * the data NULL. The scheduler wakes the first waiting thread, and its
+ * k_queue_get() returns NULL. The function does not change the list. With
+ * CONFIG_POLL it signals K_POLL_STATE_CANCELLED to the poll events (see
+ * @ref kernel_unit_queue_static).
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_cancel_wait()
+ * - z_vrfy_k_queue_cancel_wait(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_insert k_queue_insert()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_insert() puts an item after another item.
+ *
+ * k_queue_insert() calls the static function queue_insert() (see "Insert"
+ * and "Hand-over of an inserted item" in @ref kernel_unit_queue).
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_insert()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_append k_queue_append()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_append() puts an item at the tail.
+ *
+ * k_queue_append() calls the static function queue_insert() (see "Insert"
+ * and "Hand-over of an inserted item" in @ref kernel_unit_queue).
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_append()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_prepend k_queue_prepend()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_prepend() puts an item at the head.
+ *
+ * k_queue_prepend() calls the static function queue_insert() (see "Insert"
+ * and "Hand-over of an inserted item" in @ref kernel_unit_queue).
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_prepend()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_alloc_append k_queue_alloc_append()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_alloc_append() puts a wrapper node for the item at the tail, and can fail with
+ * -ENOMEM.
+ *
+ * See "Allocated nodes" and "Hand-over of an inserted item" in
+ * @ref kernel_unit_queue.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_alloc_append()
+ * - z_vrfy_k_queue_alloc_append(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_alloc_prepend k_queue_alloc_prepend()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_alloc_prepend() puts a wrapper node for the item at the head, and can fail with
+ * -ENOMEM.
+ *
+ * See "Allocated nodes" and "Hand-over of an inserted item" in
+ * @ref kernel_unit_queue.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_alloc_prepend()
+ * - z_vrfy_k_queue_alloc_prepend(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_append_list k_queue_append_list()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_append_list() and k_queue_merge_slist() append a list of items in one operation.
+ *
+ * The caller gives a NULL-terminated, singly linked list of items: the
+ * first word of each item points to the next item. k_queue_append_list()
+ * first gives one item to each waiting thread, in list order. It follows
+ * the next pointers until no thread waits or the list ends. Then it
+ * appends the rest of the list (from the current item to @p tail) to the
+ * queue in one step. It does not write the list nodes, so the flags of
+ * each node must be 0.
+ *
+ * Both functions check their arguments with CHECKIF(). The Kconfig
+ * options of CHECKIF() change what an invalid argument causes.
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_append_list()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_merge_slist k_queue_merge_slist()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_merge_slist() appends the items of a sys_slist_t and makes the slist empty.
+ *
+ * k_queue_merge_slist() appends the items of a @c sys_slist_t with
+ * k_queue_append_list() and then makes the slist empty.
+ *
+ * Both functions check their arguments with CHECKIF(). The Kconfig
+ * options of CHECKIF() change what an invalid argument causes.
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_merge_slist()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_get k_queue_get()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_get() removes the head item, or returns NULL, or waits.
+ *
+ * If the list is not empty, k_queue_get() removes the head node and
+ * returns its item (and frees a wrapper node). It then does not wait, for
+ * any timeout. If the list is empty and the timeout is K_NO_WAIT, it
+ * returns NULL. Otherwise it waits on the wait queue with z_pend_curr().
+ * After the wait, it returns the @c swap_data of the current thread if
+ * the wait result is 0, else NULL. An insert function or
+ * k_queue_cancel_wait() sets @c swap_data and the result 0 with
+ * z_sched_wake().
+ *
+ * The API says that an ISR must use K_NO_WAIT. queue.c has no check of this
+ * rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler refuses
+ * it with a panic in every build.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_get()
+ * - z_vrfy_k_queue_get(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_remove k_queue_remove()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_remove() removes one item at any position.
+ *
+ * k_queue_remove() searches the list from the head for the first node
+ * with the item and removes it. It returns true if it found the item.
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_remove()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_unique_append k_queue_unique_append()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_unique_append() appends an item only if it is not in the list.
+ *
+ * k_queue_unique_append() calls the static function queue_insert() (see
+ * "Insert" and "Hand-over of an inserted item" in @ref kernel_unit_queue).
+ *
+ * @par Functions in kernel/queue.c
+ * - k_queue_unique_append()
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_peek_head k_queue_peek_head()
+ * @ingroup kernel_unit_queue
+ * @brief The peek functions read the list and do not change it.
+ *
+ * k_queue_peek_head() and k_queue_peek_tail() return the item of the head
+ * or tail node, or NULL for an empty list. They do not change the list.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_peek_head()
+ * - z_vrfy_k_queue_peek_head(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_peek_tail k_queue_peek_tail()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_peek_tail() returns the item of the tail node, or NULL for an empty list.
+ *
+ * See k_queue_peek_head() (@ref kernel_unit_queue_k_queue_peek_head).
+ *
+ * @par Functions in kernel/queue.c
+ * - z_impl_k_queue_peek_tail()
+ * - z_vrfy_k_queue_peek_tail(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_queue_k_queue_is_empty k_queue_is_empty()
+ * @ingroup kernel_unit_queue
+ * @brief k_queue_is_empty() reads the list without the lock.
+ *
+ * k_queue_is_empty() is static inline in @c zephyr/kernel.h and reads the
+ * list without the lock.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_vrfy_k_queue_is_empty(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}. queue.c has no z_impl_k_queue_is_empty().
+ */
+
+/**
+ * @defgroup kernel_unit_queue_static Static functions and data
+ * @ingroup kernel_unit_queue
+ * @brief The static functions of queue.c, and the data that queue.c defines.
+ *
+ * @par Poll events
+ * With CONFIG_POLL, a queue signals K_POLL_STATE_DATA_AVAILABLE when items
+ * go into the list, and K_POLL_STATE_CANCELLED on k_queue_cancel_wait().
+ * The static function queue_handle_poll_events() calls
+ * z_handle_obj_poll_events() with the poll events of the queue. The return
+ * value tells if a polling thread became ready. Then the operation
+ * releases the lock with z_reschedule(). Without CONFIG_POLL,
+ * queue_handle_poll_events() returns false and calls nothing.
+ *
+ * - queue_insert() signals only if the item went into the list: not after
+ *   a hand-over to a waiting thread, and not after -ENOMEM.
+ * - k_queue_append_list() always signals, also if all items went to
+ *   waiting threads.
+ * - k_queue_cancel_wait() always signals, also if it woke a thread.
+ * - k_queue_get(), k_queue_remove() and the peek functions do not signal.
+ *
+ * Most tests of these rules are in the groups of the functions that they
+ * call.
+ *
+ * @par Functions in kernel/queue.c
+ * - z_queue_node_peek(), static. It gives the item of a node, and frees a
+ *   wrapper node if the caller asks for it. The tests of k_queue_get(),
+ *   k_queue_remove() and the peek functions call it.
+ * - queue_handle_poll_events(), static inline. The poll part is only in the
+ *   code with @kconfig{CONFIG_POLL}.
+ * - queue_insert(), static. The common code of the insert and alloc
+ *   functions (see "Insert" in @ref kernel_unit_queue).
+ *
+ * @par Data in kernel/queue.c
+ * - @c _obj_type_fifo and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_FIFO}.
+ * - @c _obj_type_lifo and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_LIFO}.
+ *
+ * These two object types have external linkage: the macros k_fifo_init()
+ * and k_lifo_init() in @c zephyr/kernel.h use them. The tests of the
+ * descriptors are in this group.
  */
 
 #include <string.h>
@@ -350,16 +713,10 @@ static void queue_unit_before(void *fixture)
 
 ZTEST_SUITE(queue_unit, NULL, NULL, queue_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_queue_init Initialization
- * @ingroup kernel_unit_queue
- * @brief k_queue_init() makes the queue empty and initializes its parts.
- *
- * k_queue_init() makes the list empty, sets the lock to its initial value,
- * and initializes the wait queue, the poll events and the kernel object.
- * It does not lock the queue: until k_queue_init() returns, only the
- * caller uses the queue. It does not link an object core. The FIFO and
- * LIFO macros do this (see @ref kernel_unit_queue_obj_core).
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -371,7 +728,7 @@ ZTEST_SUITE(queue_unit, NULL, NULL, queue_unit_before, NULL, NULL);
  * - Expected: the list has no head and no tail. k_queue_is_empty() returns
  *   a value other than 0.
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_empties_list)
@@ -396,7 +753,7 @@ ZTEST(queue_unit, test_init_empties_list)
  * - Expected: all bytes of the lock are 0 (the value of an unlocked
  *   spinlock).
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_resets_lock)
@@ -418,7 +775,7 @@ ZTEST(queue_unit, test_init_resets_lock)
  * - Action: z_impl_k_queue_init().
  * - Expected: one call of z_waitq_init() with the wait queue of the queue.
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_initializes_wait_queue)
@@ -440,7 +797,7 @@ ZTEST(queue_unit, test_init_initializes_wait_queue)
  * - Action: z_impl_k_queue_init().
  * - Expected: the list @c poll_events is a valid, empty list.
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_empties_poll_events)
@@ -463,7 +820,7 @@ ZTEST(queue_unit, test_init_empties_poll_events)
  * - Action: z_impl_k_queue_init().
  * - Expected: one call of k_object_init() with the queue.
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_initializes_kernel_object)
@@ -486,7 +843,7 @@ ZTEST(queue_unit, test_init_initializes_kernel_object)
  * - Expected calls, in this order: z_waitq_init(), k_object_init() (with
  *   CONFIG_USERSPACE). No lock, no object core link, no allocation.
  *
- * @ingroup kernel_unit_queue_init
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_init_call_order)
@@ -498,17 +855,10 @@ ZTEST(queue_unit, test_init_call_order)
 	zassert_call_history(z_waitq_init, KERNEL_UNIT_IF_ENABLED(CONFIG_USERSPACE, k_object_init));
 }
 
-/**
- * @defgroup kernel_unit_queue_insert Insert
- * @ingroup kernel_unit_queue
- * @brief The insert functions put an item into the list, if no thread waits.
- *
- * k_queue_append(), k_queue_prepend(), k_queue_insert() and
- * k_queue_unique_append() share the static function queue_insert(). The
- * list node of the item is the first word of the item. queue_insert()
- * writes this word with the pointer to the next node and the flags 0. It
- * does not write the other words of the item. These functions do not
- * allocate memory. If a thread waits, see @ref kernel_unit_queue_handover.
+/*
+ * Tests: Insert. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -519,7 +869,7 @@ ZTEST(queue_unit, test_init_call_order)
  * - Action: k_queue_append() of the items a, b and c.
  * - Expected: the list is a, b, c. The tail of the list is c.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append()
  */
 ZTEST(queue_unit, test_append_puts_item_at_tail)
@@ -543,7 +893,7 @@ ZTEST(queue_unit, test_append_puts_item_at_tail)
  * - Action: k_queue_prepend() of the items a, b and c.
  * - Expected: the list is c, b, a. The tail of the list is a.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_prepend
  * @see k_queue_prepend()
  */
 ZTEST(queue_unit, test_prepend_puts_item_at_head)
@@ -567,7 +917,7 @@ ZTEST(queue_unit, test_prepend_puts_item_at_head)
  * - Action: k_queue_insert() of b after a, then of d after c.
  * - Expected: the list is a, b, c, d. The tail of the list is d.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_insert
  * @see k_queue_insert()
  */
 ZTEST(queue_unit, test_insert_puts_item_after_prev)
@@ -592,7 +942,7 @@ ZTEST(queue_unit, test_insert_puts_item_after_prev)
  * - Action: k_queue_insert() of b with prev NULL.
  * - Expected: the list is b, a.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_insert
  * @see k_queue_insert()
  */
 ZTEST(queue_unit, test_insert_null_prev_puts_item_at_head)
@@ -616,7 +966,7 @@ ZTEST(queue_unit, test_insert_null_prev_puts_item_at_head)
  * - Expected: the first word of a is the list node with the flags 0 and
  *   no next node. The other words of a do not change.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), queue_insert()
  */
 ZTEST(queue_unit, test_insert_writes_only_first_word)
@@ -642,7 +992,7 @@ ZTEST(queue_unit, test_insert_writes_only_first_word)
  * - Action: each of the four functions with a new item.
  * - Expected: no call of z_thread_malloc() and of k_free().
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), k_queue_prepend(), k_queue_insert(), k_queue_unique_append()
  */
 ZTEST(queue_unit, test_insert_does_not_allocate)
@@ -669,7 +1019,7 @@ ZTEST(queue_unit, test_insert_does_not_allocate)
  * - Action: k_queue_unique_append() of b.
  * - Expected: return value true. The list is a, b.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_unique_append
  * @see k_queue_unique_append()
  */
 ZTEST(queue_unit, test_unique_append_appends_new_item)
@@ -694,7 +1044,7 @@ ZTEST(queue_unit, test_unique_append_appends_new_item)
  * - Expected: return value false. The list is a, b, c. No call of
  *   z_sched_wake() and of the poll subsystem.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_unique_append
  * @see k_queue_unique_append()
  */
 ZTEST(queue_unit, test_unique_append_rejects_item_in_list)
@@ -730,7 +1080,7 @@ ZTEST(queue_unit, test_unique_append_rejects_item_in_list)
  * - Expected: return value true. The list has a two times: first in a
  *   wrapper node, then as the item itself.
  *
- * @ingroup kernel_unit_queue_insert
+ * @ingroup kernel_unit_queue_k_queue_unique_append
  * @see k_queue_unique_append()
  */
 ZTEST(queue_unit, test_unique_append_does_not_find_allocated_item)
@@ -747,17 +1097,10 @@ ZTEST(queue_unit, test_unique_append_does_not_find_allocated_item)
 	zassert_equal_ptr(sys_sflist_peek_tail(&queue.data_q), (sys_sfnode_t *)a);
 }
 
-/**
- * @defgroup kernel_unit_queue_handover Hand-over to a waiting thread
- * @ingroup kernel_unit_queue
- * @brief If a thread waits, an insert function gives the item to this thread and not to the list.
- *
- * Before queue_insert() changes the list, it calls z_sched_wake() with the
- * wait queue, the return value 0 and the item. If a thread waits, the
- * scheduler makes it ready with the item as its @c swap_data, and
- * queue_insert() releases the lock with z_reschedule(). The item does not
- * go into the list, and queue_insert() does not write to it. The
- * allocating functions then do not allocate a node.
+/*
+ * Tests: Hand-over to a waiting thread. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -772,7 +1115,7 @@ ZTEST(queue_unit, test_unique_append_does_not_find_allocated_item)
  *   the return value 0 and a. The list is empty. The first word of a has
  *   the pattern.
  *
- * @ingroup kernel_unit_queue_handover
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), queue_insert()
  */
 ZTEST(queue_unit, test_handover_append_gives_item_to_thread)
@@ -806,7 +1149,7 @@ ZTEST(queue_unit, test_handover_append_gives_item_to_thread)
  * - Expected: z_sched_wake() with a, b and c. The list is empty.
  *   k_queue_unique_append() returns true.
  *
- * @ingroup kernel_unit_queue_handover
+ * @ingroup kernel_unit_queue_k_queue_prepend
  * @see k_queue_prepend(), k_queue_insert(), k_queue_unique_append()
  */
 ZTEST(queue_unit, test_handover_other_inserts_give_item_to_thread)
@@ -838,7 +1181,7 @@ ZTEST(queue_unit, test_handover_other_inserts_give_item_to_thread)
  * - Expected: return value 0 each time. z_sched_wake() with a and b. No
  *   call of z_thread_malloc(). The list is empty.
  *
- * @ingroup kernel_unit_queue_handover
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_impl_k_queue_alloc_append(), z_impl_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_handover_alloc_does_not_allocate)
@@ -866,7 +1209,7 @@ ZTEST(queue_unit, test_handover_alloc_does_not_allocate)
  * - Action: k_queue_append() of a.
  * - Expected: one call of z_sched_wake(). One thread still waits.
  *
- * @ingroup kernel_unit_queue_handover
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), queue_insert()
  */
 ZTEST(queue_unit, test_handover_wakes_one_thread_only)
@@ -882,19 +1225,10 @@ ZTEST(queue_unit, test_handover_wakes_one_thread_only)
 	zassert_equal(kernel_unit_waiting_threads, 1U);
 }
 
-/**
- * @defgroup kernel_unit_queue_alloc Items with an allocated node
- * @ingroup kernel_unit_queue
- * @brief The alloc functions put a wrapper node for the item into the list, and the get and remove
- * functions free it.
- *
- * k_queue_alloc_append() and k_queue_alloc_prepend() allocate a
- * @c struct @c alloc_node with z_thread_malloc() from the resource pool of
- * the current thread. The node has flag 1 and points to the item. The
- * item does not change. If no memory is available, the functions return
- * -ENOMEM and change nothing. k_queue_get() and k_queue_remove() free the
- * node with k_free() and give the item to the caller. The peek functions
- * give the item and do not free the node.
+/*
+ * Tests: Items with an allocated node. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -910,7 +1244,7 @@ ZTEST(queue_unit, test_handover_wakes_one_thread_only)
  *   pool, with flag 1 and the data pointer b. The list is a, b. Item b does
  *   not change.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_impl_k_queue_alloc_append()
  */
 ZTEST(queue_unit, test_alloc_append_wraps_item_at_tail)
@@ -944,7 +1278,7 @@ ZTEST(queue_unit, test_alloc_append_wraps_item_at_tail)
  *   with flag 1 and the data pointer b. The list is b, a. Item b does not
  *   change.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_alloc_prepend
  * @see z_impl_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_alloc_prepend_wraps_item_at_head)
@@ -975,7 +1309,7 @@ ZTEST(queue_unit, test_alloc_prepend_wraps_item_at_head)
  * - Action: z_impl_k_queue_alloc_append() of b.
  * - Expected: return value -ENOMEM. The list is a. No poll signal.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_impl_k_queue_alloc_append()
  */
 ZTEST(queue_unit, test_alloc_append_no_memory_returns_enomem)
@@ -1003,7 +1337,7 @@ ZTEST(queue_unit, test_alloc_append_no_memory_returns_enomem)
  * - Action: z_impl_k_queue_alloc_prepend() of b.
  * - Expected: return value -ENOMEM. The list is a.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_alloc_prepend
  * @see z_impl_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_alloc_prepend_no_memory_returns_enomem)
@@ -1028,7 +1362,7 @@ ZTEST(queue_unit, test_alloc_prepend_no_memory_returns_enomem)
  * - Expected: return value a. One call of k_free() with the node. The list
  *   is empty.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get(), z_queue_node_peek()
  */
 ZTEST(queue_unit, test_alloc_get_frees_node)
@@ -1053,7 +1387,7 @@ ZTEST(queue_unit, test_alloc_get_frees_node)
  * - Action: z_impl_k_queue_get() with K_NO_WAIT.
  * - Expected: return value a. No call of k_free().
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get(), z_queue_node_peek()
  */
 ZTEST(queue_unit, test_alloc_get_direct_item_does_not_free)
@@ -1078,7 +1412,7 @@ ZTEST(queue_unit, test_alloc_get_direct_item_does_not_free)
  * - Expected: return values a and b. No call of k_free(). The list is a,
  *   b.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_impl_k_queue_peek_head(), z_impl_k_queue_peek_tail(), z_queue_node_peek()
  */
 ZTEST(queue_unit, test_alloc_peek_does_not_free)
@@ -1106,7 +1440,7 @@ ZTEST(queue_unit, test_alloc_peek_does_not_free)
  * - Expected: return value true. One call of k_free() with the node of b.
  *   The list is a, c.
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_remove
  * @see k_queue_remove(), z_queue_node_peek()
  */
 ZTEST(queue_unit, test_alloc_remove_frees_node)
@@ -1134,7 +1468,7 @@ ZTEST(queue_unit, test_alloc_remove_frees_node)
  * - Action: z_impl_k_queue_get() with K_NO_WAIT, four times.
  * - Expected: return values c, a, b, d. Two calls of k_free().
  *
- * @ingroup kernel_unit_queue_alloc
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_alloc_mixed_items_keep_order)
@@ -1156,24 +1490,10 @@ ZTEST(queue_unit, test_alloc_mixed_items_keep_order)
 	zassert_queue_empty(&queue);
 }
 
-/**
- * @defgroup kernel_unit_queue_list List operations
- * @ingroup kernel_unit_queue
- * @brief k_queue_append_list() and k_queue_merge_slist() append a list of items in one operation.
- *
- * The caller gives a NULL-terminated, singly linked list of items: the
- * first word of each item points to the next item. k_queue_append_list()
- * first gives one item to each waiting thread, in list order. It follows
- * the next pointers until no thread waits or the list ends. Then it
- * appends the rest of the list (from the current item to @p tail) to the
- * queue in one step. It does not write the list nodes, so the flags of
- * each node must be 0.
- *
- * k_queue_merge_slist() appends the items of a @c sys_slist_t with
- * k_queue_append_list() and then makes the slist empty.
- *
- * Both functions check their arguments with CHECKIF(). The Kconfig
- * options of CHECKIF() change what an invalid argument causes.
+/*
+ * Tests: List operations. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /* Link the items into a NULL-terminated list in the order of the arguments. */
@@ -1200,7 +1520,7 @@ static void link_items(size_t n, struct item **list)
  * - Action: k_queue_append_list() with head b and tail d.
  * - Expected: return value 0. The list is a, b, c, d. The tail is d.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_appends_all_items)
@@ -1224,7 +1544,7 @@ ZTEST(queue_unit, test_list_append_list_appends_all_items)
  * - Action: k_queue_append_list() with head a and tail b.
  * - Expected: return value 0. The list is a, b.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_to_empty_queue)
@@ -1251,7 +1571,7 @@ ZTEST(queue_unit, test_list_append_list_to_empty_queue)
  *   wait queue of the queue and the return value 0). Then z_sched_wake()
  *   with c, which wakes no thread. The list is c.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_hands_items_to_threads)
@@ -1284,7 +1604,7 @@ ZTEST(queue_unit, test_list_append_list_hands_items_to_threads)
  * - Expected: return value 0. Two calls of z_sched_wake(), with a and b.
  *   One thread still waits. The list is empty.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_stops_at_end_of_list)
@@ -1312,7 +1632,7 @@ ZTEST(queue_unit, test_list_append_list_stops_at_end_of_list)
  * - Expected: return value -EINVAL. The list is a. No calls to the layers
  *   below.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_rejects_null_head)
@@ -1343,7 +1663,7 @@ ZTEST(queue_unit, test_list_append_list_rejects_null_head)
  * - Expected: return value -EINVAL. The list is a. No calls to the layers
  *   below.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_rejects_null_tail)
@@ -1376,7 +1696,7 @@ ZTEST(queue_unit, test_list_append_list_rejects_null_tail)
  * - Expected: return value 0. The list is a. No call of z_sched_wake().
  *   The queue was locked and released once.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_no_runtime_checks_accepts_empty_list)
@@ -1412,7 +1732,7 @@ ZTEST(queue_unit, test_list_append_list_no_runtime_checks_accepts_empty_list)
  *   before the lock. No failed assertion for the third call. The fake
  *   assertion hook returns, so each call continues and returns 0.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_list_append_list_assert_on_errors)
@@ -1448,7 +1768,7 @@ ZTEST(queue_unit, test_list_append_list_assert_on_errors)
  * - Expected: return value 0. The list of the queue is a, b, c. The slist
  *   is empty.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_merge_slist
  * @see k_queue_merge_slist()
  */
 ZTEST(queue_unit, test_list_merge_slist_appends_and_empties_slist)
@@ -1479,7 +1799,7 @@ ZTEST(queue_unit, test_list_merge_slist_appends_and_empties_slist)
  * - Expected: return value -EINVAL. The list is a. No calls to the layers
  *   below.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_merge_slist
  * @see k_queue_merge_slist()
  */
 ZTEST(queue_unit, test_list_merge_slist_rejects_empty_slist)
@@ -1515,7 +1835,7 @@ ZTEST(queue_unit, test_list_merge_slist_rejects_empty_slist)
  * - Expected: return value -EINVAL. The slist still has the head b. The
  *   queue is empty.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_merge_slist
  * @see k_queue_merge_slist()
  */
 ZTEST(queue_unit, test_list_merge_slist_keeps_slist_on_error)
@@ -1548,7 +1868,7 @@ ZTEST(queue_unit, test_list_merge_slist_keeps_slist_on_error)
  * - Expected: return value 0. The list is a. The slist is empty. The
  *   queue was locked and released once (in k_queue_append_list()).
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_merge_slist
  * @see k_queue_merge_slist()
  */
 ZTEST(queue_unit, test_list_merge_slist_no_runtime_checks_accepts_empty_slist)
@@ -1584,7 +1904,7 @@ ZTEST(queue_unit, test_list_merge_slist_no_runtime_checks_accepts_empty_slist)
  *   0. For the slist with b, no failed assertion, return value 0, and the
  *   queue has b.
  *
- * @ingroup kernel_unit_queue_list
+ * @ingroup kernel_unit_queue_k_queue_merge_slist
  * @see k_queue_merge_slist()
  */
 ZTEST(queue_unit, test_list_merge_slist_assert_on_errors)
@@ -1604,23 +1924,10 @@ ZTEST(queue_unit, test_list_merge_slist_assert_on_errors)
 }
 #endif /* CONFIG_ASSERT_ON_ERRORS */
 
-/**
- * @defgroup kernel_unit_queue_get Get
- * @ingroup kernel_unit_queue
- * @brief k_queue_get() removes the head item, or returns NULL, or waits.
- *
- * If the list is not empty, k_queue_get() removes the head node and
- * returns its item (and frees a wrapper node). It then does not wait, for
- * any timeout. If the list is empty and the timeout is K_NO_WAIT, it
- * returns NULL. Otherwise it waits on the wait queue with z_pend_curr().
- * After the wait, it returns the @c swap_data of the current thread if
- * the wait result is 0, else NULL. An insert function or
- * k_queue_cancel_wait() sets @c swap_data and the result 0 with
- * z_sched_wake().
- *
- * The API says that an ISR must use K_NO_WAIT. queue.c has no check of this
- * rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler refuses
- * it with a panic in every build.
+/*
+ * Tests: Get. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -1631,7 +1938,7 @@ ZTEST(queue_unit, test_list_merge_slist_assert_on_errors)
  * - Action: z_impl_k_queue_get() with K_NO_WAIT.
  * - Expected: return value a. The list is b.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_removes_head_item)
@@ -1656,7 +1963,7 @@ ZTEST(queue_unit, test_get_removes_head_item)
  * - Action: z_impl_k_queue_get() with K_FOREVER.
  * - Expected: return value a. No call of z_pend_curr(). The list is empty.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_with_data_does_not_wait)
@@ -1681,7 +1988,7 @@ ZTEST(queue_unit, test_get_with_data_does_not_wait)
  * - Action: z_impl_k_queue_get() with K_NO_WAIT.
  * - Expected: return value NULL. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_empty_no_wait_returns_null)
@@ -1705,7 +2012,7 @@ ZTEST(queue_unit, test_get_empty_no_wait_returns_null)
  * - Expected: one call of z_pend_curr() with the lock of the queue, the
  *   key, the wait queue of the queue and the timeout.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_empty_waits_with_timeout)
@@ -1733,7 +2040,7 @@ ZTEST(queue_unit, test_get_empty_waits_with_timeout)
  * - Action: z_impl_k_queue_get() with K_FOREVER.
  * - Expected: return value a. The list is empty.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_after_wait_returns_handed_item)
@@ -1758,7 +2065,7 @@ ZTEST(queue_unit, test_get_after_wait_returns_handed_item)
  * - Action: z_impl_k_queue_get() with a timeout of 10 ticks.
  * - Expected: return value NULL.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_after_timeout_returns_null)
@@ -1789,7 +2096,7 @@ ZTEST(queue_unit, test_get_after_timeout_returns_null)
  *   After the panic, the fake returns KERNEL_UNIT_PEND_REFUSED (a timeout),
  *   and k_queue_get() returns NULL.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_get_in_isr_with_wait_refused_by_scheduler)
@@ -1829,7 +2136,7 @@ ZTEST(queue_unit, test_get_in_isr_with_wait_refused_by_scheduler)
  *   returns the return value and the data of the z_sched_wake() call.
  * - Expected: return value a.
  *
- * @ingroup kernel_unit_queue_get
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get(), k_queue_append()
  */
 ZTEST(queue_unit, test_get_receives_item_of_append)
@@ -1846,18 +2153,10 @@ ZTEST(queue_unit, test_get_receives_item_of_append)
 	zassert_equal_ptr(z_impl_k_queue_get(&queue, K_FOREVER), a);
 }
 
-/**
- * @defgroup kernel_unit_queue_peek Peek, remove and empty check
- * @ingroup kernel_unit_queue
- * @brief The peek functions and k_queue_is_empty() read the list, k_queue_remove() removes one item
- * at any position.
- *
- * k_queue_peek_head() and k_queue_peek_tail() return the item of the head
- * or tail node, or NULL for an empty list. They do not change the list.
- * k_queue_remove() searches the list from the head for the first node
- * with the item and removes it. It returns true if it found the item.
- * k_queue_is_empty() is static inline in @c zephyr/kernel.h and reads the
- * list without the lock.
+/*
+ * Tests: Peek, remove and empty check. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -1868,7 +2167,7 @@ ZTEST(queue_unit, test_get_receives_item_of_append)
  * - Action: z_impl_k_queue_peek_head().
  * - Expected: return value a. The list is a, b.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_impl_k_queue_peek_head()
  */
 ZTEST(queue_unit, test_peek_head_returns_head_item)
@@ -1892,7 +2191,7 @@ ZTEST(queue_unit, test_peek_head_returns_head_item)
  * - Action: z_impl_k_queue_peek_tail().
  * - Expected: return value b. The list is a, b.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_peek_tail
  * @see z_impl_k_queue_peek_tail()
  */
 ZTEST(queue_unit, test_peek_tail_returns_tail_item)
@@ -1916,7 +2215,7 @@ ZTEST(queue_unit, test_peek_tail_returns_tail_item)
  * - Action: z_impl_k_queue_peek_head(), z_impl_k_queue_peek_tail().
  * - Expected: return value NULL each time.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_impl_k_queue_peek_head(), z_impl_k_queue_peek_tail(), z_queue_node_peek()
  */
 ZTEST(queue_unit, test_peek_empty_returns_null)
@@ -1937,7 +2236,7 @@ ZTEST(queue_unit, test_peek_empty_returns_null)
  * - Action: z_impl_k_queue_is_empty() each time.
  * - Expected: return value 1, then 0. No lock.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_is_empty
  * @see z_impl_k_queue_is_empty()
  */
 ZTEST(queue_unit, test_is_empty_reads_list_without_lock)
@@ -1963,7 +2262,7 @@ ZTEST(queue_unit, test_is_empty_reads_list_without_lock)
  * - Expected: return value true each time. The list is a, c, then a (the
  *   tail is a again), then empty.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_remove
  * @see k_queue_remove()
  */
 ZTEST(queue_unit, test_remove_removes_item_at_any_position)
@@ -1994,7 +2293,7 @@ ZTEST(queue_unit, test_remove_removes_item_at_any_position)
  * - Expected: return value false each time. The list does not change. No
  *   call of k_free().
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_remove
  * @see k_queue_remove()
  */
 ZTEST(queue_unit, test_remove_absent_item_returns_false)
@@ -2024,7 +2323,7 @@ ZTEST(queue_unit, test_remove_absent_item_returns_false)
  * - Expected: return value true. The list is b, a. One call of k_free()
  *   with the first node.
  *
- * @ingroup kernel_unit_queue_peek
+ * @ingroup kernel_unit_queue_k_queue_remove
  * @see k_queue_remove()
  */
 ZTEST(queue_unit, test_remove_removes_first_match_only)
@@ -2043,16 +2342,10 @@ ZTEST(queue_unit, test_remove_removes_first_match_only)
 	zassert_equal_ptr(k_free_fake.arg0_val, &node_pool[0]);
 }
 
-/**
- * @defgroup kernel_unit_queue_cancel Cancel a wait
- * @ingroup kernel_unit_queue
- * @brief k_queue_cancel_wait() makes one waiting thread return NULL from k_queue_get().
- *
- * k_queue_cancel_wait() calls z_sched_wake() with the return value 0 and
- * the data NULL. The scheduler wakes the first waiting thread, and its
- * k_queue_get() returns NULL. The function does not change the list. With
- * CONFIG_POLL it signals K_POLL_STATE_CANCELLED to the poll events (see
- * @ref kernel_unit_queue_poll).
+/*
+ * Tests: Cancel a wait. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -2065,7 +2358,7 @@ ZTEST(queue_unit, test_remove_removes_first_match_only)
  * - Expected: one call of z_sched_wake() with the wait queue of the queue,
  *   0 and NULL. One thread still waits.
  *
- * @ingroup kernel_unit_queue_cancel
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_cancel_wait_wakes_one_thread_with_null)
@@ -2094,7 +2387,7 @@ ZTEST(queue_unit, test_cancel_wait_wakes_one_thread_with_null)
  *   returns the return value and the data of the z_sched_wake() call.
  * - Expected: return value NULL.
  *
- * @ingroup kernel_unit_queue_cancel
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait(), z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_cancel_wait_makes_get_return_null)
@@ -2119,7 +2412,7 @@ ZTEST(queue_unit, test_cancel_wait_makes_get_return_null)
  * - Action: z_impl_k_queue_cancel_wait().
  * - Expected: the list is a, b.
  *
- * @ingroup kernel_unit_queue_cancel
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_cancel_wait_keeps_list)
@@ -2135,24 +2428,10 @@ ZTEST(queue_unit, test_cancel_wait_keeps_list)
 	zassert_queue_contents(&queue, a, b);
 }
 
-/**
- * @defgroup kernel_unit_queue_poll Poll events
- * @ingroup kernel_unit_queue
- * @brief With CONFIG_POLL, a queue signals K_POLL_STATE_DATA_AVAILABLE when items go into the list,
- * and K_POLL_STATE_CANCELLED on k_queue_cancel_wait().
- *
- * The static function queue_handle_poll_events() calls
- * z_handle_obj_poll_events() with the poll events of the queue. The return
- * value tells if a polling thread became ready. Then the operation
- * releases the lock with z_reschedule(). Without CONFIG_POLL,
- * queue_handle_poll_events() returns false and calls nothing.
- *
- * - queue_insert() signals only if the item went into the list: not after
- *   a hand-over to a waiting thread, and not after -ENOMEM.
- * - k_queue_append_list() always signals, also if all items went to
- *   waiting threads.
- * - k_queue_cancel_wait() always signals, also if it woke a thread.
- * - k_queue_get(), k_queue_remove() and the peek functions do not signal.
+/*
+ * Tests: Poll events. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 #ifdef CONFIG_POLL
@@ -2167,7 +2446,8 @@ ZTEST(queue_unit, test_cancel_wait_keeps_list)
  *   of the queue and K_POLL_STATE_DATA_AVAILABLE. At this call, the list
  *   has one item.
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_append
+ * @see k_queue_append()
  * @see queue_insert(), queue_handle_poll_events()
  */
 ZTEST(queue_unit, test_poll_insert_signals_after_insert)
@@ -2198,7 +2478,7 @@ ZTEST(queue_unit, test_poll_insert_signals_after_insert)
  *   of the queue and K_POLL_STATE_DATA_AVAILABLE. At this call, the list
  *   has two items.
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_poll_append_list_signals_after_append)
@@ -2228,7 +2508,8 @@ ZTEST(queue_unit, test_poll_append_list_signals_after_append)
  * - Action: k_queue_append() of a.
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_append
+ * @see k_queue_append()
  * @see queue_insert()
  */
 ZTEST(queue_unit, test_poll_insert_no_signal_after_handover)
@@ -2256,7 +2537,8 @@ ZTEST(queue_unit, test_poll_insert_no_signal_after_handover)
  * - Action: z_impl_k_queue_alloc_append() of a.
  * - Expected: return value -ENOMEM. No call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
+ * @see z_impl_k_queue_alloc_append()
  * @see queue_insert()
  */
 ZTEST(queue_unit, test_poll_insert_no_signal_on_enomem)
@@ -2287,7 +2569,7 @@ ZTEST(queue_unit, test_poll_insert_no_signal_on_enomem)
  *   with K_POLL_STATE_DATA_AVAILABLE, after the last call of
  *   z_sched_wake().
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_poll_append_list_signals_after_handover)
@@ -2322,7 +2604,7 @@ ZTEST(queue_unit, test_poll_append_list_signals_after_handover)
  *   poll events of the queue and K_POLL_STATE_CANCELLED, after
  *   z_sched_wake().
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_poll_cancel_wait_signals_cancelled)
@@ -2357,7 +2639,7 @@ ZTEST(queue_unit, test_poll_cancel_wait_signals_cancelled)
  *   z_impl_k_queue_get() with K_NO_WAIT.
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get(), k_queue_remove(), k_queue_unique_append()
  */
 ZTEST(queue_unit, test_poll_read_and_remove_do_not_signal)
@@ -2391,7 +2673,7 @@ ZTEST(queue_unit, test_poll_read_and_remove_do_not_signal)
  * - Expected: no call of z_handle_obj_poll_events(). Each operation
  *   releases the lock with k_spin_unlock() (no reschedule).
  *
- * @ingroup kernel_unit_queue_poll
+ * @ingroup kernel_unit_queue_static
  * @see queue_handle_poll_events()
  */
 ZTEST(queue_unit, test_poll_not_called_without_config)
@@ -2411,21 +2693,10 @@ ZTEST(queue_unit, test_poll_not_called_without_config)
 }
 #endif /* !CONFIG_POLL */
 
-/**
- * @defgroup kernel_unit_queue_locking Locking
- * @ingroup kernel_unit_queue
- * @brief The spinlock of the queue protects the list and the wait queue. Each path releases it
- * exactly once.
- *
- * Each path of the queue operations, except k_queue_init() and
- * k_queue_is_empty(), locks the spinlock of its queue once, as its first
- * call to the layers below. Each path releases the lock once, as its last
- * call, with the key of the lock. The release is k_spin_unlock() (seen as
- * arch_irq_unlock()), z_reschedule() or z_pend_curr(). k_queue_insert(),
- * k_queue_append(), k_queue_prepend(), k_queue_unique_append() and the
- * alloc functions give the lock key to queue_insert(), which releases the
- * lock. The list changes only while the lock is held. z_thread_malloc()
- * and k_free() run while the lock is held.
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -2439,7 +2710,7 @@ ZTEST(queue_unit, test_poll_not_called_without_config)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), queue_insert()
  */
 ZTEST(queue_unit, test_lock_insert_no_ready_thread_unlocks)
@@ -2466,7 +2737,7 @@ ZTEST(queue_unit, test_lock_insert_no_ready_thread_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_reschedule() with
  *   the lock of the queue and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_prepend
  * @see k_queue_prepend(), queue_insert()
  */
 ZTEST(queue_unit, test_lock_insert_handover_reschedules)
@@ -2494,7 +2765,7 @@ ZTEST(queue_unit, test_lock_insert_handover_reschedules)
  *   z_handle_obj_poll_events(), z_reschedule() with the lock of the queue
  *   and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_insert
  * @see k_queue_insert(), queue_insert()
  */
 ZTEST(queue_unit, test_lock_insert_poll_ready_reschedules)
@@ -2526,7 +2797,7 @@ ZTEST(queue_unit, test_lock_insert_poll_ready_reschedules)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_impl_k_queue_alloc_append(), queue_insert()
  */
 ZTEST(queue_unit, test_lock_alloc_allocates_under_lock)
@@ -2553,7 +2824,7 @@ ZTEST(queue_unit, test_lock_alloc_allocates_under_lock)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_thread_malloc(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_alloc_prepend
  * @see z_impl_k_queue_alloc_prepend(), queue_insert()
  */
 ZTEST(queue_unit, test_lock_alloc_no_memory_unlocks)
@@ -2581,7 +2852,7 @@ ZTEST(queue_unit, test_lock_alloc_no_memory_unlocks)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_unique_append
  * @see k_queue_unique_append()
  */
 ZTEST(queue_unit, test_lock_unique_append_new_item_locks_once)
@@ -2609,7 +2880,7 @@ ZTEST(queue_unit, test_lock_unique_append_new_item_locks_once)
  * - Action: k_queue_unique_append() of a.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_unique_append
  * @see k_queue_unique_append()
  */
 ZTEST(queue_unit, test_lock_unique_append_duplicate_unlocks)
@@ -2637,7 +2908,7 @@ ZTEST(queue_unit, test_lock_unique_append_duplicate_unlocks)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_lock_append_list_no_ready_thread_unlocks)
@@ -2666,7 +2937,7 @@ ZTEST(queue_unit, test_lock_append_list_no_ready_thread_unlocks)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), z_reschedule() with the
  *   lock of the queue and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_lock_append_list_handover_reschedules)
@@ -2697,7 +2968,7 @@ ZTEST(queue_unit, test_lock_append_list_handover_reschedules)
  *   z_handle_obj_poll_events(), z_reschedule() with the lock of the queue
  *   and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_append_list
  * @see k_queue_append_list()
  */
 ZTEST(queue_unit, test_lock_append_list_poll_ready_reschedules)
@@ -2731,7 +3002,7 @@ ZTEST(queue_unit, test_lock_append_list_poll_ready_reschedules)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_lock_cancel_wait_no_ready_thread_unlocks)
@@ -2758,7 +3029,7 @@ ZTEST(queue_unit, test_lock_cancel_wait_no_ready_thread_unlocks)
  *   z_handle_obj_poll_events() (with CONFIG_POLL), z_reschedule() with the
  *   lock of the queue and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_lock_cancel_wait_wake_reschedules)
@@ -2788,7 +3059,7 @@ ZTEST(queue_unit, test_lock_cancel_wait_wake_reschedules)
  *   z_handle_obj_poll_events(), z_reschedule() with the lock of the queue
  *   and the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_impl_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_lock_cancel_wait_poll_ready_reschedules)
@@ -2819,7 +3090,7 @@ ZTEST(queue_unit, test_lock_cancel_wait_poll_ready_reschedules)
  * - Expected calls: arch_irq_lock(), k_free(), arch_irq_unlock() with the
  *   key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_lock_get_data_frees_under_lock)
@@ -2844,7 +3115,7 @@ ZTEST(queue_unit, test_lock_get_data_frees_under_lock)
  * - Action: z_impl_k_queue_get() with K_NO_WAIT.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_lock_get_no_wait_unlocks)
@@ -2869,7 +3140,7 @@ ZTEST(queue_unit, test_lock_get_no_wait_unlocks)
  * - Expected calls: arch_irq_lock(), z_pend_curr() with the lock of the
  *   queue and the key. No call after z_pend_curr().
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_lock_get_wait_hands_lock_to_pend)
@@ -2896,7 +3167,7 @@ ZTEST(queue_unit, test_lock_get_wait_hands_lock_to_pend)
  * - Expected calls: arch_irq_lock(), k_free(), arch_irq_unlock() with the
  *   key. Then arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_remove
  * @see k_queue_remove()
  */
 ZTEST(queue_unit, test_lock_remove_unlocks)
@@ -2927,7 +3198,7 @@ ZTEST(queue_unit, test_lock_remove_unlocks)
  * - Expected calls each time: arch_irq_lock(), arch_irq_unlock() with the
  *   key.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_impl_k_queue_peek_head(), z_impl_k_queue_peek_tail()
  */
 ZTEST(queue_unit, test_lock_peek_unlocks)
@@ -2960,7 +3231,7 @@ ZTEST(queue_unit, test_lock_peek_unlocks)
  * - Expected: for each call, the length at the lock is the old length, and
  *   the length at the release is the new length.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_static
  * @see queue_insert(), k_queue_remove(), z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_lock_protects_list)
@@ -3000,7 +3271,8 @@ ZTEST(queue_unit, test_lock_protects_list)
  * - Expected: two calls of z_reschedule(), the first with the lock of the
  *   first queue, the second with the lock of the second queue.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_append
+ * @see k_queue_append()
  * @see queue_insert()
  */
 ZTEST(queue_unit, test_lock_one_lock_per_queue)
@@ -3027,7 +3299,7 @@ ZTEST(queue_unit, test_lock_one_lock_per_queue)
  * - Action: z_impl_k_queue_init().
  * - Expected: no call of arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_lock_not_used_by_init)
@@ -3050,7 +3322,7 @@ ZTEST(queue_unit, test_lock_not_used_by_init)
  * - Expected: one call of z_spin_lock_valid() and one call of
  *   z_spin_unlock_valid(), each with the lock of the queue.
  *
- * @ingroup kernel_unit_queue_locking
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_impl_k_queue_peek_head()
  */
 ZTEST(queue_unit, test_lock_validation_sees_queue_lock)
@@ -3069,30 +3341,10 @@ ZTEST(queue_unit, test_lock_validation_sees_queue_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_queue_syscall System call verification
- * @ingroup kernel_unit_queue
- * @brief With CONFIG_USERSPACE, each verification function checks the queue object before it calls
- * the implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_queue_*(). This
- * function checks that the pointer is a queue object of the kernel that the
- * thread has access to. z_vrfy_k_queue_init() uses
- * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet. Thus
- * a user thread cannot initialize a queue again while other threads use
- * it. The other functions use K_SYSCALL_OBJ(): the object must be
- * initialized. If the check fails, K_OOPS() stops the thread. Otherwise
- * the function calls z_impl_k_queue_*() with the same arguments and
- * returns its result.
- *
- * k_queue_append(), k_queue_prepend(), k_queue_insert(),
- * k_queue_append_list(), k_queue_merge_slist(), k_queue_remove() and
- * k_queue_unique_append() are not system calls. A user thread can only
- * add items with the alloc functions, which do not write to the item.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that
- * the oops occurs before the implementation locks or changes the queue.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /* Assert one object check of queue with the type K_OBJ_QUEUE and init state, and no oops. */
@@ -3119,7 +3371,7 @@ static void assert_object_check(struct k_queue *queue, enum _obj_init_check init
  *   queue, K_OBJ_QUEUE and _OBJ_INIT_FALSE, before z_waitq_init(). No oops.
  *   The list is empty.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_vrfy_k_queue_init()
  */
 ZTEST(queue_unit, test_syscall_init_checks_new_object)
@@ -3146,7 +3398,7 @@ ZTEST(queue_unit, test_syscall_init_checks_new_object)
  * - Action: z_vrfy_k_queue_init().
  * - Expected: one oops, before z_waitq_init().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_vrfy_k_queue_init()
  */
 ZTEST(queue_unit, test_syscall_init_oops_on_bad_object)
@@ -3170,7 +3422,7 @@ ZTEST(queue_unit, test_syscall_init_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE, before
  *   the lock. No oops. One call of z_sched_wake() with NULL.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_vrfy_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_syscall_cancel_wait_checks_initialized_object)
@@ -3198,7 +3450,7 @@ ZTEST(queue_unit, test_syscall_cancel_wait_checks_initialized_object)
  * - Action: z_vrfy_k_queue_cancel_wait().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_cancel_wait
  * @see z_vrfy_k_queue_cancel_wait()
  */
 ZTEST(queue_unit, test_syscall_cancel_wait_oops_on_bad_object)
@@ -3225,7 +3477,7 @@ ZTEST(queue_unit, test_syscall_cancel_wait_oops_on_bad_object)
  *   the lock. No oops. Return value -ENOMEM. Then, with memory, return
  *   value 0 and the list is a.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_vrfy_k_queue_alloc_append()
  */
 ZTEST(queue_unit, test_syscall_alloc_append_checks_initialized_object)
@@ -3255,7 +3507,7 @@ ZTEST(queue_unit, test_syscall_alloc_append_checks_initialized_object)
  * - Action: z_vrfy_k_queue_alloc_append() of a.
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_vrfy_k_queue_alloc_append()
  */
 ZTEST(queue_unit, test_syscall_alloc_append_oops_on_bad_object)
@@ -3280,7 +3532,7 @@ ZTEST(queue_unit, test_syscall_alloc_append_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value 0. The list is b, a.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_alloc_prepend
  * @see z_vrfy_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_syscall_alloc_prepend_checks_initialized_object)
@@ -3308,7 +3560,7 @@ ZTEST(queue_unit, test_syscall_alloc_prepend_checks_initialized_object)
  * - Action: z_vrfy_k_queue_alloc_prepend() of a.
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_alloc_prepend
  * @see z_vrfy_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_syscall_alloc_prepend_oops_on_bad_object)
@@ -3333,7 +3585,7 @@ ZTEST(queue_unit, test_syscall_alloc_prepend_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE, before
  *   the lock. No oops. z_pend_curr() with the timeout. Return value a.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_vrfy_k_queue_get()
  */
 ZTEST(queue_unit, test_syscall_get_checks_initialized_object)
@@ -3360,7 +3612,7 @@ ZTEST(queue_unit, test_syscall_get_checks_initialized_object)
  * - Action: z_vrfy_k_queue_get() with K_NO_WAIT.
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_get
  * @see z_vrfy_k_queue_get()
  */
 ZTEST(queue_unit, test_syscall_get_oops_on_bad_object)
@@ -3385,7 +3637,7 @@ ZTEST(queue_unit, test_syscall_get_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE. No
  *   oops. Return value 0.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_is_empty
  * @see z_vrfy_k_queue_is_empty()
  */
 ZTEST(queue_unit, test_syscall_is_empty_checks_initialized_object)
@@ -3409,7 +3661,7 @@ ZTEST(queue_unit, test_syscall_is_empty_checks_initialized_object)
  * - Action: z_vrfy_k_queue_is_empty().
  * - Expected: one oops.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_is_empty
  * @see z_vrfy_k_queue_is_empty()
  */
 ZTEST(queue_unit, test_syscall_is_empty_oops_on_bad_object)
@@ -3434,7 +3686,7 @@ ZTEST(queue_unit, test_syscall_is_empty_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value a.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_vrfy_k_queue_peek_head()
  */
 ZTEST(queue_unit, test_syscall_peek_head_checks_initialized_object)
@@ -3462,7 +3714,7 @@ ZTEST(queue_unit, test_syscall_peek_head_checks_initialized_object)
  * - Action: z_vrfy_k_queue_peek_head().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_peek_head
  * @see z_vrfy_k_queue_peek_head()
  */
 ZTEST(queue_unit, test_syscall_peek_head_oops_on_bad_object)
@@ -3487,7 +3739,7 @@ ZTEST(queue_unit, test_syscall_peek_head_oops_on_bad_object)
  * - Expected: the object check with K_OBJ_QUEUE and _OBJ_INIT_TRUE, before
  *   the lock. No oops. Return value b.
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_peek_tail
  * @see z_vrfy_k_queue_peek_tail()
  */
 ZTEST(queue_unit, test_syscall_peek_tail_checks_initialized_object)
@@ -3515,7 +3767,7 @@ ZTEST(queue_unit, test_syscall_peek_tail_checks_initialized_object)
  * - Action: z_vrfy_k_queue_peek_tail().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_queue_syscall
+ * @ingroup kernel_unit_queue_k_queue_peek_tail
  * @see z_vrfy_k_queue_peek_tail()
  */
 ZTEST(queue_unit, test_syscall_peek_tail_oops_on_bad_object)
@@ -3531,20 +3783,10 @@ ZTEST(queue_unit, test_syscall_peek_tail_oops_on_bad_object)
 }
 #endif /* CONFIG_USERSPACE */
 
-/**
- * @defgroup kernel_unit_queue_obj_core Object core
- * @ingroup kernel_unit_queue
- * @brief With CONFIG_OBJ_CORE_FIFO and CONFIG_OBJ_CORE_LIFO, queue.c defines the object types of
- * the FIFO and the LIFO.
- *
- * A plain queue has no object core. queue.c defines the object types
- * @c _obj_type_fifo and @c _obj_type_lifo. K_OBJ_TYPE_DEFINE() puts one
- * descriptor of each type into the iterable section @c k_obj_core_desc.
- * At boot, the object core code initializes the type from the descriptor
- * and links the FIFOs and LIFOs that K_FIFO_DEFINE() and K_LIFO_DEFINE()
- * define (the sections @c k_fifo and @c k_lifo). The macros k_fifo_init()
- * and k_lifo_init() in @c zephyr/kernel.h link each FIFO or LIFO that they
- * initialize to the type of queue.c.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /* Return the descriptor of a type, and count the descriptors of this type. */
@@ -3578,7 +3820,7 @@ K_FIFO_DEFINE(unit_static_fifo);
  *   size is the size of @c struct @c k_fifo, and its object core offset is
  *   the offset of @c obj_core. Its object range is the section @c k_fifo.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_static
  */
 ZTEST(queue_unit, test_obj_core_fifo_type_descriptor)
 {
@@ -3604,7 +3846,7 @@ ZTEST(queue_unit, test_obj_core_fifo_type_descriptor)
  * - Expected: the FIFO is in the range, at a multiple of the object size
  *   from the start.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_static
  */
 ZTEST(queue_unit, test_obj_core_fifo_descriptor_covers_static_fifos)
 {
@@ -3628,7 +3870,7 @@ ZTEST(queue_unit, test_obj_core_fifo_descriptor_covers_static_fifos)
  *   and @c _obj_type_fifo, k_obj_core_link() with the object core of the
  *   FIFO.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_obj_core_fifo_init_links_fifo)
@@ -3659,7 +3901,7 @@ K_LIFO_DEFINE(unit_static_lifo);
  *   size is the size of @c struct @c k_lifo, and its object core offset is
  *   the offset of @c obj_core. Its object range is the section @c k_lifo.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_static
  */
 ZTEST(queue_unit, test_obj_core_lifo_type_descriptor)
 {
@@ -3685,7 +3927,7 @@ ZTEST(queue_unit, test_obj_core_lifo_type_descriptor)
  * - Expected: the LIFO is in the range, at a multiple of the object size
  *   from the start.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_static
  */
 ZTEST(queue_unit, test_obj_core_lifo_descriptor_covers_static_lifos)
 {
@@ -3709,7 +3951,7 @@ ZTEST(queue_unit, test_obj_core_lifo_descriptor_covers_static_lifos)
  *   and @c _obj_type_lifo, k_obj_core_link() with the object core of the
  *   LIFO.
  *
- * @ingroup kernel_unit_queue_obj_core
+ * @ingroup kernel_unit_queue_k_queue_init
  * @see z_impl_k_queue_init()
  */
 ZTEST(queue_unit, test_obj_core_lifo_init_links_lifo)
@@ -3726,16 +3968,10 @@ ZTEST(queue_unit, test_obj_core_lifo_init_links_lifo)
 }
 #endif /* CONFIG_OBJ_CORE_LIFO */
 
-/**
- * @defgroup kernel_unit_queue_wrappers FIFO and LIFO
- * @ingroup kernel_unit_queue
- * @brief The FIFO and the LIFO are queues: a FIFO appends at the tail, a LIFO prepends at the head,
- * and both get from the head.
- *
- * The FIFO and LIFO functions are macros in @c zephyr/kernel.h. Each one
- * calls a function of queue.c with the queue @c _queue of the FIFO or
- * LIFO. These tests show that the order of the items comes from the choice
- * of the queue function.
+/*
+ * Tests: FIFO and LIFO. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_queue, at the top of this file.
  */
 
 /**
@@ -3747,7 +3983,7 @@ ZTEST(queue_unit, test_obj_core_lifo_init_links_lifo)
  *   times.
  * - Expected: return values a, b, c, NULL.
  *
- * @ingroup kernel_unit_queue_wrappers
+ * @ingroup kernel_unit_queue_k_queue_append
  * @see k_queue_append(), z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_wrapper_fifo_is_first_in_first_out)
@@ -3775,7 +4011,7 @@ ZTEST(queue_unit, test_wrapper_fifo_is_first_in_first_out)
  *   times.
  * - Expected: return values c, b, a, NULL.
  *
- * @ingroup kernel_unit_queue_wrappers
+ * @ingroup kernel_unit_queue_k_queue_prepend
  * @see k_queue_prepend(), z_impl_k_queue_get()
  */
 ZTEST(queue_unit, test_wrapper_lifo_is_last_in_first_out)
@@ -3805,7 +4041,7 @@ ZTEST(queue_unit, test_wrapper_lifo_is_last_in_first_out)
  * - Expected: return value 0 each time. The FIFO list is a, b. The LIFO
  *   list is d, c. Four calls of z_thread_malloc().
  *
- * @ingroup kernel_unit_queue_wrappers
+ * @ingroup kernel_unit_queue_k_queue_alloc_append
  * @see z_impl_k_queue_alloc_append(), z_impl_k_queue_alloc_prepend()
  */
 ZTEST(queue_unit, test_wrapper_alloc_put_order)
