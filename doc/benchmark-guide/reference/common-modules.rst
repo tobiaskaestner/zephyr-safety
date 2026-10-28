@@ -15,7 +15,7 @@ The folder ``common/`` has the code that all measurement apps share.
      - Adds the common code to the ``app`` target. See
        :ref:`benchguide-latbench-cmake`.
    * - ``Kconfig``
-     - The common Kconfig options (see :doc:`../kconfig`).
+     - The common Kconfig options (see :doc:`kconfig`).
    * - ``include/latbench/hist.h``, ``src/hist.c``
      - Histogram and phase histogram
    * - ``include/latbench/stim.h``, ``src/stim.c``
@@ -74,7 +74,7 @@ It is not a latency. The histogram counts it only in ``invalid``. Thus
 
 ``lat_hist_add()`` is safe in an ISR. Two contexts must not add to the same
 histogram at the same time. ``lat_hist_print()`` prints the histogram (see
-:doc:`../output`).
+:doc:`log-format`).
 
 .. _benchguide-phase-hist:
 

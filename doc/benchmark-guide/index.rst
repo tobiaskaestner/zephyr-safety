@@ -51,8 +51,6 @@ part answers a different question:
 .. toctree::
    :maxdepth: 2
 
-   kconfig
-   output
    host-tools
    unit-tests
    m4

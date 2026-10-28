@@ -120,7 +120,7 @@ Add an app
 
 #. Write ``Kconfig``. Define the options of the app, and
    ``LATBENCH_STIM_MIN_US``, ``LATBENCH_STIM_MAX_US`` and ``LATBENCH_POLL_MS``
-   (see :doc:`kconfig`). Then source the common options and Zephyr:
+   (see :doc:`reference/kconfig`). Then source the common options and Zephyr:
 
    .. code-block:: kconfig
 
@@ -173,4 +173,4 @@ Add an app
 #. Add an experiment for the app (see above).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in
-``scripts/benchmarks/latbench.py`` and to :doc:`output` in this guide.
+``scripts/benchmarks/latbench.py`` and to :doc:`reference/log-format` in this guide.

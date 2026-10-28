@@ -207,7 +207,7 @@ Metadata keys
      - Length of a tick in system timer cycles
    * - ``tick_phase_check``, ``tick_phase_check_end``
      - stimulus
-     - Phase check at the start and at the end (see :doc:`explanation/method`)
+     - Phase check at the start and at the end (see :doc:`../explanation/method`)
    * - ``static_check``
      - stimulus
      - ``ok`` or ``fail``
@@ -220,10 +220,10 @@ Metadata keys
    * - ``stim_late``
      - stimulus
      - Edges that ``stim_arm()`` moved, because the edge time was less than
-       1000 counts after the fresh count (see :doc:`explanation/method`)
+       1000 counts after the fresh count (see :doc:`../explanation/method`)
    * - ``clock_elapsed_cyc``, ``clock_drift_cyc``
      - stimulus
-     - Clock drift check (see :doc:`explanation/method`). ``clock_drift_cyc`` is
+     - Clock drift check (see :doc:`../explanation/method`). ``clock_drift_cyc`` is
        ``n/a`` if the two clocks are not the same.
    * - ``load_threads``, ``load_timers``
      - load

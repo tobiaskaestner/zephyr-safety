@@ -25,7 +25,7 @@ durations, see the histograms of a run.
 - The orange vertical line is the edge. A black vertical line is a time
   stamp. Its name is the name of the variable in the code.
 - A bracket below the lanes is a histogram of the app. Its label is the
-  name of the histogram in the output (see :doc:`../output`).
+  name of the histogram in the output (see :doc:`../reference/log-format`).
 - In the HTML output, move the pointer onto a box to see what the code
   does at that step, and which lock it holds.
 

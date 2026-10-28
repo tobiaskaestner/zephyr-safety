@@ -185,7 +185,7 @@ stimulus must define them too.
 
 The interrupt path must be on the CMake command line, because
 ``CMakeLists.txt`` selects the overlay of the port from it (see
-:doc:`reference/apps`).
+:doc:`apps`).
 
 .. list-table::
    :header-rows: 1
@@ -270,7 +270,7 @@ The interrupt path must be on the CMake command line, because
        ``LATBENCH_T2T_WORK``, ``LATBENCH_T2T_WAKEUP``
      - n
      - Choice ``LATBENCH_T2T_PRIMITIVE``: the other primitives (see
-       :doc:`reference/apps`). ``EVENT`` selects ``EVENTS``, and ``POLL`` selects
+       :doc:`apps`). ``EVENT`` selects ``EVENTS``, and ``POLL`` selects
        ``POLL``.
    * - ``LATBENCH_T2T_PREEMPT``
      - y
@@ -282,11 +282,11 @@ Settings in ``prj.conf``
 
 Each measurement app sets ``CONFIG_ASSERT=n`` and
 ``CONFIG_SPIN_VALIDATE=n`` in its ``prj.conf``, because the two trees have
-different defaults for these options (see :doc:`pitfalls`).
+different defaults for these options (see :doc:`../pitfalls`).
 ``wake_latency`` and ``thread_latency`` set
 ``CONFIG_MAIN_THREAD_PRIORITY=10``, so that the main thread does not compete
 with the measured threads.
 
 A board port can add a Kconfig fragment ``port.conf``. The port of the
 NUCLEO-G474RE sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y`` (see
-:doc:`explanation/method`).
+:doc:`../explanation/method`).

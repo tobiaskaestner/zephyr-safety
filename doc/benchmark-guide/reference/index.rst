@@ -8,6 +8,8 @@ output format and the terms. Use it to look up one item.
    :maxdepth: 1
 
    glossary
+   log-format
+   kconfig
    apps
    common-modules
    boards
