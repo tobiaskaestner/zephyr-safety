@@ -56,6 +56,7 @@ Warnings:
 - A study without experiments, imports and sub-studies.
 - An axis that ``experiment.md`` does not name.
 - More than 4 hypotheses in a study.
+- A hypothesis without checks (it stays open).
 
 ``run.py`` runs the lint for its experiment and for the study that owns
 it before it builds. It prints each problem and continues. With

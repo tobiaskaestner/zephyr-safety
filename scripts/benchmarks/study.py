@@ -590,8 +590,10 @@ def cmd_missing(args):
         checks_ = [i for i in items if not i.startswith("[")]
         crs = [i for i in items if i.startswith("[")]
         print(f"{where}: {exp}: no evidence run; waits: "
-              + ", ".join(x for x in (f"{len(checks_)} checks ({', '.join(checks_)})" if checks_ else "",
-                                      f"{len(crs)} central results ({', '.join(crs)})" if crs else "") if x))
+              + ", ".join(x for x in (f"{len(checks_)} check{'s' if len(checks_) != 1 else ''} ({', '.join(checks_)})"
+                                      if checks_ else "",
+                                      f"{len(crs)} central result{'s' if len(crs) != 1 else ''} ({', '.join(crs)})"
+                                      if crs else "") if x))
     print(f"{len({e for _, e in m})} experiments to run; 'study.py campaign check <folder> --only EXP ...'")
     return 0
 

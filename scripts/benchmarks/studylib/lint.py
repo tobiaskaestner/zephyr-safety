@@ -213,6 +213,8 @@ def lint_study(d, path, st, points, out):
         out.append(Problem(WARNING, f, f"{len(st.hypotheses)} hypotheses; a study aims for 1-{MAX_HYPOTHESES}"))
     readable = st.readable()
     for h in st.hypotheses:
+        if not h.get("checks"):
+            out.append(Problem(WARNING, f, f"{h.get('id')} has no checks: it stays open"))
         for c in h.get("checks") or []:
             what = f"{h.get('id')} {c.get('id')}"
             for p in checks.problems(c):
