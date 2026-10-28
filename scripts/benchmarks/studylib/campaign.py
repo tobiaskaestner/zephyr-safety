@@ -118,6 +118,10 @@ def plan(lab, folder, board=None, only=None, skip=None, design=None):
         raise CampaignError(f"--board {board}, but the instance is for {inst_board}")
     board = board or inst_board
     default_board = trees.load_boards()["default"]
+    # an earlier name of a renamed experiment (folder ex-<old>, --only, --skip) means the current one
+    one = design.canonical(one) if one else one
+    only = [design.canonical(x) for x in only] if only else only
+    skip = [design.canonical(x) for x in skip] if skip else skip
     items = [(p, e) for p, e in experiments_of(design, path, path) if one is None or e == one]
     if one is not None and not items:
         raise CampaignError(f"experiment {one} is not an experiment of the study {path}")

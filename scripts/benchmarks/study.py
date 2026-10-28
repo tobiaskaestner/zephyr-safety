@@ -417,11 +417,16 @@ def cmd_build(args):
 
 def cmd_check(args):
     root = layout.find_root(args.root)
-    t, w = build.build(root, dry=True)
+    with results_lock(root):
+        t, w = build.build(root, dry=True)
     if w.differ:
         print(f"FAIL: {len(w.differ)} files differ from a new build:")
         for p in w.differ[:50]:
             print("  ", p)
+        owner = labmod.owner(root)
+        if owner is not None and campaign.pending(owner):
+            print("note: a campaign runs: its provisional verdicts change with each run, so a study.json can "
+                  "differ until the campaign ends")
         return 1
     print(f"ok: {len(t.loaded)} runs agree with their seals; the build gives the same {len(t.results)} study.json files")
     return 0

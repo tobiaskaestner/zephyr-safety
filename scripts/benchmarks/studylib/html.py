@@ -129,7 +129,7 @@ def crumbs(folder, root, studies, up=0):
     return "<div class='crumbs'>" + " / ".join(reversed(parts)) + "</div>" if parts else ""
 
 
-def instance_page(folder, root, studies):
+def instance_page(folder, root, studies, design=None):
     s = studies[folder]
     out = head(f"{layout.display(s['instance'])}")
     out.append(crumbs(folder, root, studies))
@@ -138,10 +138,10 @@ def instance_page(folder, root, studies):
     if s["experiments"]:
         out.append("<h2>Experiments</h2><table><tr><th>Experiment</th><th>Runs</th></tr>")
         for e in s["experiments"]:
-            runs = [r for r in instance_runs(folder) if r["id"].split("/")[0] == e["name"]
-                    or (folder / f"{layout.EXPERIMENT_PREFIX}{e['name']}" / "index.html").exists()]
+            names = design.names(e["name"]) if design is not None else [e["name"]]
+            n = sum(1 for r in instance_runs(folder) if r["id"].split("/")[0] in names)
             out.append(f"<tr><td><a href='{layout.EXPERIMENT_PREFIX}{esc(e['name'])}/index.html'>{esc(e['name'])}</a>"
-                       f"</td><td>{len([r for r in runs if r['id'].split('/')[0] == e['name']])}</td></tr>")
+                       f"</td><td>{n}</td></tr>")
         out.append("</table>")
     nbi = folder / "notebooks" / "notebooks.json"
     if nbi.is_file():
@@ -179,6 +179,8 @@ def experiment_page(folder, exp, root, studies, design_names=None):
     acc = {a["run"]: a["checks"] for a in s.get("acceptance", [])}
     runs = [r for r in instance_runs(folder) if r["id"].split("/")[0] in names]
     plots_file = edir / "plots" / "plots.json"
+    if (edir / "plots" / "error.txt").is_file():
+        out.append(f"<div class='note'>The plots failed: {esc((edir / 'plots' / 'error.txt').read_text().strip())}</div>")
     if plots_file.is_file():
         plots = json.loads(plots_file.read_text())
         out.append(f"<h2>Plots</h2><div class='small'>From the runs {esc(', '.join(plots['runs']))} "
@@ -227,7 +229,7 @@ def write_pages(root, below=None, design=None):
         if not f.resolve().is_relative_to(below):
             continue
         target = f / "index.html"
-        target.write_text(instance_page(f, root, studies))
+        target.write_text(instance_page(f, root, studies, design))
         written.append(target)
         for e in s["experiments"]:
             names = design.names(e["name"]) if design is not None else [e["name"]]

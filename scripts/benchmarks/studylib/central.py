@@ -34,7 +34,7 @@ import re
 import statistics
 
 from . import checks, stats
-from .stats import NoValue
+from .stats import MissingRun, NoValue
 
 PLACEHOLDER = re.compile(r"\{([\w.\-]+)(?::([^}]*))?\}")
 
@@ -128,7 +128,7 @@ def from_obs(cr, src):
             missing.append(str(err))
             errs.append(err)
     if not obs and missing:
-        if len(errs) == 1:
+        if all(isinstance(e, MissingRun) for e in errs):
             raise errs[0]                 # a MissingRun stays one (analysis missing lists it)
         raise NoValue("; ".join(missing))
     if missing:

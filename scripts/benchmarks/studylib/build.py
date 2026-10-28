@@ -267,9 +267,11 @@ class Tree:
             sha = self.writer.write(folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "experiment.json", ej)
             experiments.append({"name": exp, "file": f"{layout.EXPERIMENT_PREFIX}{exp}/experiment.json", "sha256": sha})
             if not self.writer.dry:
+                # not a note of study.json: "analysis check" (a dry build without plots) must give the
+                # same bytes; the experiment page shows the error (plots/plots.json)
                 why = self.plot(folder, exp, runs)
                 if why:
-                    notes.append(f"{exp}: the plots failed: {why}")
+                    self.log(f"warning: {layout.ipath_display(self.ipath[folder])}: {exp}: the plots failed: {why}")
             if ej.get("code_differs"):
                 notes.append(f"{exp}: the evidence runs have different code at {len(ej['code_differs'])} points "
                              f"({', '.join(ej['code_differs'][:4])}); a check over these runs mixes two code versions")
@@ -299,7 +301,8 @@ class Tree:
                     try:
                         out = checks.evaluate(c, src)
                         entry.update(verdict=out["verdict"], by="auto", measured=out["measured"],
-                                     limit=out["limit"], values=out["values"])
+                                     limit=out["limit"], values=out["values"],
+                                     **({"measured_lines": out["measured_lines"]} if "measured_lines" in out else {}))
                     except NoValue as e:
                         entry.update(verdict="not evaluated", by="auto", measured=str(e), limit=safe_limit(c))
                         if isinstance(e, MissingRun):
@@ -385,11 +388,20 @@ class Tree:
         args = []
         for r in ev:
             run_dir = folder / layout.run_folder(r["id"])
-            label = r["id"] if r["role"] == "evidence" else f"{r['id']} ({r['role']})"
+            tags = ([] if r["role"] == "evidence" else [r["role"]]) + \
+                (["acceptance failed"] if self.failed_acceptance(folder, r["id"]) else [])
+            label = r["id"] + (f" ({', '.join(tags)})" if tags else "")
             args.append(f"{label}={run_dir.parent / f'{run_dir.name}.{app}.json'}")
         out = folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "plots"
         res = subprocess.run([sys.executable, str(script), str(out), *args], capture_output=True, text=True)
-        return None if res.returncode == 0 else (res.stderr.strip().splitlines() or ["?"])[-1][:300]
+        err = out / "error.txt"
+        if res.returncode == 0:
+            err.unlink(missing_ok=True)
+            return None
+        why = (res.stderr.strip().splitlines() or ["?"])[-1][:300]
+        out.mkdir(parents=True, exist_ok=True)
+        err.write_text(f"{script.relative_to(trees.REPO_DIR)}: {why}\n")
+        return why
 
     def experiment_json(self, folder, exp, runs):
         rows, axes_all, core = [], set(), set()

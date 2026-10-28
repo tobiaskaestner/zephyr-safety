@@ -475,10 +475,12 @@ def short_measured(res):
     if len(res.lines) <= MEASURED_LINES:
         return "; ".join(res.lines)
     fails = [ln for ln in res.lines if ln.startswith("FAIL ")]
-    nums = [v["value"] for v in res.values if isinstance(v.get("value"), (int, float)) and not isinstance(v.get("value"), bool)]
+    # the value that the check compares with its limit: a ratio, a difference, else the value
+    key = next((k for k in ("ratio", "diff") if any(k in v for v in res.values)), "value")
+    nums = [v[key] for v in res.values if isinstance(v.get(key), (int, float)) and not isinstance(v.get(key), bool)]
     text = f"{len(res.lines)} values"
     if nums:
-        text += f", min {fmt(min(nums))}, max {fmt(max(nums))}"
+        text += f", {'' if key == 'value' else key + ' '}min {fmt(min(nums))}, max {fmt(max(nums))}"
     if fails:
         text += f"; {len(fails)} outside the limit: " + "; ".join(fails[:3]) + ("; ..." if len(fails) > 3 else "")
     else:
