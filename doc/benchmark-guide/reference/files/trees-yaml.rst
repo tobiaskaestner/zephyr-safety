@@ -10,7 +10,9 @@ The file has only the pins. The paths of a host are in the ``.lab/config`` of it
 - The SDK path is ``[toolchain] zephyr_sdk``. The default is
   ``~/zephyr-sdk-<version>``.
 - A folder of local clones to clone from is ``[trees] source``, with the
-  layout ``<source>/<tree>/<path>``.
+  layout ``<source>/<tree>/<path>``. Two trees can use the same clone
+  (a link ``<source>/<tree2>`` to ``<source>/<tree1>``), if it has the
+  commits of both.
 
 A tree manifest has these keys (the west manifest format):
 

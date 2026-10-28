@@ -175,3 +175,13 @@ def test_lab_init_records_the_venv_and_checks_the_packages(tmp_path, monkeypatch
     assert any(p.startswith("no-such-package-x: not installed") for p in problems)
     assert any(p.startswith("packaging: ") and "does not meet >=999" in p for p in problems)
     assert not any(p.startswith("PyYAML") for p in problems)
+
+
+def test_west_problem_keeps_the_cause_before_the_fetch_lines():
+    import subprocess
+    out = "\n".join(["=== updating zephyr (zephyr):", "warning: remote HEAD refers to nonexistent ref",
+                     "fatal: git checkout: --detach does not take a path argument 'HEAD'"]
+                    + [f" * [new tag] v{i} -> v{i}" for i in range(500)]
+                    + ["HEAD is now at c708b9f", "ERROR: update failed for project zephyr"])
+    text = trees.west_problem(subprocess.CompletedProcess([], 1, stdout="", stderr=out))
+    assert "fatal: git checkout" in text and "remote HEAD" in text and text.endswith("project zephyr")

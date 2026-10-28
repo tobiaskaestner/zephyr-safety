@@ -27,6 +27,7 @@ from --trees-root / LATBENCH_TREES_ROOT.
 """
 
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -273,11 +274,20 @@ def west_env():
     return env
 
 
+def west_problem(r):
+    """The lines of a failed west command that tell the cause: each fatal/error/warning line and the
+    last lines. The output of a long update has many fetch lines; the cause can be far before the end."""
+    lines = [ln for ln in f"{r.stdout or ''}\n{r.stderr or ''}".splitlines() if ln.strip()]
+    keep = [ln for i, ln in enumerate(lines)
+            if i >= len(lines) - 3 or re.search(r"fatal:|error:|ERROR|warning:", ln)]
+    return "\n".join(keep)[-2000:]
+
+
 def west(args, cwd, check=True):
     r = subprocess.run([sys.executable, "-m", "west", *args], cwd=cwd, env=west_env(), capture_output=True,
                        text=True)
     if check and r.returncode != 0:
-        raise TreeError(f"west {' '.join(args)} ({cwd}): {(r.stderr or r.stdout).strip()[-2000:]}")
+        raise TreeError(f"west {' '.join(args)} ({cwd}):\n{west_problem(r)}")
     return r
 
 

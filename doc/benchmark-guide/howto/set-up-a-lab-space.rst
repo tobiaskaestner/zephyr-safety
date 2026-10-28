@@ -28,7 +28,11 @@ A :term:`lab space` holds everything of one host that a study needs.
 #. If the host has local clones of the tree repositories, find their
    folder. It must have the layout ``<folder>/<tree>/<path>``, for example
    the trees root of another lab space. Without local clones, the trees
-   come from the ``url`` of each project.
+   come from the ``url`` of each project. A project that is not in the
+   folder also comes from its ``url``. A commit that is only in a local
+   branch (a patch tree) must be in the clone of the folder. Each clone
+   needs a ``HEAD`` that names a branch that exists (``git symbolic-ref
+   HEAD refs/heads/<branch>``), else ``west`` cannot clone from it.
 #. Run ``lab init`` with the Python of the environment. Give
    ``--trees-source <folder>`` only if you have local clones:
 
