@@ -18,6 +18,11 @@ experiments:
   - wake-m4-image-check                 # build only, no run
   - wake-m4-validate                    # its latency histograms are not data
 
+# H2 c and d compare the calibration point with t0-default of
+# wake-timers-1m on ws-up.
+imports:
+  - {study: zephyr-versions, experiment: wake-timers-1m, mode: reuse}
+
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.
 #

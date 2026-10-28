@@ -111,7 +111,7 @@ hypotheses:
         metric: irq
         stat: p50
         expect:
-          diff_to: {run: load-scaling/timeout-queue-cost/wake-timers-1m/20261024T225125Z, tree: ws-up, point: t0-default, range: [60, 150]}
+          diff_to: {experiment: wake-timers-1m, tree: ws-up, point: t0-default, range: [60, 150]}
         basis: >
           Reconstruction: the comment says "about one pair cost", and check b
           gives 60..150 for it. The reason: the wake from WFI runs a begin
@@ -125,7 +125,7 @@ hypotheses:
         metric: isr2thr
         stat: p50
         expect:
-          diff_to: {run: load-scaling/timeout-queue-cost/wake-timers-1m/20261024T225125Z, tree: ws-up, point: t0-default, range: [200, 400]}
+          diff_to: {experiment: wake-timers-1m, tree: ws-up, point: t0-default, range: [200, 400]}
         basis: >
           Estimate. The comment gives the parts: two pair costs (check b:
           120..300 together) and one ISR exit hook. It gives no cost for the

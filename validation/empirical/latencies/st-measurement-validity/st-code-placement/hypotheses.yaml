@@ -143,7 +143,7 @@ hypotheses:
         experiment: wake-stim-seed-1m
         select: {point: seed-default}
         metric: [irq, isr2thr, irq2thr]
-        expect: {hist_identical_to: {run: kconfig-factors/wp3-wake-1m/20261025T205806Z, point: baseline-t64}}
+        expect: {hist_identical_to: {experiment: wake-kconfig-1m, point: baseline-t64}}
         basis: >
           The same image gave the same histograms bin for bin on two hosts
           (reproducibility). The checks a to e found no change for code

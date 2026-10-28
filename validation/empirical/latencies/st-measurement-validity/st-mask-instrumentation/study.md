@@ -33,8 +33,10 @@ differ between the two trees.
 `wake-m4-validate` checks if the hooks measure the mask time of each call
 site. It compares the direct values of the site table with a
 calibration, with a probe of a known length, and with the IRQ tail of
-the same run and of earlier `ws-up` runs. The earlier `ws-up` values
-are:
+the same run and of other `ws-up` experiments. The checks H2 c and d
+read the current evidence run of `wake-timers-1m` (an import). The
+values in the table are from the earlier runs. They were the basis of
+the limits:
 
 | Point | Earlier `ws-up` value |
 |---|---|

@@ -94,7 +94,7 @@ hypotheses:
         metric: [irq, isr2thr]
         stat: max(max)
         expect:
-          ratio_to: {run: kconfig-factors/wp3-wake-1m/20261025T205806Z, point: baseline-t64, stat: max}
+          ratio_to: {experiment: wake-kconfig-1m, point: baseline-t64, stat: max}
           range: [1.0, 1.2]
         basis: Estimate. 8 seeds give 8 times the samples of the night run.
 

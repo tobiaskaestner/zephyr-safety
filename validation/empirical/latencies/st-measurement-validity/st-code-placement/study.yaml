@@ -19,9 +19,10 @@ experiments:
   - wake-code-place-q4
 
 # The check of a code shift in the CCM SRAM (H2 k) reads the default seed
-# of wake-stim-seed-1m.
+# of wake-stim-seed-1m and compares it with baseline-t64 of wake-kconfig-1m.
 imports:
   - {study: measurement-validity/stimulus-sampling, experiment: wake-stim-seed-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wake-kconfig-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

@@ -20,6 +20,10 @@ experiments:
   - wake-stim-seed-1m
   - wake-load-seed-tail
 
+# H1 e compares the max of the seeds with baseline-t64 of wake-kconfig-1m.
+imports:
+  - {study: kconfig-factors, experiment: wake-kconfig-1m, mode: reuse}
+
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
 # probability. There are no requirement limits yet.
