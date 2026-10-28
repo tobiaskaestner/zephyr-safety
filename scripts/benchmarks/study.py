@@ -426,6 +426,13 @@ def cmd_check(args):
         print(f"FAIL: {len(w.differ)} files differ from a new build:")
         for p in w.differ[:50]:
             print("  ", p)
+        # the usual cause: a new input since the last build (a rebuild record, a run, a verdict)
+        newest = max((f.stat().st_mtime for f in root.rglob("study.json")), default=0)
+        newer = sorted(f for f in root.rglob("*.rebuild-*.json") if f.stat().st_mtime > newest)
+        newer += sorted(f for f in root.rglob("instance.json") if f.stat().st_mtime > newest)
+        if newer:
+            print(f"note: {len(newer)} inputs are newer than the last build (for example {newer[0].relative_to(root)}); "
+                  "after 'study.py analysis build' the check compares again")
         owner = labmod.owner(root)
         if owner is not None and campaign.pending(owner):
             print("note: a campaign runs: its provisional verdicts change with each run, so a study.json can "
