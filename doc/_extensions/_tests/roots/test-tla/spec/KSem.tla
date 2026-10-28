@@ -156,6 +156,7 @@ SemInit(a, args) ==
 \* (the C code compares with !=, not <) and the poll events get the signal.
 \* @kind action
 \* @c-function z_impl_k_sem_give
+\* @source doc:api#k_sem_give
 Give(a) ==
     /\ initialized
     /\ CanCall(a)
@@ -345,6 +346,7 @@ PollSignalMeansAvailable == obs.poll # NoPoll => obs.poll > 0
 \* Reset wakes all threads that waited before the reset, with -EAGAIN.
 \* @kind action-property
 \* @expresses TEST-REQ-4
+\* @source TEST-REQ-4
 ResetWakesAll ==
     [][obs'.op = "reset" =>
          /\ obs'.woken = Range(waitq)

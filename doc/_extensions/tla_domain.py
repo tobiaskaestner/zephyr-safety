@@ -43,7 +43,8 @@ fields, the parameters of the definition, or the name of the definition.
 
 ``tla:property`` makes a sphinx-needs need (type ``tla_property_need_type``,
 id ``tla_property_id``) with the links ``tla_property_link`` to the
-requirements from ``@expresses``. See README.rst for the tags and the fields.
+requirements from ``@expresses`` and from the requirement UIDs of ``@source``.
+See README.rst for the tags and the fields.
 
 Configuration (in conf.py):
 
@@ -64,8 +65,9 @@ Configuration (in conf.py):
     (``PROP-{module}-{name}``).
 ``tla_property_need_fields``
     Field role -> field name. The roles are ``kind``, ``expected``,
-    ``module``, ``source_file``, ``source_line`` and ``c_function``. A role
-    with the value None gives no field.
+    ``module``, ``source_file``, ``source_line``, ``c_function`` and
+    ``source`` (the ``@source`` values). A role with the value None gives no
+    field.
 ``tla_source_root``
     The ``source_file`` field is relative to this directory (relative to the
     conf.py directory). Default: the source directory.
@@ -108,7 +110,7 @@ EXPECTED = ("hold", "violation")
 LEVELS = ("1", "2")
 #: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
 #: annotations of Apalache: they are not prose, and the extension does not show them.
-TAGS = ("expresses", "kind", "c-function", "expected", "level", "type", "typeAlias")
+TAGS = ("expresses", "source", "kind", "c-function", "expected", "level", "type", "typeAlias")
 
 CSS_NAME = "tla_domain.css"
 #: The start of the rawsource of a rendered block (see code_nodes()).
@@ -122,6 +124,7 @@ DEFAULT_NEED_FIELDS = {
     "source_file": "source_file",
     "source_line": "source_line",
     "c_function": "c_function",
+    "source": "tla_source",
 }
 
 
@@ -391,6 +394,17 @@ def _unit_list(argument):
     return [x for x in re.split(r"[\s,]+", argument or "") if x]
 
 
+def _sources(unit):
+    """The ``@source`` values of ``unit``: one for each tag line."""
+    return [v.strip() for v in unit.tags.get("source", []) if v.strip()]
+
+
+def _source_uids(sources):
+    """The requirement UIDs among ``@source`` values. A value with a prefix
+    (``doc:...``) names a document, not a requirement."""
+    return [v for v in sources if ":" not in v]
+
+
 class TLADirective(SphinxDirective):
     """Shared code of the TLA+ directives."""
 
@@ -570,6 +584,19 @@ class TLADirective(SphinxDirective):
                 items.append(("Expresses", ", ".join(f":need:`{u}`" for u in uids), True))
             else:
                 items.append(("Expresses", ", ".join(f"``{u}``" for u in uids), True))
+        sources = _sources(unit)
+        if sources:
+            need_role = is_role_registered("need")
+            items.append(
+                (
+                    "Source",
+                    ", ".join(
+                        f":need:`{v}`" if need_role and ":" not in v else f"``{v}``"
+                        for v in sources
+                    ),
+                    True,
+                )
+            )
         funcs = [f for v in unit.tags.get("c-function", []) for f in _unit_list(v)]
         if funcs:
             role = self.config.tla_c_function_role
@@ -747,7 +774,10 @@ class TLADirective(SphinxDirective):
     # -- Property needs
 
     def property_values(self, module, unit, options):
-        """(kind, uids, expected, c_functions) of a property, options first."""
+        """(kind, uids, expected, c_functions) of a property, options first.
+
+        The uids are the ``@expresses`` UIDs and then the requirement UIDs of
+        ``@source`` (a property from a requirement expresses it)."""
         kind = options.get("kind") or (unit.tags.get("kind") or [""])[-1]
         if not kind or kind == "definition":
             kind = infer_kind(unit)
@@ -755,6 +785,7 @@ class TLADirective(SphinxDirective):
             uids = _unit_list(options["expresses"])
         else:
             uids = [u for v in unit.tags.get("expresses", []) for u in _unit_list(v)]
+            uids += [u for u in _source_uids(_sources(unit)) if u not in uids]
         expected = options.get("expected") or (unit.tags.get("expected") or ["hold"])[-1]
         funcs = [f for v in unit.tags.get("c-function", []) for f in _unit_list(v)]
         return kind, uids, expected, funcs
@@ -801,6 +832,7 @@ class TLADirective(SphinxDirective):
             "source_file": source_file,
             "source_line": str(unit.start_line),
             "c_function": "; ".join(funcs),
+            "source": "; ".join(_sources(unit)),
         }
         rst = [f".. {need_type}:: {unit.name}", f"   :id: {need_id}"]
         if uids:
@@ -926,7 +958,7 @@ def module_body_nodes(directive, module, property_needs, declarations=True, excl
 
 def _is_property(unit):
     kind = (unit.tags.get("kind") or [""])[-1]
-    return bool(unit.tags.get("expresses")) or kind in NEED_KINDS
+    return bool(unit.tags.get("expresses")) or bool(_sources(unit)) or kind in NEED_KINDS
 
 
 class TLAModuleBody(TLADirective):

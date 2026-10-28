@@ -15,15 +15,27 @@
 (*   the cancellation of the timeout first.                                *)
 (*                                                                         *)
 (* MCIsrPends lets the ISR call z_pend_curr(), which panics.               *)
+(*                                                                         *)
+(* MCSetPrioBy selects the target of k_thread_priority_set(): "any",       *)
+(* "self" (the caller sets its own priority), "other" (another thread),    *)
+(* "other_same" (another thread that does not run, to its own priority)   *)
+(* or "none" (no call).                                                    *)
+(* The configurations p7_* use "self" and "other" to give the short        *)
+(* counterexamples of the findings P7-a and P7-b one at a time. MCAbort    *)
+(* FALSE removes k_thread_abort() from the environment for the same        *)
+(* reason. The new priority can be the old one: the code then also         *)
+(* requeues the thread.                                                    *)
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
 
 CONSTANTS t1, t2, t3, o1, o2, i1, c1, c2, NoObj, IdleT, d1, NoD,
-          MCCPUS, MCZPrios, MCMutant, MCIsrPends
+          MCCPUS, MCZPrios, MCMutant, MCIsrPends, MCSetPrioBy, MCAbort
 
-VARIABLES tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost
+VARIABLES tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
+          pendedOn, stamp, tq, tqCost
 
-vars == <<tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+vars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
+          pendedOn, stamp, tq, tqCost>>
 
 Threads == {t1, t2, t3}
 Objs    == {o1, o2}
@@ -99,7 +111,16 @@ WakeNoCancelStep ==
            /\ tstate' = [tstate EXCEPT ![t] = "ready"]
            /\ swapRet' = [swapRet EXCEPT ![t] = Sched!OK]
            /\ UNCHANGED <<prio, swapData, panic, tq, tqCost>>
+           /\ Sched!QueueReady({t})
         /\ Sched!Release(a, "resched")
+
+\* The calls of k_thread_priority_set(t, p) by a that the configuration
+\* allows.
+PrioTarget(a, t, p) ==
+    \/ MCSetPrioBy = "any"
+    \/ MCSetPrioBy = "self" /\ a = t
+    \/ MCSetPrioBy = "other" /\ a # t
+    \/ MCSetPrioBy = "other_same" /\ a # t /\ ~Sched!Running(t) /\ p = prio[t]
 
 -----------------------------------------------------------------------------
 
@@ -110,8 +131,8 @@ Next ==
     \/ panic = "none" /\ (PendStep \/ IsrPendStep \/ WakeStep
                           \/ MissedReschedStep \/ WakeNoCancelStep)
     \/ \E c \in MCCPUS : Sched!ThreadTimeout(c) \/ Sched!Preempt(c)
-    \/ \E a \in Actors, t \in Threads : Sched!Abort(a, t)
-    \/ \E a \in Actors, t \in Threads, p \in Prios : p # prio[t] /\ Sched!SetPrio(a, t, p)
+    \/ MCAbort /\ \E a \in Actors, t \in Threads : Sched!Abort(a, t)
+    \/ \E a \in Actors, t \in Threads, p \in Prios : PrioTarget(a, t, p) /\ Sched!SetPrio(a, t, p)
     \/ \E t \in Threads : Sched!Resume(t)
     \/ Halted
 
@@ -134,9 +155,21 @@ Inv_WQ_StampsNormal == Sched!WQ!StampsNormal
 Inv_WQ_RanksDistinct == Sched!WQ!RanksDistinct
 Inv_TO_ArmedOnce    == Sched!TO!ArmedOnce
 Inv_TO_CostBounded  == Sched!TO!CostBounded
+Inv_RqStampsNormal  == Sched!RqStampsNormal
 
 Live_TimedWaitEnds    == Sched!TimedWaitEnds
 Live_SelectionHappens == Sched!SelectionHappens
+
+-----------------------------------------------------------------------------
+(* The normative properties of the library module (one CPU).              *)
+
+Inv_PreemptibleRunsHighest == Sched!PreemptibleRunsHighest
+Prop_SwitchSelectsHighest  == Sched!SwitchSelectsHighest
+\* @expected violation (configuration p7_tie, finding P7-a)
+Prop_TieGoesToLongestReady == Sched!TieGoesToLongestReady
+\* @expected violation (configurations p7_coop and p7_abort, findings P7-b
+\* and P7-c)
+Prop_CoopKeepsCpu          == Sched!CoopKeepsCpu
 
 -----------------------------------------------------------------------------
 (* Reachability probes. Each one is the negation of a situation that the   *)

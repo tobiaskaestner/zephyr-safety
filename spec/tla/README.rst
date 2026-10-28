@@ -86,6 +86,10 @@ module boundaries against eight kernel objects).
      - TLC from ``tla2tools.jar`` v1.8.0 (pre-release, rev ``d2e1472``),
        pinned by hash (see `Running`_).
        The style stays readable for Apalache (see `Apalache`_).
+   * - Method
+     - Two layers in each spec (2026-10-28, see `Descriptive and normative
+       layer`_): the operators follow the code, the properties come from
+       the requirements and the documentation (``@source``).
 
 Entities
 ********
@@ -123,12 +127,13 @@ application code.
        ``swapData[t]``).
      - Stacks, the thread entry function.
    * - Scheduler
-     - The ready set, the rule "the highest priority runs", cooperative
-       threads, the reschedule points.
-     - The ready queue implementations (``CONFIG_SCHED_*``), the order of
-       the ready threads with the same priority (the model selects any
-       one), time slices, ``k_yield()``, ``k_sched_lock()``, meta-IRQ
-       threads, CPU masks.
+     - The ready set, the run queue order (``rqStamp``) and the cache of
+       ``update_cache()`` on one CPU (``preemptOk``), cooperative threads,
+       the reschedule points.
+     - The data structures of the ready queue (``CONFIG_SCHED_*``: all
+       three give the same order), the run queue and the cache on SMP (the
+       model selects any thread of the highest priority), time slices,
+       ``k_yield()``, ``k_sched_lock()``, meta-IRQ threads, CPU masks.
    * - Wait queue
      - One set of waiters for each object, with priorities and stamps (see
        `The wait queue`_).
@@ -162,7 +167,8 @@ Module structure
    lib/Platform     CPUs, ISR actors, lock owners (level 2)
      |
    lib/Scheduler    thread state, priorities, current thread, swap result,
-     |              panic, ready set; Abort, SetPrio, Resume
+     |              panic, ready set, run queue order, cache; Abort,
+     |              SetPrio, Resume
    lib/WaitQueue    pendedOn, stamps, Before, Best, Ordered; Add, Remove
      |
    lib/Timeout      timeout entries, the expiry event, the insertion cost
@@ -185,7 +191,9 @@ Module structure
      - ``InIsr(a)``, lock steps
      - objects, priorities
    * - ``Scheduler``
-     - ``tstate``, ``prio``, ``cur``, ``swapRet``, ``swapData``, ``panic``
+     - ``tstate``, ``prio``, ``cur``, ``swapRet``, ``swapData``, ``panic``,
+       ``rqStamp``, ``preemptOk``, ``readySince`` (a history variable of the
+       normative layer)
      - layer A operators, the selection rule ``Choices``, ``ThreadTimeout``,
        ``Abort``, ``SetPrio``, ``Resume``, ``Preempt``, the ISR guard,
        fairness
@@ -259,7 +267,10 @@ an ISR), ``o`` an object.
        the cancellation of the timeout that its callers do first.
    * - ``PrioSet(t, p)``
      - ``z_thread_prio_set()``: a waiter goes to the end of the waiters
-       with its new priority. No reschedule.
+       with its new priority. A ready thread (on one CPU also the current
+       thread) goes to the end of the run queue for its new priority, also
+       if the priority does not change, and ``update_cache(1)`` follows.
+       No reschedule.
    * - ``Release(a, kind)``
      - The end of the critical section. ``"unlock"``:
        ``k_spin_unlock()``, a thread keeps its CPU. ``"resched"``:
@@ -272,18 +283,31 @@ an ISR), ``o`` an object.
        the swap, an interrupt or IPI that selects a thread on ``c``.
 
 **The selection rule.** At each reschedule point, CPU ``c`` selects a
-thread from ``Choices(c, ...)``. The rule is the one of ``next_up()`` and
-``should_preempt()``: a ready cooperative thread keeps the CPU. Else the
-candidates are the ready threads that do not run on another CPU, and the
-current thread wins a tie. Among the other threads with the highest
-priority the model selects any one. ``mc/SchedulerTest`` fixes the rule
-for single states.
+thread from ``Choices(c, ...)``. On one CPU this is the cache of the code
+(``CacheOf``). ``next_up()`` gives the head of the run queue: the highest
+priority, then the position (``rqStamp``). The current thread stays in the
+run queue, so "the current thread wins a tie" is only a result of its
+position. ``should_preempt()`` accepts the head if the flag ``preemptOk``
+(the argument of the last ``update_cache()``) is true, if the current
+thread cannot run, or if it is preemptible. Else the current thread keeps
+the CPU (the cooperative rule). A wake and a timeout call
+``update_cache(0)``. A wait, ``z_thread_prio_set()`` of a ready thread and
+an abort call ``update_cache(1)``: then the next reschedule point has no
+cooperative rule. Threads that become ready in one critical section get any
+order among them (no document orders them). On SMP the rule is
+``SmpChoices`` (design exploration): a ready cooperative thread keeps the
+CPU, the current thread wins a tie, else any thread with the highest
+priority. ``mc/SchedulerTest`` fixes the rules for single states.
 
-**The composition rule.** A critical section that makes a thread ready
-ends with ``"resched"`` (or is an ISR). Then on one CPU the invariant
-``RunRuleHolds`` holds after each step: each CPU runs a thread that the
+**The composition rule.** A critical section that changes the cache ends
+with ``"resched"`` (or is an ISR). Then on one CPU the invariant
+``RunRuleHolds`` holds after each step: each CPU runs the thread that the
 rule selects. The mutant ``missed_resched`` of ``mc/MCScheduler`` (a wake
-that ends with ``k_spin_unlock()``) violates it. On SMP the invariant
+that ends with ``k_spin_unlock()``) violates it. The code itself breaks the
+rule in one place: ``k_thread_abort()`` of another thread calls
+``update_cache(1)`` and ends with ``k_spin_unlock()`` (configuration
+``coop_rule``, finding P7-c). A mutex model that de-boosts the owner and
+then ends with ``k_spin_unlock()`` must show the same. On SMP the invariant
 fails until the IPI arrives (configuration ``smp_rule``, expected). The
 liveness property ``SelectionHappens`` holds with the fairness of
 ``Preempt``.
@@ -546,6 +570,39 @@ roadmap step 5. The specs keep a style that it can read from the start:
 The doc extension takes ``@type`` and ``@typeAlias`` lines as tags, so
 they do not show in the rendered prose.
 
+Descriptive and normative layer
+*******************************
+
+Decided on 2026-10-28 (roadmap, "Method decision 2026-10-28"). Each spec
+has two layers:
+
+- **Descriptive layer: the operators.** They follow the C code
+  (``@c-function``), also where the code is surprising. An operator is
+  never adjusted to the intent. The unit tests check the code against the
+  operators, later trace validation too. An incidental choice of the code,
+  which no document promises, is a free choice in the model.
+- **Normative layer: the properties.** Each property is written from its
+  own source, before a look at the code if possible: a requirement
+  (``@source ZEP-SRS-2-13``) or a document (``@source doc:<page>``). Where
+  the source text has more than one reading, the comment of the property
+  or the register of findings states the reading. A property can read a
+  history variable that records what the source names (``readySince`` for
+  "ready the longest"). Such a variable is not a field of the code.
+
+A property of the normative layer that fails on the model is a design
+finding. Its model configuration expects the failure (``mc/expected.txt``,
+with a comment that names the finding). A property that cannot be written,
+because the sources say nothing, is a finding too. One register holds all
+findings (the workspace notes ``claude/kernel-unit/tla/findings.md`` for
+now). Each finding gets a class: defect, intended but undocumented,
+accepted deviation, or open.
+
+The pilot is ``lib/Scheduler`` (finding P7, 2026-10-28). Its normative
+properties are ``PreemptibleRunsHighest`` (ZEP-SRS-2-9, 2-12),
+``SwitchSelectsHighest`` (2-12), ``TieGoesToLongestReady`` (2-13) and
+``CoopKeepsCpu`` (2-14). The configurations ``p7_*`` and ``coop_rule`` of
+``mc/MCScheduler`` check them. The last two properties fail as expected.
+
 Conventions
 ***********
 
@@ -563,13 +620,17 @@ Comments
    .. code-block:: none
 
       \* @expresses ZEP-SRS-5-3
+      \* @source ZEP-SRS-2-13
       \* @kind invariant
       \* @c-function z_impl_k_sem_give
       \* @expected violation
       \* @level 2
 
    ``@expresses`` names a requirement that the definition expresses (one
-   UID on each line). ``@kind`` is one of:
+   UID on each line). ``@source`` names the source of a property of the
+   normative layer, one on each line: a requirement UID (the doc extension
+   also makes it an ``expresses`` link) or ``doc:<page>`` for a document.
+   ``@kind`` is one of:
 
    - ``action``: a step of the system, usually the model of a C function
      (with ``@c-function``). It is part of ``Next``.

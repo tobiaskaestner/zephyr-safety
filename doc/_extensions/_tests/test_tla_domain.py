@@ -107,6 +107,7 @@ def test_the_tags_of_a_definition(app):
     give = definition_html(html(app, "ksem"), "tla-KSem-Give")
     assert "Models" in give and "z_impl_k_sem_give" in give
     assert '<span class="pre">action</span>' in give
+    assert "Source" in give and "doc:api#k_sem_give" in give
 
 
 @TLA
@@ -140,6 +141,7 @@ def test_the_property_needs(app):
         "PROP-KSem-WaiterServedIfGives",
         "PROP-KSem-TimedWaitEnds",
         "PROP-Extra-StepIncrements",
+        "PROP-Extra-XIsNat",
     }
     nwa = props["PROP-KSem-NoWaitWhileAvailable"]
     assert nwa["expresses"] == ["TEST-REQ-2", "TEST-REQ-3"]
@@ -157,9 +159,22 @@ def test_the_property_needs(app):
     timed = props["PROP-KSem-TimedWaitEnds"]
     assert timed["expresses"] == ["TEST-REQ-9"]
     assert timed["kind"] == "liveness"
+    # @source: a property with @source tags only is a need. A requirement UID
+    # of a source is an expresses link, a document is not. The field has
+    # all values.
+    xisnat = props["PROP-Extra-XIsNat"]
+    assert xisnat["expresses"] == ["TEST-REQ-1"]
+    assert xisnat["tla_source"] == "TEST-REQ-1; doc:api#x"
+    # A source that is also an @expresses UID gives one link.
+    assert props["PROP-KSem-ResetWakesAll"]["expresses"] == ["TEST-REQ-4"]
+    assert props["PROP-KSem-ResetWakesAll"]["tla_source"] == "TEST-REQ-4"
     # The back-link on the requirement.
     assert data["TEST-REQ-2"]["expresses_back"] == ["PROP-KSem-NoWaitWhileAvailable"]
     assert data["TEST-REQ-5"]["expresses_back"] == []
+    assert data["TEST-REQ-1"]["expresses_back"] == [
+        "PROP-Extra-XIsNat",
+        "PROP-KSem-CountLeLimit",
+    ]
 
 
 @TLA

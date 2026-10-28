@@ -312,7 +312,8 @@ nullable = true
 [needs.fields.symbol_hits.schema]
 type = "string"
 
-# kind, expected, tla_module, c_function: set by tla_domain on a model property.
+# kind, expected, tla_module, c_function, tla_source: set by tla_domain on a
+# model property.
 [needs.fields.kind]
 description = "Kind of a model property (invariant / action-property / liveness / probe)"
 nullable = true
@@ -335,4 +336,12 @@ type = "string"
 description = "C functions that a TLA+ action models, joined with '; '"
 nullable = true
 [needs.fields.c_function.schema]
+type = "string"
+
+# tla_source: the @source tags of a model property (a requirement UID, or
+# doc:<page> for a document), joined with "; ". Set by tla_domain.
+[needs.fields.tla_source]
+description = "Sources of a model property of the normative layer (@source), joined with '; '"
+nullable = true
+[needs.fields.tla_source.schema]
 type = "string"
