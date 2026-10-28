@@ -9,4 +9,5 @@ work in this way.
 
    purpose
    method
+   timing-diagrams
    documentation-guidelines

@@ -220,7 +220,7 @@ Board ``nucleo_g474re``
        SRAM1. No MPU region covers ``0x10000000``, so the code can execute
        when the MPU is on. See :ref:`benchguide-code-placement`.
    * - Other files
-     - ``clocks/`` (85 MHz and 16 MHz, see :doc:`hardware`), ``systick/``
+     - ``clocks/`` (85 MHz and 16 MHz, see :ref:`benchguide-clock-overlays`), ``systick/``
        (see :ref:`benchguide-systick-wrap`).
    * - ``boards.yaml``
      - Modules ``cmsis_6``, ``hal_stm32``. Flash with OpenOCD; ``adapter serial``

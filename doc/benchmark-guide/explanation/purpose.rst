@@ -12,7 +12,7 @@ in a histogram on the target, not only a mean.
 
 All times are in counts of the stimulus timer. On the NUCLEO-G474RE, the
 stimulus timer runs at the core clock, so one count is one core cycle (see
-:doc:`../hardware`). This guide uses "cycles" for these counts.
+:doc:`method`). This guide uses "cycles" for these counts.
 
 The suite has four measurement points:
 

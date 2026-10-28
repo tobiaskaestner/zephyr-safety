@@ -141,7 +141,7 @@ Stimulus
        arm.
    * - ``stim_arm(now)``
      - Programs the next edge, with interrupts locked. It moves a late edge
-       and counts it in ``stim_late`` (see :doc:`hardware`). Read
+       and counts it in ``stim_late`` (see :doc:`explanation/method`). Read
        ``stim_edge()`` and ``stim_edge_phase()`` of the current edge before
        this call.
    * - ``stim_stop()``
@@ -152,7 +152,7 @@ Stimulus
      - Prints ``stim_overruns``, ``stim_late``, the clock drift and the phase
        check at the end of the run.
 
-:doc:`hardware` describes the edge, the stimulus modes and the tick
+:doc:`explanation/method` describes the edge, the stimulus modes and the tick
 phase.
 
 .. _benchguide-static-check:

@@ -289,4 +289,4 @@ with the measured threads.
 
 A board port can add a Kconfig fragment ``port.conf``. The port of the
 NUCLEO-G474RE sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y`` (see
-:doc:`hardware`).
+:doc:`explanation/method`).

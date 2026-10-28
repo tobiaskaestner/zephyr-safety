@@ -8,3 +8,4 @@ the tools work as they do.
 .. toctree::
    :maxdepth: 1
 
+   wire-the-nucleo-g474re
