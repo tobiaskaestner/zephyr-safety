@@ -113,9 +113,6 @@ Limits
   sleep, but a measurement over a sleep is not possible with it. The
   window length comes from ``k_cycle_get_64()``.
 
-``claude/latency-benchmarks/m4-design.md`` (outside this repository)
-has the full list of the mask paths and the reasons.
-
 Experiments
 -----------
 
