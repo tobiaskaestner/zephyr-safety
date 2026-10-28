@@ -20,3 +20,4 @@ the tools work as they do.
    combine-lab-spaces
    reproduce-a-data-point
    run-the-unit-tests
+   troubleshoot-a-run
