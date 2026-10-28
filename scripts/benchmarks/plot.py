@@ -29,7 +29,13 @@ import argparse
 import sys
 from pathlib import Path
 
-import matplotlib
+if __name__ == "__main__":
+    # in a lab space: the Python of the lab space (it has matplotlib)
+    sys.path.insert(0, str(Path(__file__).resolve().parent))
+    from studylib import lab as _lab  # noqa: E402
+    _lab.restart_with_lab_python(Path(__file__).resolve(), sys.argv[1:])
+
+import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
