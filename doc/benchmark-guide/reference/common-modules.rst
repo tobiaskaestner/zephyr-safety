@@ -286,10 +286,8 @@ steps:
   ``LATBENCH_CODE_RAM``, ``pad.c`` goes to a library of its own, and the
   build relocates the hot code (see :ref:`benchguide-code-placement`).
 - It defines ``LATBENCH_SRC_REV``, the revision of the benchmark sources.
-  ``run.py`` gives a content hash of the firmware files of
-  ``tests/benchmarks`` with ``-DLATBENCH_SRC_REV=<hash>``, so the same
-  firmware gives the same image
-  at any commit (old runs have the commit). A manual build gets the value
+  ``run.py`` gives the firmware hash with ``-DLATBENCH_SRC_REV=<hash>``
+  (see :ref:`benchguide-firmware-hash`). Old runs have the commit. A manual build gets the value
   from ``git describe --always --abbrev=12 --dirty``. If git gives no
   value, the value is ``unknown``.
 - If the app sets ``LATBENCH_STIM`` before the include, it adds the
