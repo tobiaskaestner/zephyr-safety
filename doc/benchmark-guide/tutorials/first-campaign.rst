@@ -3,7 +3,9 @@ Your first campaign
 
 .. admonition:: Prerequisites
 
-   The lab space of :doc:`set-up-a-lab-space`.
+   The lab space of :doc:`set-up-a-lab-space`. The images of
+   :doc:`first-experiment` in the build cache help, but are not
+   necessary.
 
 A :term:`campaign` runs the experiments of a study, adds each run to the
 run list of its :term:`instance` (the study for one board, in the results
@@ -60,8 +62,8 @@ You can close the terminal. After about five minutes:
    waiting for the last build of the results (it makes the verdicts final)
    campaign 20261028T011250Z: done, 0 experiments failed; results /wrk/z/lab-tutorial/results/kernel-latency/index.html
 
-The campaign is done. It held the board lock the whole time, so no second
-campaign could use the board.
+The campaign is done. It held the board lock the whole time. A second
+campaign on this board stops at once.
 
 Read the verdicts
 -----------------
@@ -111,6 +113,9 @@ What is missing
    5 experiments to run; 'study.py campaign check <folder> --only EXP ...'
 
 This is the list of the runs to make next.
+:doc:`../explanation/campaigns` tells how a campaign works, and
+:doc:`../explanation/studies-and-verdicts` how the verdicts come from the
+runs.
 
 The pages
 ---------
