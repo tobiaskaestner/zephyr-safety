@@ -16,9 +16,9 @@ question: >
   the share and the max of the IRQ tail?
 
 imports:
-  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: reuse}
-  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: reuse}
-  - {study: kconfig-factors, experiment: wp3-t2t-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: irq-kconfig-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wake-kconfig-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: thread-kconfig-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet. The rankings of

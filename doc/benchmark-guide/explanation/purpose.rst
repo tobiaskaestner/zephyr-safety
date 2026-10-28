@@ -50,6 +50,6 @@ The suite has four measurement points:
 
 M4 needs the :term:`tree` ``ws-up-irqoff``, which has the hooks. The hooks make
 each mask section longer, so the latency histograms of an M4 run are not
-data. The :term:`experiments <Experiment>` ``m4-sweep`` and ``m4-thread`` of the :term:`study`
+data. The :term:`experiments <Experiment>` ``wake-m4-sweep`` and ``thread-m4`` of the :term:`study`
 ``mask-time`` measure M4. :doc:`mask-time` describes the method and its
 limits.

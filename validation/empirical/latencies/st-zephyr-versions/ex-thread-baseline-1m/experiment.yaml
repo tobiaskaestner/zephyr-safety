@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: none.
 
-name: thread2thread-1m
+name: thread-baseline-1m
 app: thread_latency
 trees: [ws-up]
 repeat: 1

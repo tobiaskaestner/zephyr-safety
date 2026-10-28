@@ -51,12 +51,12 @@ measures the number of kernel timers, with and without time slicing.
 The point `t0` is the reference. The far timers show the cost of the
 length of the timeout queue alone.
 
-`timeout-backends-1m` measures the timeout queue backends with 256
+`wake-timeout-backends-1m` measures the timeout queue backends with 256
 periodic load timers: DLIST, MINHEAP, WHEEL and BUCKET. The point
 `dlist` gives a reference in the same binary as the other points. The
 point `t256-default` of `wake-timers-1m` has the same load with the
 DLIST backend. The SKIPLIST backend is only in the tree `ws-up`. Thus
-it is in a separate experiment, `timeout-skiplist-1m`, with the same
+it is in a separate experiment, `wake-timeout-skiplist-1m`, with the same
 axis name `backend`.
 
 The predictions were written on 2026-10-24, before the runs
@@ -72,7 +72,7 @@ The predictions were written on 2026-10-24, before the runs
   reset of each wake. Thus with time slicing, the `isr2thr` grows with
   the number of timers.
 
-`timeout-backends-1m` and `timeout-skiplist-1m` stated no prediction
+`wake-timeout-backends-1m` and `wake-timeout-skiplist-1m` stated no prediction
 before their runs. Their tail is the central result `backend-tail`. The
 slopes per timer and per thread are the central results `timer-slope`
 and `thread-slope`.

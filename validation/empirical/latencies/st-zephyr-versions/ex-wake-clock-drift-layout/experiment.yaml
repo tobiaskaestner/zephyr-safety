@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: none.
 
-name: clock-drift-layout
+name: wake-clock-drift-layout
 app: wake_latency
 trees: [ws-up]
 repeat: 1

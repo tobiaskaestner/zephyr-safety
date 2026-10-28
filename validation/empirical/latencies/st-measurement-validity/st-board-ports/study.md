@@ -17,9 +17,9 @@ Each experiment is a smoke test of one port. It uses the app
 `ws-safety` and `ws-up`. `run.py` must build the image, flash the board
 and read the console.
 
-- `port-smoke-nrf54l15dk`: the board `nrf54l15dk/nrf54l15/cpuapp`.
-- `port-smoke-nrf52840dk`: the board `nrf52840dk/nrf52840`.
-- `port-smoke-mimxrt1060_evk`: the board
+- `wake-port-smoke-nrf54l15dk`: the board `nrf54l15dk/nrf54l15/cpuapp`.
+- `wake-port-smoke-nrf52840dk`: the board `nrf52840dk/nrf52840`.
+- `wake-port-smoke-mimxrt1060_evk`: the board
   `mimxrt1060_evk@C/mimxrt1062/qspi`. The loopback wire is D2 - A3 (A3
   drives, D2 reads).
 

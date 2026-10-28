@@ -1,4 +1,4 @@
-# code-place-q4
+# wake-code-place-q4
 
 ## What it measures
 
@@ -9,7 +9,7 @@ against a flash control.
 ## Method
 
 - Tree `ws-safety`. Semaphore wake (`LATBENCH_WAKE_SEM`). 50000 samples
-  per point. The same points on `ws-up` are in `code-place-q4-up`.
+  per point. The same points on `ws-up` are in `wake-code-place-q4-up`.
 - The checks read the p50 of each histogram (`irq`, `isr2thr`) and the
   drift per wake (`clock_drift_cyc` / samples, default anchor only).
 - Board time: about 35 s per point, with build and flash.
@@ -20,7 +20,7 @@ against a flash control.
 
 - **place**: `f0` and `f4` are the flash control
   (`LATBENCH_CODE_FLASH_PAD`, pad 0 and 4 bytes). Their code layout is
-  that of the reference points `p0` and `p4` of `code-layout`. `r0` ..
+  that of the reference points `p0` and `p4` of `wake-code-layout`. `r0` ..
   `r28` have hot code in RAM (`LATBENCH_CODE_RAM`, pad 0, 4, .. 28
   bytes). The pad moves only the relocated code.
 - **anchor**: `default` is time slicing, 20 ms, the default anchor.

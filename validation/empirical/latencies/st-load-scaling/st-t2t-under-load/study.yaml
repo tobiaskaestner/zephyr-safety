@@ -16,7 +16,7 @@ question: >
   slope for all three primitives, and does its tail grow with the load?
 
 experiments:
-  - t2t-load-1m
+  - thread-load-1m
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.

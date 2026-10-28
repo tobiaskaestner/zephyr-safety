@@ -49,17 +49,17 @@ hypotheses:
       the p99.99.
     checks:
       - id: a
-        formerly: stim-seed-1m/P2
+        formerly: wake-stim-seed-1m/P2
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         metric: [irq, isr2thr]
         stat: p50
         expect: {spread_abs_le: 2}
         basis: Estimate. The comment gives no basis for the 2 cycles.
       - id: b
-        formerly: stim-seed-1m/P3
+        formerly: wake-stim-seed-1m/P3
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         metric: [irq, isr2thr]
         stat: [mean, p99]
         expect: {spread_le: 0.03}
@@ -69,9 +69,9 @@ hypotheses:
           1 %, and the range of 8 seeds is about 3 standard deviations. This
           assumes that the value moves like the count.
       - id: c
-        formerly: stim-seed-1m/P4
+        formerly: wake-stim-seed-1m/P4
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         metric: [irq, isr2thr]
         stat: p99.99
         expect: {spread_le: 0.15}
@@ -80,17 +80,17 @@ hypotheses:
           has a relative standard deviation of 10 %. The comment gives no
           basis for 15 %; there is no model of the tail shape.
       - id: d
-        formerly: stim-seed-1m/P4
+        formerly: wake-stim-seed-1m/P4
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         metric: [irq, isr2thr]
         stat: max
         expect: {spread_le: 0.30}
         basis: Estimate. The max is one sample; there is no model of the tail shape.
       - id: e
-        formerly: stim-seed-1m/P4
+        formerly: wake-stim-seed-1m/P4
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         metric: [irq, isr2thr]
         stat: max(max)
         expect:
@@ -106,46 +106,46 @@ hypotheses:
       ticks with many expiries, and the percentiles stay in the range of
       the seeds.
     basis: >
-      stim-seed-1m showed that the seeds act as independent samples (the
+      wake-stim-seed-1m showed that the seeds act as independent samples (the
       counts agree with Poisson). loadmodel.py gives the ticks with >= k
       expiries for each run length.
     wrong_if: A long run is not the same as several seeds, for example because the run is not stationary.
     checks:
       - id: a
-        formerly: load-seed-tail/P1
+        formerly: wake-load-seed-tail/P1
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: default-4m}
         metric: irq
         stat: count_ge(4288)
         expect: {range: [365, 450]}
         basis: >
-          4 x the mean count of the 8 seeds of stim-seed-1m (100.4 per 1M),
+          4 x the mean count of the 8 seeds of wake-stim-seed-1m (100.4 per 1M),
           times the ratio of the ticks with >= 3 expiries in the 4M run to 4 x
           the 1M run (loadmodel.py: 6142 / (4 x 1518)) = 406. Reconstruction:
           the range is about +-2 Poisson standard deviations.
       - id: b
-        formerly: load-seed-tail/P1
+        formerly: wake-load-seed-tail/P1
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: default-4m}
         metric: irq
         stat: count_ge(5952)
         expect: {range: [17, 37]}
         basis: As a, from the mean count 5.2 per 1M of the 8 seeds = 27.
       - id: c
-        formerly: load-seed-tail/P1
+        formerly: wake-load-seed-tail/P1
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: default-4m}
         metric: [irq, isr2thr]
         stat: [p99, p99.9, p99.99]
-        expect: {within: {experiment: stim-seed-1m, stat: range}, tolerance_bins: 1}
+        expect: {within: {experiment: wake-stim-seed-1m, stat: range}, tolerance_bins: 1}
         basis: A value up to the p99.99 does not depend on the stimulus seed (H1 c).
       - id: d
-        formerly: load-seed-tail/P1
+        formerly: wake-load-seed-tail/P1
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: default-4m}
         metric: irq
         stat: max
@@ -167,9 +167,9 @@ hypotheses:
     wrong_if: The tail does not come from the ticks with many expiries, or not from them only.
     checks:
       - id: a
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-90befffa}
         metric: irq
         stat: count_ge(4288)
@@ -180,18 +180,18 @@ hypotheses:
           948 / 1518) = 63. Reconstruction: the range is about +-2.5 Poisson
           standard deviations. The same rule gives the ranges of b and c.
       - id: b
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-78a5636f}
         metric: irq
         stat: count_ge(4288)
         expect: {range: [145, 210]}
         basis: As a, ratio 2674 / 1518 = 177.
       - id: c
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-c67178f2}
         metric: irq
         stat: count_ge(4288)
@@ -200,9 +200,9 @@ hypotheses:
           As a, ratio 3608 / 1518 = 239. If the count changed with the ticks
           with >= 2 expiries instead, it would be 157.
       - id: d
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-90befffa}
         metric: irq
         stat: count_ge(5952)
@@ -211,35 +211,35 @@ hypotheses:
           The default count per 1M (5.2), times the ratio of the ticks with
           >= 4 expiries (33 / 39) = 4. The same rule gives e and f.
       - id: e
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-78a5636f}
         metric: irq
         stat: count_ge(5952)
         expect: {range: [9, 27]}
         basis: As d, ratio 125 / 39 = 17.
       - id: f
-        formerly: load-seed-tail/P2
+        formerly: wake-load-seed-tail/P2
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         select: {point: lseed-c67178f2}
         metric: irq
         stat: count_ge(5952)
         expect: {range: [17, 40]}
         basis: As d, ratio 209 / 39 = 28.
       - id: g
-        formerly: load-seed-tail/P3
+        formerly: wake-load-seed-tail/P3
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         metric: irq
         stat: mean
         expect: {order: [lseed-90befffa, default-4m, lseed-78a5636f, lseed-c67178f2]}
         basis: loadmodel.py, the number of expiries per run for each load seed.
       - id: h
-        formerly: load-seed-tail/P4
+        formerly: wake-load-seed-tail/P4
         written: 2026-10-26, before load-seed-tail/20261026T181105Z
-        experiment: load-seed-tail
+        experiment: wake-load-seed-tail
         manual: true
         statement: >
           The max is not a sharp test: an edge must come in the first

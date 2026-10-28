@@ -64,7 +64,7 @@ hypotheses:
           p99.99 as the tail.
       - id: b
         written: 2026-10-25, before systick-prio-1m/20261025T051643Z
-        experiment: systick-prio-1m
+        experiment: wake-systick-prio-1m
         metric: irq
         stat: p99.99
         expect: {order: {prio: [lower, same]}}
@@ -91,7 +91,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before systick-prio-1m/20261025T051643Z
-        experiment: systick-prio-1m
+        experiment: wake-systick-prio-1m
         metric: irq
         stat: max
         manual: true
@@ -103,7 +103,7 @@ hypotheses:
           limit for "about the same".
       - id: b
         written: 2026-10-25, before systick-prio-1m/20261025T051643Z
-        experiment: systick-prio-1m
+        experiment: wake-systick-prio-1m
         metric: isr2thr
         manual: true
         statement: >

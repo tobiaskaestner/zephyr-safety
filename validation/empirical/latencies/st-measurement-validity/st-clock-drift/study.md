@@ -33,19 +33,19 @@ the DWT cycle counter. It then adds them to the software count.
 
 ## Experiments
 
-`clock-drift` measures how many cycles the counter loses, and if the
+`wake-clock-drift` measures how many cycles the counter loses, and if the
 loss changes with the number of SysTick reprograms. Its anchors and its
 load timers change the number of reprograms. It runs on two trees,
 `ws-safety` and `ws-up`.
 
-`clock-drift-fix` tests both causes. It compares the tree with the
+`wake-clock-drift-fix` tests both causes. It compares the tree with the
 option against the same tree without it, for the anchors of
-`clock-drift`. Three more points with 256 load timers test the second
+`wake-clock-drift`. Three more points with 256 load timers test the second
 cause at three values of the shortest SysTick reload.
 
-`clock-drift-layout` asks a later question. The same wake (semaphore,
+`wake-clock-drift-layout` asks a later question. The same wake (semaphore,
 time slicing, no load timers) loses 8.0 cycles per wake in
-`clock-drift`, but 9.7 cycles per wake in `wake-timers-1m` (point
+`wake-clock-drift`, but 9.7 cycles per wake in `wake-timers-1m` (point
 `t0-default`). The safety revision of the two runs has the same SysTick
 code. The two runs have a different histogram size, and thus a
 different code and data layout. They also have a different number of
@@ -62,10 +62,10 @@ The predictions were written before the runs (dates from
   longer shortest reload removes this loss (written 2026-10-25, before
   `clock-drift-fix/20261024T223910Z`).
 
-The dates of the predictions for `clock-drift-fix` are local time
+The dates of the predictions for `wake-clock-drift-fix` are local time
 (+0200). The run id is UTC: the run started at 00:39 +0200.
 
-`clock-drift-layout` stated no prediction before its run. Its drift
+`wake-clock-drift-layout` stated no prediction before its run. Its drift
 values are the central result `layout-drift`. A person confirms the
 central result `drift-cause` from H1 and H2.
 

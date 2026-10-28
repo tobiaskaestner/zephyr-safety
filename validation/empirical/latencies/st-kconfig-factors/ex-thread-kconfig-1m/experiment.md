@@ -1,4 +1,4 @@
-# wp3-t2t-1m
+# thread-kconfig-1m
 
 ## What it measures
 
@@ -18,4 +18,4 @@ each WP3 Kconfig factor, against the point `baseline` of the same run.
 
 - **variant**: one Kconfig factor at a time against the defaults of the
   app. `../wp3-variants.md` gives the variants, the defaults and the
-  Kconfig traps. `wp3-irq-1m` and `wp3-wake-1m` have the same variants.
+  Kconfig traps. `irq-kconfig-1m` and `wake-kconfig-1m` have the same variants.

@@ -1,6 +1,6 @@
 # WP3 variants
 
-The experiments `wp3-irq-1m`, `wp3-wake-1m` and `wp3-t2t-1m` have the
+The experiments `irq-kconfig-1m`, `wake-kconfig-1m` and `thread-kconfig-1m` have the
 same axis `variant`. This file describes the variants one time for the
 three experiments.
 

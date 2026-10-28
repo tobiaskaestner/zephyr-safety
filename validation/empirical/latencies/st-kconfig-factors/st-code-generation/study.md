@@ -21,8 +21,8 @@ variants:
 
 ## Experiments
 
-This study owns no experiment. It imports `wp3-irq-1m`, `wp3-wake-1m`
-and `wp3-t2t-1m` from the parent study `kconfig-factors`. The checks
+This study owns no experiment. It imports `irq-kconfig-1m`, `wake-kconfig-1m`
+and `thread-kconfig-1m` from the parent study `kconfig-factors`. The checks
 compare each variant with `baseline` of the same run. The checks of
 `assert-spin` on the wake paths compare it with `assert`.
 

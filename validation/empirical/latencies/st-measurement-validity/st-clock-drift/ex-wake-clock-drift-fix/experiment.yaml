@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: clock-drift-fix
+name: wake-clock-drift-fix
 app: wake_latency
 trees: [ws-up-driftfix]
 repeat: 1

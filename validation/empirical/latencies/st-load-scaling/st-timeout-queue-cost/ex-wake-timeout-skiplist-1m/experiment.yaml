@@ -3,7 +3,7 @@
 
 # Description: experiment.md.
 
-name: timeout-skiplist-1m
+name: wake-timeout-skiplist-1m
 app: wake_latency
 trees: [ws-up]
 repeat: 1
@@ -18,5 +18,5 @@ common:
     LATBENCH_LOAD_TIMERS: 256
 
 axes:
-  backend:                  # the axis of timeout-backends-1m
+  backend:                  # the axis of wake-timeout-backends-1m
     skiplist: {kconfig: {TIMEOUT_BACKEND_SKIPLIST: y}}

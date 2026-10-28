@@ -64,9 +64,9 @@ hypotheses:
       then the slice reset is not the cause.
     checks:
       - id: a
-        formerly: t2t-load-1m/1
+        formerly: thread-load-1m/1
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: none, slicing: default}}
         metric: t2t
         manual: true
@@ -79,9 +79,9 @@ hypotheses:
           Estimate. The comment gives no calculation for 20 %, 80 % and 640
           cycles.
       - id: b
-        formerly: t2t-load-1m/2
+        formerly: thread-load-1m/2
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {slicing: default}}
         metric: t2t
         manual: true
@@ -94,9 +94,9 @@ hypotheses:
           after the reset): timers with a period of 10..100 ms, sleepers of
           1..20 ms. Estimate. The comment gives no basis for 95 %.
       - id: c
-        formerly: t2t-load-1m/3
+        formerly: thread-load-1m/3
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: t16}}
         metric: t2t
         stat: p50
@@ -108,9 +108,9 @@ hypotheses:
           -490..-452 cycles. The range does not include an error of the 640
           cycles.
       - id: d
-        formerly: t2t-load-1m/3
+        formerly: thread-load-1m/3
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: sl8}}
         metric: t2t
         stat: p50
@@ -119,9 +119,9 @@ hypotheses:
           As c, with n = 8. Reconstruction: c x n - 640 gives -480..-440
           cycles.
       - id: e
-        formerly: t2t-load-1m/3
+        formerly: thread-load-1m/3
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: t64}}
         metric: t2t
         stat: p50
@@ -130,9 +130,9 @@ hypotheses:
           As c, with n = 30. Reconstruction: c x n - 640 gives -40..110
           cycles.
       - id: f
-        formerly: t2t-load-1m/3
+        formerly: thread-load-1m/3
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: sl64}}
         metric: t2t
         stat: p50
@@ -141,9 +141,9 @@ hypotheses:
           As c, with n = 64. Reconstruction: c x n - 640 gives 640..960
           cycles.
       - id: g
-        formerly: t2t-load-1m/3
+        formerly: thread-load-1m/3
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {load: t256}}
         metric: t2t
         stat: p50
@@ -152,9 +152,9 @@ hypotheses:
           As c, with n = 120. Reconstruction: c x n - 640 gives
           1760..2360 cycles.
       - id: h
-        formerly: t2t-load-1m/4
+        formerly: thread-load-1m/4
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {slicing: default}}
         metric: t2t
         stat: p50
@@ -166,9 +166,9 @@ hypotheses:
           The walk over the timeouts is in the scheduler (slice reset), not
           in the primitive. One slice reset per sample gives one insert.
       - id: i
-        formerly: t2t-load-1m/5
+        formerly: thread-load-1m/5
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {point: sem-t256-noslice}
         metric: t2t
         stat: p50
@@ -177,9 +177,9 @@ hypotheses:
           Without time slicing, the give inserts no slice timeout. Estimate.
           The comment gives no basis for 30 cycles.
       - id: j
-        formerly: t2t-load-1m/5
+        formerly: thread-load-1m/5
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {point: sem-sl64-noslice}
         metric: t2t
         stat: p50
@@ -199,18 +199,18 @@ hypotheses:
     wrong_if: The SysTick ISR does not set the tail of the thread to thread wake.
     checks:
       - id: a
-        formerly: t2t-load-1m/6
+        formerly: thread-load-1m/6
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {slicing: default}}
         metric: t2t
         stat: p99.99
         expect: {order: {load: [none, t16, t64, t256]}}
         basis: The SysTick ISR runs the expiry functions of the timers (wake-timers-1m).
       - id: b
-        formerly: t2t-load-1m/6
+        formerly: thread-load-1m/6
         written: 2026-10-25, before t2t-load-1m/20261025T193636Z
-        experiment: t2t-load-1m
+        experiment: thread-load-1m
         select: {axes: {slicing: default}}
         metric: t2t
         stat: p99.99

@@ -57,7 +57,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         select: {point: scalable}
         metric: irq
         stat: p50
@@ -67,7 +67,7 @@ hypotheses:
           basis for the 2 cycles.
       - id: b
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         select: {point: multiq}
         metric: irq
         stat: p50
@@ -75,7 +75,7 @@ hypotheses:
         basis: As a.
       - id: c
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: scalable}
         metric: isr2thr
         stat: p50
@@ -86,7 +86,7 @@ hypotheses:
           so the check uses the p50.
       - id: d
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: scalable-busy16}
         metric: isr2thr
         stat: p50
@@ -98,7 +98,7 @@ hypotheses:
           0 to 16 busy threads. The check uses the p50, as c.
       - id: e
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: multiq}
         metric: isr2thr
         stat: p50
@@ -108,7 +108,7 @@ hypotheses:
           statistic, so the check uses the p50.
       - id: f
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: multiq-busy16}
         metric: isr2thr
         stat: p50
@@ -116,7 +116,7 @@ hypotheses:
         basis: As e.
       - id: g
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         select: {point: scalable}
         metric: t2t
         stat: p50
@@ -124,7 +124,7 @@ hypotheses:
         basis: As c.
       - id: h
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         select: {point: multiq}
         metric: t2t
         stat: p50
@@ -147,7 +147,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         manual: true
         statement: >
           16 busy threads increase the isr2thr by about 400 cycles. The value

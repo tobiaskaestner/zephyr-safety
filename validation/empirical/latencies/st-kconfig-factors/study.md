@@ -23,7 +23,7 @@ The design uses these facts of the code:
 
 - On the IRQ entry path, the kernel does no scheduling and saves no FP
   context. Thus the scheduler variants and `fpu-sharing` are references
-  for "no change" in `wp3-irq-1m`.
+  for "no change" in `irq-kconfig-1m`.
 - Without `TICKLESS_KERNEL`, `sys_clock_set_timeout()` returns at once
   (ws-up `drivers/timer/system_timer_generic.h:650`). Thus the slice
   reset never reprograms the SysTick in `tickless-off` and
@@ -35,7 +35,7 @@ This study owns the three experiments. It has no hypotheses. Each
 sub-study has the hypotheses of one question and imports the three
 experiments.
 
-`wp3-irq-1m` measures the IRQ entry on the wrapped ISR path, with an
+`irq-kconfig-1m` measures the IRQ entry on the wrapped ISR path, with an
 idle CPU and a random stimulus interval of 100..500 us. It has the 11
 variants with no load. Four more points have 64 load timers:
 
@@ -48,7 +48,7 @@ variants with no load. Four more points have 64 load timers:
 - `tickless-off-100-t64`: a SysTick ISR every 10 ms handles the
   expiries of 10 ms.
 
-`wp3-wake-1m` measures the wake by a semaphore from the wrapped ISR. It
+`wake-kconfig-1m` measures the wake by a semaphore from the wrapped ISR. It
 has the 11 variants with no load. Three points have 16 busy threads,
 with priority 5. This priority is lower than the priority of the woken
 thread.
@@ -59,7 +59,7 @@ thread.
   the number of threads?
 - `multiq-busy16` asks the same for one list for each priority.
 
-Four points of `wp3-wake-1m` have 64 load timers:
+Four points of `wake-kconfig-1m` have 64 load timers:
 
 - `baseline-t64` is the reference for the other points with 64 load
   timers.
@@ -70,7 +70,7 @@ Four points of `wp3-wake-1m` have 64 load timers:
 The review of 2026-10-25, §5, gives the cost of a sliced busy thread for
 each wake, from `wake-threads-1m` (2..64 busy threads).
 
-`wp3-t2t-1m` measures the wake by a semaphore from a thread: the taker
+`thread-kconfig-1m` measures the wake by a semaphore from a thread: the taker
 thread preempts the giver thread. The stimulus interval is 50..150 us.
 It has the 11 variants with no load. Each sample has one thread switch.
 The variant `tickless-off` is the strongest test of the cause of the two

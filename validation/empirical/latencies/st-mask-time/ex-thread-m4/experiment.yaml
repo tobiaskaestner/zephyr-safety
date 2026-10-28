@@ -4,7 +4,7 @@
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
 # The latency histograms of these runs are not data (LAT META m4=1).
-name: m4-thread
+name: thread-m4
 app: thread_latency
 trees: [ws-up-irqoff]
 repeat: 1
@@ -15,7 +15,7 @@ common:
     ARM_IRQ_MASK_HOOKS: y
     ARM_IRQ_MASK_HOOKS_ISR: y
     LATBENCH_SAMPLES: 200000
-    LATBENCH_STIM_MIN_US: 50          # as in thread2thread-1m
+    LATBENCH_STIM_MIN_US: 50          # as in thread-baseline-1m
     LATBENCH_STIM_MAX_US: 150
     LATBENCH_HIST_BINS: 1024
     LATBENCH_HIST_COARSE_BINS: 1024
@@ -33,7 +33,7 @@ axes:
 
 # Checks of each run. A run that fails one gets the role "excluded".
 acceptance:
-  # From m4-sweep/7 (written 2026-10-25): the same M4 log keys
-  # (common/src/irqmask.c, irqmask_table.c). The m4-thread comments gave
+  # From wake-m4-sweep/7 (written 2026-10-25): the same M4 log keys
+  # (common/src/irqmask.c, irqmask_table.c). The thread-m4 comments gave
   # no such check before the run m4-thread/20261026T004002Z.
   - {id: A1, metric: [meta.m4_unmatched_end, meta.m4_begin_open, meta.dropped], stat: value, expect: {range: [0, 0]}}

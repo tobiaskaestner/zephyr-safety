@@ -1,4 +1,4 @@
-# fast-mode
+# wake-fast-mode
 
 ## What it measures
 

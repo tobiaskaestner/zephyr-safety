@@ -1,4 +1,4 @@
-# m4-thread
+# thread-m4
 
 ## What it measures
 
@@ -12,7 +12,7 @@ semaphore and for a mutex.
   `CONFIG_ARM_IRQ_MASK_HOOKS_ISR`.
 - The ISR wakes the giver, and the giver wakes the taker. The taker has
   priority 1 and preempts the giver. Time slicing on, DLIST backend.
-- Stimulus interval 50..150 us, as in `thread2thread-1m`.
+- Stimulus interval 50..150 us, as in `thread-baseline-1m`.
 - 200000 samples per point. Latency histograms of 1024 fine bins and
   1024 coarse bins of 64 cycles. All values are in cycles at 170 MHz.
 - The latency histograms are not data (`LAT META m4=1`). The analysis
@@ -25,5 +25,5 @@ semaphore and for a mutex.
   wake in thread context. `mutex` (`LATBENCH_T2T_MUTEX`): the lock and
   unlock sites, with the priority inheritance under the lock.
 - **timers**: `t0` has no load timers. `t64` has 64 periodic load
-  timers: the timeout walk in the thread app, against `m4-sweep` and
-  `m4-validate`.
+  timers: the timeout walk in the thread app, against `wake-m4-sweep` and
+  `wake-m4-validate`.

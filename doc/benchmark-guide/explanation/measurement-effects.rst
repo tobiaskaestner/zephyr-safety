@@ -16,8 +16,8 @@ Thus a tick phase that the code calculates from a reference at the start
 of the run moves away from the real tick grid. ``stim_arm()`` reads
 the stimulus timer and ``k_cycle_get_64()`` again for each edge, and
 calculates the phase from this fresh pair. ``clock_drift_cyc`` in the
-output shows the drift of a run. The :term:`experiment` ``clock-drift`` measures
-it. The experiment ``clock-drift-fix`` examines a change of the SysTick
+output shows the drift of a run. The :term:`experiment` ``wake-clock-drift`` measures
+it. The experiment ``wake-clock-drift-fix`` examines a change of the SysTick
 driver on the :term:`tree` ``ws-safety-driftfix``.
 
 .. _benchguide-systick-wrap:
@@ -40,7 +40,7 @@ The devicetree property ``zephyr,min-timeout-cycles`` of the ``systick``
 node sets a longer shortest reload. The port ``nucleo_g474re`` has two
 overlays in ``common/boards/nucleo_g474re/systick/``:
 ``min_timeout_50us.overlay`` and ``min_timeout_200us.overlay``. The
-experiment ``clock-drift-fix`` uses them.
+experiment ``wake-clock-drift-fix`` uses them.
 
 Late edges
 ----------

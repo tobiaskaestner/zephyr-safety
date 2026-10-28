@@ -6,8 +6,8 @@
 # statistics. The hypothesis is wrong if one check is wrong.
 #
 # H1 came from the study code-placement (H2 f..j, criterion C2 of
-# code-place-q4), when the version comparison left that study
-# (2026-10-28). Its checks compare code-place-q4-up with code-place-q4 at
+# wake-code-place-q4), when the version comparison left that study
+# (2026-10-28). Its checks compare wake-code-place-q4-up with wake-code-place-q4 at
 # the same point. They compare two Zephyr versions only when the two
 # experiments run on different trees. Now both run on ws-up.
 #
@@ -30,46 +30,46 @@ hypotheses:
       also in RAM. Then a version comparison needs a range over the pads.
     checks:
       - id: a
-        formerly: code-placement/H2 f (code-place-q4/C2)
+        formerly: code-placement/H2 f (wake-code-place-q4/C2)
         written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
+        experiment: wake-code-place-q4-up
         select: {point: [r0-default, r4-default]}
         metric: irq
         stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+        expect: {diff_to: {experiment: wake-code-place-q4, point: same, spread_abs_le: 2}}
         basis: The limit of code-placement/H2 a (the C1 limit of the metric).
       - id: b
-        formerly: code-placement/H2 g (code-place-q4/C2)
+        formerly: code-placement/H2 g (wake-code-place-q4/C2)
         written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
+        experiment: wake-code-place-q4-up
         select: {point: [r0-noslice, r4-noslice]}
         metric: irq
         stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+        expect: {diff_to: {experiment: wake-code-place-q4, point: same, spread_abs_le: 2}}
         basis: The limit of code-placement/H2 b.
       - id: c
-        formerly: code-placement/H2 h (code-place-q4/C2)
+        formerly: code-placement/H2 h (wake-code-place-q4/C2)
         written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
+        experiment: wake-code-place-q4-up
         select: {point: [r0-default, r4-default]}
         stat: drift_per_wake
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 0.2}}
+        expect: {diff_to: {experiment: wake-code-place-q4, point: same, spread_abs_le: 0.2}}
         basis: The limit of code-placement/H2 c.
       - id: d
-        formerly: code-placement/H2 i (code-place-q4/C2)
+        formerly: code-placement/H2 i (wake-code-place-q4/C2)
         written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
+        experiment: wake-code-place-q4-up
         select: {point: [r0-default, r4-default]}
         metric: isr2thr
         stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+        expect: {diff_to: {experiment: wake-code-place-q4, point: same, spread_abs_le: 5}}
         basis: The limit of code-placement/H2 d.
       - id: e
-        formerly: code-placement/H2 j (code-place-q4/C2)
+        formerly: code-placement/H2 j (wake-code-place-q4/C2)
         written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
+        experiment: wake-code-place-q4-up
         select: {point: [r0-noslice, r4-noslice]}
         metric: isr2thr
         stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+        expect: {diff_to: {experiment: wake-code-place-q4, point: same, spread_abs_le: 5}}
         basis: The limit of code-placement/H2 e.

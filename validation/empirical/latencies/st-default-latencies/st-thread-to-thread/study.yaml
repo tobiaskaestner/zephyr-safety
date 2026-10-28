@@ -16,8 +16,8 @@ question: >
 
 # The experiments that the study zephyr-versions owns and this study reads.
 imports:
-  - {study: zephyr-versions, experiment: thread2thread-1m, mode: reuse}
-  - {study: zephyr-versions, experiment: thread2thread-switch, mode: reuse}
+  - {study: zephyr-versions, experiment: thread-baseline-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: thread-switch, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -35,6 +35,6 @@ central_results:
       With the board and kernel defaults, the wake of a thread by a
       semaphore from a thread of lower priority has a p99 of {p99:.0f}
       cycles.
-    from: {experiment: thread2thread-1m, point: sem, metric: t2t}
+    from: {experiment: thread-baseline-1m, point: sem, metric: t2t}
     stat: p99
     unit: CPU cycles (170 MHz)

@@ -1,4 +1,4 @@
-# t2t-load-1m
+# thread-load-1m
 
 ## What it measures
 

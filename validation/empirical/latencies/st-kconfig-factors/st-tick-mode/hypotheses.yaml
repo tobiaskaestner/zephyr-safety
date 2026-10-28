@@ -52,7 +52,7 @@ hypotheses:
       (ws-up drivers/timer/system_timer_generic.h:650). Thus the slice
       reset never reprograms the SysTick, and the kernel resets no SysTick
       reload. The slice reset also walks the timeout list. The baseline
-      has the same two modes as thread2thread-1m.
+      has the same two modes as thread-baseline-1m.
     wrong_if: >
       Two modes stay without the tickless kernel, or the two modes of the
       baseline are not about 640 cycles apart. Then the SysTick reprogram
@@ -63,7 +63,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: tickless-off}
         metric: isr2thr
         stat: p50
@@ -77,13 +77,13 @@ hypotheses:
           statistic, so the check uses the p50.
       - id: b
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         manual: true
         statement: Without the tickless kernel, the isr2thr has one mode, at the fast mode of the baseline.
         basis: As a.
       - id: c
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: tickless-off}
         stat: drift_ppm
         expect: {range: [-20, 20]}
@@ -92,7 +92,7 @@ hypotheses:
           limit of 20 ppm is the "Wrong if" limit of the comment.
       - id: d
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         manual: true
         statement: >
           The isr2thr p50 of tickless-off-100 is the same as of tickless-off:
@@ -103,16 +103,16 @@ hypotheses:
           tolerance for "the same".
       - id: e
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         manual: true
         statement: >
           The t2t of the baseline has two modes: about 20 % fast and 80 %
           slow. The slow mode is about 640 cycles slower (two SysTick
           reprograms).
-        basis: The same two modes as in thread2thread-1m.
+        basis: The same two modes as in thread-baseline-1m.
       - id: f
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         manual: true
         statement: >
           Without the tickless kernel, the t2t has one mode, at the fast mode
@@ -122,7 +122,7 @@ hypotheses:
           SysTick (as a). The slice walk stays.
       - id: g
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         manual: true
         statement: >
           The t2t p50 of tickless-off-100 is the same as of tickless-off: no
@@ -130,7 +130,7 @@ hypotheses:
         basis: As d.
       - id: h
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         manual: true
         statement: >
           With 64 load timers, the slice walk over about 30 timeouts adds
@@ -165,7 +165,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         manual: true
         statement: >
           Without the tickless kernel (10000 ticks/s), about 1..3 % of the
@@ -177,14 +177,14 @@ hypotheses:
           about 81 cycles is from an earlier run.
       - id: b
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         metric: irq
         stat: p99
         expect: {order: [baseline, tickless-off]}
         basis: As a.
       - id: c
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         metric: irq
         stat: p99
         expect: {order: [ticks1000-t64, baseline-t64]}
@@ -193,21 +193,21 @@ hypotheses:
           fewer SysTick ISRs, but longer ones.
       - id: d
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         metric: irq
         stat: max
         expect: {order: [baseline-t64, ticks1000-t64]}
         basis: As c.
       - id: e
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         metric: irq
         stat: p99
         expect: {order: [baseline-t64, tickless-off-t64]}
         basis: A SysTick ISR comes every 100 us, also when no timer expires.
       - id: f
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         manual: true
         statement: >
           With no load, the irq tail of tickless-off-100 is about 100 times
@@ -217,7 +217,7 @@ hypotheses:
           than 10000 ticks/s.
       - id: g
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         select: {point: tickless-off-100-t64}
         metric: irq
         stat: max
@@ -229,14 +229,14 @@ hypotheses:
           and 10000..20000 cycles for the max, with no derivation.
       - id: h
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         metric: irq
         stat: max
         expect: {order: [baseline-t64, tickless-off-100-t64]}
         basis: As g.
       - id: i
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         manual: true
         statement: >
           With 64 load timers, the irq tail of tickless-off-100 has a share
@@ -253,8 +253,8 @@ hypotheses:
       irq, isr2thr and t2t and the drift for each reprogram stay the same.
     basis: >
       At 1000 ticks/s, the kernel stays tickless, with the same slice and
-      the same SysTick reprogram (the comments of wp3-irq-1m and
-      wp3-wake-1m).
+      the same SysTick reprogram (the comments of irq-kconfig-1m and
+      wake-kconfig-1m).
     wrong_if: >
       The tick rate changes the IRQ entry path of the tickless kernel, the
       slice or the reprogram, or the drift for each reprogram depends on
@@ -262,7 +262,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         select: {point: ticks1000}
         metric: irq
         stat: p50
@@ -274,7 +274,7 @@ hypotheses:
           b, code-generation H3 a, stack-guard H1 a).
       - id: b
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: ticks1000}
         metric: isr2thr
         stat: p50
@@ -285,13 +285,13 @@ hypotheses:
           comment names no statistic, so the check uses the p50.
       - id: c
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         manual: true
         statement: At 1000 ticks/s, the clock drift for each reprogram is the same as in the baseline.
         basis: As b.
       - id: d
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         select: {point: ticks1000}
         metric: t2t
         stat: p50

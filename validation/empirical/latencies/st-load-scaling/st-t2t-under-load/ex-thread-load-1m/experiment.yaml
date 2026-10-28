@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: t2t-load-1m
+name: thread-load-1m
 app: thread_latency
 trees: [ws-up]
 repeat: 1

@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: systick-prio-1m
+name: wake-systick-prio-1m
 app: wake_latency
 trees: [ws-up]
 repeat: 1

@@ -16,9 +16,9 @@ question: >
 board: null                      # one instance per board; the folder of each instance is board-ports@<port>
 
 experiments:
-  - port-smoke-nrf54l15dk
-  - port-smoke-nrf52840dk
-  - port-smoke-mimxrt1060_evk
+  - wake-port-smoke-nrf54l15dk
+  - wake-port-smoke-nrf52840dk
+  - wake-port-smoke-mimxrt1060_evk
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -37,14 +37,14 @@ central_results:
     statement: >
       run.py builds the image, flashes the board and reads the console,
       and the data are plausible.
-    from: {experiment: [port-smoke-nrf54l15dk, port-smoke-nrf52840dk, port-smoke-mimxrt1060_evk]}
+    from: {experiment: [wake-port-smoke-nrf54l15dk, wake-port-smoke-nrf52840dk, wake-port-smoke-mimxrt1060_evk]}
     stat: conclusion               # a person confirms the sentence
 
   - id: irq-p50
     statement: >
       On {board}, the IRQ to ISR p50 is {p50} cycles of the CPU clock
       ({tree}).
-    from: {experiment: [port-smoke-nrf54l15dk, port-smoke-nrf52840dk, port-smoke-mimxrt1060_evk],
+    from: {experiment: [wake-port-smoke-nrf54l15dk, wake-port-smoke-nrf52840dk, wake-port-smoke-mimxrt1060_evk],
            point: default, metric: irq}
     stat: p50
     unit: cycles of the CPU clock of the board

@@ -25,7 +25,7 @@ The study uses these facts of the code:
 
 ## Experiments
 
-`systick-prio-1m` measures the IRQ latency and the wake with 64 and 256
+`wake-systick-prio-1m` measures the IRQ latency and the wake with 64 and 256
 periodic load timers (10..100 ms). These loads gave the IRQ tail in
 `wake-timers-1m`. Each load runs with SysTick at the same priority as
 EXTI0 and at a lower priority. The experiment runs on two trees,
@@ -36,7 +36,7 @@ The study imports three experiments:
 - `wake-timers-1m` (`load-scaling/timeout-queue-cost`): the IRQ tail
   with 0..256 periodic load timers and SysTick at the same priority as
   EXTI0.
-- `stim-seed-1m` and `load-seed-tail`
+- `wake-stim-seed-1m` and `wake-load-seed-tail`
   (`measurement-validity/stimulus-sampling`): the tail of the `t64`
   point over 8 stimulus seeds and 4 load seeds.
 
@@ -55,7 +55,7 @@ The predictions were written before the runs (dates from
   `systick-prio-1m/20261025T051643Z`).
 
 The central result `systick-prio-tail` in `study.yaml` gives the p99.99
-and the max for each point of `systick-prio-1m`.
+and the max for each point of `wake-systick-prio-1m`.
 
 ## References
 

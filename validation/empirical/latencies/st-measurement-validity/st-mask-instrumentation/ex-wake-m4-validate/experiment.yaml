@@ -4,7 +4,7 @@
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
 # The latency histograms of these runs are not data (LAT META m4=1).
-name: m4-validate
+name: wake-m4-validate
 app: wake_latency
 trees: [ws-up-irqoff]
 repeat: 1
@@ -23,7 +23,7 @@ common:
     LATBENCH_HIST_COARSE_SHIFT: 6
 
 # No cube: the points change several factors. The axis names are the
-# names of wake-timers-1m, systick-prio-1m and timeout-backends-1m.
+# names of wake-timers-1m, wake-systick-prio-1m and wake-timeout-backends-1m.
 extra_axes: {timers: t0, prio: same, backend: dlist, probe: none}
 
 points:
@@ -50,6 +50,6 @@ points:
 
 # Checks of each run. A run that fails one gets the role "excluded".
 acceptance:
-  # m4-validate/cal-t0, written 2026-10-25, before m4-validate/20261025T235532Z:
+  # wake-m4-validate/cal-t0, written 2026-10-25, before m4-validate/20261025T235532Z:
   # each start hook has one end hook (m4.rst), after the start.
   - {id: A1, select: {point: cal-t0}, metric: [meta.m4_unmatched_end, meta.m4_begin_open], stat: value, expect: {range: [0, 0]}}

@@ -123,7 +123,7 @@ Experiments
    * - File
      - Content
    * - ``validation/empirical/latencies/st-measurement-validity/st-mask-instrumentation/ex-m4-validate/experiment.yaml``
-     - Calibration, the probe, and the points of ``systick-prio-1m`` and
+     - Calibration, the probe, and the points of ``wake-systick-prio-1m`` and
        of the WHEEL backend, for the check against the IRQ tail
    * - ``validation/empirical/latencies/st-mask-time/ex-m4-sweep/experiment.yaml``
      - Load timers 0/16/64/256 x sleeper threads 0/8/64 x time slicing

@@ -1,4 +1,4 @@
-# thread2thread-switch
+# thread-switch
 
 ## What it measures
 
@@ -11,7 +11,7 @@ trees.
 
 - Trees `ws-safety` and `ws-up`. 1M samples per point.
 - Random stimulus interval 50..150 us. Histograms with 2048 fine and
-  2048 coarse bins. These are the settings of `thread2thread-1m`.
+  2048 coarse bins. These are the settings of `thread-baseline-1m`.
 - The points are the cube `primitive` x `arch`.
 
 ## Axes
@@ -20,5 +20,5 @@ trees.
   (`LATBENCH_T2T_MUTEX`).
 - **arch**: `legacy` is the thread switch through PendSV. The legacy
   points are the reference from the same session, with the same
-  settings as `sem` and `mutex` in `thread2thread-1m`. `switch` is the
+  settings as `sem` and `mutex` in `thread-baseline-1m`. `switch` is the
   new arch interface (`common/conf/use_switch.conf`).

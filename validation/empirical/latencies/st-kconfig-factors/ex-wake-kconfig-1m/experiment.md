@@ -1,4 +1,4 @@
-# wp3-wake-1m
+# wake-kconfig-1m
 
 ## What it measures
 
@@ -19,7 +19,7 @@ each WP3 Kconfig factor, against the point `baseline` of the same run.
 
 - **variant**: one Kconfig factor at a time against the defaults of the
   app. `../wp3-variants.md` gives the variants, the defaults and the
-  Kconfig traps. `wp3-irq-1m` and `wp3-t2t-1m` have the same variants.
+  Kconfig traps. `irq-kconfig-1m` and `thread-kconfig-1m` have the same variants.
 - **load**: `none` for the points of the axis `variant`. `busy16`
   (`LATBENCH_LOAD_THREAD_BUSY=y`, `LATBENCH_LOAD_THREADS=16`) for the
   points `baseline-busy16`, `scalable-busy16` and `multiq-busy16`. `t64`

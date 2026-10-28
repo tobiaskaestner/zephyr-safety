@@ -11,12 +11,12 @@
 # notes that they name. Where a comment gave no basis for a number, the
 # basis text of the check starts with "Reconstruction:" or "Estimate.".
 #
-# The checks with experiment m4-validate read the runs of the study
+# The checks with experiment wake-m4-validate read the runs of the study
 # mask-instrumentation (imports in study.yaml, mode reuse). They are the
-# predictions of m4-validate about the kernel. The pairing counters and
+# predictions of wake-m4-validate about the kernel. The pairing counters and
 # the dropped sites of the M4 logs say if a run is usable: they are
 # acceptance checks in the experiment.yaml files. There is no hypothesis
-# for the growth of the masked share with the load: the m4-sweep comment
+# for the growth of the masked share with the load: the wake-m4-sweep comment
 # gave no limit for it. The masked share is a central result (study.yaml).
 #
 # Keys of a hypothesis:
@@ -74,17 +74,17 @@ hypotheses:
       timers.
     checks:
       - id: a
-        formerly: m4-sweep/1
+        formerly: wake-m4-sweep/1
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         metric: m4.mask
         stat: top_place
         expect: {equals: z_add_timeout}
         basis: No number. The basis of the hypothesis gives the mechanism.
       - id: b
-        formerly: m4-validate/t64-same, m4-validate/t256-same
+        formerly: wake-m4-validate/t64-same, wake-m4-validate/t256-same
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: [t64-same, t64-lower, t256-same, t256-lower]}
         metric: m4.mask
         stat: top_place
@@ -94,18 +94,18 @@ hypotheses:
           z_add_timeout, with the timeout lock held. The walk grows with the
           number of timeouts.
       - id: c
-        formerly: m4-thread/3
+        formerly: thread-m4/3
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         select: {timers: t64}
         metric: m4.mask
         stat: top_place
         expect: {equals: z_add_timeout}
         basis: As a.
       - id: d
-        formerly: m4-sweep/1
+        formerly: wake-m4-sweep/1
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         manual: true
         statement: >
           The max of z_add_timeout grows about linearly with the number of
@@ -115,9 +115,9 @@ hypotheses:
           Estimate. The 25 cycles come from the hypothesis basis. The
           comment gives no basis for the 300 cycles.
       - id: e
-        formerly: m4-sweep/1
+        formerly: wake-m4-sweep/1
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t0, sleepers: s0}
         metric: m4.mask
         stat: max(max_net)
@@ -126,9 +126,9 @@ hypotheses:
           Estimate. The formula of d gives about 300. The comment gives no
           basis for the limit of 1000.
       - id: f
-        formerly: m4-sweep/1
+        formerly: wake-m4-sweep/1
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t64, sleepers: s0}
         metric: m4.mask
         stat: max(max_net)
@@ -137,31 +137,31 @@ hypotheses:
           Reconstruction: the formula of d gives 1900. The comment gives no
           basis for the width of the range.
       - id: g
-        formerly: m4-validate/t64-same, m4-validate/t64-lower
+        formerly: wake-m4-validate/t64-same, wake-m4-validate/t64-lower
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: [t64-same, t64-lower]}
         metric: m4.mask
         stat: max(max_net)
         expect: {range: [1800, 2600]}
         basis: >
           Reconstruction: 64 x 25 cycles give about 1600 cycles for the walk.
-          m4-sweep expectation 1 gives 300 + 25 x 64 = 1900. The 25 cycles for
+          wake-m4-sweep expectation 1 gives 300 + 25 x 64 = 1900. The 25 cycles for
           each timeout come from review-2026-10-25 §4 and §5. The comment
           gives no basis for the width of the range.
       - id: h
-        formerly: m4-thread/3
+        formerly: thread-m4/3
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         select: {timers: t64}
         metric: m4.mask
         stat: max(max_net)
         expect: {range: [1800, 2600]}
-        basis: As f. The comment gives the range of m4-sweep t64.
+        basis: As f. The comment gives the range of wake-m4-sweep t64.
       - id: i
-        formerly: m4-sweep/1
+        formerly: wake-m4-sweep/1
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t256, sleepers: s0}
         metric: m4.mask
         stat: max(max_net)
@@ -170,23 +170,23 @@ hypotheses:
           Reconstruction: the formula of d gives 6700. The comment gives no
           basis for the width of the range.
       - id: j
-        formerly: m4-validate/t256-same, m4-validate/t256-lower
+        formerly: wake-m4-validate/t256-same, wake-m4-validate/t256-lower
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: [t256-same, t256-lower]}
         metric: m4.mask.e15[z_add_timeout]
         stat: max(max_net)
         expect: {range: [6300, 7500]}
         basis: >
-          Reconstruction: m4-sweep expectation 1 gives 300 + 25 x 256 = 6700.
+          Reconstruction: wake-m4-sweep expectation 1 gives 300 + 25 x 256 = 6700.
           review-2026-10-25 §4 finding 8 explains the stop of the IRQ tail at
           about 7000 cycles with this walk (the restart of a periodic timer,
           in SysTick context). The comment gives no basis for the width of
           the range.
       - id: k
-        formerly: m4-sweep/3
+        formerly: wake-m4-sweep/3
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t256, sleepers: s0, slice: slice}
         metric: m4.mask.e22[z_add_timeout]
         stat: max(max_net)
@@ -197,9 +197,9 @@ hypotheses:
           timeouts), about half of the max of i. The comment gives no count
           of these timeouts. In the formula, the range is 108..140 timeouts.
       - id: l
-        formerly: m4-validate/t256-wheel
+        formerly: wake-m4-validate/t256-wheel
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: t256-wheel}
         metric: m4.mask
         stat: max(max_net)
@@ -225,18 +225,18 @@ hypotheses:
       changes the restart walk.
     checks:
       - id: a
-        formerly: m4-sweep/2
+        formerly: wake-m4-sweep/2
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {slice: noslice}
         metric: m4.mask.e22[z_add_timeout]
         stat: n
         expect: {range: [0, 0]}
         basis: No number. Without slicing there is no slice reset.
       - id: b
-        formerly: m4-sweep/2
+        formerly: wake-m4-sweep/2
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {slice: noslice, sleepers: s0}
         metric: m4.mask.t[z_add_timeout]
         stat: n
@@ -246,9 +246,9 @@ hypotheses:
           z_add_timeout in thread context (H1). Thus the check uses only the
           points without sleepers.
       - id: c
-        formerly: m4-sweep/2
+        formerly: wake-m4-sweep/2
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         manual: true
         statement: >
           Without slicing, the SysTick entries of z_add_timeout and the max
@@ -270,9 +270,9 @@ hypotheses:
       same priority, or the app changes the work of the SysTick ISR.
     checks:
       - id: a
-        formerly: m4-sweep/4
+        formerly: wake-m4-sweep/4
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         manual: true
         statement: >
           The SysTick ISR body max grows faster than the longest mask
@@ -280,40 +280,40 @@ hypotheses:
           priority.
         basis: No number. The SysTick ISR body contains the callbacks and the restarts of several expiries in one tick.
       - id: b
-        formerly: m4-validate/t64-same
+        formerly: wake-m4-validate/t64-same
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: t64-same}
         metric: m4.isr.e15
         stat: max(max)
         expect: {range: [7500, 9500]}
         basis: >
           Estimate. The body plus the hooks of its sections. ws-up
-          systick-prio-1m t64-same has an IRQ max of 7775 and an IRQ p99.99
+          wake-systick-prio-1m t64-same has an IRQ max of 7775 and an IRQ p99.99
           of 5312. The comment gives no basis for the limits.
       - id: c
-        formerly: m4-thread/3
+        formerly: thread-m4/3
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         manual: true
-        statement: At 64 timers, the SysTick ISR body max is as in m4-validate t64-same.
+        statement: At 64 timers, the SysTick ISR body max is as in wake-m4-validate t64-same.
         basis: No number. Both apps use the same 64 periodic load timers, and the SysTick ISR restarts them.
       - id: d
-        formerly: m4-validate/t256-same
+        formerly: wake-m4-validate/t256-same
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: t256-same}
         metric: m4.isr.e15
         stat: max(max)
         expect: {range: [33000, 42000]}
         basis: >
-          Estimate. ws-up systick-prio-1m t256-same has an IRQ max of 34762
+          Estimate. ws-up wake-systick-prio-1m t256-same has an IRQ max of 34762
           and an IRQ p99.99 of 24704. The comment gives no basis for the
           limits.
       - id: e
-        formerly: m4-sweep/4
+        formerly: wake-m4-sweep/4
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t256, sleepers: s0}
         metric: m4.isr.e15
         stat: max(max)
@@ -322,15 +322,15 @@ hypotheses:
           Estimate. ws-up wake-timers-1m at 256 timers has an IRQ max of
           33005..36140. The comment gives no basis for the limits.
       - id: f
-        formerly: m4-validate/t256-wheel
+        formerly: wake-m4-validate/t256-wheel
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: t256-wheel}
         metric: m4.isr.e15
         stat: max(max)
         expect: {range: [6500, 9000]}
         basis: >
-          Estimate. ws-up timeout-backends-1m wheel has an IRQ max of 7160 and
+          Estimate. ws-up wake-timeout-backends-1m wheel has an IRQ max of 7160 and
           an IRQ p99.99 of 5056. The comment gives no basis for the limits.
 
   - id: H4
@@ -354,9 +354,9 @@ hypotheses:
       longer than expected.
     checks:
       - id: a
-        formerly: m4-sweep/5
+        formerly: wake-m4-sweep/5
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         metric:
           - m4.mask.e14[z_arm_pendsv]
           - m4.mask[arch_cpu_idle]
@@ -369,27 +369,27 @@ hypotheses:
           no basis for 10 % and does not name the statistic. The check uses
           max_net, as the other mask checks.
       - id: b
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: cal-t0}
         metric: [m4.mask, m4.isr]
         stat: max(max)
         expect: {range: [0, 2000]}
         basis: Estimate. The comment gives no basis for 2000 cycles.
       - id: c
-        formerly: m4-sweep/6
+        formerly: wake-m4-sweep/6
         written: 2026-10-25, before m4-sweep/20261026T000640Z
-        experiment: m4-sweep
+        experiment: wake-m4-sweep
         select: {timers: t0, sleepers: s0}
         metric: meta.m4_masked_share
         stat: value
         expect: {range: [0, 0.02]}
         basis: Estimate. The comment gives no basis for 2 %.
       - id: d
-        formerly: m4-thread/1
+        formerly: thread-m4/1
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         manual: true
         statement: >
           The thread context has more sites than in wake_latency: the wake
@@ -397,18 +397,18 @@ hypotheses:
           lock in the wake call), the slice abort and the slice add.
         basis: No number. The giver is a thread, so its wake call and the switch to the taker run in thread context.
       - id: e
-        formerly: m4-thread/2
+        formerly: thread-m4/2
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         select: {primitive: sem, timers: t0}
         metric: m4.mask.t
         stat: max(max)
         expect: {range: [0, 1000]}
         basis: Estimate. The comment gives no basis for 1000 cycles.
       - id: f
-        formerly: m4-thread/2
+        formerly: thread-m4/2
         written: 2026-10-25, before m4-thread/20261026T004002Z
-        experiment: m4-thread
+        experiment: thread-m4
         select: {primitive: mutex, timers: t0}
         metric:
           - m4.mask.t[z_impl_k_mutex_lock]

@@ -11,9 +11,9 @@
 # a comment gave no basis for a number, the basis text of the check
 # starts with "Reconstruction:" or "Estimate.".
 #
-# H1 came from the study code-placement (criterion C3 of code-place-q4).
-# It reads the experiment code-place-q4 (imported) and the reference run
-# of code-layout in flash. The re-runs on another host have no
+# H1 came from the study code-placement (criterion C3 of wake-code-place-q4).
+# It reads the experiment wake-code-place-q4 (imported) and the reference run
+# of wake-code-layout in flash. The re-runs on another host have no
 # hypothesis. Their results are central results (study.yaml).
 #
 # Keys of a hypothesis:
@@ -51,9 +51,9 @@ hypotheses:
     wrong_if: The new revision changes the flash behaviour. Flash data from before and after it are not comparable.
     checks:
       - id: a
-        formerly: code-place-q4/C3
+        formerly: wake-code-place-q4/C3
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [f0-default, f4-default, f0-noslice, f4-noslice]}
         metric: irq
         stat: p50
@@ -64,9 +64,9 @@ hypotheses:
             range: [-1, 1]
         basis: Estimate. The comment gives no basis for the tolerance.
       - id: b
-        formerly: code-place-q4/C3
+        formerly: wake-code-place-q4/C3
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [f0-default, f4-default, f0-noslice, f4-noslice]}
         metric: isr2thr
         stat: p50
@@ -77,9 +77,9 @@ hypotheses:
             range: [-5, 5]
         basis: As a.
       - id: c
-        formerly: code-place-q4/C3
+        formerly: wake-code-place-q4/C3
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [f0-default, f4-default]}
         stat: drift_per_wake
         expect:

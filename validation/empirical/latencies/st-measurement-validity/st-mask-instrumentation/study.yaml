@@ -15,8 +15,8 @@ question: >
   when they are off?
 
 experiments:
-  - m4-image-check                 # build only, no run
-  - m4-validate                    # its latency histograms are not data
+  - wake-m4-image-check                 # build only, no run
+  - wake-m4-validate                    # its latency histograms are not data
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.
@@ -42,7 +42,7 @@ central_results:
     statement: >
       An empty mask section has a value of {m4_floor_cyc} cycles. The
       hooks add {m4_pair_cost_cyc} cycles of CPU time to each section.
-    from: {experiment: m4-validate, point: cal-t0, metric: [meta.m4_floor_cyc, meta.m4_pair_cost_cyc]}
+    from: {experiment: wake-m4-validate, point: cal-t0, metric: [meta.m4_floor_cyc, meta.m4_pair_cost_cyc]}
     stat: value
     unit: cycles at 170 MHz
 

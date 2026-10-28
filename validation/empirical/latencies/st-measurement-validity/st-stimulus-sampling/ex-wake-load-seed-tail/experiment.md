@@ -1,4 +1,4 @@
-# load-seed-tail
+# wake-load-seed-tail
 
 ## What it measures
 
@@ -7,7 +7,7 @@ longer run and with other load seeds.
 
 ## Method
 
-- Tree `ws-up`. The point of `stim-seed-1m` with the default stimulus
+- Tree `ws-up`. The point of `wake-stim-seed-1m` with the default stimulus
   seed: semaphore given from the wrapped ISR, 64 periodic load timers,
   hot code in the CCM SRAM.
 - 1M samples per point, 4M for `default-4m`. 2048 fine bins and 2048

@@ -37,7 +37,7 @@ timeout.
 
 ## Experiments
 
-`t2t-load-1m` is the only experiment of the study. It measures three
+`thread-load-1m` is the only experiment of the study. It measures three
 primitives, sem, mutex and msgq. The three primitives show if the slope
 is the same for all. Each primitive has a reference point without load.
 Three control points without time slicing check that the slice reset is

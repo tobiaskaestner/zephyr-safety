@@ -19,9 +19,9 @@ imports:
   # priority as EXTI0.
   - {study: zephyr-versions, experiment: wake-timers-1m, mode: reuse}
   # The tail of the t64 point over 8 stimulus seeds and 4 load seeds.
-  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
-  - {study: measurement-validity/stimulus-sampling, experiment: load-seed-tail, mode: reuse}
-  - {study: zephyr-versions, experiment: systick-prio-1m, mode: reuse}
+  - {study: measurement-validity/stimulus-sampling, experiment: wake-stim-seed-1m, mode: reuse}
+  - {study: measurement-validity/stimulus-sampling, experiment: wake-load-seed-tail, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-systick-prio-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.
@@ -37,6 +37,6 @@ central_results:
     statement: >
       With {timers} load timers and SysTick priority {prio}, the irq
       p99.99 is {p99.99} cycles and the max is {max} cycles ({tree}).
-    from: {experiment: systick-prio-1m, metric: irq}
+    from: {experiment: wake-systick-prio-1m, metric: irq}
     stat: [p99.99, max]
     unit: cycles

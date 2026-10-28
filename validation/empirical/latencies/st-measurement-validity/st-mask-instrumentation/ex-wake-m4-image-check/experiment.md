@@ -1,4 +1,4 @@
-# m4-image-check
+# wake-m4-image-check
 
 ## What it measures
 

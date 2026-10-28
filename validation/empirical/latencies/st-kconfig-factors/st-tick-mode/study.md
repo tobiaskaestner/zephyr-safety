@@ -37,11 +37,11 @@ The study uses these mechanisms:
 
 ## Experiments
 
-This study owns no experiment. It imports `wp3-irq-1m`, `wp3-wake-1m`
-and `wp3-t2t-1m` from the parent study `kconfig-factors`. The checks
+This study owns no experiment. It imports `irq-kconfig-1m`, `wake-kconfig-1m`
+and `thread-kconfig-1m` from the parent study `kconfig-factors`. The checks
 compare a point with `baseline`, or with `baseline-t64`, of the same
-run. The points with 64 load timers (`t64`) are in `wp3-irq-1m` and
-`wp3-wake-1m`.
+run. The points with 64 load timers (`t64`) are in `irq-kconfig-1m` and
+`wake-kconfig-1m`.
 
 The predictions were written on 2026-10-25, before the runs
 `wp3-t2t-1m/20261025T203235Z`, `wp3-wake-1m/20261025T205806Z` and
@@ -49,7 +49,7 @@ The predictions were written on 2026-10-25, before the runs
 
 - H1: the SysTick reprograms make the slow mode of the wake and of the
   thread to thread latency, and the clock drift. The baseline has the
-  same two modes as `thread2thread-1m`: about 20 % fast and 80 % slow.
+  same two modes as `thread-baseline-1m`: about 20 % fast and 80 % slow.
   In `t2t` the slow mode is about 640 cycles slower (two SysTick
   reprograms). Without the tickless kernel, the latency has one mode
   (the fast mode), and the drift is about 0 ppm. With 64 load timers,
@@ -72,7 +72,7 @@ The central result `tick-reprogram-modes` in `study.yaml` comes from H1.
   `tickless-off`.
 - `../study.md`: the three experiments.
 - `st-default-latencies/st-thread-to-thread/study.md`: the two modes of
-  `thread2thread-1m`.
+  `thread-baseline-1m`.
 - `st-measurement-validity/st-clock-drift/study.md`: the clock drift.
 - `drivers/timer/system_timer_generic.h` (ws-up tree):
   `sys_clock_set_timeout()`.

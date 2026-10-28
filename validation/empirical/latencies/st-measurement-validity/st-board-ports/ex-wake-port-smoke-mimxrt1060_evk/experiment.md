@@ -1,4 +1,4 @@
-# port-smoke-mimxrt1060_evk
+# wake-port-smoke-mimxrt1060_evk
 
 ## What it measures
 

@@ -12,7 +12,7 @@
 # starts with "Reconstruction:" or "Estimate.".
 #
 # The comments have no "Wrong if" text. Each wrong_if says which part of
-# the basis is then wrong. thread2thread-1m stated no prediction before
+# the basis is then wrong. thread-baseline-1m stated no prediction before
 # its run.
 #
 # Keys of a hypothesis:
@@ -46,7 +46,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before thread2thread-switch/20261025T100427Z
-        experiment: thread2thread-switch
+        experiment: thread-switch
         select: {point: [sem-switch, mutex-switch]}
         metric: t2t
         manual: true
@@ -69,14 +69,14 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before thread2thread-switch/20261025T100427Z
-        experiment: thread2thread-switch
+        experiment: thread-switch
         metric: t2t
         stat: mean
         expect: {order: [sem-legacy, sem-switch]}
         basis: The comment gives no value for the thread to thread wake.
       - id: b
         written: 2026-10-25, before thread2thread-switch/20261025T100427Z
-        experiment: thread2thread-switch
+        experiment: thread-switch
         metric: t2t
         stat: mean
         expect: {order: [mutex-legacy, mutex-switch]}

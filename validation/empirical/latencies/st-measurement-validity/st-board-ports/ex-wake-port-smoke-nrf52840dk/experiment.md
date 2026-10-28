@@ -1,4 +1,4 @@
-# port-smoke-nrf52840dk
+# wake-port-smoke-nrf52840dk
 
 ## What it measures
 

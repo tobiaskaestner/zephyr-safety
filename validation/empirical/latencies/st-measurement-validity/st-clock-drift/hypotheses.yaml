@@ -12,7 +12,7 @@
 # "Reconstruction:" or "Estimate.".
 #
 # All checks are manual: the comments gave no limit for each point.
-# clock-drift-layout stated no prediction before its run. Its drift
+# wake-clock-drift-layout stated no prediction before its run. Its drift
 # values are a central result (study.yaml).
 #
 # Keys of a hypothesis:
@@ -50,7 +50,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-24, before clock-drift/20261024T210905Z
-        experiment: clock-drift
+        experiment: wake-clock-drift
         manual: true
         statement: >
           The drift changes with the number of reprograms per wake: time
@@ -58,7 +58,7 @@ hypotheses:
         basis: The comment gives no number of reprograms for each point.
       - id: b
         written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:04 +0200, run at 00:39 +0200
-        experiment: clock-drift-fix
+        experiment: wake-clock-drift-fix
         manual: true
         statement: >
           With CORTEX_M_SYSTICK_RELOAD_GAP_COMP (points gapcomp-*), the
@@ -81,7 +81,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before clock-drift-fix/20261024T223910Z   # 00:33 +0200, run at 00:39 +0200
-        experiment: clock-drift-fix
+        experiment: wake-clock-drift-fix
         manual: true
         statement: >
           The points t256-min50us-gapcomp and t256-min200us-gapcomp do not

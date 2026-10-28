@@ -6,16 +6,16 @@
 # statistics. The hypothesis is wrong if one check is wrong.
 #
 # Each statement and each limit was written before the run of its
-# experiment (in the comments of the experiment files). m4-image-check has
+# experiment (in the comments of the experiment files). wake-m4-image-check has
 # no run: it is a build check. The basis texts were written on 2026-10-26,
 # after the runs, from these comments and the notes that they name. Where
 # a comment gave no basis for a number, the basis text of the check
 # starts with "Reconstruction:" or "Estimate.".
 #
 # This study checks the instrument (the M4 hooks) only. The predictions of
-# m4-validate about the kernel (the timeout walk, the SysTick ISR body, the
+# wake-m4-validate about the kernel (the timeout walk, the SysTick ISR body, the
 # sites without load) are checks in the study mask-time, which imports
-# m4-validate. The pairing counters of the M4 logs (m4_unmatched_end,
+# wake-m4-validate. The pairing counters of the M4 logs (m4_unmatched_end,
 # m4_begin_open) say if a run is usable: they are acceptance checks in
 # ex-m4-validate/experiment.yaml.
 #
@@ -60,7 +60,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25 (commit 8a6ba03), build only, no run in the results
-        experiment: m4-image-check
+        experiment: wake-m4-image-check
         manual: true
         statement: >
           For each point, the images of ws-up and ws-up-irqoff are the same,
@@ -84,9 +84,9 @@ hypotheses:
       hooks says. Then the site values contain an unknown part.
     checks:
       - id: a
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         metric: meta.m4_floor_cyc
         stat: value
         expect: {range: [15, 30]}
@@ -94,9 +94,9 @@ hypotheses:
           Estimate. The comment gives no basis. m4-design.md §3 gives 15..30
           as an estimate from the disassembly of the hooks.
       - id: b
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         metric: meta.m4_pair_cost_cyc
         stat: value
         expect: {range: [60, 150]}
@@ -104,9 +104,9 @@ hypotheses:
           Estimate. The comment gives no basis. m4-design.md §3 gives 60..150
           as an estimate from the disassembly of the hooks.
       - id: c
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: cal-t0}
         metric: irq
         stat: p50
@@ -118,9 +118,9 @@ hypotheses:
           and an end hook before "cpsie i", and the ISR enter hook runs
           before the ISR. m4-design.md §3 gives the same +60..150.
       - id: d
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: cal-t0}
         metric: isr2thr
         stat: p50
@@ -131,9 +131,9 @@ hypotheses:
           120..300 together) and one ISR exit hook. It gives no cost for the
           exit hook. m4-design.md §3 gives the same +200..400 as an estimate.
       - id: e
-        formerly: m4-validate/cal-t0
+        formerly: wake-m4-validate/cal-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: cal-t0}
         metric: m4.mask[arch_cpu_idle]
         stat: max(max_net)
@@ -157,9 +157,9 @@ hypotheses:
       tail) does not measure a known mask length.
     checks:
       - id: a
-        formerly: m4-validate/probe-t0
+        formerly: wake-m4-validate/probe-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: probe-t0}
         metric: m4.mask[probe_fn]
         stat: [min_net, max_net]
@@ -169,9 +169,9 @@ hypotheses:
           section value contains the floor (H2 a). The comment gives no basis
           for the tolerance of 10 cycles.
       - id: b
-        formerly: m4-validate/probe-t0
+        formerly: wake-m4-validate/probe-t0
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: probe-t0}
         metric: irq
         stat: max
@@ -198,9 +198,9 @@ hypotheses:
       does not see a mask path (m4-design.md §2).
     checks:
       - id: a
-        formerly: m4-validate/t64-lower, m4-validate/t256-lower
+        formerly: wake-m4-validate/t64-lower, wake-m4-validate/t256-lower
         written: 2026-10-25, before m4-validate/20261025T235532Z
-        experiment: m4-validate
+        experiment: wake-m4-validate
         select: {point: [t64-lower, t256-lower]}
         metric: irq
         stat: max

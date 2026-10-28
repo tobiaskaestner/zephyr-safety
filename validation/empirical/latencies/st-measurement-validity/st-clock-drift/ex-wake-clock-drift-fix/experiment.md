@@ -1,4 +1,4 @@
-# clock-drift-fix
+# wake-clock-drift-fix
 
 ## What it measures
 
@@ -20,7 +20,7 @@ values of the shortest SysTick reload.
 - **comp**: `nocomp` is the tree without the option, the control with
   the drift. `gapcomp` (`CORTEX_M_SYSTICK_RELOAD_GAP_COMP=y`) is the fix
   of the first cause.
-- **anchor**: `default`, `noslice` and `switch`, as in `clock-drift`:
+- **anchor**: `default`, `noslice` and `switch`, as in `wake-clock-drift`:
   different numbers of reprograms.
 - **timers**: `t0` for the cube points. `t256`
   (`LATBENCH_LOAD_TIMERS=256`) for the explicit points, all with

@@ -16,7 +16,7 @@ question: >
 
 experiments:
   - wake-isr-1m
-  - fast-mode
+  - wake-fast-mode
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

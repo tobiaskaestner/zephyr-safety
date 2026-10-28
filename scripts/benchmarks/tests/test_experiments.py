@@ -27,6 +27,6 @@ def test_repo_design_has_no_lint_errors():
 
 
 def test_code_layout_selects_the_pad():
-    """code-layout measures the flash pad, as the run 20261025T060257Z."""
-    for pt in run.expand_points(yaml.safe_load(trees.experiment_file("code-layout").read_text())):
+    """wake-code-layout measures the flash pad, as the run 20261025T060257Z."""
+    for pt in run.expand_points(yaml.safe_load(trees.experiment_file("wake-code-layout").read_text())):
         assert lint.is_y(pt["kconfig"], "LATBENCH_CODE_FLASH_PAD"), pt["id"]

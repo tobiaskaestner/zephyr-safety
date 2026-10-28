@@ -17,11 +17,11 @@ question: >
   256 periodic timers?
 
 experiments:
-  - timeout-skiplist-1m
+  - wake-timeout-skiplist-1m
 
 # The experiments that the study zephyr-versions owns and this study reads.
 imports:
-  - {study: zephyr-versions, experiment: timeout-backends-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-timeout-backends-1m, mode: reuse}
   - {study: zephyr-versions, experiment: wake-threads-1m, mode: reuse}
   - {study: zephyr-versions, experiment: wake-timers-1m, mode: reuse}
 
@@ -60,6 +60,6 @@ central_results:
       With 256 periodic load timers and the {backend} timeout backend, the
       {metric} p99 is {p99} cycles and the p99.99 is {p99.99} cycles
       ({tree}).
-    from: {experiment: [timeout-backends-1m, timeout-skiplist-1m], metric: [irq, isr2thr]}
+    from: {experiment: [wake-timeout-backends-1m, wake-timeout-skiplist-1m], metric: [irq, isr2thr]}
     stat: [p99, p99.99]
     unit: cycles

@@ -1,4 +1,4 @@
-# m4-sweep
+# wake-m4-sweep
 
 ## What it measures
 

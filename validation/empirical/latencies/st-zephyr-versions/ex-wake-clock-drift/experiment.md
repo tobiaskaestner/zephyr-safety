@@ -1,4 +1,4 @@
-# clock-drift
+# wake-clock-drift
 
 ## What it measures
 

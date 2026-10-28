@@ -32,26 +32,26 @@ before is in parentheses.
   the four interrupt paths, 1M samples.
 - `wake-anchors-1m` (`default-latencies/isr-to-thread`): the anchors of
   the ISR to thread wake.
-- `thread2thread-1m` and `thread2thread-switch`
+- `thread-baseline-1m` and `thread-switch`
   (`default-latencies/thread-to-thread`): the thread to thread wake,
   and the wake with the new context switch.
-- `systick-prio-1m` (`load-scaling/systick-priority`): the SysTick
+- `wake-systick-prio-1m` (`load-scaling/systick-priority`): the SysTick
   priority under timer load.
-- `timeout-backends-1m`, `wake-threads-1m` and `wake-timers-1m`
+- `wake-timeout-backends-1m`, `wake-threads-1m` and `wake-timers-1m`
   (`load-scaling/timeout-queue-cost`): the growth with the load and the
   timeout queue backends.
-- `clock-drift` and `clock-drift-layout` (`measurement-validity/clock-drift`):
+- `wake-clock-drift` and `wake-clock-drift-layout` (`measurement-validity/clock-drift`):
   the drift of the kernel cycle counter.
-- `code-place-q4-up` (`measurement-validity/code-placement`): the points
-  of `code-place-q4` that a comparison of two trees needs.
+- `wake-code-place-q4-up` (`measurement-validity/code-placement`): the points
+  of `wake-code-place-q4` that a comparison of two trees needs.
 
-The study imports `code-place-q4` from `measurement-validity/code-placement`
+The study imports `wake-code-place-q4` from `measurement-validity/code-placement`
 for H1.
 
 ## Open points
 
 - The central result `tree-diff` and the checks of H1 compare
-  `code-place-q4-up` with `code-place-q4`. They compare two versions only
+  `wake-code-place-q4-up` with `wake-code-place-q4`. They compare two versions only
   when the two experiments run on different trees.
 - The statistic `tree_diff` has the tree names `ws-up` and `ws-safety`
   in the tools. A comparison of versions needs a form with the names of

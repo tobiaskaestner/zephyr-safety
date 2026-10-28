@@ -27,11 +27,11 @@ The choice `LATBENCH_CODE_PLACE` came after the run
 `code-layout/20261025T060257Z` (commit `48f1341`). Since then, the pad
 needs `LATBENCH_CODE_FLASH_PAD`. The run had no choice, but the code
 layout of each point is the same. The flash layout of `f0` and `f4` in
-`code-place-q4` is that of `p0` and `p4` in `code-layout`.
+`wake-code-place-q4` is that of `p0` and `p4` in `wake-code-layout`.
 
 ## Experiments
 
-`code-layout` measures how much the place of the code in flash changes
+`wake-code-layout` measures how much the place of the code in flash changes
 the latency. It moves the code in steps of 4 bytes over 32 bytes, on
 the tree `ws-safety`. Its run `code-layout/20261025T060257Z` (safety
 `5a7d0a5`, 200000 samples, pads 0..28) is the reference in flash. In
@@ -43,7 +43,7 @@ this run, the spread over the pads was (values from the basis texts of
 - ISR to thread p50, anchor `default`: 40 cycles (1663..1703).
 - ISR to thread p50, anchor `noslice`: 35 cycles (763..798).
 
-`code-place-q4` asks: does hot code in RAM remove the effect of the code
+`wake-code-place-q4` asks: does hot code in RAM remove the effect of the code
 address on the latency? This is question Q4 of the review of
 2026-10-25 (items L2 and L17 of `later.md`). The decision to check:
 comparisons between trees and options use `LATBENCH_CODE_RAM`. Absolute
@@ -52,21 +52,21 @@ flash points are the control. The checks read the p50 of each histogram
 (`irq`, `isr2thr`) and the drift per wake (`clock_drift_cyc` / samples,
 default anchor only).
 
-`code-place-q4` has 50000 samples per point. The p50 of these
+`wake-code-place-q4` has 50000 samples per point. The p50 of these
 histograms and the drift per wake do not change with the number of
-samples. In `clock-drift-layout`, 200000 against 1000000 samples
+samples. In `wake-clock-drift-layout`, 200000 against 1000000 samples
 changed the drift by 0.01 cycles per wake. Thus 50000 samples are
 sufficient. The board time is about 35 s per point, with build and
 flash.
 
-`code-place-q4-up` is the second part of the check. It asks: does hot
+`wake-code-place-q4-up` is the second part of the check. It asks: does hot
 code in RAM remove the difference between the trees that changes from
-build to build? It has the points of `code-place-q4` that the tree
+build to build? It has the points of `wake-code-place-q4` that the tree
 comparison needs, on the tree `ws-up`. The tree difference is the value
-of `ws-up` minus the value of `ws-safety` (`code-place-q4`) at the same
+of `ws-up` minus the value of `ws-safety` (`wake-code-place-q4`) at the same
 point.
 
-The study imports `stim-seed-1m` from
+The study imports `wake-stim-seed-1m` from
 `measurement-validity/stimulus-sampling`. Its default seed checks a
 shift of the CCM code by 16 bytes (H2 k). The shift comes from a new
 `LAT META` line in `stim_init()`.
@@ -87,8 +87,8 @@ The criteria of the old file map to the checks as follows. C1 (the pad
 in RAM) is H2 a..e. C2 (the tree difference is the same at `r0` and at
 `r4`) is H2 f..j. C3 (the new revision against the old flash data) is
 H1 of the study `reproducibility`. C4 (the cost of RAM) has no limit:
-it is the central result `ram-cost`. The log checks of `code-place-q4`
-and `code-place-q4-up` are acceptance checks in their `experiment.yaml`
+it is the central result `ram-cost`. The log checks of `wake-code-place-q4`
+and `wake-code-place-q4-up` are acceptance checks in their `experiment.yaml`
 files.
 
 ## References

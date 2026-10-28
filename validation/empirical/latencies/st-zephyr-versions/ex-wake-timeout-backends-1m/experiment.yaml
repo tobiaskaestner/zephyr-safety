@@ -3,7 +3,7 @@
 
 # Description: experiment.md.
 
-name: timeout-backends-1m
+name: wake-timeout-backends-1m
 app: wake_latency
 trees: [ws-up]
 repeat: 1

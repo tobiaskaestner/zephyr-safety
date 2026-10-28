@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: stim-seed-1m
+name: wake-stim-seed-1m
 app: wake_latency
 trees: [ws-up]
 repeat: 1

@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: none.
 
-name: fast-mode
+name: wake-fast-mode
 app: wake_latency
 trees: [ws-up]
 repeat: 1

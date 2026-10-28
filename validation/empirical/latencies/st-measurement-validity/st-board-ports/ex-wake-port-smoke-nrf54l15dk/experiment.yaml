@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: none.
 
-name: port-smoke-nrf54l15dk
+name: wake-port-smoke-nrf54l15dk
 app: wake_latency
 board: nrf54l15dk/nrf54l15/cpuapp
 trees: [ws-up]

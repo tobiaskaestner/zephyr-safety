@@ -8,9 +8,9 @@
     inst.hypotheses()            one row per hypothesis
     inst.checks()                one row per check, with the basis from the design
     inst.central()               one row per sentence of a central result
-    inst.rows("stim-seed-1m")    the rows of experiment.json (percentiles per run, tree, point, metric)
-    inst.points("stim-seed-1m")  the points of the evidence runs: app data of rep 1
-    inst.hist(point, "irq", "stim-seed-1m")
+    inst.rows("wake-stim-seed-1m")    the rows of experiment.json (percentiles per run, tree, point, metric)
+    inst.points("wake-stim-seed-1m")  the points of the evidence runs: app data of rep 1
+    inst.hist(point, "irq", "wake-stim-seed-1m")
     data.ccdf(hist)              (x, share of samples >= x)
 
 An experiment of another instance (an import) or a reference run is found

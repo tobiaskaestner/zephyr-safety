@@ -17,20 +17,20 @@ log says so (`LAT META m4=1`, `m4_note`). The analysis uses the M4
 tables (`scripts/benchmarks/m4.py`) only. The IRQ tail of the same run
 is only a cross check.
 
-This study checks the instrument only. The predictions of `m4-validate`
+This study checks the instrument only. The predictions of `wake-m4-validate`
 about the kernel (the timeout walk, the SysTick ISR body, the sites
 without load) are checks in the study `mask-time`, which imports
-`m4-validate`.
+`wake-m4-validate`.
 
 ## Experiments
 
-`m4-image-check` is a build check, with no board run. It builds two
+`wake-m4-image-check` is a build check, with no board run. It builds two
 points of `wake-timers-1m` on `ws-up` and on `ws-up-irqoff`, with the
 hooks off. Then it compares the two images of each point. The version
 strings (`BUILD_VERSION`: the `git describe` of each Zephyr tree) can
 differ between the two trees.
 
-`m4-validate` checks if the hooks measure the mask time of each call
+`wake-m4-validate` checks if the hooks measure the mask time of each call
 site. It compares the direct values of the site table with a
 calibration, with a probe of a known length, and with the IRQ tail of
 the same run and of earlier `ws-up` runs. The earlier `ws-up` values
@@ -39,11 +39,11 @@ are:
 | Point | Earlier `ws-up` value |
 |---|---|
 | `cal-t0` | `wake-timers-1m` `t0-default`: IRQ p50 81, ISR to thread p50 1575 cycles. The point gives the cost of the hooks on these two p50 values. |
-| `t64-same` | `systick-prio-1m` `t64-same`: IRQ p99.99 5312, max 7775. |
-| `t64-lower` | `systick-prio-1m` `t64-lower`: IRQ max 2330. |
-| `t256-same` | `systick-prio-1m` `t256-same`: IRQ p99.99 24704, max 34762. |
-| `t256-lower` | `systick-prio-1m` `t256-lower`: IRQ p99.99 6592, max 6898. This is the "sharp stop at about 7000" of review-2026-10-25 §4 finding 8. |
-| `t256-wheel` | `timeout-backends-1m` `wheel`: IRQ p99.99 5056, max 7160. The WHEEL backend has no DLIST insert walk. |
+| `t64-same` | `wake-systick-prio-1m` `t64-same`: IRQ p99.99 5312, max 7775. |
+| `t64-lower` | `wake-systick-prio-1m` `t64-lower`: IRQ max 2330. |
+| `t256-same` | `wake-systick-prio-1m` `t256-same`: IRQ p99.99 24704, max 34762. |
+| `t256-lower` | `wake-systick-prio-1m` `t256-lower`: IRQ p99.99 6592, max 6898. This is the "sharp stop at about 7000" of review-2026-10-25 §4 finding 8. |
+| `t256-wheel` | `wake-timeout-backends-1m` `wheel`: IRQ p99.99 5056, max 7160. The WHEEL backend has no DLIST insert walk. |
 
 Each run has the calibration (`m4_floor_cyc`, `m4_pair_cost_cyc`), but
 the point `cal-t0` has no load. The point `probe-t0` checks the direct
@@ -55,7 +55,7 @@ one level lower, the IRQ max of the run must be the longest mask
 section plus a small rest. If the IRQ max is clearly larger, M4 does
 not see a mask path (`m4-design.md` §2).
 
-The board time of `m4-validate` is about 12 min: 7 points x (30 s
+The board time of `wake-m4-validate` is about 12 min: 7 points x (30 s
 build and flash + 200000 x 300 us = 60 s + about 10 s output).
 
 The predictions were written on 2026-10-25 (dates from
@@ -89,6 +89,6 @@ the results). H2, H3 and H4 came before the run
 - `st-mask-time/study.md`: the study that uses the instrument.
 - `claude/latency-benchmarks/m4-design.md` §2, §3, §4 and §5.1 (outside
   this repository): the mask paths, the cost estimates, the build
-  checks and `m4-validate`.
+  checks and `wake-m4-validate`.
 - `claude/latency-benchmarks/review-2026-10-25` §4 finding 8 (outside
   this repository): the sharp stop of the IRQ tail.

@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: none.
 
-name: port-smoke-mimxrt1060_evk
+name: wake-port-smoke-mimxrt1060_evk
 app: wake_latency
 board: mimxrt1060_evk@C/mimxrt1062/qspi
 trees: [ws-up]

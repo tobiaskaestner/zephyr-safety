@@ -17,8 +17,8 @@ question: >
 experiments:
   - irq-phase-1m
   - wake-phase-1m
-  - stim-seed-1m
-  - load-seed-tail
+  - wake-stim-seed-1m
+  - wake-load-seed-tail
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -43,7 +43,7 @@ central_results:
     statement: >
       Over 8 stimulus seeds of 1M samples, the {metric} p99 changes by
       {p99:.1%}, the p99.99 by {p99.99:.1%} and the max by {max:.1%}.
-    from: {experiment: stim-seed-1m, metric: [irq, isr2thr]}
+    from: {experiment: wake-stim-seed-1m, metric: [irq, isr2thr]}
     stat: {spread: [p99, p99.99, max]}
     unit: (max - min) / min over the seeds
 
@@ -51,7 +51,7 @@ central_results:
     statement: >
       With load seed {load_seed}, P(irq >= {threshold} cycles) <= {bound:.1e}
       at {confidence:.0%} confidence ({count} of {n} samples).
-    from: {experiment: load-seed-tail, point: default-4m, metric: irq}
+    from: {experiment: wake-load-seed-tail, point: default-4m, metric: irq}
     stat: {exceedance_bound: {thresholds: [4288, 5952, 8000], confidence: 0.95}}
     unit: probability per sample
 

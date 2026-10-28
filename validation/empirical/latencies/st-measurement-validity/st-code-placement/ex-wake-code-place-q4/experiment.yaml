@@ -4,7 +4,7 @@
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml and
 # st-measurement-validity/st-reproducibility/hypotheses.yaml.
 
-name: code-place-q4
+name: wake-code-place-q4
 app: wake_latency
 trees: [ws-up]
 repeat: 1

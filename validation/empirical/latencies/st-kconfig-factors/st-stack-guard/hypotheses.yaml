@@ -53,7 +53,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before wp3-irq-1m/20261025T223624Z
-        experiment: wp3-irq-1m
+        experiment: irq-kconfig-1m
         select: {point: no-mpu-guard}
         metric: irq
         stat: p50
@@ -65,7 +65,7 @@ hypotheses:
           for the 2 cycles.
       - id: b
         written: 2026-10-25, before wp3-wake-1m/20261025T205806Z
-        experiment: wp3-wake-1m
+        experiment: wake-kconfig-1m
         select: {point: no-mpu-guard}
         metric: isr2thr
         stat: p50
@@ -76,7 +76,7 @@ hypotheses:
           the check uses the p50.
       - id: c
         written: 2026-10-25, before wp3-t2t-1m/20261025T203235Z
-        experiment: wp3-t2t-1m
+        experiment: thread-kconfig-1m
         select: {point: no-mpu-guard}
         metric: t2t
         stat: p50

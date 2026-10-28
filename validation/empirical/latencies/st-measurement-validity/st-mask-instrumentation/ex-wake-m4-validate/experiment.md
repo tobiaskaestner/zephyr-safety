@@ -1,4 +1,4 @@
-# m4-validate
+# wake-m4-validate
 
 ## What it measures
 
@@ -20,8 +20,8 @@ tail.
 - The latency histograms are not data (`LAT META m4=1`). The analysis
   uses the M4 tables (`scripts/benchmarks/m4.py`) only.
 - No cube: seven explicit points that change several factors. The axis
-  names are the names of `wake-timers-1m`, `systick-prio-1m` and
-  `timeout-backends-1m`.
+  names are the names of `wake-timers-1m`, `wake-systick-prio-1m` and
+  `wake-timeout-backends-1m`.
 
 ## Axes
 

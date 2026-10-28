@@ -49,7 +49,7 @@ defaults, no time slicing, and `lean.conf` (no time slicing, no stack
 guard, `-O2`). Each anchor runs with the legacy thread switch (PendSV)
 and with the new arch interface (`USE_SWITCH=y`).
 
-`fast-mode` asks: does the fast mode depend on the stimulus delay, or on
+`wake-fast-mode` asks: does the fast mode depend on the stimulus delay, or on
 other state? Each point changes the stimulus or the poll interval of the
 main thread. The result has two readings:
 

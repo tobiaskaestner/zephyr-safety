@@ -1,4 +1,4 @@
-# stim-seed-1m
+# wake-stim-seed-1m
 
 ## What it measures
 
@@ -7,7 +7,7 @@ results over different sequences of the random stimulus.
 
 ## Method
 
-- Tree `ws-up`. The point `baseline-t64` of `wp3-wake-1m`: semaphore
+- Tree `ws-up`. The point `baseline-t64` of `wake-kconfig-1m`: semaphore
   given from the wrapped ISR, 64 periodic load timers, hot code in the
   CCM SRAM.
 - 1M samples per point. 2048 fine bins and 2048 coarse bins.

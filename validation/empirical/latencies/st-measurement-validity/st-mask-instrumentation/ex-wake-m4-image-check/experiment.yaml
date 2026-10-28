@@ -4,7 +4,7 @@
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
 # Build only (run.py --build-only --keep-build), no board run.
-name: m4-image-check
+name: wake-m4-image-check
 app: wake_latency
 trees: [ws-up, ws-up-irqoff]
 repeat: 1

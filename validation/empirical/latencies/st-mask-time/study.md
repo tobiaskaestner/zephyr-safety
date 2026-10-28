@@ -36,20 +36,20 @@ The study uses these mechanisms:
 
 ## Experiments
 
-`m4-sweep` measures the mask time and the ISR body time of each site
+`wake-m4-sweep` measures the mask time and the ISR body time of each site
 over three loads: periodic load timers, sleeper threads and time
 slicing. The app is `wake_latency`. The board time is about 40 min:
 24 points x (30 s + 200000 x 300 us = 60 s + 10 s).
 
-`m4-thread` measures the mask sites that a thread to thread wake adds,
+`thread-m4` measures the mask sites that a thread to thread wake adds,
 for a semaphore and for a mutex. The app is `thread_latency`. The giver
 is a thread, so its wake call and the switch to the taker run in thread
 context. The mutex does the priority inheritance under the lock. The
 points with 64 load timers compare the timeout walk in the thread app
-with `m4-sweep` and `m4-validate`. The board time is about 4 min:
+with `wake-m4-sweep` and `wake-m4-validate`. The board time is about 4 min:
 4 points x (30 s + 200000 x 100 us = 20 s + 10 s).
 
-The study imports `m4-validate` from
+The study imports `wake-m4-validate` from
 `measurement-validity/mask-instrumentation`. Its points `t64-same` and
 `t256-same` give values at 64 and 256 timers in `wake_latency`.
 
@@ -72,7 +72,7 @@ The predictions were written on 2026-10-25, before the runs
   sites with a fixed cost and to the thread to thread wake with a
   semaphore or a mutex.
 
-The comment of `m4-sweep` said that the masked share "grows with the
+The comment of `wake-m4-sweep` said that the masked share "grows with the
 load", with no limit. Thus the masked share is the central result
 `masked-share`, not a hypothesis. The pairing counters and the dropped
 sites of the M4 logs are acceptance checks in the `experiment.yaml`
@@ -92,5 +92,5 @@ files.
   the `ws-up` IRQ max at 256 timers.
 - `st-default-latencies/st-thread-to-thread/ex-thread2thread-1m/experiment.md`:
   the same thread app without hooks.
-- `claude/latency-benchmarks/m4-design.md` §5.2 (`m4-sweep`) and §5.3
-  (`m4-thread`), outside this repository.
+- `claude/latency-benchmarks/m4-design.md` §5.2 (`wake-m4-sweep`) and §5.3
+  (`thread-m4`), outside this repository.

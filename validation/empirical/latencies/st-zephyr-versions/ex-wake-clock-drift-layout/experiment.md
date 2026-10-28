@@ -1,4 +1,4 @@
-# clock-drift-layout
+# wake-clock-drift-layout
 
 ## What it measures
 
@@ -16,9 +16,9 @@ histogram sizes and two sample counts.
 ## Axes
 
 - **bins**: `hdefault` is the default bins of the app, the histogram
-  size of `clock-drift`. `hcoarse` (2048 fine bins and 2048 coarse
+  size of `wake-clock-drift`. `hcoarse` (2048 fine bins and 2048 coarse
   bins) is the histogram size of `wake-timers-1m`. The histogram size
   changes the code and data layout.
 - **samples**: `s200k` (200000 samples) is the sample count of
-  `clock-drift`. `s1m` (1000000 samples) is the sample count of
+  `wake-clock-drift`. `s1m` (1000000 samples) is the sample count of
   `wake-timers-1m`.

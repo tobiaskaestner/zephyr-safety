@@ -1,4 +1,4 @@
-# thread2thread-1m
+# thread-baseline-1m
 
 ## What it measures
 

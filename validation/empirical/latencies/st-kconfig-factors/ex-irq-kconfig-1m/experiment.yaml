@@ -4,7 +4,7 @@
 # Description: experiment.md. Hypotheses: ../st-<sub-study>/hypotheses.yaml
 # of the sub-studies scheduler, tick-mode, code-generation, stack-guard.
 
-name: wp3-irq-1m
+name: irq-kconfig-1m
 app: irq_latency
 trees: [ws-up]
 repeat: 1

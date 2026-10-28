@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: thread2thread-switch
+name: thread-switch
 app: thread_latency
 trees: [ws-up]
 repeat: 1

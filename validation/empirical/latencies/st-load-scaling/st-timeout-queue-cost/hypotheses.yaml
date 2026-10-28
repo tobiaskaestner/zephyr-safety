@@ -12,7 +12,7 @@
 # starts with "Reconstruction:" or "Estimate.".
 #
 # There is no hypothesis for the timeout queue backends: the experiment
-# files timeout-backends-1m and timeout-skiplist-1m stated no prediction
+# files wake-timeout-backends-1m and wake-timeout-skiplist-1m stated no prediction
 # before their runs. Their tail is a central result (study.yaml), as the
 # slopes per timer and per thread.
 #

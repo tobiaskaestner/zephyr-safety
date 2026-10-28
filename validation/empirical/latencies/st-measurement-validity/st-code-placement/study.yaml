@@ -15,13 +15,13 @@ question: >
   can use?
 
 experiments:
-  - code-layout
-  - code-place-q4
+  - wake-code-layout
+  - wake-code-place-q4
 
 # The check of a code shift in the CCM SRAM (H2 k) reads the default seed
-# of stim-seed-1m.
+# of wake-stim-seed-1m.
 imports:
-  - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
+  - {study: measurement-validity/stimulus-sampling, experiment: wake-stim-seed-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -43,7 +43,7 @@ central_results:
     statement: >
       In flash, the {metric} p50 changes by {p50} cycles over the pads
       0..28 (anchor {anchor}).
-    from: {experiment: code-layout, metric: [irq, isr2thr]}
+    from: {experiment: wake-code-layout, metric: [irq, isr2thr]}
     stat: {spread_abs: [p50]}
     group_by: [anchor]
     unit: cycles (max - min over the pads)
@@ -52,7 +52,7 @@ central_results:
     statement: >
       In flash, the drift changes by {drift_per_wake:.2f} cycles per wake
       over the pads 0..28 (anchor default).
-    from: {experiment: code-layout, point: [p0-default, p4-default, p8-default, p12-default,
+    from: {experiment: wake-code-layout, point: [p0-default, p4-default, p8-default, p12-default,
                                             p16-default, p20-default, p24-default, p28-default]}
     stat: {spread_abs: [drift_per_wake]}
     unit: cycles per wake (max - min over the pads)
@@ -63,7 +63,7 @@ central_results:
       {drift_per_wake:.2f} cycles per wake over the pads 0..28 (anchor
       {anchor}).
     from:
-      experiment: code-place-q4
+      experiment: wake-code-place-q4
       point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default,
               r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]
       metric: [irq, isr2thr]
@@ -76,7 +76,7 @@ central_results:
       Hot code in RAM changes the {metric} p50 by {p50:+.0f} cycles and
       the drift by {drift_per_wake:+.2f} cycles per wake, against code in
       flash (anchor {anchor}).
-    from: {experiment: code-place-q4, metric: [irq, isr2thr]}
+    from: {experiment: wake-code-place-q4, metric: [irq, isr2thr]}
     stat: {ram_cost: [p50, drift_per_wake]}    # criterion C4 of the old file: no limit
     group_by: [anchor]
     unit: cycles, cycles per wake

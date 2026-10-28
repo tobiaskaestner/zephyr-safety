@@ -1,4 +1,4 @@
-# wp3-irq-1m
+# irq-kconfig-1m
 
 ## What it measures
 
@@ -16,7 +16,7 @@ Kconfig factor, against the point `baseline` of the same run.
 
 - **variant**: one Kconfig factor at a time against the defaults of the
   app. `../wp3-variants.md` gives the variants, the defaults and the
-  Kconfig traps. `wp3-wake-1m` and `wp3-t2t-1m` have the same variants.
+  Kconfig traps. `wake-kconfig-1m` and `thread-kconfig-1m` have the same variants.
 - **load**: `none` for the points of the axis `variant`. `t64`
   (`LATBENCH_LOAD_TIMERS=64`) for the explicit points `baseline-t64`,
   `ticks1000-t64`, `tickless-off-t64` and `tickless-off-100-t64`.

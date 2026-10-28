@@ -14,11 +14,11 @@ question: >
   how does the longest mask section grow with the load?
 
 experiments:
-  - m4-sweep
-  - m4-thread
+  - wake-m4-sweep
+  - thread-m4
 
 imports:
-  - {study: measurement-validity/mask-instrumentation, experiment: m4-validate, mode: reuse}
+  - {study: measurement-validity/mask-instrumentation, experiment: wake-m4-validate, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.
@@ -39,7 +39,7 @@ central_results:
     statement: >
       At {point} (timers, sleepers, slicing), the longest mask section is
       {max_net} cycles, in {place} ({ctx}).
-    from: {experiment: m4-sweep, metric: m4.mask}
+    from: {experiment: wake-m4-sweep, metric: m4.mask}
     stat: top_site
     unit: cycles at 170 MHz (max - m4_floor_cyc)
 
@@ -48,7 +48,7 @@ central_results:
       The longest mask section grows by {slope:.0f} cycles for each timeout
       in the queue (timers + sleepers), from {intercept:.0f} cycles without
       load ({slice}).
-    from: {experiment: m4-sweep, metric: m4.mask}
+    from: {experiment: wake-m4-sweep, metric: m4.mask}
     stat: {fit_linear: {stat: max(max_net), x: [timers, sleepers]}}
     group_by: [slice]
     unit: cycles at 170 MHz
@@ -57,16 +57,16 @@ central_results:
     statement: >
       In thread_latency with {primitive} and {timers}, the longest mask
       section in thread context is {max_net} cycles, in {place}.
-    from: {experiment: m4-thread, metric: m4.mask.t}
+    from: {experiment: thread-m4, metric: m4.mask.t}
     stat: top_site
     unit: cycles at 170 MHz (max - m4_floor_cyc)
 
-  # The m4-sweep comment (m4-sweep/6) said "grows with the load" and gave
+  # The wake-m4-sweep comment (wake-m4-sweep/6) said "grows with the load" and gave
   # no limit for it. Thus the masked share is a result, not a hypothesis.
   - id: masked-share
     statement: >
       At {point} (timers, sleepers, slicing), the interrupts are masked for
       {value:.2%} of the M4 window.
-    from: {experiment: m4-sweep, metric: meta.m4_masked_share}
+    from: {experiment: wake-m4-sweep, metric: meta.m4_masked_share}
     stat: value
     unit: share of the window (m4_masked_cyc / m4_window_cyc)

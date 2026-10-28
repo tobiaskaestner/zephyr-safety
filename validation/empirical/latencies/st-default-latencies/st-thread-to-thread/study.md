@@ -26,7 +26,7 @@ experiments.
 
 ## Experiments
 
-`thread2thread-1m` measures M3 for each of the 11 kernel objects, with
+`thread-baseline-1m` measures M3 for each of the 11 kernel objects, with
 the board and kernel defaults. It runs on two trees, `ws-safety` and
 `ws-up`, with 1M samples per point. Two more points measure the
 semaphore and the mutex without preemption. The board time is about 1 h
@@ -34,14 +34,14 @@ for the points of both trees. The central result `t2t-p99-sem` in
 `study.yaml` comes from the point `sem`. This experiment stated no
 prediction before its run.
 
-`thread2thread-switch` measures M3 with the new arch interface
+`thread-switch` measures M3 with the new arch interface
 (`USE_SWITCH=y`), on both trees. It asks: does the wake have the same
-two modes as with PendSV? It uses the settings of `thread2thread-1m`,
+two modes as with PendSV? It uses the settings of `thread-baseline-1m`,
 for the semaphore and the mutex. Its legacy points are the reference
 from the same session. They have the same settings as `sem` and `mutex`
-in `thread2thread-1m`.
+in `thread-baseline-1m`.
 
-The predictions for `thread2thread-switch` were written on 2026-10-25,
+The predictions for `thread-switch` were written on 2026-10-25,
 before the run `thread2thread-switch/20261025T100427Z` (dates from
 `hypotheses.yaml`):
 

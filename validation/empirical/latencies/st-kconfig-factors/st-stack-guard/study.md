@@ -17,8 +17,8 @@ The variant `no-mpu-guard` sets `HW_STACK_PROTECTION=n` and
 
 ## Experiments
 
-This study owns no experiment. It imports `wp3-irq-1m`, `wp3-wake-1m`
-and `wp3-t2t-1m` from the parent study `kconfig-factors`. The checks
+This study owns no experiment. It imports `irq-kconfig-1m`, `wake-kconfig-1m`
+and `thread-kconfig-1m` from the parent study `kconfig-factors`. The checks
 compare `no-mpu-guard` with `baseline` in all three experiments.
 
 The prediction was written on 2026-10-25, before the runs

@@ -122,7 +122,7 @@ The folder ``scripts/benchmarks/tests/`` has these modules:
   :doc:`../reference/cli/study-py`.
 - ``test_exchange.py``: the export and the import of runs.
 - ``test_experiments.py``: the design of the repository has no lint
-  errors, and the code pad of ``code-layout`` is correct.
+  errors, and the code pad of ``wake-code-layout`` is correct.
 - ``test_hwmap.py``: the hardware map and its use in ``run.py``.
 - ``test_latbench.py``: the parser, the percentiles, the standard
   deviation, the mean without invalid samples, and the plot values of

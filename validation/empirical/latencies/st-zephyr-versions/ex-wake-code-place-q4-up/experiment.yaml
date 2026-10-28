@@ -3,7 +3,7 @@
 
 # Description: experiment.md. Hypotheses: ../hypotheses.yaml.
 
-name: code-place-q4-up
+name: wake-code-place-q4-up
 app: wake_latency
 trees: [ws-up]
 repeat: 1

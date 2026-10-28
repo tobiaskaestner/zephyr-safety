@@ -17,9 +17,9 @@ question: >
   against a baseline of the same run, and by how much?
 
 experiments:
-  - wp3-irq-1m
-  - wp3-wake-1m
-  - wp3-t2t-1m
+  - irq-kconfig-1m
+  - wake-kconfig-1m
+  - thread-kconfig-1m
 
 substudies:
   - use: scheduler
@@ -45,7 +45,7 @@ central_results:
       Against the baseline of the same run, {first} changes the irq
       {stat} most, by {first_diff:+d} cycles. The order of all variants
       is {ranking}.
-    from: {experiment: wp3-irq-1m, metric: irq}
+    from: {experiment: irq-kconfig-1m, metric: irq}
     stat: {diff_rank: [p50, p99]}
     unit: cycles at 170 MHz
 
@@ -54,7 +54,7 @@ central_results:
       Against the baseline of the same run, {first} changes the isr2thr
       {stat} most, by {first_diff:+d} cycles. The order of all variants
       is {ranking}.
-    from: {experiment: wp3-wake-1m, metric: isr2thr}
+    from: {experiment: wake-kconfig-1m, metric: isr2thr}
     stat: {diff_rank: [p50, p99]}
     unit: cycles at 170 MHz
 
@@ -63,7 +63,7 @@ central_results:
       Against the baseline of the same run, {first} changes the t2t
       {stat} most, by {first_diff:+d} cycles. The order of all variants
       is {ranking}.
-    from: {experiment: wp3-t2t-1m, metric: t2t}
+    from: {experiment: thread-kconfig-1m, metric: t2t}
     stat: {diff_rank: [p50, p99]}
     unit: cycles at 170 MHz
 

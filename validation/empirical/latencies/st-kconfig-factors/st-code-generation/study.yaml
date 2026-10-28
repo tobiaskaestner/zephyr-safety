@@ -15,9 +15,9 @@ question: >
   wake and the thread to thread latency?
 
 imports:
-  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: reuse}
-  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: reuse}
-  - {study: kconfig-factors, experiment: wp3-t2t-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: irq-kconfig-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: wake-kconfig-1m, mode: reuse}
+  - {study: kconfig-factors, experiment: thread-kconfig-1m, mode: reuse}
 
 # This study has no central result of its own. The rankings of the
 # parent study (irq-ranking, wake-ranking, t2t-ranking) give the measured

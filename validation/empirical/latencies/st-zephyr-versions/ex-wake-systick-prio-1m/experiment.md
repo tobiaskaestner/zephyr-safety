@@ -1,4 +1,4 @@
-# systick-prio-1m
+# wake-systick-prio-1m
 
 ## What it measures
 

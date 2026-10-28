@@ -1,4 +1,4 @@
-# timeout-backends-1m
+# wake-timeout-backends-1m
 
 ## What it measures
 

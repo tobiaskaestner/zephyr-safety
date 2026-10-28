@@ -19,12 +19,12 @@ question: >
 # It runs points of other experiments again (mode rerun: its own runs of
 # these experiments, not their data).
 imports:
-  - {study: kconfig-factors, experiment: wp3-irq-1m, mode: rerun}
-  - {study: kconfig-factors, experiment: wp3-wake-1m, mode: rerun}
-  - {study: load-scaling/t2t-under-load, experiment: t2t-load-1m, mode: rerun}
+  - {study: kconfig-factors, experiment: irq-kconfig-1m, mode: rerun}
+  - {study: kconfig-factors, experiment: wake-kconfig-1m, mode: rerun}
+  - {study: load-scaling/t2t-under-load, experiment: thread-load-1m, mode: rerun}
   # H1 reads the data of this experiment (mode reuse: the runs of the
   # owner study).
-  - {study: measurement-validity/code-placement, experiment: code-place-q4, mode: reuse}
+  - {study: measurement-validity/code-placement, experiment: wake-code-place-q4, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -45,12 +45,12 @@ central_results:
     statement: >
       On another host, {hist_identical_count} of {n} re-run points give
       the same histograms bin for bin as the run of the owner study.
-    from: {experiment: [wp3-irq-1m, wp3-wake-1m, t2t-load-1m]}
+    from: {experiment: [irq-kconfig-1m, wake-kconfig-1m, thread-load-1m]}
     stat: hist_identical_count
     unit: points
 
   - id: rebuild-same-image
     statement: >
       A rebuild from the sources of the run gives the same image on two hosts.
-    from: {experiment: [wp3-irq-1m, wp3-wake-1m, t2t-load-1m]}
+    from: {experiment: [irq-kconfig-1m, wake-kconfig-1m, thread-load-1m]}
     stat: conclusion               # a person confirms the sentence; run.py --rebuild writes no record yet

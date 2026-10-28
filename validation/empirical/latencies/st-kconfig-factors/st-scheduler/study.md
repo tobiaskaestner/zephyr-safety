@@ -24,10 +24,10 @@ each wake (review of 2026-10-25, §5).
 
 ## Experiments
 
-This study owns no experiment. It imports `wp3-irq-1m`, `wp3-wake-1m`
-and `wp3-t2t-1m` from the parent study `kconfig-factors`. The checks
+This study owns no experiment. It imports `irq-kconfig-1m`, `wake-kconfig-1m`
+and `thread-kconfig-1m` from the parent study `kconfig-factors`. The checks
 compare `scalable` and `multiq` with `baseline` in all three
-experiments. In `wp3-wake-1m`, they also compare `scalable-busy16` and
+experiments. In `wake-kconfig-1m`, they also compare `scalable-busy16` and
 `multiq-busy16` with `baseline-busy16`.
 
 The predictions were written on 2026-10-25, before the runs
@@ -42,7 +42,7 @@ The predictions were written on 2026-10-25, before the runs
 - H2: 16 busy threads add a constant cost of about 400 cycles to the
   wake. The cost comes from the slice of the busy thread, not from the
   ready queue. Thus it does not depend on the number of busy threads.
-  `wp3-wake-1m` has 16 busy threads only. `wake-threads-1m` has 2..64.
+  `wake-kconfig-1m` has 16 busy threads only. `wake-threads-1m` has 2..64.
 
 This study has no central result of its own. The rankings of the parent
 study give the measured change of each variant.

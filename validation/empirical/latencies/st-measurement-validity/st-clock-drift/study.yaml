@@ -14,12 +14,12 @@ question: >
   timer (same clock), and does the loss change the latency data?
 
 experiments:
-  - clock-drift-fix
+  - wake-clock-drift-fix
 
 # The experiments that the study zephyr-versions owns and this study reads.
 imports:
-  - {study: zephyr-versions, experiment: clock-drift, mode: reuse}
-  - {study: zephyr-versions, experiment: clock-drift-layout, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-clock-drift, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-clock-drift-layout, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a
@@ -40,7 +40,7 @@ central_results:
     statement: >
       With the anchor {anchor} and {timers}, the kernel cycle counter
       loses {drift_per_wake:.2f} cycles per wake against TIM2 ({tree}).
-    from: {experiment: clock-drift}
+    from: {experiment: wake-clock-drift}
     stat: drift_per_wake
     unit: cycles per wake
 
@@ -48,7 +48,7 @@ central_results:
     statement: >
       With CORTEX_M_SYSTICK_RELOAD_GAP_COMP ({comp}) and the anchor
       {anchor}, the drift is {drift_ppm:.1f} ppm.
-    from: {experiment: clock-drift-fix, point: [nocomp-default, nocomp-noslice, nocomp-switch,
+    from: {experiment: wake-clock-drift-fix, point: [nocomp-default, nocomp-noslice, nocomp-switch,
                                                  gapcomp-default, gapcomp-noslice, gapcomp-switch]}
     stat: drift_ppm
     unit: ppm of the elapsed cycles
@@ -57,7 +57,7 @@ central_results:
     statement: >
       With 256 load timers and the gap compensation, the drift is
       {drift_ppm:.0f} ppm at the shortest reload {min_reload}.
-    from: {experiment: clock-drift-fix, point: [t256-min10us-gapcomp, t256-min50us-gapcomp, t256-min200us-gapcomp]}
+    from: {experiment: wake-clock-drift-fix, point: [t256-min10us-gapcomp, t256-min50us-gapcomp, t256-min200us-gapcomp]}
     stat: drift_ppm
     unit: ppm of the elapsed cycles
 
@@ -65,7 +65,7 @@ central_results:
     statement: >
       With the histogram size {bins} and {samples} samples, the drift is
       {drift_per_wake:.2f} cycles per wake ({tree}).
-    from: {experiment: clock-drift-layout}
+    from: {experiment: wake-clock-drift-layout}
     stat: drift_per_wake
     unit: cycles per wake
 

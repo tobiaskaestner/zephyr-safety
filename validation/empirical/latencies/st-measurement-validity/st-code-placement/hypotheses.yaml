@@ -12,8 +12,8 @@
 # starts with "Reconstruction:" or "Estimate.".
 #
 # The check of the new revision against the old flash data (criterion C3
-# of code-place-q4) is in the study reproducibility. The log checks of
-# code-place-q4 and code-place-q4-up are acceptance checks in their
+# of wake-code-place-q4) is in the study reproducibility. The log checks of
+# wake-code-place-q4 and wake-code-place-q4-up are acceptance checks in their
 # experiment files. The cost of RAM (criterion C4) has no limit: it is a
 # central result (study.yaml).
 #
@@ -54,7 +54,7 @@ hypotheses:
     checks:
       - id: a
         written: 2026-10-25, before code-layout/20261025T060257Z
-        experiment: code-layout
+        experiment: wake-code-layout
         manual: true
         statement: >
           The IRQ p50, the ISR to thread p50 and the drift per wake change
@@ -70,7 +70,7 @@ hypotheses:
       latency and the drift.
     basis: >
       In flash, the code address changes the latency: the IRQ p50 changes
-      by 5 cycles over the pads 0..28 (code-layout), and the tree
+      by 5 cycles over the pads 0..28 (wake-code-layout), and the tree
       difference of the ISR to thread p50 changed from 0 to 190 cycles from
       build to build (wake-threads-1m). Code in the CCM SRAM does not go
       through the flash and its cache.
@@ -81,9 +81,9 @@ hypotheses:
     checks:
       # Criterion C1: the pad in RAM.
       - id: a
-        formerly: code-place-q4/C1
+        formerly: wake-code-place-q4/C1
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
         metric: irq
         stat: p50
@@ -93,18 +93,18 @@ hypotheses:
           the spread in flash over the pads 0..28 is 5 cycles
           (code-layout/20261025T060257Z, IRQ p50 81..86).
       - id: b
-        formerly: code-place-q4/C1
+        formerly: wake-code-place-q4/C1
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]}
         metric: irq
         stat: p50
         expect: {spread_abs_le: 2}
         basis: As a.
       - id: c
-        formerly: code-place-q4/C1
+        formerly: wake-code-place-q4/C1
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
         stat: drift_per_wake
         expect: {spread_abs_le: 0.2}
@@ -113,9 +113,9 @@ hypotheses:
           the spread in flash over the pads is 1.6 cycles per wake
           (code-layout/20261025T060257Z, 8.06..9.66).
       - id: d
-        formerly: code-place-q4/C1
+        formerly: wake-code-place-q4/C1
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [r0-default, r4-default, r8-default, r12-default, r16-default, r20-default, r24-default, r28-default]}
         metric: isr2thr
         stat: p50
@@ -125,9 +125,9 @@ hypotheses:
           the spread in flash over the pads is 40 cycles
           (code-layout/20261025T060257Z, 1663..1703).
       - id: e
-        formerly: code-place-q4/C1
+        formerly: wake-code-place-q4/C1
         written: 2026-10-25, before code-place-q4/20261025T184743Z
-        experiment: code-place-q4
+        experiment: wake-code-place-q4
         select: {point: [r0-noslice, r4-noslice, r8-noslice, r12-noslice, r16-noslice, r20-noslice, r24-noslice, r28-noslice]}
         metric: isr2thr
         stat: p50
@@ -136,11 +136,11 @@ hypotheses:
           Estimate, as d. The spread in flash over the pads is 35 cycles
           (code-layout/20261025T060257Z, 763..798).
       # A shift of the CCM code by 16 bytes (a new LAT META line in
-      # stim_init(), see stim-seed-1m).
+      # stim_init(), see wake-stim-seed-1m).
       - id: k
-        formerly: stim-seed-1m/P1
+        formerly: wake-stim-seed-1m/P1
         written: 2026-10-26, before stim-seed-1m/20261026T155715Z
-        experiment: stim-seed-1m
+        experiment: wake-stim-seed-1m
         select: {point: seed-default}
         metric: [irq, isr2thr, irq2thr]
         expect: {hist_identical_to: {run: kconfig-factors/wp3-wake-1m/20261025T205806Z, point: baseline-t64}}
