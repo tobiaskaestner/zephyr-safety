@@ -282,7 +282,7 @@ Settings in ``prj.conf``
 
 Each measurement app sets ``CONFIG_ASSERT=n`` and
 ``CONFIG_SPIN_VALIDATE=n`` in its ``prj.conf``, because the two trees have
-different defaults for these options (see :doc:`../pitfalls`).
+different defaults for these options (see :doc:`../explanation/measurement-effects`).
 ``wake_latency`` and ``thread_latency`` set
 ``CONFIG_MAIN_THREAD_PRIORITY=10``, so that the main thread does not compete
 with the measured threads.

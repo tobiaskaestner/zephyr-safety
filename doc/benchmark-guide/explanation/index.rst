@@ -17,4 +17,5 @@ work in this way.
    lab-exchange
    mask-time
    code-placement
+   measurement-effects
    documentation-guidelines

@@ -91,7 +91,7 @@ Options:
 #. **Kconfig check.** It compares each Kconfig value of the point with the
    ``.config`` of the build. If the ``.config`` does not have the requested
    value, the run stops. Kconfig can ignore a value without an error
-   (see :doc:`../../pitfalls`).
+   (see :doc:`../../explanation/measurement-effects`).
 #. **Flash and capture.** For each repetition, it opens the serial port
    and runs the ``flash`` commands of the board in order. Then it saves the
    output until ``LAT DONE``. If no ``LAT DONE`` comes before the timeout,

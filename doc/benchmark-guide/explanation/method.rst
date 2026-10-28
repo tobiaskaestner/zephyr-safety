@@ -81,7 +81,7 @@ read of ``now`` and the write of the compare value. If the ISR takes more
 time than the delay to the edge, the compare value is in the past. Then
 the timer reaches it only after a full wrap of the 32-bit counter (25 s at
 170 MHz), and a repetition can time out. ``stim_late`` other than 0 shows
-that this occurred (see :doc:`../pitfalls`).
+that this occurred (see :doc:`measurement-effects`).
 
 The wire takes the rising edge to the response pin, and its interrupt
 starts. The measurement point reads ``stim_now()`` as its first action.
@@ -168,7 +168,7 @@ two cycles (see :doc:`../reference/boards`).
 ``to_sys()`` converts counts of the stimulus timer to system timer cycles.
 If the two clocks are the same (``stim_timer_hz`` = ``sys_timer_hz``), it
 does not change the value. The code uses a fresh pair of readings for
-each edge, not a reference from the start of the run. :doc:`../pitfalls` gives
+each edge, not a reference from the start of the run. :doc:`measurement-effects` gives
 the reason.
 
 The stimulus module prints two checks of the phase as ``LAT META``:

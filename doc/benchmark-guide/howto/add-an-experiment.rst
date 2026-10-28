@@ -58,4 +58,4 @@ the tree. If the tree does not define the option, the build stops. Thus
 an experiment can use an option that only one tree has (for example a
 timeout backend) only with that tree. If Kconfig ignores a value (unmet
 dependencies, or a second member of a choice), the Kconfig check stops
-the run (see :doc:`../pitfalls`).
+the run (see :doc:`../explanation/measurement-effects`).

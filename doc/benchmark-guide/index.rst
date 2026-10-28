@@ -47,8 +47,3 @@ part answers a different question:
    :caption: Explanation
 
    explanation/index
-
-.. toctree::
-   :maxdepth: 2
-
-   pitfalls

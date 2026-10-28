@@ -251,7 +251,7 @@ that returns the system timer clock. A board port gives the real value.
 
 Each measurement app also prints ``debug_reg_at_boot``: the value that
 ``port_debug_reset()`` found in the debug register. The text depends on
-the port (see :doc:`boards` and :doc:`../pitfalls`).
+the port (see :doc:`boards` and :doc:`../explanation/measurement-effects`).
 
 .. _benchguide-latbench-cmake:
 
