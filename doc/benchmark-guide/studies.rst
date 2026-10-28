@@ -9,37 +9,6 @@ central results that state the answer. This page describes the files of
 a study design, the results tree, the tool ``scripts/benchmarks/study.py``
 and the forms that a check can use.
 
-Terms
------
-
-Study
-   A folder with ``study.yaml``. The top study is
-   ``validation/empirical/latencies/`` itself. A study can have
-   sub-studies (folders ``st-<name>/``) and experiments (folders
-   ``ex-<name>/``). A sub-study is a study.
-
-Experiment
-   A folder ``ex-<name>/`` with ``experiment.yaml`` (the input of
-   ``run.py``, see :doc:`host-tools`) and ``experiment.md`` (question,
-   method, references). The study that holds the folder owns the
-   experiment. Another study can import it (``imports:``).
-
-Instance
-   One study design, applied to one board, in a results tree. Its folder
-   has ``instance.json``: the run list, the roles of the runs, the
-   references and the manual verdicts. The run list is hand-made data.
-
-Run
-   One raw run folder of ``run.py``: ``ex-<experiment>/<UTC>/`` in the
-   folder of its instance. The run folder does not change after the run.
-   Its seal ``<UTC>.sha256`` is beside it: one line ``<sha256>  <path>``
-   for each file. The digest of the run is ``sha256:`` + the sha256 of
-   the seal file.
-
-The prefixes ``st-`` and ``ex-`` are only in the folder names. Names and
-references in the files have no prefix: a study path is a path of names
-(``load-scaling/t2t-under-load``), a run id is ``<experiment>/<UTC>``.
-
 Design files
 ------------
 
