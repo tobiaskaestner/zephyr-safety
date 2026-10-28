@@ -3,7 +3,7 @@ Measurement method
 
 This page describes the measurement method. The method is the same on
 each board. The board port supplies the hardware
-parts (see :doc:`../boards`). The examples on this page are for the
+parts (see :doc:`../reference/boards`). The examples on this page are for the
 NUCLEO-G474RE, the only board with data points today.
 
 Why the stimulus comes from hardware
@@ -163,7 +163,7 @@ calculates:
 
 ``sys_cyc()`` is ``k_cycle_get_64()``. If the timer driver has no 64-bit
 counter, it is ``k_cycle_get_32()``, and the tick period must be a power of
-two cycles (see :doc:`../boards`).
+two cycles (see :doc:`../reference/boards`).
 
 ``to_sys()`` converts counts of the stimulus timer to system timer cycles.
 If the two clocks are the same (``stim_timer_hz`` = ``sys_timer_hz``), it
@@ -190,3 +190,42 @@ On the NUCLEO-G474RE, the SysTick driver has the 64-bit counter by
 default only above 60 MHz. Thus ``port.conf`` of the
 port sets ``CONFIG_CORTEX_M_SYSTICK_64BIT_CYCLE_COUNTER=y``, for the 16 MHz
 clock overlay.
+
+The system timer and the tick phase
+-----------------------------------
+
+The tick phase is in cycles of the system timer (see
+:ref:`benchguide-tick-phase`). Its meaning depends on the system timer of
+the board:
+
+- If the system timer counts the core clock (SysTick), the phase has the
+  resolution of one count of the stimulus timer.
+- If the system timer has a slow clock (RTC, GRTC), the phase has the
+  resolution of one system timer cycle. A tick of a few cycles gives a
+  phase histogram with a few steps only.
+
+``stim.c`` reads the system timer count with ``k_cycle_get_64()``. If the
+timer driver does not have a 64-bit counter
+(``CONFIG_TIMER_HAS_64BIT_CYCLE_COUNTER=n``), ``stim.c`` uses the 32-bit
+count of ``k_cycle_get_32()``. A wrap of the 32-bit count keeps the tick
+grid only if the tick period is a power of two cycles. A ``BUILD_ASSERT``
+in ``stim.c`` makes sure of this.
+
+If the stimulus timer and the system timer have different clocks,
+``stim.c`` converts the counts for the phase. ``clock_drift_cyc`` is then
+``n/a``.
+
+What the method needs from a board
+----------------------------------
+
+A new board must have these properties, or an equivalent:
+
+- A 32-bit hardware timer with an output compare channel that drives a
+  pin with no software in the path. On the Nordic SoCs, a (D)PPI
+  connection to a GPIOTE task is the equivalent.
+- A pin with an interrupt on the rising edge, and a wire from the timer
+  pin to this pin.
+- A system timer with a 64-bit cycle counter, or a tick period of a power
+  of two cycles, for the tick phase.
+- A serial console that the host can read without loss at the output rate
+  of the apps.

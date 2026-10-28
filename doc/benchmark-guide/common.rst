@@ -21,9 +21,9 @@ The folder ``common/`` has the code that all measurement apps share.
    * - ``include/latbench/stim.h``, ``src/stim.c``
      - Stimulus, static check, response IRQ set-up, tick phase
    * - ``include/latbench/port.h``
-     - The contract of a board port (see :doc:`boards`)
+     - The contract of a board port (see :doc:`reference/boards`)
    * - ``boards/<board>/``
-     - One board port for each board (see :doc:`boards`)
+     - One board port for each board (see :doc:`reference/boards`)
    * - ``include/latbench/load.h``, ``src/load.c``
      - Load generators: threads and timers
    * - ``include/latbench/meta.h``, ``src/meta.c``
@@ -251,7 +251,7 @@ that returns the system timer clock. A board port gives the real value.
 
 Each measurement app also prints ``debug_reg_at_boot``: the value that
 ``port_debug_reset()`` found in the debug register. The text depends on
-the port (see :doc:`boards` and :doc:`pitfalls`).
+the port (see :doc:`reference/boards` and :doc:`pitfalls`).
 
 .. _benchguide-code-placement:
 
@@ -332,7 +332,7 @@ groups stays in flash, for example the C library, ``libgcc`` and the
 console. A call from RAM to flash goes through a linker veneer.
 
 The board port gives the memory region in ``LATBENCH_CODE_RAM_REGION``
-(see :doc:`boards`). If the port gives no region, the build stops with a
+(see :doc:`reference/boards`). If the port gives no region, the build stops with a
 message. ``nucleo_g474re`` uses the CCM SRAM.
 
 The pad is the first relocated function. Zephyr's

@@ -26,7 +26,7 @@ This guide uses these terms with one meaning each:
 
    Board port
       The board-specific code of the stimulus, in ``common/boards/<board>/``
-      (see :doc:`../boards`).
+      (see :doc:`boards`).
 
    Tree
       A pinned set of source repositories (Zephyr and its modules), declared

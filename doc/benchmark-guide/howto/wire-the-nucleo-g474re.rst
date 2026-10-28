@@ -1,7 +1,7 @@
 Hardware setup on the NUCLEO-G474RE
 ===================================
 
-:doc:`../boards` gives the pins and the wire of the other boards.
+:doc:`../reference/boards` gives the pins and the wire of the other boards.
 
 - One NUCLEO-G474RE board.
 - One USB cable to the ST-LINK connector of the board. The ST-LINK gives

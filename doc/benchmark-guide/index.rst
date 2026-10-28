@@ -61,5 +61,4 @@ part answers a different question:
    studies
    lab
    extending
-   boards
    pitfalls

@@ -9,3 +9,4 @@ the tools work as they do.
    :maxdepth: 1
 
    wire-the-nucleo-g474re
+   add-a-board
