@@ -92,6 +92,8 @@
  * - Logging: LOG_DBG() of the module @c os.
  * - Tracing: the SYS_PORT_TRACING_OBJ_* hooks. They are empty in the test.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change mutex.c
  * - @kconfig{CONFIG_PRIORITY_CEILING} and
  *   @kconfig{CONFIG_NUM_PREEMPT_PRIORITIES}: priority inheritance and its
@@ -571,6 +573,7 @@ static bool prio_set_model(struct k_thread *thread, int prio)
 	return z_thread_prio_set_fake.return_val;
 }
 
+/* Spy z_sched_ready_locked(): record the depth of the lock model at the call. */
 static void ready_spy(struct k_thread *thread)
 {
 	ARG_UNUSED(thread);
@@ -581,6 +584,7 @@ static void ready_spy(struct k_thread *thread)
 /* z_thread_prio_set() model with a reschedule hint for each call: prio_set_returns[n] */
 static bool prio_set_returns[3];
 
+/* Fake z_thread_prio_set(): set the priority; return prio_set_returns[n] for call n. */
 static __maybe_unused bool prio_set_sequence(struct k_thread *thread, int prio)
 {
 	unsigned int n = z_thread_prio_set_fake.call_count - 1U;

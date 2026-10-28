@@ -69,6 +69,8 @@
  *   k_spin_lock() and k_spin_unlock(), and arch_is_in_isr() in an
  *   assertion.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change sem.c
  * - @kconfig{CONFIG_POLL}: the poll events of the semaphore.
  * - @kconfig{CONFIG_OBJ_CORE_SEM}: the object core link and the object type
@@ -321,6 +323,7 @@ static void observe_release(void)
 	count_at_release = spied_sem->count;
 }
 
+/* Spy z_pend_curr(): record the count at the release of the lock, and return 0 (a wake). */
 static int pend_spy(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wait_q,
 		    k_timeout_t timeout)
 {
@@ -334,6 +337,7 @@ static int pend_spy(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wa
 	return 0;
 }
 
+/* Spy z_handle_obj_poll_events(): record the count at the call, and return false. */
 static __maybe_unused bool poll_spy(sys_dlist_t *events, uint32_t state)
 {
 	ARG_UNUSED(events);
@@ -1740,6 +1744,7 @@ ZTEST(sem_unit, test_lock_validation_sees_sem_lock)
 
 static unsigned int count_at_oops;
 
+/* Spy unit_syscall_oops(): record the count at the oops, and return. */
 static void oops_spy(void)
 {
 	count_at_oops = spied_sem->count;

@@ -367,6 +367,29 @@ add_custom_command(
   USES_TERMINAL
 )
 
+# The test doubles of the kernel unit tests (Kernel Unit Test Specification).
+# The filter of dox-kernel-unit-testspec generates them at each build, so they
+# cannot drift. This check finds what is written by hand: a known limit
+# (tests/kernel/unit/common/fake_limits.yaml) whose selector matches no test,
+# and a local custom fake without a comment. A standalone target, and a
+# POST_BUILD step of `all-docs`.
+set(kernel_unit_doubles_check_cmd
+  ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_LIST_DIR}/_scripts/kernel_unit_doubles.py check
+)
+add_custom_target(
+  kernel-unit-doubles-check
+  COMMAND ${kernel_unit_doubles_check_cmd}
+  COMMENT "Checking the known limits of the kernel unit test doubles..."
+  USES_TERMINAL
+)
+add_custom_command(
+  TARGET all-docs
+  POST_BUILD
+  COMMAND ${kernel_unit_doubles_check_cmd}
+  COMMENT "Checking the known limits of the kernel unit test doubles..."
+  USES_TERMINAL
+)
+
 add_custom_target(
   pristine
   COMMAND ${CMAKE_COMMAND} -P ${ZEPHYR_BASE}/cmake/pristine.cmake

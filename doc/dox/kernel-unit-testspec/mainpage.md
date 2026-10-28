@@ -48,6 +48,28 @@ option that changes the code of the unit. `tests/kernel/unit/README.rst`
 describes the harness: the fakes, the shadow headers, the models of the layers
 below a unit, and the procedure to run the tests.
 
+## Test doubles
+
+Each function below a unit is a test double. A test is correct only if the
+double behaves as the real function in the case of the test. Thus the
+document shows the doubles. The text is generated from the test sources and
+from the harness at each build of the document.
+
+- The page @ref kunit_doubles "Test doubles" has each kind of double, the
+  fake groups with the default of each fake, the real copies of the pure
+  helpers, the shared models with their assumptions, the reference fake of
+  the scheduler contract and the known limits.
+- The group of a kernel source file has the section "Test doubles of this
+  file": a table of the fakes of the unit, and the doubles that the suite
+  configures before each test.
+- Each test has the sections "Test doubles" (the fakes that the test
+  configures, and how), "Checked calls" (the fakes whose calls the test
+  checks) and "Known limits" (the known limits of these doubles).
+
+Today the units `sem` and `mutex` have these sections. The page @ref
+kunit_limits "Known limits of the test doubles" lists each test with a
+known limit.
+
 ## Scope
 
 The document has the units `condvar`, `event`, `mem_slab`, `msgq`, `mutex`,

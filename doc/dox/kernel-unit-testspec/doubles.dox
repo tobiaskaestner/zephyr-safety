@@ -1,0 +1,16 @@
+/*
+ * Copyright (c) 2026 inovex GmbH
+ *
+ * SPDX-License-Identifier: Apache-2.0
+ */
+
+/**
+ * @page kunit_doubles Test doubles
+ *
+ * The input filter of this document (doc/_scripts/doxygen_filter_kernel_unit.py)
+ * replaces the content of this file with the page "Test doubles". The script
+ * doc/_scripts/kernel_unit_doubles.py generates the page from the sources of
+ * the harness (tests/kernel/unit/common) and from the known limits
+ * (common/fake_limits.yaml). To see the page without Doxygen, run
+ * "kernel_unit_doubles.py catalog".
+ */

@@ -703,9 +703,10 @@ static bool ref_sched_wake(_wait_q_t *wait_q, int swap_retval, void *swap_data)
 }
 
 /*
- * z_reschedule(): Release(a, "resched"). A thread selects now. In an ISR,
- * the C code does not swap (resched() is false), and the exit of the ISR
- * selects. The fake does not read the key (finding R8 of the review).
+ * z_reschedule(): Release(a, "resched"). From a thread, the fake selects the
+ * next thread now. In an ISR, the fake does not select: as in the C code
+ * (resched() is false), the exit of the ISR selects. The fake does not read
+ * the key (finding R8 of the review).
  */
 static void ref_reschedule(struct k_spinlock *lock, k_spinlock_key_t key)
 {
@@ -767,8 +768,8 @@ static void ref_thread_return_value_set(struct k_thread *thread, unsigned int va
 
 /*
  * z_sched_ready_locked(): the second half of WakeFirstWith(o, F). As
- * ready_thread() of the code: no change for a thread that is not ready to run
- * (pending or dead) or that is ready already.
+ * ready_thread() of the code, the fake makes no change for a thread that is
+ * not ready to run (pending or dead) or that is ready already.
  */
 static void ref_sched_ready_locked(struct k_thread *thread)
 {
@@ -899,7 +900,11 @@ static bool ref_thread_prio_set(struct k_thread *thread, int prio)
 	return z_is_thread_ready(thread);
 }
 
-/* z_waitq_head() and z_waitq_head_locked(): the query Head(o) (proposal P3 of the review). */
+/*
+ * z_waitq_head() and z_waitq_head_locked(): the first waiter in the order of the
+ * contract (WaitQueue!Best(o)), or NULL. The contract has no query for it yet
+ * (Head(o), proposal P3 of the review).
+ */
 static struct k_thread *ref_waitq_head(_wait_q_t *wait_q)
 {
 	struct kernel_unit_sched_ref_thread *t = best(wait_q);
@@ -909,7 +914,11 @@ static struct k_thread *ref_waitq_head(_wait_q_t *wait_q)
 	return (t != NULL) ? t->thread : NULL;
 }
 
-/* z_waitq_init(): an init of a wait queue with waiters loses them in the code. */
+/*
+ * z_waitq_init(): no operator. In the contract, the wait queue of an object
+ * exists from the start. The fake reports an init of a wait queue with waiters
+ * as a misuse (check MISUSE), because the code then loses the waiters.
+ */
 static void ref_waitq_init(_wait_q_t *wait_q)
 {
 	if (best(wait_q) != NULL) {

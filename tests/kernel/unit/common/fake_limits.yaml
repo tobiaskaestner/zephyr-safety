@@ -1,0 +1,217 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+#
+# Known limits of the test doubles of the kernel unit tests.
+#
+# Each limit is a gap between a test double and the layer below that it
+# replaces: a defect of the unit that a test with this double cannot find.
+# The source is the review of the scheduler assumptions of the fakes
+# (workspace notes, claude/kernel-unit/reffake/review.md, findings R1 to R15).
+# R14 of the review has two limits here, R14a and R14b.
+#
+# doc/_scripts/kernel_unit_doubles.py reads this file. The Kernel Unit Test
+# Specification shows each limit on the page "Test doubles" and at each test
+# that uses such a double. The command "kernel_unit_doubles.py check" fails if
+# a selector matches no test.
+#
+# A limit applies to a test if one of its selectors matches the test. All
+# keys of one selector must match:
+#   fake:      a fake that the test configures (with how and custom: in the
+#              same statement)
+#   how:       value, sequence, custom, custom_seq or plain (one or a list)
+#   custom:    the name of the custom fake
+#   uses:      a local or shared function that the test calls or gives as an
+#              argument
+#   checks:    a fake whose calls the test checks
+#   unit:      only the tests of this unit
+#   reference: true for a test with the reference fake, false for a test
+#              without it
+
+limits:
+  - id: R1
+    severity: high
+    title: A wait result has no connection to a wake.
+    text: >-
+      The fake z_pend_curr() returns a value that the test gives. No waker of
+      the unit gives this value. Each half of a hand-over (the give and the
+      take) is tested alone against a value of the test. A defect in which the
+      waker gives a value or a data pointer that the waiter does not expect
+      passes.
+    applies:
+      - fake: z_pend_curr
+        how: [value, sequence]
+      - uses: kernel_unit_set_wait_result
+      - fake: z_pend_curr
+        custom: pend_spy
+
+  - id: R2
+    severity: high
+    title: A wait without a waker always ends as a timeout, also with K_FOREVER.
+    text: >-
+      If no other thread wakes the current thread, the model returns -EAGAIN.
+      In the real system, a K_FOREVER wait without a waker does not end. A
+      lost wake-up or a deadlock looks like a timeout.
+    applies:
+      - uses: kernel_unit_set_other_thread
+      - uses: set_other_thread
+        unit: mutex
+
+  - id: R3
+    severity: high
+    title: The waiting-threads model has no thread identity and no order.
+    text: >-
+      z_sched_wake() wakes "a" thread: the model decrements a global count, or
+      the test gives the return value. The model ignores the wait queue, the
+      return value and the data of the wake. No test can show that the thread
+      with the highest priority gets the object.
+    applies:
+      - uses: kernel_unit_set_waiting_threads
+      - fake: z_sched_wake
+        how: [value, sequence]
+
+  - id: R4
+    severity: high
+    title: The reschedule decision is not modeled.
+    text: >-
+      z_reschedule() is a plain fake or a spy. No fake has a current thread with
+      a priority. The tests specify the call, not its effect. A missed
+      reschedule on a path without a test is not found.
+    applies:
+      - checks: z_reschedule
+        reference: false
+
+  - id: R5
+    severity: medium
+    title: The timeout state is not modeled.
+    text: >-
+      No plain fake of z_pend_curr() arms a timeout, and no wake cancels one.
+      A test arms a timeout by hand. A defect in the timeout logic of the unit
+      is visible only in the tests that arm the timeout.
+    applies:
+      - uses: set_timeout_active
+        unit: mutex
+      - checks: z_try_abort_thread_timeout
+
+  - id: R6
+    severity: medium
+    title: The mutex wake model wakes at the return value, not at the ready call.
+    text: >-
+      The local model treats arch_thread_return_value_set() as the wake. A
+      unit that unpends a thread and gives it a value, but does not make it
+      ready, loses the thread. The model returns the value and the test
+      passes.
+    applies:
+      - custom: return_value_model
+        unit: mutex
+      - uses: owner_unlocks
+        unit: mutex
+
+  - id: R7
+    severity: medium
+    title: The mutex priority model does not move a waiter and returns a free hint.
+    text: >-
+      The local model of z_thread_prio_set() sets the priority, but keeps the
+      position of a waiting thread in its wait queue. Its return value comes
+      from the test, not from the state of the thread.
+    applies:
+      - custom: prio_set_model
+        unit: mutex
+      - checks: z_thread_prio_set
+        unit: mutex
+
+  - id: R8
+    severity: medium
+    title: The reschedule contract ignores the interrupt state in the key.
+    text: >-
+      The real z_reschedule() switches only if the key unlocks the interrupts
+      and the CPU is not in an ISR. The contract and the reference fake always
+      select. A gap of the contract, not of the fake.
+    applies:
+      - reference: true
+
+  - id: R9
+    severity: medium
+    title: The event walk model keeps the order of the test, not the wait queue order.
+    applies:
+      - fake: z_sched_waitq_walk
+        how: custom
+        unit: event
+
+  - id: R10
+    severity: medium
+    title: The contract resets the swap data at a wait, msgq uses it as input.
+    text: >-
+      A model on the contract cannot express the hand-over of msgq, in which the
+      waiting thread writes the swap data before the wait.
+    applies:
+      - fake: z_pend_curr
+        unit: msgq
+
+  - id: R11
+    severity: low
+    title: Wait queue head queries return a fixed thread.
+    applies:
+      - fake: z_waitq_head
+        how: [value, sequence]
+      - fake: z_waitq_head_locked
+        how: [value, sequence]
+      - custom: waitq_head_model
+        unit: mutex
+
+  - id: R12
+    severity: low
+    title: The ISR refusal does not stop the scheduler state.
+    text: >-
+      After the panic of the refusal, the fakes accept more calls. A unit that
+      continues after the panic is found only with zassert_stopped_by_panic().
+    applies:
+      - uses: kernel_unit_expect_pend_refusal
+
+  - id: R13
+    severity: low
+    title: The lock spies and the lock model have no lock owner.
+    text: >-
+      The spies and the model release the lock in z_reschedule() and
+      z_pend_curr(), as the contract does. No gap at level 1.
+    applies:
+      - uses: kernel_unit_spy_on_lock
+      - uses: kernel_unit_lock_model_install
+
+  - id: R14a
+    severity: low
+    title: The plain fake z_waitq_init() cannot show the loss of waiters.
+    text: >-
+      A test can show that the unit initializes its wait queue. In the real
+      code, z_waitq_init() on a wait queue with waiters loses the waiters. The
+      plain fake records the call and has no waiters, so no test of the unit can
+      find an init of a wait queue that is in use. The reference fake reports
+      it as a misuse.
+    source: finding R14 of the review (first part)
+    applies:
+      - checks: z_waitq_init
+        reference: false
+
+  - id: R14b
+    severity: low
+    title: k_sched_current_thread_query() returns a thread that the test gives, not the current thread.
+    text: >-
+      The plain fake returns NULL after the reset, or the value of the test.
+      This value has no connection to _current. A unit that uses the result of
+      the query as the current thread passes with a value that the real
+      scheduler does not give.
+    source: finding R14 of the review (second part)
+    applies:
+      - fake: k_sched_current_thread_query
+        how: [value, sequence]
+
+  - id: R15
+    severity: medium
+    title: A priority change of a ready thread cancels the tie rule and the cooperative rule.
+    text: >-
+      In the code, z_thread_prio_set() of a ready thread moves it to the end of
+      its new priority, and the next selection can switch to a thread with the
+      same priority. The mutex model of z_thread_prio_set() does not show this
+      switch.
+    applies:
+      - custom: prio_set_model
+        unit: mutex

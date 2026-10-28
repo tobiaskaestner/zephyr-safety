@@ -1026,6 +1026,53 @@ safety repository and build the target ``dox-kernel-unit-testspec``:
    cmake -S safety/doc -B build-doc
    cmake --build build-doc --target dox-kernel-unit-testspec
 
+Test doubles in the specification
+---------------------------------
+
+The document shows the test doubles of each test: the fakes that the test
+configures, how it configures them, the calls that it checks and the known
+limits of these doubles. Nobody writes this text by hand. The input filter
+of the document runs ``safety/doc/_scripts/kernel_unit_doubles.py``. The
+script reads the test source, the ``CMakeLists.txt`` of the application and
+the sources in ``common``. Thus the text changes together with the tests.
+
+- A test source with the marker ``@kunit_interfaces`` in its file group gets
+  the generated sections. Today ``sem`` and ``mutex`` have the marker. Put
+  the marker after the paragraph "Interfaces below <file>". The filter adds
+  a table there: each fake of the unit, its fake group, and the number of
+  tests that configure or check it.
+- Each test of such a source gets a section "Test doubles" and a section
+  "Checked calls". The doubles are a fixed value (``return_val``), a
+  sequence (``SET_RETURN_SEQ()``), a local custom fake, a shared model or
+  the reference fake. The statements of the ``before`` function of the
+  suite are in the file group, not at each test.
+- The page "Test doubles" (``safety/doc/dox/kernel-unit-testspec/doubles.dox``)
+  has the fake groups, the defaults after the reset, the real copies, the
+  models with their assumptions, the reference fake with the operators of
+  the contract, the local custom fakes and the known limits.
+- The known limits are in ``common/fake_limits.yaml``. This is the only
+  part that is written by hand. Each limit has selectors: the doubles that
+  it applies to. A test that uses such a double in its own statements shows
+  the limit.
+
+Give each local custom fake a comment directly before the function. The
+page "Test doubles" shows the comment as the description of the fake.
+
+The script reads the C text. It does not evaluate ``#if`` or ``if``, so the
+result is the set of doubles that a test can use. Run the check after a
+change of the tests or of ``fake_limits.yaml``:
+
+.. code-block:: console
+
+   python3 safety/doc/_scripts/kernel_unit_doubles.py check
+
+The check fails if a selector of a limit matches no test or names no fake.
+It warns if a local custom fake has no comment. With ``--prose``, it also
+warns if the doc comment of a test does not name a fake that the test body
+configures. The target ``kernel-unit-doubles-check`` of the documentation
+build runs the same check. To see the doubles of the tests of a unit as
+text, run ``kernel_unit_doubles.py unit <unit>``.
+
 Tests for some configurations
 =============================
 
@@ -1069,6 +1116,8 @@ Add a test application
    group with ``@ingroup kernel_unit_tests``, one group for each public
    function of the kernel source file, in the order of the file, and the
    static group. Put each test in the group of its function under test.
+   Put the marker ``@kunit_interfaces`` into the file group (see `Test
+   doubles in the specification`_).
 #. Add the test sources to the ``INPUT`` of
    ``safety/doc/dox/kernel-unit-testspec/Doxyfile.in``. Build the target
    ``dox-kernel-unit-testspec`` and make sure that it gives no warning.
