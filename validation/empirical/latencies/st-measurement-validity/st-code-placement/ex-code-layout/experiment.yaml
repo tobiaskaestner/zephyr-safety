@@ -5,7 +5,7 @@
 
 name: code-layout
 app: wake_latency
-trees: [ws-safety]
+trees: [ws-up]
 repeat: 1
 timeout: 600
 

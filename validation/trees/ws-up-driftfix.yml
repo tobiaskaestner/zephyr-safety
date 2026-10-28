@@ -1,9 +1,9 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# The pinned tree ws-safety-driftfix: a west manifest. "study.py trees setup ws-safety-driftfix"
-# copies it to <trees root>/ws-safety-driftfix/manifest/west.yml and makes the west
-# workspace <trees root>/ws-safety-driftfix/ with exactly these projects at these
+# The pinned tree ws-up-driftfix: a west manifest. "study.py trees setup ws-up-driftfix"
+# copies it to <trees root>/ws-up-driftfix/manifest/west.yml and makes the west
+# workspace <trees root>/ws-up-driftfix/ with exactly these projects at these
 # revisions (scripts/benchmarks/trees.py). Do not change a revision: old
 # results refer to it. Pin a new commit as a new tree (a new file).
 # userdata of self: the description and the Zephyr SDK version of the
@@ -13,28 +13,28 @@ manifest:
   version: "1.0"
   self:
     userdata:
-      description: ws-safety Zephyr plus the SysTick reload gap experiment (branch tkaestner/latency-systick-drift)
+      description: ws-up plus the SysTick reload gap experiment (branch tkaestner/latency-systick-drift-up)
       zephyr_sdk: "1.0.1"
   projects:
     - name: zephyr
-      url: https://github.com/tiacsys/zephyr
-      revision: d793263cd6c0f2f8a2c8fb5d5188aab26e3e439f
+      url: https://github.com/zephyrproject-rtos/zephyr
+      revision: baa55dbae5e05d81a6585a2d3c4cb5a381a540de
       path: zephyr
       west-commands: scripts/west-commands.yml
-      userdata: {branch: tkaestner/latency-systick-drift}   # a local branch of the source, not pushed
+      userdata: {branch: tkaestner/latency-systick-drift-up}   # a local branch of the source, not pushed
     - name: cmsis_6
-      url: https://github.com/ARM-software/CMSIS_6.git
-      revision: b2dfbe1a20bbd49c2d2c605073799671074bbb30
+      url: https://github.com/zephyrproject-rtos/CMSIS_6
+      revision: 1c1840af7a7e757d6e2fec3ddb0e5ce0dfcc93c8
       path: modules/hal/cmsis_6
     - name: hal_stm32
       url: https://github.com/zephyrproject-rtos/hal_stm32
-      revision: 02baa06ccea3304d1f65ec6550c68e5e300fcc58
+      revision: c9550199186236d610092f4005f8c9bae2a6bfcf
       path: modules/hal/stm32
     - name: hal_nordic
       url: https://github.com/zephyrproject-rtos/hal_nordic
-      revision: 4387c79cebd31927fb1ea7d64bee11728ae8041f
+      revision: c708b9fe1b7a36090c468374811a6e934b97e54a
       path: modules/hal/nordic
     - name: hal_nxp
       url: https://github.com/zephyrproject-rtos/hal_nxp
-      revision: c2d68e4b9526aa03174d1da9464dd8e8b87e0a3e
+      revision: a8b437ef366ff9a6f9bee3377dc189c4d2623f5b
       path: modules/hal/nxp

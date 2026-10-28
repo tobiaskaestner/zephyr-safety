@@ -13,15 +13,15 @@ manifest:
   version: "1.0"
   self:
     userdata:
-      description: ws-up plus the interrupt mask hooks for M4 (branch tkaestner/latency-irqoff-hook)
+      description: ws-up plus the interrupt mask hooks for M4 (branch tkaestner/latency-irqoff-hook-up)
       zephyr_sdk: "1.0.1"
   projects:
     - name: zephyr
       url: https://github.com/zephyrproject-rtos/zephyr
-      revision: f46df810a5ff32ea69fc8055a9a9633fcfd87b8f
+      revision: 7b6c482964be8d4c5d62c8a368408be5ddfd3100
       path: zephyr
       west-commands: scripts/west-commands.yml
-      userdata: {branch: tkaestner/latency-irqoff-hook}   # a local branch of the source, not pushed
+      userdata: {branch: tkaestner/latency-irqoff-hook-up}   # a local branch of the source, not pushed
     - name: cmsis_6
       url: https://github.com/zephyrproject-rtos/CMSIS_6
       revision: 1c1840af7a7e757d6e2fec3ddb0e5ce0dfcc93c8

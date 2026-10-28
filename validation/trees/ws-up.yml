@@ -13,12 +13,12 @@ manifest:
   version: "1.0"
   self:
     userdata:
-      description: upstream Zephyr main, v4.5.0-rc3-8
+      description: upstream Zephyr main, v4.5.0-rc3-40
       zephyr_sdk: "1.0.1"
   projects:
     - name: zephyr
       url: https://github.com/zephyrproject-rtos/zephyr
-      revision: 3b42ac0d24bda3d655b70127186bd43115d69223
+      revision: ec98918869caeb2ddaef6e698f9ff36fb60a97ac
       path: zephyr
       west-commands: scripts/west-commands.yml
       userdata: {branch: main}

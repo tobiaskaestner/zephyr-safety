@@ -5,7 +5,7 @@
 
 name: thread2thread-1m
 app: thread_latency
-trees: [ws-safety, ws-up]
+trees: [ws-up]
 repeat: 1
 timeout: 1200
 

@@ -6,7 +6,7 @@
 name: port-smoke-nrf54l15dk
 app: wake_latency
 board: nrf54l15dk/nrf54l15/cpuapp
-trees: [ws-safety, ws-up]
+trees: [ws-up]
 repeat: 1
 timeout: 400
 

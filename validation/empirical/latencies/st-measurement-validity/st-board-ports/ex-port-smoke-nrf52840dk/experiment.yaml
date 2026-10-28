@@ -6,7 +6,7 @@
 name: port-smoke-nrf52840dk
 app: wake_latency
 board: nrf52840dk/nrf52840
-trees: [ws-safety, ws-up]
+trees: [ws-up]
 repeat: 1
 timeout: 400
 

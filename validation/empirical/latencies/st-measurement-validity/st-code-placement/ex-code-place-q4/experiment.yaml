@@ -6,7 +6,7 @@
 
 name: code-place-q4
 app: wake_latency
-trees: [ws-safety]
+trees: [ws-up]
 repeat: 1
 timeout: 300
 
