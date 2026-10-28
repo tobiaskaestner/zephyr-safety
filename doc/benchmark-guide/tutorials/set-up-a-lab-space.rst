@@ -12,6 +12,8 @@ Set up a lab space
      (see :doc:`../howto/wire-the-nucleo-g474re`).
    - Network access to PyPI for the Python packages, and to the Zephyr
      repositories if you have no local clones of them.
+   - git with a user identity (``git config user.name`` and ``git config
+     user.email``). The tutorial :doc:`your-own-study` makes a commit.
 
 A :term:`lab space` is a folder that holds everything of one host that a
 study needs and that the safety repository must not hold: the pinned
@@ -27,9 +29,9 @@ Make the folder and clone the safety repository
    $ mkdir lab-tutorial && cd lab-tutorial && git clone -q <safety repository> safety && git -C safety log --oneline -1
    7004a89 scripts: benchmarks: the command-line tools are executable
 
-The clone is the design repository of the lab space: it has the study
-designs and the tools. The tools of the lab space always come from this
-clone.
+The clone is the :term:`design repository` of the lab space. It has the
+study designs and the tools. The tools of the lab space always come from
+this clone.
 
 Make the Python environment
 ---------------------------
@@ -46,8 +48,16 @@ Write the hardware map
 ----------------------
 
 The hardware map tells the tools the probe and the console of each board.
-Write ``hw-map.yml`` in the lab folder. Use the ``/dev/serial/by-id``
-name of the console, and the serial number of the probe:
+Find the console of the board in the list of the serial devices:
+
+.. code-block:: console
+
+   $ /bin/ls -l /dev/serial/by-id/
+
+The console of the ST-LINK has a name of the form
+``usb-STMicroelectronics_STLINK-V3_<serial>-if02``. The long hex
+``<serial>`` is the probe ID. Write ``hw-map.yml`` in the lab folder,
+with your console name and your probe ID:
 
 .. code-block:: yaml
 
@@ -67,6 +77,12 @@ See :doc:`../howto/make-a-hardware-map` for the details.
 Make the lab space
 ------------------
 
+``lab init`` can clone the trees from local clones. ``--trees-source``
+names a folder of local clones, with the layout ``<folder>/<tree>/<path>``,
+for example the trees root of another lab space. If you have no local
+clones, leave out ``--trees-source``. Then the trees come from their
+URLs.
+
 Run ``lab init`` in the lab folder with the Python of the environment:
 
 .. code-block:: console
@@ -80,11 +96,10 @@ Run ``lab init`` in the lab folder with the Python of the environment:
      hardware map /wrk/z/lab-tutorial/hw-map.yml
    next: cd /wrk/z/lab-tutorial && /wrk/z/lab-tutorial/safety/scripts/benchmarks/study.py trees setup <tree>
 
-``lab init`` writes ``.lab/config``. It records the Python environment, so
-from now on each ``study.py`` in the lab folder runs with that Python,
-also if you start it with the Python of the system. ``--trees-source``
-names a folder of local clones (``<folder>/<tree>/<path>``) to clone the
-trees from; without it, the trees come from their URLs.
+``lab init`` writes ``.lab/config``. It records the Python environment.
+From now on, each ``study.py`` in the lab folder runs with that Python.
+This is also true if you start it with the Python of the system (see
+:doc:`../reference/files/lab-config`).
 
 Set up the pinned tree
 ----------------------
@@ -143,7 +158,8 @@ the wire:
      RESULT: OK
    nucleo_g474re: loopback wire ok; record /wrk/z/lab-tutorial/.lab/hwcheck/history/nucleo_g474re/20261028T010525Z.json
 
-If you see ``RESULT: FAIL``, look at the wire D2 to A3. The record keeps
-all lines of the check.
+If you see ``RESULT: FAIL``, look at the wire D2 to A3 (see
+:doc:`../howto/troubleshoot-a-run`). The record keeps all lines of the
+:term:`wire check`.
 
 You have a lab space that works. Next: :doc:`first-experiment`.
