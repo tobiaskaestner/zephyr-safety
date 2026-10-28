@@ -20,8 +20,12 @@ sys.path.insert(0, str(TOOL))
 import tdl  # noqa: E402
 
 CARDS = sorted((TOOL / "latency-modes" / "cards").glob("*.tdl"))
-# The diagrams of the documentation (timeline-viz directive).
-DOC_DIAGRAMS = sorted((TOOL.parents[1] / "doc").glob("**/diagrams/*.tdl"))
+# The diagrams of the documentation (timeline-viz directive): those of the
+# guides, and those of the benchmark apps beside their code. The app diagrams
+# include the contexts of the benchmark guide (timeline_viz_include_path).
+REPO = TOOL.parents[1]
+DOC_DIAGRAMS = sorted(REPO.glob("doc/**/diagrams/*.tdl")) + sorted(REPO.glob("tests/benchmarks/**/doc/*.tdl"))
+DOC_INCLUDE = [REPO / "doc" / "benchmark-guide" / "diagrams"]
 
 CONTEXTS = """\
 core   hw     "Hardware"
@@ -52,7 +56,7 @@ def test_all_cards_compile():
 
 @pytest.mark.parametrize("path", DOC_DIAGRAMS, ids=lambda p: p.name)
 def test_doc_diagrams_compile_without_overlap(path):
-    card = tdl.compile_file(path, {})
+    card = tdl.compile_file(path, {}, DOC_INCLUDE)
     pieces = card.get("pieces") or [{"from": card["from"], "to": card["to"]}]
     lanes = {}
     for s in card["segs"]:

@@ -12,6 +12,17 @@ Format
   or an unknown ``:term:`` stops the build.
 - Each page is in a toctree. The guide has no page that a reader cannot
   find from the start page.
+- The page of each app is beside its code, in ``tests/benchmarks/<app>/doc/``,
+  and the page of each board port in
+  ``tests/benchmarks/common/boards/<board>/doc/``, as the samples and the
+  boards of Zephyr. The build copies them into the source tree of the
+  guide (``external_content``). A link from such a page to a page of the
+  guide is absolute, for example ``:doc:`/reference/boards```.
+- The build reads ``conf.py`` from ``doc/benchmark-guide`` and builds from a
+  copy: ``sphinx-build -W -c doc/benchmark-guide <empty folder> <output
+  folder>``. zdocs does the same. A build in ``doc/benchmark-guide`` itself
+  stops with an error, because ``external_content`` writes into the source
+  folder.
 
 Structure
 ---------

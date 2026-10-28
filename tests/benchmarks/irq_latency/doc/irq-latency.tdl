@@ -1,4 +1,4 @@
-# apps.rst, irq_latency (M1): the stock path (the default).
+# irq_latency/doc/index.rst, irq_latency (M1): the stock path (the default).
 # Schematic: 1 unit is 1 pixel; the box widths fit the labels, they are
 # not durations. The masks are those of the pinned trees (both the same).
 include apps.tdc

@@ -72,8 +72,13 @@ Add an app
    ``common/scripts/``). The results build needs both: the extractor for the
    app data, the plot script for the standard plots (see :doc:`../reference/files/results-tree`).
    A value or a plot that only this app gives goes into these files.
-#. Add the app to the table in ``tests/benchmarks/README.md`` and to
-   :doc:`../explanation/apps` and :doc:`../reference/apps` in this guide.
+#. Write the page of the app, ``doc/index.rst`` in the app folder, from the
+   page of an existing app: the label ``benchguide-app-<app>``, what the app
+   measures (with a timing diagram ``doc/<app>.tdl`` if it helps), and its
+   options, variants and output. The guide collects the page by itself
+   (:doc:`../reference/apps`).
+#. Add the app to the table in ``tests/benchmarks/README.md`` and to the
+   table of :doc:`../explanation/apps`.
 #. Add an experiment for the app (see :doc:`add-an-experiment`).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in

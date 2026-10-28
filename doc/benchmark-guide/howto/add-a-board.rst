@@ -41,6 +41,11 @@ contract.
 #. If a tree does not pin a module of the board, add the module to the
    tree in ``validation/trees/<tree>.yml`` (see :doc:`add-a-tree`).
 #. Add an overlay for ``loopback_check`` in ``loopback_check/boards/``.
+#. Write the page of the port, ``common/boards/<board>/doc/index.rst``, from
+   the page of an existing port: the label ``benchguide-board-<board>``, the
+   pins, the stimulus timer, the files of the port and what to examine
+   first on the hardware. The guide collects the page by itself
+   (:doc:`../reference/boards`). Add the board to the table there.
 #. Add a ``wake-port-smoke-<port>`` experiment with ``board: <board target>``
    (see :doc:`add-an-experiment`). Build all points with ``run.py
    <experiment> --build-only``.

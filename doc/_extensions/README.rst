@@ -23,6 +23,13 @@ Modules
     zdocs ``skip_class`` and board (one ``:need_count:`` per cell, the boards
     from the run's ``twister.json``). Used by ``test-report`` (``skips.rst``).
 
+``external_content.py``
+    A copy of Zephyr's ``zephyr.external_content`` (Apache-2.0, no
+    changes). It copies sources from outside the document folder into the
+    Sphinx source tree. The benchmark guide loads it only when zdocs did not
+    load the Zephyr module, so its app and board pages (beside their code
+    in ``tests/benchmarks/``) are also there without ``ZEPHYR_BASE``.
+
 ``timeline_viz/``
     The ``timeline-viz`` directive: a timing diagram from a TDL file, as
     inline SVG. It uses the compiler and the renderer of
