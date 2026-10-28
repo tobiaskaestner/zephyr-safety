@@ -185,7 +185,7 @@ stimulus must define them too.
 
 The interrupt path must be on the CMake command line, because
 ``CMakeLists.txt`` selects the overlay of the port from it (see
-:doc:`apps`).
+:doc:`reference/apps`).
 
 .. list-table::
    :header-rows: 1
@@ -270,7 +270,7 @@ The interrupt path must be on the CMake command line, because
        ``LATBENCH_T2T_WORK``, ``LATBENCH_T2T_WAKEUP``
      - n
      - Choice ``LATBENCH_T2T_PRIMITIVE``: the other primitives (see
-       :doc:`apps`). ``EVENT`` selects ``EVENTS``, and ``POLL`` selects
+       :doc:`reference/apps`). ``EVENT`` selects ``EVENTS``, and ``POLL`` selects
        ``POLL``.
    * - ``LATBENCH_T2T_PREEMPT``
      - y

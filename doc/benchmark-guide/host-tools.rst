@@ -578,7 +578,7 @@ Example: four interrupt paths times two anchors give eight points
 
 The paths ``wrapped``, ``direct`` and ``zli`` need no overlay in the
 experiment. ``run.py`` puts their Kconfig value on the CMake command line,
-and the port then adds its ``resp_irq_own.overlay`` (see :doc:`apps`).
+and the port then adds its ``resp_irq_own.overlay`` (see :doc:`reference/apps`).
 
 The experiment folders in the study folders below
 ``validation/empirical/latencies/`` are the current experiments. The

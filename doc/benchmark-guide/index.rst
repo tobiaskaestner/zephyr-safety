@@ -51,7 +51,6 @@ part answers a different question:
 .. toctree::
    :maxdepth: 2
 
-   apps
    common
    kconfig
    output

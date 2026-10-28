@@ -10,4 +10,5 @@ work in this way.
    purpose
    method
    timing-diagrams
+   apps
    documentation-guidelines

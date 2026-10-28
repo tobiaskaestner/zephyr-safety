@@ -134,7 +134,7 @@ Add an app
 #. Do not write a board overlay. The board port gives the ``zephyr,user``
    node and the other devicetree changes.
 #. Write ``src/main.c`` with the frame of the existing apps (see
-   :doc:`apps`):
+   :doc:`explanation/apps`):
 
    - Call ``port_debug_reset()``. Print the old value as
      ``debug_reg_at_boot``.
@@ -169,7 +169,7 @@ Add an app
    app data, the plot script for the standard plots (see :doc:`studies`).
    A value or a plot that only this app gives goes into these files.
 #. Add the app to the table in ``tests/benchmarks/README.md`` and to
-   :doc:`apps` in this guide.
+   :doc:`explanation/apps` and :doc:`reference/apps` in this guide.
 #. Add an experiment for the app (see above).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in
