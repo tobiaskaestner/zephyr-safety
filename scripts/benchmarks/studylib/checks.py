@@ -35,8 +35,9 @@ expect (exactly one form):
     within: {experiment: E, stat: range} + tolerance_bins: k
                                    value in min..max of all points of E,
                                    +- k coarse bins
-    hist_identical_to: {run, point[, tree]}
+    hist_identical_to: {run | experiment, point[, tree]}
                                    the same histogram, bin for bin, on the same tree
+                                   (experiment: its one evidence run)
 REF: point: P | axes: {axis: v} (the point with this axis value and the
 same other axes) | run: <study path>/<experiment>/<UTC> with point: P,
 points: {selected: reference} or the same point id, and tree: T |
@@ -246,18 +247,22 @@ def evaluate(check, src):
 
     if form == "hist_identical_to":
         ref = expect["hist_identical_to"]
+        name = ref.get("run") or ref.get("experiment")
         for s, pts in series.items():
             tree = ref.get("tree", s[1])
-            ref_obs = [r for r in src.run_obs(ref["run"]) if r.point == ref["point"] and r.tree == tree]
+            cands = src.run_obs(ref["run"]) if "run" in ref else src.observations(ref["experiment"])
+            ref_obs = [r for r in cands if r.point == ref["point"] and r.tree == tree]
             if not ref_obs:
-                raise NoValue(f"reference {ref['run']} has no point {tree}/{ref['point']}")
+                raise NoValue(f"reference {name} has no point {tree}/{ref['point']}")
+            if len(ref_obs) > 1:
+                raise NoValue(f"reference {name} {ref['point']}: {len(ref_obs)} runs, the reference is not clear")
             for o in pts:
                 for m in metrics:
                     same = stats.hist_identical(o.rep["hists"][m], ref_obs[0].rep["hists"][m])
                     res.add(same, f"{label(o.series, None, None, len(series) > 1)}/{o.point} {m}: "
                                   f"{'same' if same else 'differs'}",
                             {"point": o.point, "metric": m, "identical": same})
-        return finish(res, "the same histogram, bin for bin as " + f"{ref['run']} {ref['point']}")
+        return finish(res, "the same histogram, bin for bin as " + f"{name} {ref['point']}")
 
     with_run = len({o.run for o in obs}) > 1
     undecided = []

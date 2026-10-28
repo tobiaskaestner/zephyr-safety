@@ -452,6 +452,21 @@ def test_within_tolerance_uses_the_coarse_width_of_the_metric():
     assert r["verdict"] == "confirmed", r["measured"]  # 1050 <= 1020 + 32
 
 
+def test_hist_identical_to_an_experiment():
+    """The reference can be an experiment: the point of its one evidence run."""
+    class S(Src):
+        def observations(self, exp, series=None):
+            return ref if exp == "other" else self.points
+    ref = [obs("p", 90, run="other/20260101T000001Z")]
+    check = {"experiment": "e", "metric": "irq", "stat": None,
+             "expect": {"hist_identical_to": {"experiment": "other", "point": "p"}}}
+    assert checks.evaluate(check, S([obs("q", 90)]))["verdict"] == "confirmed"
+    assert checks.evaluate(check, S([obs("q", 91)]))["verdict"] == "wrong"
+    ref.append(obs("p", 90, run="other/20260102T000001Z"))
+    with pytest.raises(NoValue):
+        checks.evaluate(check, S([obs("q", 90)]))
+
+
 def test_hist_identical_needs_the_same_tree():
     runs = {"st/r/1": [obs("p", 90, tree="ws-up", run="r/1")]}
     with pytest.raises(NoValue):

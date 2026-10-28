@@ -86,15 +86,22 @@ with ``tolerance_bins``):
      - (value - P) - (Q - R), in the same run and :term:`tree`
    * - ``within: {experiment: E, stat: range}`` + ``tolerance_bins: k``
      - the value is in min..max of all points of E, +- k coarse bins
-   * - ``hist_identical_to: {run, point}``
+   * - ``hist_identical_to: {run | experiment, point}``
      - the histograms are the same, bin for bin (on the same tree, or on
-       ``tree``)
+       ``tree``). With ``experiment: E``, the reference is the point of the
+       one evidence run of E
 
 REF is ``point: P``, ``axes: {axis: v}`` (the point with this axis value
 and the same other axes), ``run: <study path>/<experiment>/<UTC>`` with
 ``point``, ``points: {selected: reference}`` and ``tree``,
-``experiment: E, point: same`` (E must have one run with that point), or
-``metric: M, stat: S`` (the same point). For ``max(<stat>)`` over the
+``experiment: E`` with ``point: same`` (the default), ``point: P`` and
+``tree`` (E must have one evidence run with that point), or ``metric: M,
+stat: S`` (the same point). The study must own or import E.
+
+Use ``experiment:`` when the reference is the current data of another
+experiment: the check then needs no change after a new campaign. Use
+``run:`` only when the reference must stay one fixed run, for example the
+old data that a new revision must reproduce. For ``max(<stat>)`` over the
 points, the reference is that of the point that gives the max. A
 ``run:`` reference must not be excluded. The points of each run and tree
 form a series. A check is confirmed only if it holds in each series, for
