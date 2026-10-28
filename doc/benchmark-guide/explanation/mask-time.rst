@@ -8,7 +8,7 @@ code that masks them. It also measures the time of each ISR body. The
 values are in DWT cycles (core clock cycles).
 
 M4 needs a Zephyr :term:`tree` with the hooks of the branch
-``tkaestner/latency-irqoff-hook``. In ``validation/trees/`` this tree is
+``tkaestner/latency-irqoff-hook-up``. In ``validation/trees/`` this tree is
 ``ws-up-irqoff``. The hooks are only for Cortex-M with BASEPRI (ARMv7-M,
 ARMv8-M Mainline) and the legacy context switch (``USE_SWITCH=n``).
 
@@ -122,15 +122,15 @@ Experiments
 
    * - File
      - Content
-   * - ``validation/empirical/latencies/st-measurement-validity/st-mask-instrumentation/ex-m4-validate/experiment.yaml``
+   * - ``validation/empirical/latencies/st-measurement-validity/st-mask-instrumentation/ex-wake-m4-validate/experiment.yaml``
      - Calibration, the probe, and the points of ``wake-systick-prio-1m`` and
        of the WHEEL backend, for the check against the IRQ tail
-   * - ``validation/empirical/latencies/st-mask-time/ex-m4-sweep/experiment.yaml``
+   * - ``validation/empirical/latencies/st-mask-time/ex-wake-m4-sweep/experiment.yaml``
      - Load timers 0/16/64/256 x sleeper threads 0/8/64 x time slicing
        on/off
-   * - ``validation/empirical/latencies/st-mask-time/ex-m4-thread/experiment.yaml``
+   * - ``validation/empirical/latencies/st-mask-time/ex-thread-m4/experiment.yaml``
      - ``thread_latency`` with sem and mutex, 0 and 64 load timers
-   * - ``validation/empirical/latencies/st-measurement-validity/st-mask-instrumentation/ex-m4-image-check/experiment.yaml``
+   * - ``validation/empirical/latencies/st-measurement-validity/st-mask-instrumentation/ex-wake-m4-image-check/experiment.yaml``
      - Build check only: ``ws-up`` and ``ws-up-irqoff`` with the hooks
        off give the same code
 

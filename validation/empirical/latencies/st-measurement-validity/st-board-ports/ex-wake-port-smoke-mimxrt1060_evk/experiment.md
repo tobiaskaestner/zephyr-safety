@@ -8,7 +8,7 @@ of the benchmark to the board `mimxrt1060_evk@C/mimxrt1062/qspi`.
 
 ## Method
 
-- Trees `ws-safety` and `ws-up`, board defaults.
+- Tree `ws-up`, board defaults.
 - 10000 samples.
 - The loopback wire is D2 - A3 (A3 drives, D2 reads).
 

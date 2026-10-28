@@ -100,8 +100,8 @@ the p50 and the p99.
 ## References
 
 - `wp3-variants.md`: the variants, the defaults and the Kconfig traps.
-- `ex-wp3-irq-1m/experiment.md`, `ex-wp3-wake-1m/experiment.md`,
-  `ex-wp3-t2t-1m/experiment.md`: the three experiments.
+- `ex-irq-kconfig-1m/experiment.md`, `ex-wake-kconfig-1m/experiment.md`,
+  `ex-thread-kconfig-1m/experiment.md`: the three experiments.
 - `st-scheduler/study.md`, `st-tick-mode/study.md`,
   `st-code-generation/study.md`, `st-stack-guard/study.md`: the
   sub-studies.
@@ -109,7 +109,7 @@ the p50 and the p99.
   SRAM.
 - `st-default-latencies/st-thread-to-thread/study.md`: the two modes of
   the thread to thread latency.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-threads-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-threads-1m/experiment.md`:
   the wake with 2..64 busy threads.
 - Review of 2026-10-25, §5 (project notes, not in this repository): the
   cost of a sliced busy thread for each wake, from `wake-threads-1m`.

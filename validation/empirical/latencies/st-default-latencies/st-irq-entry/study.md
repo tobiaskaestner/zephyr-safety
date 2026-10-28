@@ -29,6 +29,10 @@ distribution.
 
 ## Experiments
 
+The study owns `irq-smoke` and `irq-checks-1m`. It reads
+`irq-baseline-1m` with an import. The study `zephyr-versions` owns
+`irq-baseline-1m`.
+
 `irq-smoke` is the first check of the method. It measures the four paths
 with the board defaults and an idle CPU. It also measures the direct
 path with a busy CPU. The compare of `direct-busy` with `direct-idle`
@@ -38,11 +42,11 @@ sample count and the stimulus are the defaults of the app.
 
 `irq-baseline-1m` measures the same four paths as `irq-smoke`, with the
 board defaults and an idle CPU. It has 1M samples per point, for plots
-of the distribution and of its tail. It runs on two trees, `ws-safety`
-and `ws-up`. Its point ids are the same as in `irq-smoke`. Its point
-`direct-idle` is the reference point of `irq-checks-1m`. The central
-result `irq-entry-p99-direct` in `study.yaml` comes from this point on
-`ws-up`. This experiment stated no prediction before its run.
+of the distribution and of its tail. It runs on the tree `ws-up`. Its
+point ids are the same as in `irq-smoke`. Its point `direct-idle` is
+the reference point of `irq-checks-1m`. The central result
+`irq-entry-p99-direct` in `study.yaml` comes from this point. This
+experiment stated no prediction before its run.
 
 `irq-checks-1m` starts from two observations of `irq-smoke` on the
 direct path. The first observation is a second mode (H2 in
@@ -68,8 +72,8 @@ the run `irq-checks-1m/20261024T163216Z` (dates from `hypotheses.yaml`):
 - `hypotheses.yaml`: the hypotheses H1, H2 and H3, and their checks.
 - `ex-irq-smoke/experiment.md`: the first check of the method. It is
   the source of the second mode and of the larger tail.
-- `ex-irq-baseline-1m/experiment.md`: the same four paths with 1M
-  samples, and the reference point `direct-idle`.
+- `st-zephyr-versions/ex-irq-baseline-1m/experiment.md`: the same four
+  paths with 1M samples, and the reference point `direct-idle`.
 - `ex-irq-checks-1m/experiment.md`: the checks of the modes against
   `direct-idle`.
 - `tests/benchmarks/irq_latency/Kconfig`: the paths and the defaults of

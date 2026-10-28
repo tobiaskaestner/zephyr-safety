@@ -9,7 +9,7 @@ values of the shortest SysTick reload.
 
 ## Method
 
-- Tree `ws-safety-driftfix`. Semaphore wake (`LATBENCH_WAKE_SEM`).
+- Tree `ws-up-driftfix`. Semaphore wake (`LATBENCH_WAKE_SEM`).
 - 200000 samples per point.
 - The cube has the axes `comp` and `anchor` (point id
   `<comp>-<anchor>`). Three explicit points (`t256-*`) change the load

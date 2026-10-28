@@ -11,7 +11,7 @@
 # a comment gave no basis for a number, the basis text of the check
 # starts with "Reconstruction:" or "Estimate.".
 #
-# The model of H1 (ex-t2t-load-1m/experiment.md, from the review 2026-10-25
+# The model of H1 (ex-thread-load-1m/experiment.md, from the review 2026-10-25
 # §4 and §5): t2t(load) = t2t_fast(no load) + c x n. n is the number of
 # timeouts that expire before the new slice deadline, c is the cost of
 # one node of the DLIST walk.

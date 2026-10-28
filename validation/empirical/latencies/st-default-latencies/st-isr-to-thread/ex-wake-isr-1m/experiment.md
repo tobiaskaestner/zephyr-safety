@@ -8,7 +8,7 @@ the board defaults and an idle CPU.
 
 ## Method
 
-- Tree `ws-safety`, board defaults, idle CPU.
+- Tree `ws-up`, board defaults, idle CPU.
 - 1M samples per point. The stimulus is the default of the app (random
   interval 100..500 us).
 - The woken thread has priority 0. It is preemptible, and time slicing

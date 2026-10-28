@@ -6,9 +6,12 @@ App `wake_latency`, metrics `irq` and `isr2thr`: the IRQ latency and
 the ISR to thread wake latency with periodic load timers, with SysTick
 at the priority of the device IRQ and at a lower priority.
 
+The study `zephyr-versions` owns this experiment. The study
+`load-scaling/systick-priority` reads it with an import.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore given from the wrapped ISR.
+- Tree `ws-up`. Semaphore given from the wrapped ISR.
 - 1M samples per point. 2048 fine bins and 2048 coarse bins.
 - The points are the cube `timers` x `prio` (id `<timers>-<prio>`).
 

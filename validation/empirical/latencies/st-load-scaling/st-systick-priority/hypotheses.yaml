@@ -12,7 +12,7 @@
 # starts with "Reconstruction:" or "Estimate.".
 #
 # The check H1 a reads wake-timers-1m, an experiment of the study
-# load-scaling/timeout-queue-cost (imported with mode reuse).
+# zephyr-versions (imported with mode reuse).
 #
 # Keys of a hypothesis:
 #   id         unique in the study

@@ -26,16 +26,19 @@ experiments.
 
 ## Experiments
 
+The study has no experiments of its own. It reads `thread-baseline-1m`
+and `thread-switch` with imports. The study `zephyr-versions` owns the
+two experiments.
+
 `thread-baseline-1m` measures M3 for each of the 11 kernel objects, with
-the board and kernel defaults. It runs on two trees, `ws-safety` and
-`ws-up`, with 1M samples per point. Two more points measure the
-semaphore and the mutex without preemption. The board time is about 1 h
-for the points of both trees. The central result `t2t-p99-sem` in
-`study.yaml` comes from the point `sem`. This experiment stated no
-prediction before its run.
+the board and kernel defaults. It runs on the tree `ws-up`, with 1M
+samples per point. Two more points measure the semaphore and the mutex
+without preemption. With two trees, the board time was about 1 h. The
+central result `t2t-p99-sem` in `study.yaml` comes from the point `sem`.
+This experiment stated no prediction before its run.
 
 `thread-switch` measures M3 with the new arch interface
-(`USE_SWITCH=y`), on both trees. It asks: does the wake have the same
+(`USE_SWITCH=y`), on the tree `ws-up`. It asks: does the wake have the same
 two modes as with PendSV? It uses the settings of `thread-baseline-1m`,
 for the semaphore and the mutex. Its legacy points are the reference
 from the same session. They have the same settings as `sem` and `mutex`
@@ -57,11 +60,11 @@ before the run `thread2thread-switch/20261025T100427Z` (dates from
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-thread2thread-1m/experiment.md`: the legacy points of all kernel
-  objects.
-- `ex-thread2thread-switch/experiment.md`: the same measurement with
-  `USE_SWITCH=y`.
-- `st-default-latencies/st-isr-to-thread/ex-wake-anchors-1m/experiment.md`:
+- `st-zephyr-versions/ex-thread-baseline-1m/experiment.md`: the legacy
+  points of all kernel objects.
+- `st-zephyr-versions/ex-thread-switch/experiment.md`: the same
+  measurement with `USE_SWITCH=y`.
+- `st-zephyr-versions/ex-wake-anchors-1m/experiment.md`:
   the cost of `USE_SWITCH=y` for the ISR wake.
 - `update_cache()` in `kernel/sched.c`: the slice reset.
 - `tests/benchmarks/thread_latency/Kconfig`: the kernel objects and

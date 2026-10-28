@@ -17,7 +17,7 @@
 # sites without load) are checks in the study mask-time, which imports
 # wake-m4-validate. The pairing counters of the M4 logs (m4_unmatched_end,
 # m4_begin_open) say if a run is usable: they are acceptance checks in
-# ex-m4-validate/experiment.yaml.
+# ex-wake-m4-validate/experiment.yaml.
 #
 # Keys of a hypothesis:
 #   id         unique in the study

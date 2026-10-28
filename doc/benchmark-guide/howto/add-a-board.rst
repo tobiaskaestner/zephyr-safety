@@ -41,7 +41,7 @@ contract.
 #. If a tree does not pin a module of the board, add the module to the
    tree in ``validation/trees/<tree>.yml`` (see :doc:`add-a-tree`).
 #. Add an overlay for ``loopback_check`` in ``loopback_check/boards/``.
-#. Add a ``port-smoke-<port>`` experiment with ``board: <board target>``
+#. Add a ``wake-port-smoke-<port>`` experiment with ``board: <board target>``
    (see :doc:`add-an-experiment`). Build all points with ``run.py
    <experiment> --build-only``.
 #. Connect the board and the wire, and run the smoke experiment. Make sure

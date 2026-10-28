@@ -8,7 +8,7 @@ stimulus.
 
 ## Method
 
-- Tree `ws-safety`. Semaphore given from the wrapped ISR, board
+- Tree `ws-up`. Semaphore given from the wrapped ISR, board
   defaults.
 - 1M samples per point.
 - The app records each sample in one of 64 bins by the tick phase of the

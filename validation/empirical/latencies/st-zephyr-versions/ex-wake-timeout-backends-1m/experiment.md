@@ -6,9 +6,12 @@ App `wake_latency`, metrics `irq` and `isr2thr`: the IRQ latency (M1)
 and the ISR to thread wake latency (M2) for each timeout queue backend,
 with 256 periodic load timers.
 
+The study `zephyr-versions` owns this experiment. The study
+`load-scaling/timeout-queue-cost` reads it with an import.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore given from the wrapped ISR.
+- Tree `ws-up`. Semaphore given from the wrapped ISR.
 - 256 periodic load timers (`LATBENCH_LOAD_TIMERS=256`).
 - 1M samples per point. 2048 fine bins and 2048 coarse bins.
 

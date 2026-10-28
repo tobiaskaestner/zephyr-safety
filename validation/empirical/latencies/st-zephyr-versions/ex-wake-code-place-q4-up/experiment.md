@@ -3,9 +3,13 @@
 ## What it measures
 
 App `wake_latency`, metrics `irq` and `isr2thr`, and the clock drift:
-the points of `wake-code-place-q4` that the tree comparison needs, on the
-tree `ws-up`. The tree difference is the value of `ws-up` minus the
-value of `ws-safety` (`wake-code-place-q4`) at the same point.
+the points of `wake-code-place-q4` that the tree comparison needs. The
+tree difference is the value of this experiment minus the value of
+`wake-code-place-q4` at the same point. Now both experiments run on
+`ws-up`, so the difference compares no Zephyr versions yet.
+
+The study `zephyr-versions` owns this experiment. The checks of its
+H1 read it. No other study imports it.
 
 ## Method
 

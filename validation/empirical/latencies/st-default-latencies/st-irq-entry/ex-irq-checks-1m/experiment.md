@@ -7,7 +7,7 @@ path. The points check the causes of its second mode and larger tail.
 
 ## Method
 
-- Tree `ws-safety`, direct path, 1M samples per point, random stimulus
+- Tree `ws-up`, direct path, 1M samples per point, random stimulus
   interval 100..500 us.
 - No cube: each point changes one factor against `direct-idle` of
   `irq-baseline-1m` (poll 100 ms, 170 MHz, idle CPU, time slicing on).

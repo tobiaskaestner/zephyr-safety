@@ -7,7 +7,7 @@ phase of the stimulus edge, with a random and with a fixed stimulus.
 
 ## Method
 
-- Tree `ws-safety`. Direct ISR path, idle CPU, board defaults.
+- Tree `ws-up`. Direct ISR path, idle CPU, board defaults.
 - 1M samples per point.
 - The app records each sample in one of 64 bins by the tick phase of the
   stimulus edge.

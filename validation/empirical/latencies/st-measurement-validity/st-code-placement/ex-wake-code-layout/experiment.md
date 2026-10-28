@@ -7,7 +7,7 @@ the effect of the place of the code in flash on the latency.
 
 ## Method
 
-- Tree `ws-safety`. Semaphore wake (`LATBENCH_WAKE_SEM`). 200000 samples
+- Tree `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`). 200000 samples
   per point.
 - Code in flash with a pad (`LATBENCH_CODE_FLASH_PAD`).
   `LATBENCH_CODE_PAD_BYTES` sets the pad. `common/src/pad.c` moves all

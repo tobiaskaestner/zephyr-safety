@@ -35,6 +35,8 @@ slicing, there is no fast mode.
 
 ## Experiments
 
+The study owns `wake-isr-1m` and `wake-fast-mode`. It has no imports.
+
 `wake-isr-1m` measures M2 for each kernel object, with the board
 defaults and an idle CPU. It has 1M samples per point. The stimulus is
 the default of the app, a random interval of 100..500 us. The semaphore
@@ -42,9 +44,11 @@ is measured from both ISR kinds, for the compare of the two kinds. The
 other objects are measured from the wrapped ISR. The central result
 `isr2thr-p99-sem` in `study.yaml` comes from the point `wrapped-sem`.
 
-`wake-anchors-1m` finds the setting that makes the two modes. It uses
-only the semaphore, because all five objects have the same two modes. It
-runs on two trees, `ws-safety` and `ws-up`. The anchors are the
+`wake-anchors-1m` finds the setting that makes the two modes. The study
+`zephyr-versions` owns it. This study does not import it, because no
+check of this study uses it. It uses only the semaphore, because all
+five objects have the same two modes. It runs on the tree `ws-up`. The
+anchors are the
 defaults, no time slicing, and `lean.conf` (no time slicing, no stack
 guard, `-O2`). Each anchor runs with the legacy thread switch (PendSV)
 and with the new arch interface (`USE_SWITCH=y`).
@@ -64,9 +68,9 @@ prediction.
 
 - `ex-wake-isr-1m/experiment.md`: the five kernel objects and the two
   ISR kinds.
-- `ex-wake-anchors-1m/experiment.md`: the settings that make the two
-  modes.
-- `ex-fast-mode/experiment.md`: the stimulus delay and the poll interval.
+- `st-zephyr-versions/ex-wake-anchors-1m/experiment.md`: the settings
+  that make the two modes.
+- `ex-wake-fast-mode/experiment.md`: the stimulus delay and the poll interval.
 - `later.md`, item L15 (latency notes): the fast mode.
 - `st-default-latencies/st-thread-to-thread/study.md`: the two modes in
   M3.

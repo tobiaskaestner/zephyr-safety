@@ -81,16 +81,16 @@ files.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 to H4, and their checks.
-- `ex-m4-sweep/experiment.md`: the load sweep in `wake_latency`.
-- `ex-m4-thread/experiment.md`: the thread to thread wake.
+- `ex-wake-m4-sweep/experiment.md`: the load sweep in `wake_latency`.
+- `ex-thread-m4/experiment.md`: the thread to thread wake.
 - `doc/benchmark-guide/explanation/mask-time.rst`: the M4 method.
 - `doc/benchmark-guide/reference/log-format.rst` (section "M4 output"):
   the site names.
-- `st-measurement-validity/st-mask-instrumentation/ex-m4-validate/experiment.md`:
+- `st-measurement-validity/st-mask-instrumentation/ex-wake-m4-validate/experiment.md`:
   the check of the method, and the points `t64-same` and `t256-same`.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`:
   the `ws-up` IRQ max at 256 timers.
-- `st-default-latencies/st-thread-to-thread/ex-thread2thread-1m/experiment.md`:
+- `st-zephyr-versions/ex-thread-baseline-1m/experiment.md`:
   the same thread app without hooks.
 - `claude/latency-benchmarks/m4-design.md` §5.2 (`wake-m4-sweep`) and §5.3
   (`thread-m4`), outside this repository.

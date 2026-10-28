@@ -6,9 +6,12 @@ App `wake_latency`, `LAT META` keys `clock_drift_cyc` and
 `clock_elapsed_cyc`: the cycles that the kernel cycle counter loses
 against TIM2, for different numbers of SysTick reprograms.
 
+The study `zephyr-versions` owns this experiment. The study
+`measurement-validity/clock-drift` reads it with an import.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`).
+- Tree `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`).
 - 200000 samples per point.
 - The points are the cube `anchor` x `timers` (id `<anchor>-<timers>`).
   They change the number of SysTick reprograms.

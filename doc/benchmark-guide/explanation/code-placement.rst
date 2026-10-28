@@ -124,9 +124,10 @@ example, a different number of load threads changes the size of
 ``load.c``.
 
 In the :term:`experiment` ``wake-threads-1m``, builds that differ only in the
-number of load threads give different IRQ latencies and a different
-clock drift. The difference between the two :term:`trees <Tree>` in the ISR to thread
-latency also changes from build to build.
+number of load threads gave different IRQ latencies and a different
+clock drift. The experiment then ran on two :term:`trees <Tree>`. The
+difference between the trees in the ISR to thread latency also changed
+from build to build.
 
 The experiment ``wake-code-layout`` moves all code with a code pad of 0 to 28
 bytes. The :term:`study` ``code-placement`` examines how the latencies change with
@@ -151,7 +152,8 @@ difference is small. The choice ``LATBENCH_CODE_PLACE`` (see
   together with a range from a pad set, or for a smoke test.
 
 The experiments ``wake-code-place-q4`` and ``wake-code-place-q4-up`` examine this
-rule on ``nucleo_g474re``. Their :term:`hypotheses <Hypothesis>` predict that with
+rule on ``nucleo_g474re``. The :term:`hypotheses <Hypothesis>` of the
+studies ``code-placement`` and ``zephyr-versions`` predict that with
 ``LATBENCH_CODE_RAM`` all pads give the same latencies and the same
 drift, and that the difference between the trees does not depend on the
 pad. In flash, the difference between the trees can change with the pad.

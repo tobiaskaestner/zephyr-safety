@@ -25,17 +25,19 @@ The study uses these facts of the code:
 
 ## Experiments
 
-`wake-systick-prio-1m` measures the IRQ latency and the wake with 64 and 256
-periodic load timers (10..100 ms). These loads gave the IRQ tail in
+The study has no experiments of its own. It reads four experiments
+with imports.
+
+`wake-systick-prio-1m` measures the IRQ latency and the wake with 64 and
+256 periodic load timers (10..100 ms). These loads gave the IRQ tail in
 `wake-timers-1m`. Each load runs with SysTick at the same priority as
-EXTI0 and at a lower priority. The experiment runs on two trees,
-`ws-safety` and `ws-up`.
+EXTI0 and at a lower priority. The experiment runs on the tree `ws-up`.
+The study `zephyr-versions` owns it.
 
-The study imports three experiments:
+The other three imports are:
 
-- `wake-timers-1m` (`load-scaling/timeout-queue-cost`): the IRQ tail
-  with 0..256 periodic load timers and SysTick at the same priority as
-  EXTI0.
+- `wake-timers-1m` (`zephyr-versions`): the IRQ tail with 0..256
+  periodic load timers and SysTick at the same priority as EXTI0.
 - `wake-stim-seed-1m` and `wake-load-seed-tail`
   (`measurement-validity/stimulus-sampling`): the tail of the `t64`
   point over 8 stimulus seeds and 4 load seeds.
@@ -60,8 +62,9 @@ and the max for each point of `wake-systick-prio-1m`.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-systick-prio-1m/experiment.md`: the SysTick priority points.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-systick-prio-1m/experiment.md`: the
+  SysTick priority points.
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`:
   the IRQ tail with load timers.
 - `st-measurement-validity/st-stimulus-sampling/study.md`: the seeds of
   the `t64` tail.

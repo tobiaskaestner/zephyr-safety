@@ -54,5 +54,5 @@ study give the measured change of each variant.
 - `../study.md`: the three experiments.
 - Review of 2026-10-25, §5 (project notes, not in this repository): the
   cost of a sliced busy thread for each wake.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-threads-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-threads-1m/experiment.md`:
   the wake with 2..64 busy threads.

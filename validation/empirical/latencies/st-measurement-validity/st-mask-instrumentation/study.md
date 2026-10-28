@@ -77,14 +77,13 @@ the results). H2, H3 and H4 came before the run
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 to H4, and their checks.
-- `ex-m4-image-check/experiment.md`: the build check.
-- `ex-m4-validate/experiment.md`: the check of the site values.
+- `ex-wake-m4-image-check/experiment.md`: the build check.
+- `ex-wake-m4-validate/experiment.md`: the check of the site values.
 - `doc/benchmark-guide/explanation/mask-time.rst`: the M4 method, the hooks, the
   calibration and the probe.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`,
-  `st-load-scaling/st-systick-priority/ex-systick-prio-1m/experiment.md`
-  and
-  `st-load-scaling/st-timeout-queue-cost/ex-timeout-backends-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`,
+  `st-zephyr-versions/ex-wake-systick-prio-1m/experiment.md` and
+  `st-zephyr-versions/ex-wake-timeout-backends-1m/experiment.md`:
   the source of the points and the earlier `ws-up` values.
 - `st-mask-time/study.md`: the study that uses the instrument.
 - `claude/latency-benchmarks/m4-design.md` §2, §3, §4 and §5.1 (outside

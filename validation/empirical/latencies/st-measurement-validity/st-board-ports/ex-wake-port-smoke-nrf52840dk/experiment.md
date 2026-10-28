@@ -8,7 +8,7 @@ flash the board and read the console.
 
 ## Method
 
-- Trees `ws-safety` and `ws-up`, board defaults.
+- Tree `ws-up`, board defaults.
 - 10000 samples.
 
 ## Axes

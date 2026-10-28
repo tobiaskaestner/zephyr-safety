@@ -18,7 +18,7 @@ the stimulus timer and ``k_cycle_get_64()`` again for each edge, and
 calculates the phase from this fresh pair. ``clock_drift_cyc`` in the
 output shows the drift of a run. The :term:`experiment` ``wake-clock-drift`` measures
 it. The experiment ``wake-clock-drift-fix`` examines a change of the SysTick
-driver on the :term:`tree` ``ws-safety-driftfix``.
+driver on the :term:`tree` ``ws-up-driftfix``.
 
 .. _benchguide-systick-wrap:
 
@@ -94,13 +94,14 @@ debug interface mode while a debugger is connected, and software cannot
 stop this mode. The port only prints DHCSR. Disconnect the debugger or do
 a power cycle before a run. The RT1060 port prints ``CCM_CLPCR``.
 
-The trees have different debug defaults
+Trees can have different debug defaults
 ---------------------------------------
 
-The two trees have different defaults for ``CONFIG_ASSERT`` and
-``CONFIG_SPIN_VALIDATE``. Both options add code to the kernel paths that
-the suite measures. Each measurement app sets both to ``n`` in its
-``prj.conf``, so that the trees build the same set of debug code. The
+Two trees can have different defaults for ``CONFIG_ASSERT`` and
+``CONFIG_SPIN_VALIDATE`` (for example ``ws-safety`` and ``ws-up``). Both
+options add code to the kernel paths that the suite measures. Each
+measurement app sets both to ``n`` in its ``prj.conf``, so that all
+trees build the same set of debug code. The
 ``LAT CFG`` line shows the values of the build.
 
 The board gives the timer and the IRQ to drivers

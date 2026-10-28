@@ -60,10 +60,10 @@ The central result `t2t-grows-with-n` in `study.yaml` comes from H1.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-t2t-load-1m/experiment.md`: the load points and the control
+- `ex-thread-load-1m/experiment.md`: the load points and the control
   points.
 - Review 2026-10-25 §4 (timers) and §5 (threads): the model of the slice
   reset.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`,
-  `st-load-scaling/st-timeout-queue-cost/ex-wake-threads-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`,
+  `st-zephyr-versions/ex-wake-threads-1m/experiment.md`:
   the wake data for `c`.

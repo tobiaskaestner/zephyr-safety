@@ -6,9 +6,13 @@ App `wake_latency`, metrics `irq` and `isr2thr`: the IRQ latency (M1)
 and the ISR to thread wake latency (M2) with different numbers of kernel
 timers, with and without time slicing.
 
+The study `zephyr-versions` owns this experiment. The studies
+`load-scaling/timeout-queue-cost` and `load-scaling/systick-priority`
+read it with imports.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore given from the wrapped ISR.
+- Tree `ws-up`. Semaphore given from the wrapped ISR.
 - Board defaults (timeout queue backend DLIST).
 - 1M samples per point. 2048 fine bins and 2048 coarse bins of
   32 cycles: the histogram covers 0..67583 cycles.

@@ -41,6 +41,11 @@ The study uses these mechanisms:
 
 ## Experiments
 
+The study owns `wake-timeout-skiplist-1m`. It reads `wake-threads-1m`,
+`wake-timers-1m` and `wake-timeout-backends-1m` with imports. The study
+`zephyr-versions` owns these three experiments. All four experiments
+run on the tree `ws-up`.
+
 `wake-threads-1m` is the thread axis of the latency plan (§2.4). It
 measures the number and the kind of load threads. The point `none-n0`
 has no load threads. It is the reference, in the same binary as the
@@ -55,9 +60,10 @@ length of the timeout queue alone.
 periodic load timers: DLIST, MINHEAP, WHEEL and BUCKET. The point
 `dlist` gives a reference in the same binary as the other points. The
 point `t256-default` of `wake-timers-1m` has the same load with the
-DLIST backend. The SKIPLIST backend is only in the tree `ws-up`. Thus
+DLIST backend. The SKIPLIST backend is not in all Zephyr versions. Thus
 it is in a separate experiment, `wake-timeout-skiplist-1m`, with the same
-axis name `backend`.
+axis name `backend`. Then `wake-timeout-backends-1m` can run on more than
+one tree.
 
 The predictions were written on 2026-10-24, before the runs
 `wake-timers-1m/20261024T225125Z` and `wake-threads-1m/20261025T004141Z`
@@ -80,11 +86,12 @@ and `thread-slope`.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-wake-threads-1m/experiment.md`: the thread axis.
-- `ex-wake-timers-1m/experiment.md`: the timer axis.
-- `ex-timeout-backends-1m/experiment.md`: the backends and the DLIST
-  reference.
-- `ex-timeout-skiplist-1m/experiment.md`: the SKIPLIST backend.
+- `st-zephyr-versions/ex-wake-threads-1m/experiment.md`: the thread
+  axis.
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`: the timer axis.
+- `st-zephyr-versions/ex-wake-timeout-backends-1m/experiment.md`: the
+  backends and the DLIST reference.
+- `ex-wake-timeout-skiplist-1m/experiment.md`: the SKIPLIST backend.
 - Latency plan §2.4: the load generators.
 - `st-load-scaling/st-systick-priority/study.md`: SysTick at a lower
   priority.

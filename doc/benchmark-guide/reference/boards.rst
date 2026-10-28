@@ -20,16 +20,16 @@ Boards
      - ``tested``: data points exist.
    * - ``nrf52840dk/nrf52840``
      - ``nrf52840dk``
-     - ``untested``: builds on both :term:`trees <Tree>`, not run on hardware.
+     - ``untested``: builds, not run on hardware.
    * - ``nrf54l15dk/nrf54l15/cpuapp``
      - ``nrf54l15dk``
-     - ``untested``: builds on both trees, not run on hardware.
+     - ``untested``: builds, not run on hardware.
    * - ``mimxrt1060_evk@C/mimxrt1062/qspi``
      - ``mimxrt1060_evk``
-     - ``untested``: builds on both trees, not run on hardware.
+     - ``untested``: builds, not run on hardware.
 
 For each ``untested`` board, the section of the board lists what to
-examine first on the hardware. The ``port-smoke-<port>`` :term:`experiments <Experiment>` are
+examine first on the hardware. The ``wake-port-smoke-<port>`` :term:`experiments <Experiment>` are
 the first runs for these boards.
 
 Structure of a port

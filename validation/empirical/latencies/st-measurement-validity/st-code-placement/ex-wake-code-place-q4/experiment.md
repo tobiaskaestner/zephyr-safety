@@ -8,8 +8,9 @@ against a flash control.
 
 ## Method
 
-- Tree `ws-safety`. Semaphore wake (`LATBENCH_WAKE_SEM`). 50000 samples
-  per point. The same points on `ws-up` are in `wake-code-place-q4-up`.
+- Tree `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`). 50000 samples
+  per point. The points of the tree comparison are in
+  `wake-code-place-q4-up` (study `zephyr-versions`).
 - The checks read the p50 of each histogram (`irq`, `isr2thr`) and the
   drift per wake (`clock_drift_cyc` / samples, default anchor only).
 - Board time: about 35 s per point, with build and flash.

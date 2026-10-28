@@ -3,12 +3,14 @@
 ## What it measures
 
 App `thread_latency`, metric `t2t`: the thread to thread wake latency
-(M3) for each kernel object, with the board and kernel defaults, on
-both trees.
+(M3) for each kernel object, with the board and kernel defaults.
+
+The study `zephyr-versions` owns this experiment. The study
+`default-latencies/thread-to-thread` reads it with an import.
 
 ## Method
 
-- Trees `ws-safety` and `ws-up`. 1M samples per point.
+- Tree `ws-up`. 1M samples per point.
 - Random stimulus interval 50..150 us. Histograms with 2048 fine and
   2048 coarse bins.
 - The ISR wakes the giver thread (priority 2) at a random time. The

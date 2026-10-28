@@ -31,21 +31,23 @@ The design lint checks each tree manifest with the parser of west. There
 are four trees today:
 
 ``ws-safety``
-   The Zephyr of the safety workspace.
+   The Zephyr of the safety workspace. No experiment uses this tree now.
 
 ``ws-up``
-   An upstream Zephyr ``main``.
+   An upstream Zephyr ``main`` (v4.5.0-rc3-40). The study measures this
+   Zephyr version.
 
 ``ws-up-irqoff``
    The Zephyr of ``ws-up`` plus the interrupt mask hooks of M4 (see
-   :doc:`../../explanation/mask-time`), on a local branch (``tkaestner/latency-irqoff-hook``). The
-   branch is not pushed, so ``study.py trees setup`` needs a local clone
-   for this tree (``[trees] source``).
+   :doc:`../../explanation/mask-time`), on a local branch
+   (``tkaestner/latency-irqoff-hook-up``). The branch is not pushed, so
+   ``study.py trees setup`` needs a local clone for this tree
+   (``[trees] source``).
 
-``ws-safety-driftfix``
-   The Zephyr of ``ws-safety`` plus a SysTick :term:`experiment`, on a local branch
-   (``tkaestner/latency-systick-drift``). The branch is not pushed, so
-   ``study.py trees setup`` needs a local clone for this tree.
+``ws-up-driftfix``
+   The Zephyr of ``ws-up`` plus a SysTick :term:`experiment`, on a local
+   branch (``tkaestner/latency-systick-drift-up``). The branch is not
+   pushed, so ``study.py trees setup`` needs a local clone for this tree.
 
 Each tree has the repositories ``zephyr``, ``cmsis_6``, ``hal_stm32``,
 ``hal_nordic`` and ``hal_nxp``. The boards and the modules that each board

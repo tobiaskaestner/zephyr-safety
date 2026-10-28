@@ -107,8 +107,8 @@ H3. `report.ipynb` is the report template of the study.
 - `hypotheses.yaml`: the hypotheses H1, H2 and H3, and their checks.
 - `ex-irq-phase-1m/experiment.md`, `ex-wake-phase-1m/experiment.md`:
   the tick phase.
-- `ex-stim-seed-1m/experiment.md`: the 8 stimulus seeds.
-- `ex-load-seed-tail/experiment.md`: the run length and the load seeds.
+- `ex-wake-stim-seed-1m/experiment.md`: the 8 stimulus seeds.
+- `ex-wake-load-seed-tail/experiment.md`: the run length and the load seeds.
 - `scripts/benchmarks/loadmodel.py`: the model of the load timer
   expiries.
 - `st-default-latencies/st-isr-to-thread/ex-wake-isr-1m/experiment.md`:

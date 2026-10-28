@@ -8,7 +8,7 @@ Results tree
      st-measurement-validity/
        st-stimulus-sampling@nucleo_g474re/         the board is fixed here
          instance.json  study.json
-         ex-stim-seed-1m/
+         ex-wake-stim-seed-1m/
            experiment.json
            20261026T155715Z/                       raw run (sealed)
            20261026T155715Z.sha256                 seal

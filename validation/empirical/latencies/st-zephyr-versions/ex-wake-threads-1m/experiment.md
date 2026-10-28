@@ -6,9 +6,12 @@ App `wake_latency`, metrics `irq` and `isr2thr`: the IRQ latency (M1)
 and the ISR to thread wake latency (M2) with different numbers and kinds
 of load threads.
 
+The study `zephyr-versions` owns this experiment. The study
+`load-scaling/timeout-queue-cost` reads it with an import.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore given from the wrapped ISR,
+- Tree `ws-up`. Semaphore given from the wrapped ISR,
   the woken thread at priority 0.
 - Board defaults (`SCHED_SIMPLE`, time slicing on).
 - 1M samples per point. 2048 fine bins and 2048 coarse bins.

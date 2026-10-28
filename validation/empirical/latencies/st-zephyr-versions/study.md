@@ -40,13 +40,14 @@ before is in parentheses.
 - `wake-timeout-backends-1m`, `wake-threads-1m` and `wake-timers-1m`
   (`load-scaling/timeout-queue-cost`): the growth with the load and the
   timeout queue backends.
-- `wake-clock-drift` and `wake-clock-drift-layout` (`measurement-validity/clock-drift`):
-  the drift of the kernel cycle counter.
-- `wake-code-place-q4-up` (`measurement-validity/code-placement`): the points
-  of `wake-code-place-q4` that a comparison of two trees needs.
+- `wake-clock-drift` and `wake-clock-drift-layout`
+  (`measurement-validity/clock-drift`): the drift of the kernel cycle
+  counter.
+- `wake-code-place-q4-up` (`measurement-validity/code-placement`): the
+  points of `wake-code-place-q4` that a comparison of two trees needs.
 
-The study imports `wake-code-place-q4` from `measurement-validity/code-placement`
-for H1.
+The study imports `wake-code-place-q4` from
+`measurement-validity/code-placement` for H1.
 
 ## Open points
 

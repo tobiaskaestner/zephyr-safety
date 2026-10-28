@@ -4,12 +4,14 @@
 
 App `thread_latency`, metric `t2t`: the thread to thread wake latency
 (M3) of the semaphore and the mutex, with the legacy thread switch
-(PendSV) and with the new arch interface (`USE_SWITCH=y`), on both
-trees.
+(PendSV) and with the new arch interface (`USE_SWITCH=y`).
+
+The study `zephyr-versions` owns this experiment. The study
+`default-latencies/thread-to-thread` reads it with an import.
 
 ## Method
 
-- Trees `ws-safety` and `ws-up`. 1M samples per point.
+- Tree `ws-up`. 1M samples per point.
 - Random stimulus interval 50..150 us. Histograms with 2048 fine and
   2048 coarse bins. These are the settings of `thread-baseline-1m`.
 - The points are the cube `primitive` x `arch`.

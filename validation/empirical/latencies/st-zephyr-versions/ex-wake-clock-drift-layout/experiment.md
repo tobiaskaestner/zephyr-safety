@@ -6,9 +6,12 @@ App `wake_latency`, `LAT META` keys `clock_drift_cyc` and
 `clock_elapsed_cyc`: the clock drift of the same wake with two
 histogram sizes and two sample counts.
 
+The study `zephyr-versions` owns this experiment. The study
+`measurement-validity/clock-drift` reads it with an import.
+
 ## Method
 
-- Trees `ws-safety` and `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`),
+- Tree `ws-up`. Semaphore wake (`LATBENCH_WAKE_SEM`),
   time slicing, no load timers.
 - The points are the cube `bins` x `samples` (point id
   `<bins>-<samples>`).

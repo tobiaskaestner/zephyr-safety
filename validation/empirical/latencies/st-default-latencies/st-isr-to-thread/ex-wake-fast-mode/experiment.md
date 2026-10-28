@@ -8,7 +8,7 @@ stimulus delay or on other state.
 
 ## Method
 
-- Tree `ws-safety`. Semaphore given from the wrapped ISR. 200000 samples
+- Tree `ws-up`. Semaphore given from the wrapped ISR. 200000 samples
   per point.
 - No cube: each point changes one factor against `r100-500` (the app
   defaults).

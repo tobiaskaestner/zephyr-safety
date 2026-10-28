@@ -31,10 +31,14 @@ layout of each point is the same. The flash layout of `f0` and `f4` in
 
 ## Experiments
 
+The study owns `wake-code-layout` and `wake-code-place-q4`. It reads
+`wake-stim-seed-1m` with an import. Both experiments of the study run
+on the tree `ws-up`.
+
 `wake-code-layout` measures how much the place of the code in flash changes
-the latency. It moves the code in steps of 4 bytes over 32 bytes, on
-the tree `ws-safety`. Its run `code-layout/20261025T060257Z` (safety
-`5a7d0a5`, 200000 samples, pads 0..28) is the reference in flash. In
+the latency. It moves the code in steps of 4 bytes over 32 bytes. Its
+run `code-layout/20261025T060257Z` (tree `ws-safety`, safety `5a7d0a5`,
+200000 samples, pads 0..28) is the reference in flash. In
 this run, the spread over the pads was (values from the basis texts of
 `hypotheses.yaml`):
 
@@ -59,12 +63,12 @@ changed the drift by 0.01 cycles per wake. Thus 50000 samples are
 sufficient. The board time is about 35 s per point, with build and
 flash.
 
-`wake-code-place-q4-up` is the second part of the check. It asks: does hot
-code in RAM remove the difference between the trees that changes from
-build to build? It has the points of `wake-code-place-q4` that the tree
-comparison needs, on the tree `ws-up`. The tree difference is the value
-of `ws-up` minus the value of `ws-safety` (`wake-code-place-q4`) at the same
-point.
+`wake-code-place-q4-up` was the second part of the check. It asks: does
+hot code in RAM remove the difference between the trees that changes
+from build to build? It has the points of `wake-code-place-q4` that the
+tree comparison needs. The study `zephyr-versions` owns it now. That
+study also has the checks of the tree difference (its H1) and the
+central result `tree-diff`.
 
 The study imports `wake-stim-seed-1m` from
 `measurement-validity/stimulus-sampling`. Its default seed checks a
@@ -77,15 +81,15 @@ The predictions were written before the runs (dates from
 - H1 (2026-10-25, before `code-layout/20261025T060257Z`): the latency
   and the drift change with the pad, with a period of the flash line or
   of the cache line.
-- H2 (2026-10-25, before `code-place-q4/20261025T184743Z` and
-  `code-place-q4-up/20261025T185845Z`, and 2026-10-26, before
-  `stim-seed-1m/20261026T155715Z`): hot code in the CCM SRAM removes
-  the effect of the code address. The pad, the build of another tree
-  and a shift of the CCM code do not change the latency and the drift.
+- H2 (2026-10-25, before `code-place-q4/20261025T184743Z`, and
+  2026-10-26, before `stim-seed-1m/20261026T155715Z`): hot code in the
+  CCM SRAM removes the effect of the code address. The pad and a shift
+  of the CCM code do not change the latency and the drift.
 
 The criteria of the old file map to the checks as follows. C1 (the pad
 in RAM) is H2 a..e. C2 (the tree difference is the same at `r0` and at
-`r4`) is H2 f..j. C3 (the new revision against the old flash data) is
+`r4`) was H2 f..j. Now it is H1 of the study `zephyr-versions`. C3 (the
+new revision against the old flash data) is
 H1 of the study `reproducibility`. C4 (the cost of RAM) has no limit:
 it is the central result `ram-cost`. The log checks of `wake-code-place-q4`
 and `wake-code-place-q4-up` are acceptance checks in their `experiment.yaml`
@@ -94,17 +98,18 @@ files.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-code-layout/experiment.md`: the pad in flash.
-- `ex-code-place-q4/experiment.md`: the pad in RAM and the flash
+- `ex-wake-code-layout/experiment.md`: the pad in flash.
+- `ex-wake-code-place-q4/experiment.md`: the pad in RAM and the flash
   control.
-- `ex-code-place-q4-up/experiment.md`: the same points on `ws-up`.
+- `st-zephyr-versions/ex-wake-code-place-q4-up/experiment.md`: the
+  points of the tree comparison.
 - Run `code-layout/20261025T060257Z` (safety `5a7d0a5`): the reference
   in flash.
 - The commit of `LATBENCH_CODE_PLACE` (`48f1341`): the flash layout of
   `f0` and `f4` is that of `p0` and `p4`.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-threads-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-threads-1m/experiment.md`:
   the two groups of builds.
-- `st-measurement-validity/st-clock-drift/ex-clock-drift-layout/experiment.md`:
+- `st-zephyr-versions/ex-wake-clock-drift-layout/experiment.md`:
   the drift with 200000 and 1000000 samples.
 - `st-measurement-validity/st-reproducibility/study.md`: the check of
   the old flash data.

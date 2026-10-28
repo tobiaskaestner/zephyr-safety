@@ -26,20 +26,25 @@ The study tests two causes:
    Thus the driver can lose whole reloads. An unpinned check gave a
    drift of 4668 ppm.
 
-The tree `ws-safety-driftfix` adds the option
+The tree `ws-up-driftfix` adds the option
 `CORTEX_M_SYSTICK_RELOAD_GAP_COMP` to the SysTick driver. With this
 option, the driver measures the uncounted cycles of each reprogram with
 the DWT cycle counter. It then adds them to the software count.
 
 ## Experiments
 
+The study owns `wake-clock-drift-fix`. It reads `wake-clock-drift` and
+`wake-clock-drift-layout` with imports. The study `zephyr-versions`
+owns these two experiments.
+
 `wake-clock-drift` measures how many cycles the counter loses, and if the
 loss changes with the number of SysTick reprograms. Its anchors and its
-load timers change the number of reprograms. It runs on two trees,
-`ws-safety` and `ws-up`.
+load timers change the number of reprograms. It runs on the tree
+`ws-up`.
 
-`wake-clock-drift-fix` tests both causes. It compares the tree with the
-option against the same tree without it, for the anchors of
+`wake-clock-drift-fix` tests both causes. It runs on the tree
+`ws-up-driftfix`. It compares the tree with the option against the same
+tree without it, for the anchors of
 `wake-clock-drift`. Three more points with 256 load timers test the second
 cause at three values of the shortest SysTick reload.
 
@@ -72,11 +77,12 @@ central result `drift-cause` from H1 and H2.
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.
-- `ex-clock-drift/experiment.md`: the first cause and the anchors.
-- `ex-clock-drift-fix/experiment.md`: the test of both causes.
-- `ex-clock-drift-layout/experiment.md`: the histogram size and the
-  sample count.
-- `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`:
+- `st-zephyr-versions/ex-wake-clock-drift/experiment.md`: the first
+  cause and the anchors.
+- `ex-wake-clock-drift-fix/experiment.md`: the test of both causes.
+- `st-zephyr-versions/ex-wake-clock-drift-layout/experiment.md`: the
+  histogram size and the sample count.
+- `st-zephyr-versions/ex-wake-timers-1m/experiment.md`:
   the point `t0-default` with 9.7 cycles per wake.
 - `tests/benchmarks/common/boards/nucleo_g474re/systick/`: the overlays
   of the shortest reload.

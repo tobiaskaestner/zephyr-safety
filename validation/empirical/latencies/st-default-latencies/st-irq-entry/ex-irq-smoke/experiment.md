@@ -9,7 +9,7 @@ method.
 
 ## Method
 
-- Tree `ws-safety`, board defaults.
+- Tree `ws-up`, board defaults.
 - The sample count and the stimulus are the defaults of the app.
 - No cube: five explicit points. The points have the axes `path` and
   `background` of `irq-baseline-1m`.

@@ -7,8 +7,10 @@ for the SKIPLIST timeout queue backend.
 
 ## Method
 
-- As `wake-timeout-backends-1m`, but only in the tree `ws-up`: the SKIPLIST
-  backend is only in this tree.
+- As `wake-timeout-backends-1m`, on the tree `ws-up`. The SKIPLIST
+  backend is not in all Zephyr versions. Thus it is not a point of
+  `wake-timeout-backends-1m`, because that experiment can run on more
+  than one tree.
 
 ## Axes
 
