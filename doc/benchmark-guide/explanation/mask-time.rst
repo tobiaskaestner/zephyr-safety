@@ -94,50 +94,6 @@ is a thread that masks the interrupts for a known number of cycles. Its
 site must show this length plus the floor. The IRQ tail of the same run
 must show it too. Use the probe only to check the method.
 
-Output
-------
-
-``irqmask_print()`` prints the calibration and the totals as ``LAT META``
-lines (``m4_window_cyc``, ``m4_sections``, ``m4_masked_cyc``,
-``m4_isr_cyc``, ``m4_unmatched_end``, ``m4_begin_open``), then the table:
-
-.. code-block:: text
-
-   LAT M4 BEGIN sites=64 used=37 dropped=0 bins=112 sub_bits=3
-   LAT M4SITE m4.mask.e15.08002f19 kind=mask ipsr=15 pc=0x08002f19 end_pc=0x08003001 n=.. sum=.. min=.. max=..
-   LAT HIST m4.mask.e15.08002f19 n=.. min=.. max=.. mean=.. overflow=0 invalid=0
-   LAT BIN 14 3
-   LAT CBIN 2048 17 256
-   LAT END m4.mask.e15.08002f19
-   ...
-   LAT M4 END
-
-The name of a site is ``m4.<kind>.<ctx>.<pc>``: ``ctx`` is ``t`` for a
-thread or ``e<n>`` for exception number n (14 PendSV, 15 SysTick, 16 + n
-IRQ n). The ``LAT HIST`` blocks have the normal format, so
-``latbench.py summary`` also reads them. ``m4_unmatched_end`` counts an
-end without an open section, ``m4_begin_open`` a start while a section is
-open; both must be 0 after the start.
-
-The tables
-----------
-
-``scripts/benchmarks/m4.py table`` prints one table for the mask
-sections and one for the ISR bodies, sorted by max. It finds the
-function and the source line of each site with ``addr2line`` and ``nm``
-of the SDK in the run manifest. The ELF is the ``.elf`` file next to the
-log (``<app>-<tree>-<point>.elf``, or ``zephyr.elf`` in an older run). For an inlined lock, ``place`` is the line in the real function and
-``via`` lists the inlined functions between:
-
-.. code-block:: console
-
-   python3 scripts/benchmarks/m4.py table <run>/ws-up-irqoff/<point>/rep1.log --top 20
-   python3 scripts/benchmarks/m4.py sweep <run>/ws-up-irqoff/*/rep1.log --md
-
-``sweep`` prints one row for each log: the calibration, the masked share
-of the window, the longest mask section and ISR body, and the IRQ tail of
-the same run.
-
 Limits
 ------
 
@@ -183,13 +139,3 @@ Experiments
 
 The M4 points use smaller latency histograms (1024 fine bins and 1024
 coarse bins of 64 cycles), because the site table takes 31 KB of RAM.
-
-Unit tests
-----------
-
-``unit/irqmask/`` is a ztest app for the site table (bins, entries, full
-table, print format). ``scripts/benchmarks/tests/test_m4.py`` tests
-``m4.py`` with the fixtures
-``scripts/benchmarks/tests/fixtures/m4_*.log`` (the output of the ztest
-app on ``native_sim/native/64``). Run them as the other unit tests (see
-:doc:`unit-tests`), with ``-T tests/benchmarks/unit/irqmask``.

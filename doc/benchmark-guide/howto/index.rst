@@ -13,3 +13,4 @@ the tools work as they do.
    add-a-tree
    add-a-board
    reproduce-a-data-point
+   run-the-unit-tests

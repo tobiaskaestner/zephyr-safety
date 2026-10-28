@@ -241,3 +241,28 @@ Metadata keys
      - load
      - SysTick priority in the NVIC, in the numbers of ``IRQ_CONNECT()``
        (only with ``CONFIG_CORTEX_M_SYSTICK``)
+
+M4 output
+---------
+
+``irqmask_print()`` prints the calibration and the totals as ``LAT META``
+lines (``m4_window_cyc``, ``m4_sections``, ``m4_masked_cyc``,
+``m4_isr_cyc``, ``m4_unmatched_end``, ``m4_begin_open``), then the table:
+
+.. code-block:: text
+
+   LAT M4 BEGIN sites=64 used=37 dropped=0 bins=112 sub_bits=3
+   LAT M4SITE m4.mask.e15.08002f19 kind=mask ipsr=15 pc=0x08002f19 end_pc=0x08003001 n=.. sum=.. min=.. max=..
+   LAT HIST m4.mask.e15.08002f19 n=.. min=.. max=.. mean=.. overflow=0 invalid=0
+   LAT BIN 14 3
+   LAT CBIN 2048 17 256
+   LAT END m4.mask.e15.08002f19
+   ...
+   LAT M4 END
+
+The name of a site is ``m4.<kind>.<ctx>.<pc>``: ``ctx`` is ``t`` for a
+thread or ``e<n>`` for exception number n (14 PendSV, 15 SysTick, 16 + n
+IRQ n). The ``LAT HIST`` blocks have the normal format, so
+``latbench.py summary`` also reads them. ``m4_unmatched_end`` counts an
+end without an open section, ``m4_begin_open`` a start while a section is
+open; both must be 0 after the start.

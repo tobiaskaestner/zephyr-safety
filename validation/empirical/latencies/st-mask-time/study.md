@@ -6,7 +6,7 @@ This study measures which call sites of the kernel mask the interrupts,
 and for how long. It also measures how the longest mask section grows
 with the load. The question of the study is in `study.yaml`.
 
-The study uses the M4 method (`doc/benchmark-guide/m4.rst`). The tree
+The study uses the M4 method (`doc/benchmark-guide/explanation/mask-time.rst`). The tree
 `ws-up-irqoff` has the hooks `CONFIG_ARM_IRQ_MASK_HOOKS` and
 `CONFIG_ARM_IRQ_MASK_HOOKS_ISR`. The hooks record each mask section and
 each ISR body. The latency histograms of these runs are not data
@@ -83,7 +83,9 @@ files.
 - `hypotheses.yaml`: the hypotheses H1 to H4, and their checks.
 - `ex-m4-sweep/experiment.md`: the load sweep in `wake_latency`.
 - `ex-m4-thread/experiment.md`: the thread to thread wake.
-- `doc/benchmark-guide/m4.rst`: the M4 method and the site names.
+- `doc/benchmark-guide/explanation/mask-time.rst`: the M4 method.
+- `doc/benchmark-guide/reference/log-format.rst` (section "M4 output"):
+  the site names.
 - `st-measurement-validity/st-mask-instrumentation/ex-m4-validate/experiment.md`:
   the check of the method, and the points `t64-same` and `t256-same`.
 - `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`:

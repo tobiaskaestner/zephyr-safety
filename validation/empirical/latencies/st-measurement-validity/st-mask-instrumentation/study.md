@@ -79,7 +79,7 @@ the results). H2, H3 and H4 came before the run
 - `hypotheses.yaml`: the hypotheses H1 to H4, and their checks.
 - `ex-m4-image-check/experiment.md`: the build check.
 - `ex-m4-validate/experiment.md`: the check of the site values.
-- `doc/benchmark-guide/m4.rst`: the M4 method, the hooks, the
+- `doc/benchmark-guide/explanation/mask-time.rst`: the M4 method, the hooks, the
   calibration and the probe.
 - `st-load-scaling/st-timeout-queue-cost/ex-wake-timers-1m/experiment.md`,
   `st-load-scaling/st-systick-priority/ex-systick-prio-1m/experiment.md`

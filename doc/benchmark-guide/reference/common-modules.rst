@@ -94,7 +94,7 @@ bin calculation must fit in 32 bits. Then it prints
 period to 0, so that the phase histogram stays empty.
 
 The phase must be less than the period. ``lat_phase_add()`` does not
-examine this condition (a known gap, see :doc:`../unit-tests`).
+examine this condition (a known gap, see :doc:`../explanation/studies-and-verdicts`).
 
 The phase histogram divides the tick into ``LATBENCH_PHASE_BINS`` bins of
 equal width. Bin ``b`` holds the phases from ``b * period / BINS`` to

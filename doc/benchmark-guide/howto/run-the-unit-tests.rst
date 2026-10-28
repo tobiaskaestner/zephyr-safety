@@ -130,21 +130,12 @@ If you change the output format or the sample generator
 ``fixture_sample()`` of the ztest app, make the fixtures again.
 ``unit/README.md`` gives the procedure.
 
-Known gaps
-----------
+M4 unit tests
+-------------
 
-A test for a known defect asserts the correct behavior. While the defect
-is in the code, the test is an expected failure:
-
-- In the ztest app, ``KNOWN_GAP()`` skips the test and prints
-  ``KNOWN GAP:`` with the input and the result. If the result becomes
-  correct, the test fails. Then remove ``KNOWN_GAP()`` from the test.
-- In pytest, the test has ``xfail(strict=True)``. If the test passes,
-  pytest reports a failure. Then remove the marker.
-
-``unit/README.md`` lists the open gaps. Two gaps are open today:
-
-- ``lat_phase_add()`` does not make sure that the phase is less than the
-  period. A larger phase writes after the last bin.
-- In ``lat_hist_print()``, ``sum * 100`` wraps at 2\ :sup:`64`. This occurs
-  only if the sum is more than 1.8e17 cycles.
+``unit/irqmask/`` is a ztest app for the site table (bins, entries, full
+table, print format). ``scripts/benchmarks/tests/test_m4.py`` tests
+``m4.py`` with the fixtures
+``scripts/benchmarks/tests/fixtures/m4_*.log`` (the output of the ztest
+app on ``native_sim/native/64``). Run them as the other unit tests (see
+the sections above), with ``-T tests/benchmarks/unit/irqmask``.

@@ -38,7 +38,7 @@ are four trees today:
 
 ``ws-up-irqoff``
    The Zephyr of ``ws-up`` plus the interrupt mask hooks of M4 (see
-   :doc:`../../m4`), on a local branch (``tkaestner/latency-irqoff-hook``). The
+   :doc:`../../explanation/mask-time`), on a local branch (``tkaestner/latency-irqoff-hook``). The
    branch is not pushed, so ``study.py trees setup`` needs a local clone
    for this tree (``[trees] source``).
 

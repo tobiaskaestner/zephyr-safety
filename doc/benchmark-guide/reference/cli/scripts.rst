@@ -103,3 +103,22 @@ different load seed gives new ticks.
    ``LAT META`` lines of a log, and compares the expiries of the model
    with ``load_timer_expiries``. The model starts the timers at tick 0, so
    the two numbers can differ by a few expiries.
+
+M4 tables (``m4.py``)
+---------------------
+
+``scripts/benchmarks/m4.py table`` prints one table for the mask
+sections and one for the ISR bodies, sorted by max. It finds the
+function and the source line of each site with ``addr2line`` and ``nm``
+of the SDK in the run manifest. The ELF is the ``.elf`` file next to the
+log (``<app>-<tree>-<point>.elf``, or ``zephyr.elf`` in an older run). For an inlined lock, ``place`` is the line in the real function and
+``via`` lists the inlined functions between:
+
+.. code-block:: console
+
+   python3 scripts/benchmarks/m4.py table <run>/ws-up-irqoff/<point>/rep1.log --top 20
+   python3 scripts/benchmarks/m4.py sweep <run>/ws-up-irqoff/*/rep1.log --md
+
+``sweep`` prints one row for each log: the calibration, the masked share
+of the window, the longest mask section and ISR body, and the IRQ tail of
+the same run.

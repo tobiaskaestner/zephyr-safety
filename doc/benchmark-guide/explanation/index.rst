@@ -11,6 +11,8 @@ work in this way.
    method
    timing-diagrams
    apps
+   studies-and-verdicts
    reproducibility
+   mask-time
    code-placement
    documentation-guidelines
