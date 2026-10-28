@@ -148,3 +148,31 @@ def test_old_west_topdir(tmp_path):
     assert run.old_west_topdir(["cmake"], str(old_root), "/x/lab/trees") == []
     assert run.old_west_topdir(["cmake"], str(tmp_path / "no-ws" / "latency-trees"), "/x/lab/latency-trees") == [
         f"-DWEST_TOPDIR={run.NO_WEST_TOPDIR}"]      # no workspace then: no prefix map now either
+
+
+def test_firmware_hash_leaves_out_the_documentation(tmp_path, monkeypatch):
+    """A page in doc/ (or a Markdown file) does not change the firmware hash; a source file does."""
+    import subprocess
+
+    def git(*args):
+        return subprocess.run(["git", *args], cwd=tmp_path, check=True, capture_output=True,
+                              text=True).stdout.strip()
+
+    bench = tmp_path / "tests" / "benchmarks"
+    (bench / "app" / "src").mkdir(parents=True)
+    (bench / "app" / "src" / "main.c").write_text("int main(void) { return 0; }\n")
+    git("init", "-q")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "add", "-A")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "a")
+    monkeypatch.setattr(run, "BENCH_DIR", bench)
+    first = run.firmware_hash(tmp_path, "HEAD")
+    for f in (bench / "app" / "doc" / "index.rst", bench / "common" / "boards" / "b" / "doc" / "index.rst",
+              bench / "app" / "doc" / "app.tdl"):
+        f.parent.mkdir(parents=True, exist_ok=True)
+        f.write_text("page\n")
+    git("add", "-A")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qm", "b")
+    assert run.firmware_hash(tmp_path, "HEAD") == first
+    (bench / "app" / "src" / "main.c").write_text("int main(void) { return 1; }\n")
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "c")
+    assert run.firmware_hash(tmp_path, "HEAD") != first

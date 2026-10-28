@@ -111,8 +111,8 @@ The firmware hash
 
 The firmware hash is a content hash of the firmware files of
 ``tests/benchmarks``. The kind ``firmware/1`` counts all files except the
-host scripts in ``scripts/``, Python, Markdown, ``testcase.yaml`` and
-``boards.yaml``. The manifest records it as ``safety.bench_tree``, with
+host scripts in ``scripts/``, the documentation in ``doc/`` folders,
+Python, Markdown, ``testcase.yaml`` and ``boards.yaml``. The manifest records it as ``safety.bench_tree``, with
 the kind in ``safety.bench_tree_kind``. The app gets it as
 ``LATBENCH_SRC_REV``, not the commit. Thus the same firmware gives the
 same image at any commit (see :doc:`decisions/0004-firmware-hash`).

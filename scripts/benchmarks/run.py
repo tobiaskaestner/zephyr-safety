@@ -187,9 +187,10 @@ def tree_hash(repo_root, rev, path):
 
 
 # Files of tests/benchmarks that do not go into an image: the host scripts (extractors), Python,
-# Markdown, the twister test files and the board list of the host tools (its modules are in the
-# cache key through the tree pins).
-NOT_FIRMWARE = ("/scripts/", ".py", ".md", "/.gitignore", "/testcase.yaml", "/boards.yaml")
+# Markdown, the documentation of the apps and the board ports (doc/), the twister test files and
+# the board list of the host tools (its modules are in the cache key through the tree pins).
+# No commit before the doc/ folders had one, so the hash of each older run stays the same.
+NOT_FIRMWARE = ("/scripts/", "/doc/", ".py", ".md", "/.gitignore", "/testcase.yaml", "/boards.yaml")
 FIRMWARE_HASH = "firmware/1"
 
 
