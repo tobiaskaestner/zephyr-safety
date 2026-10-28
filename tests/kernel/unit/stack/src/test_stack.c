@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_stack Stack unit (kernel/stack.c)
+ * @defgroup kernel_unit_stack kernel/stack.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/stack.c, written as unit tests.
  *
@@ -112,6 +112,197 @@
  * in @c testcase.yaml build the tests once for each Kconfig option above. A
  * test that applies only to some configurations is in an @c \#ifdef block,
  * or it calls ztest_test_skip().
+ *
+ * @par Structure of the tests
+ * Each public function of stack.c has one group below this group. A system
+ * call has one group for z_impl_k_stack_*() and z_vrfy_k_stack_*(). The
+ * data of stack.c has the last group. Each test is in the group of the
+ * function under test. The rules below (locking, system call verification,
+ * object core) apply to more than one function. Their tests are in the
+ * group of the function that they call.
+ *
+ * @par Locking
+ * The spinlock of the stack protects the pointers and the wait queue. Each
+ * path releases it exactly once.
+ * Each path of k_stack_push(), k_stack_pop() and k_stack_cleanup() locks
+ * the spinlock of its stack once, as its first call to the layers below.
+ * Each path releases the lock once, as its last call, with the key of the
+ * lock. The release is k_spin_unlock() (seen as arch_irq_unlock()),
+ * z_reschedule() or z_pend_curr(). The pointers and the buffer change only
+ * while the lock is held. k_free() runs while the lock is held.
+ * k_stack_init() and k_stack_alloc_init() do not lock the stack.
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks its arguments
+ * before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_stack_*(). This function
+ * checks that the pointer is a stack object of the kernel that the thread
+ * has access to:
+ * - z_vrfy_k_stack_alloc_init() uses K_SYSCALL_OBJ_NEVER_INIT(): the object
+ *   must not be initialized yet. It also checks that the number of entries
+ *   is not 0 and that the size of the buffer fits into @c size_t.
+ * - z_vrfy_k_stack_push() and z_vrfy_k_stack_pop() use K_SYSCALL_OBJ(): the
+ *   object must be initialized. z_vrfy_k_stack_pop() also checks with
+ *   K_SYSCALL_MEMORY_WRITE() that the thread can write @c data.
+ *
+ * If a check fails, K_OOPS() stops the thread. Otherwise the function calls
+ * z_impl_k_stack_*() with the same arguments and returns its result.
+ * k_stack_init() and k_stack_cleanup() are not system calls.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that the
+ * oops occurs before the implementation allocates, locks or changes the
+ * stack.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_STACK, stack.c defines the object type of the stacks
+ * and links each stack that k_stack_init() initializes.
+ * stack.c defines the object type @c obj_type_stack. K_OBJ_TYPE_DEFINE()
+ * puts one descriptor of this type into the iterable section
+ * @c k_obj_core_desc. At boot, the object core code initializes the type from
+ * the descriptor and links the stacks that K_STACK_DEFINE() defines (the
+ * section @c k_stack). k_stack_init() links each stack that it initializes
+ * with k_obj_core_init_and_link(). k_stack_alloc_init() calls k_stack_init(),
+ * so it also links the stack. k_stack_cleanup() does not unlink the stack.
+ */
+
+/**
+ * @defgroup kernel_unit_stack_k_stack_init k_stack_init()
+ * @ingroup kernel_unit_stack
+ * @brief k_stack_init() makes an empty stack on the buffer of the caller.
+ *
+ * k_stack_init() sets the three pointers, the lock and the wait queue. It
+ * initializes the kernel object and, with CONFIG_OBJ_CORE_STACK, links the
+ * object core. It does not lock the stack: until k_stack_init() returns, only
+ * the caller uses the stack. It does not write to the buffer and does not
+ * change the flags. K_STACK_DEFINE() in @c zephyr/kernel.h defines a stack
+ * with the same initial state and the flags 0. The test of K_STACK_DEFINE()
+ * is in this group, because stack.c has no function for it.
+ *
+ * @par Functions in kernel/stack.c
+ * - k_stack_init(). It is not a system call.
+ */
+
+/**
+ * @defgroup kernel_unit_stack_k_stack_alloc_init k_stack_alloc_init()
+ * @ingroup kernel_unit_stack
+ * @brief k_stack_alloc_init() allocates the buffer from the resource pool of the thread.
+ *
+ * k_stack_alloc_init() computes the size of the buffer with
+ * size_mul_overflow(). If the size fits into @c size_t, it calls
+ * z_thread_malloc(). On success, it initializes the stack with
+ * k_stack_init() on the new buffer and sets the flags to
+ * @c K_STACK_FLAG_ALLOC. On a failure, it returns -ENOMEM and does not
+ * change the stack. It does not lock the stack.
+ *
+ * @par Functions in kernel/stack.c
+ * - z_impl_k_stack_alloc_init()
+ * - z_vrfy_k_stack_alloc_init(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_stack_z_stack_cleanup z_stack_cleanup()
+ * @ingroup kernel_unit_stack
+ * @brief z_stack_cleanup() is k_stack_cleanup() with the argument @c locked.
+ *
+ * The object code of @c CONFIG_USERSPACE calls z_stack_cleanup() when a
+ * stack object loses its last reference, sometimes while it holds the
+ * scheduler lock (@c locked true). k_stack_cleanup() calls it with
+ * @c locked false. The design text of the cleanup is in the group of
+ * k_stack_cleanup(). The tests in this group call z_stack_cleanup() with
+ * @c locked true. Some tests of k_stack_cleanup() also call it.
+ *
+ * @par Functions in kernel/stack.c
+ * - z_stack_cleanup(). It is a kernel-internal function, not a system call.
+ */
+
+/**
+ * @defgroup kernel_unit_stack_k_stack_cleanup k_stack_cleanup()
+ * @ingroup kernel_unit_stack
+ * @brief k_stack_cleanup() frees an allocated buffer if no thread waits.
+ *
+ * k_stack_cleanup() and z_stack_cleanup() lock the stack. If a thread waits
+ * on the stack, they return -EAGAIN (a CHECKIF()). The argument @c locked of
+ * z_stack_cleanup() tells if the caller holds the scheduler lock. With
+ * @c locked true, the function reads the wait queue with
+ * z_waitq_head_locked(), else with z_waitq_head(), which takes the
+ * scheduler lock. If the flag @c K_STACK_FLAG_ALLOC is set, the function
+ * frees the buffer with k_free(), sets @c base to NULL and clears the flag.
+ * It does not change @c next and @c top. A buffer of the caller (flag not
+ * set) stays.
+ *
+ * @par Functions in kernel/stack.c
+ * - k_stack_cleanup(). It calls z_stack_cleanup() with @c locked false. It
+ *   is not a system call.
+ */
+
+/**
+ * @defgroup kernel_unit_stack_k_stack_push k_stack_push()
+ * @ingroup kernel_unit_stack
+ * @brief k_stack_push() puts a value on the stack, or gives it to a waiting thread.
+ *
+ * k_stack_push() locks the stack and checks that the stack is not full (a
+ * CHECKIF()). If the stack is full, it returns -ENOMEM. Then it tries
+ * z_sched_wake() with the value (see "Hand-over to a waiting thread"
+ * below). If no
+ * thread waits, it writes the value to the entry at @c next and increments
+ * @c next. The full check comes before the hand-over.
+ *
+ * @par Hand-over to a waiting thread
+ * If a thread waits, k_stack_push() gives the value to this thread and not
+ * to the buffer.
+ * k_stack_push() calls z_sched_wake() with the wait queue of the stack, the
+ * return value 0 and the value as the swap data. If z_sched_wake() woke a
+ * thread, the value does not go into the buffer. The woken thread returns
+ * from z_pend_curr() in k_stack_pop() with the result 0 and reads the value
+ * from @c _current->base.swap_data.
+ *
+ * In the tests, the fake z_sched_wake() models the waiting threads, and the
+ * fake z_pend_curr() models the result of the wait. One test connects the two
+ * fakes: a push in z_pend_curr() gives the value to the waiting thread. This
+ * test is in the group of k_stack_pop(), because its action is the pop.
+ *
+ * @par Functions in kernel/stack.c
+ * - z_impl_k_stack_push()
+ * - z_vrfy_k_stack_push(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_stack_k_stack_pop k_stack_pop()
+ * @ingroup kernel_unit_stack
+ * @brief k_stack_pop() takes the last pushed value, or waits for a value.
+ *
+ * k_stack_pop() locks the stack. If the stack is not empty, it decrements
+ * @c next, writes the entry at @c next to @c *data, and returns 0. It does
+ * not wait in this case, also not with a timeout. If the stack is empty, it
+ * returns -EBUSY for K_NO_WAIT. Else it waits with z_pend_curr(). After the
+ * wait, -EAGAIN from z_pend_curr() is a timeout: k_stack_pop() returns
+ * -EAGAIN and does not write @c *data. Each other result is a wake by
+ * k_stack_push(): k_stack_pop() writes @c _current->base.swap_data to
+ * @c *data and returns 0.
+ *
+ * The API says that an ISR must use K_NO_WAIT. stack.c has no check of this
+ * rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler refuses
+ * it with a panic in every build.
+ *
+ * @par Functions in kernel/stack.c
+ * - z_impl_k_stack_pop()
+ * - z_vrfy_k_stack_pop(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_stack_static Static functions and data
+ * @ingroup kernel_unit_stack
+ * @brief The static functions of stack.c, and the data that stack.c defines.
+ *
+ * @par Functions in kernel/stack.c
+ * stack.c has no static functions.
+ *
+ * @par Data in kernel/stack.c
+ * - @c obj_type_stack and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_STACK}. The tests of the descriptor are in this
+ *   group.
  */
 
 #include <stdint.h>
@@ -301,17 +492,10 @@ static void stack_unit_before(void *fixture)
 
 ZTEST_SUITE(stack_unit, NULL, NULL, stack_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_stack_init Initialization
- * @ingroup kernel_unit_stack
- * @brief k_stack_init() makes an empty stack on the buffer of the caller.
- *
- * k_stack_init() sets the three pointers, the lock and the wait queue. It
- * initializes the kernel object and, with CONFIG_OBJ_CORE_STACK, links the
- * object core. It does not lock the stack: until k_stack_init() returns, only
- * the caller uses the stack. It does not write to the buffer and does not
- * change the flags. K_STACK_DEFINE() in @c zephyr/kernel.h defines a stack
- * with the same initial state and the flags 0.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -323,7 +507,7 @@ ZTEST_SUITE(stack_unit, NULL, NULL, stack_unit_before, NULL, NULL);
  * - Expected: base and next are the buffer. top is the buffer plus 4
  *   entries.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_sets_pointers)
@@ -348,7 +532,7 @@ ZTEST(stack_unit, test_init_sets_pointers)
  * - Expected: all bytes of the lock are 0 (the value of an unlocked
  *   spinlock).
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_resets_lock)
@@ -370,7 +554,7 @@ ZTEST(stack_unit, test_init_resets_lock)
  * - Action: k_stack_init().
  * - Expected: one call of z_waitq_init() with the wait queue of the stack.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_initializes_wait_queue)
@@ -391,7 +575,7 @@ ZTEST(stack_unit, test_init_initializes_wait_queue)
  * - Action: k_stack_init().
  * - Expected: one call of k_object_init() with the stack.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_initializes_kernel_object)
@@ -414,7 +598,7 @@ ZTEST(stack_unit, test_init_initializes_kernel_object)
  * - Expected calls: z_waitq_init(), k_object_init() (with CONFIG_USERSPACE),
  *   k_obj_core_init_and_link() (with CONFIG_OBJ_CORE_STACK). No lock.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_call_order)
@@ -436,7 +620,7 @@ ZTEST(stack_unit, test_init_call_order)
  * - Action: k_stack_init() with this buffer.
  * - Expected: all entries and the guard entry keep the pattern.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_does_not_write_buffer)
@@ -462,7 +646,7 @@ ZTEST(stack_unit, test_init_does_not_write_buffer)
  * - Action: k_stack_init().
  * - Expected: the flags are 0xA5.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_does_not_change_flags)
@@ -484,7 +668,7 @@ ZTEST(stack_unit, test_init_does_not_change_flags)
  * - Action: k_stack_init() with 0 entries.
  * - Expected: base, next and top are the buffer.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_init_zero_entries)
@@ -511,7 +695,7 @@ K_STACK_DEFINE(unit_static_stack, N_ENTRIES);
  * - Expected: base and next are the same address. top is base plus 4
  *   entries. The flags are 0.
  *
- * @ingroup kernel_unit_stack_init
+ * @ingroup kernel_unit_stack_k_stack_init
  */
 ZTEST(stack_unit, test_init_static_definition)
 {
@@ -520,17 +704,10 @@ ZTEST(stack_unit, test_init_static_definition)
 	zassert_equal(unit_static_stack.flags, 0);
 }
 
-/**
- * @defgroup kernel_unit_stack_alloc Allocated buffer
- * @ingroup kernel_unit_stack
- * @brief k_stack_alloc_init() allocates the buffer from the resource pool of the thread.
- *
- * k_stack_alloc_init() computes the size of the buffer with
- * size_mul_overflow(). If the size fits into @c size_t, it calls
- * z_thread_malloc(). On success, it initializes the stack with
- * k_stack_init() on the new buffer and sets the flags to
- * @c K_STACK_FLAG_ALLOC. On a failure, it returns -ENOMEM and does not
- * change the stack. It does not lock the stack.
+/*
+ * Tests: Allocated buffer. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -545,7 +722,7 @@ ZTEST(stack_unit, test_init_static_definition)
  *   4 * sizeof(stack_data_t). base and next are the buffer. top is the
  *   buffer plus 4 entries. One call of z_waitq_init() with the wait queue.
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_allocates_buffer)
@@ -574,7 +751,7 @@ ZTEST(stack_unit, test_alloc_init_allocates_buffer)
  * - Expected: the flags are exactly K_STACK_FLAG_ALLOC. The other bits are
  *   0.
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_sets_alloc_flag)
@@ -598,7 +775,7 @@ ZTEST(stack_unit, test_alloc_init_sets_alloc_flag)
  *   CONFIG_USERSPACE), k_obj_core_init_and_link() (with
  *   CONFIG_OBJ_CORE_STACK).
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_call_order)
@@ -626,7 +803,7 @@ ZTEST(stack_unit, test_alloc_init_call_order)
  * - Expected: return value -ENOMEM. All bytes of the stack object keep the
  *   pattern. The only call is z_thread_malloc().
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_no_memory_returns_enomem)
@@ -657,7 +834,7 @@ ZTEST(stack_unit, test_alloc_init_no_memory_returns_enomem)
  * - Expected: return value -ENOMEM. No call of z_thread_malloc(). The stack
  *   object keeps the pattern.
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_size_overflow_returns_enomem)
@@ -690,7 +867,7 @@ ZTEST(stack_unit, test_alloc_init_size_overflow_returns_enomem)
  * - Expected: return value -ENOMEM. One call of z_thread_malloc() with the
  *   number of entries times sizeof(stack_data_t).
  *
- * @ingroup kernel_unit_stack_alloc
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_alloc_init_largest_size)
@@ -708,20 +885,10 @@ ZTEST(stack_unit, test_alloc_init_largest_size)
 	zassert_equal(z_thread_malloc_fake.arg0_val, (size_t)n * sizeof(stack_data_t));
 }
 
-/**
- * @defgroup kernel_unit_stack_cleanup Cleanup
- * @ingroup kernel_unit_stack
- * @brief k_stack_cleanup() frees an allocated buffer if no thread waits.
- *
- * k_stack_cleanup() and z_stack_cleanup() lock the stack. If a thread waits
- * on the stack, they return -EAGAIN (a CHECKIF()). The argument @c locked of
- * z_stack_cleanup() tells if the caller holds the scheduler lock. With
- * @c locked true, the function reads the wait queue with
- * z_waitq_head_locked(), else with z_waitq_head(), which takes the
- * scheduler lock. If the flag @c K_STACK_FLAG_ALLOC is set, the function
- * frees the buffer with k_free(), sets @c base to NULL and clears the flag.
- * It does not change @c next and @c top. A buffer of the caller (flag not
- * set) stays.
+/*
+ * Tests: Cleanup. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -734,7 +901,7 @@ ZTEST(stack_unit, test_alloc_init_largest_size)
  * - Expected: return value 0. One call of k_free() with the buffer. base is
  *   NULL. The flags are 0.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_frees_allocated_buffer)
@@ -763,7 +930,7 @@ ZTEST(stack_unit, test_cleanup_frees_allocated_buffer)
  * - Expected: next is the buffer plus 2 entries. top is the buffer plus 4
  *   entries.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_keeps_next_and_top)
@@ -790,7 +957,7 @@ ZTEST(stack_unit, test_cleanup_keeps_next_and_top)
  * - Expected: return value 0. No call of k_free(). base, next and top do
  *   not change.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_keeps_caller_buffer)
@@ -816,7 +983,7 @@ ZTEST(stack_unit, test_cleanup_keeps_caller_buffer)
  * - Action: k_stack_cleanup() two times.
  * - Expected: both return 0. One call of k_free().
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_twice_frees_once)
@@ -840,7 +1007,7 @@ ZTEST(stack_unit, test_cleanup_twice_frees_once)
  * - Action: k_stack_cleanup().
  * - Expected: the flags are 0xFF without K_STACK_FLAG_ALLOC.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_clears_only_alloc_flag)
@@ -868,7 +1035,7 @@ ZTEST(stack_unit, test_cleanup_clears_only_alloc_flag)
  * - Expected (with CHECKIF() active): one call of z_waitq_head() with the
  *   wait queue of the stack. No call of z_waitq_head_locked().
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_unlocked_reads_wait_queue)
@@ -899,7 +1066,7 @@ ZTEST(stack_unit, test_cleanup_unlocked_reads_wait_queue)
  *   one call of z_waitq_head_locked() with the wait queue of the stack. No
  *   call of z_waitq_head().
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_z_stack_cleanup
  * @see z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_locked_reads_wait_queue_locked)
@@ -930,7 +1097,7 @@ ZTEST(stack_unit, test_cleanup_locked_reads_wait_queue_locked)
  * - Expected: return value -EAGAIN. No call of k_free(). base and the flags
  *   do not change.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_unlocked_thread_waits_returns_eagain)
@@ -964,7 +1131,7 @@ ZTEST(stack_unit, test_cleanup_unlocked_thread_waits_returns_eagain)
  * - Expected: return value -EAGAIN. No call of k_free() and of
  *   z_waitq_head(). base and the flags do not change.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_z_stack_cleanup
  * @see z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_locked_thread_waits_returns_eagain)
@@ -999,7 +1166,7 @@ ZTEST(stack_unit, test_cleanup_locked_thread_waits_returns_eagain)
  * - Expected: both return 0. Two calls of k_free(). No call of
  *   z_waitq_head() or z_waitq_head_locked().
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_no_runtime_checks_frees_with_waiter)
@@ -1038,7 +1205,7 @@ ZTEST(stack_unit, test_cleanup_no_runtime_checks_frees_with_waiter)
  *   k_free(). The fake assertion hook returns, so each call continues,
  *   frees the buffer and returns 0.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_assert_on_errors)
@@ -1070,7 +1237,7 @@ ZTEST(stack_unit, test_cleanup_assert_on_errors)
  * - Action: k_stack_cleanup() and z_stack_cleanup() with locked true.
  * - Expected: no failed assertion.
  *
- * @ingroup kernel_unit_stack_cleanup
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_cleanup_assert_on_errors_no_waiter)
@@ -1087,16 +1254,10 @@ ZTEST(stack_unit, test_cleanup_assert_on_errors_no_waiter)
 }
 #endif /* CONFIG_ASSERT_ON_ERRORS */
 
-/**
- * @defgroup kernel_unit_stack_push Push
- * @ingroup kernel_unit_stack
- * @brief k_stack_push() puts a value on the stack, or gives it to a waiting thread.
- *
- * k_stack_push() locks the stack and checks that the stack is not full (a
- * CHECKIF()). If the stack is full, it returns -ENOMEM. Then it tries
- * z_sched_wake() with the value (see @ref kernel_unit_stack_handover). If no
- * thread waits, it writes the value to the entry at @c next and increments
- * @c next. The full check comes before the hand-over.
+/*
+ * Tests: Push. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -1109,7 +1270,7 @@ ZTEST(stack_unit, test_cleanup_assert_on_errors_no_waiter)
  * - Expected: return value 0. Entry 0 is value 0. next is the buffer plus 1
  *   entry. The other entries keep the pattern.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_stores_value)
@@ -1136,7 +1297,7 @@ ZTEST(stack_unit, test_push_stores_value)
  * - Expected: each call returns 0. Entry i is value i. next is top. The
  *   guard entry keeps the pattern.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_fills_buffer_in_order)
@@ -1166,7 +1327,7 @@ ZTEST(stack_unit, test_push_fills_buffer_in_order)
  * - Expected: return value -ENOMEM. next is top. The entries and the guard
  *   entry do not change. No call of z_sched_wake().
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_full_returns_enomem)
@@ -1203,7 +1364,7 @@ ZTEST(stack_unit, test_push_full_returns_enomem)
  * - Expected: return value -ENOMEM. No call of z_sched_wake(). The thread
  *   still waits.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_zero_entries_no_handover)
@@ -1236,7 +1397,7 @@ ZTEST(stack_unit, test_push_zero_entries_no_handover)
  * - Expected: return value 0. The guard entry after the buffer is value 9.
  *   next is top plus 1 entry.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_no_runtime_checks_writes_after_top)
@@ -1269,7 +1430,7 @@ ZTEST(stack_unit, test_push_no_runtime_checks_writes_after_top)
  *   continues, writes value 9 to the guard entry and returns 0. No failed
  *   assertion for the second call.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_assert_on_errors)
@@ -1300,7 +1461,7 @@ ZTEST(stack_unit, test_push_assert_on_errors)
  * - Action: z_impl_k_stack_push() of 0, then of UINTPTR_MAX.
  * - Expected: both return 0. Entry 0 is 0, entry 1 is UINTPTR_MAX.
  *
- * @ingroup kernel_unit_stack_push
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_push_any_value)
@@ -1316,20 +1477,10 @@ ZTEST(stack_unit, test_push_any_value)
 	zassert_equal(buffer[1], UINTPTR_MAX);
 }
 
-/**
- * @defgroup kernel_unit_stack_handover Hand-over to a waiting thread
- * @ingroup kernel_unit_stack
- * @brief If a thread waits, k_stack_push() gives the value to this thread and not to the buffer.
- *
- * k_stack_push() calls z_sched_wake() with the wait queue of the stack, the
- * return value 0 and the value as the swap data. If z_sched_wake() woke a
- * thread, the value does not go into the buffer. The woken thread returns
- * from z_pend_curr() in k_stack_pop() with the result 0 and reads the value
- * from @c _current->base.swap_data.
- *
- * In the tests, the fake z_sched_wake() models the waiting threads, and the
- * fake z_pend_curr() models the result of the wait. One test connects the two
- * fakes: a push in z_pend_curr() gives the value to the waiting thread.
+/*
+ * Tests: Hand-over to a waiting thread. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -1343,7 +1494,7 @@ ZTEST(stack_unit, test_push_any_value)
  *   of the stack, the return value 0 and value 0. next is base. Entry 0
  *   keeps the pattern.
  *
- * @ingroup kernel_unit_stack_handover
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_handover_push_gives_value_to_thread)
@@ -1373,7 +1524,7 @@ ZTEST(stack_unit, test_handover_push_gives_value_to_thread)
  * - Expected: one call of z_sched_wake(). One thread still waits. The stack
  *   is empty.
  *
- * @ingroup kernel_unit_stack_handover
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_handover_wakes_one_thread_only)
@@ -1399,7 +1550,7 @@ ZTEST(stack_unit, test_handover_wakes_one_thread_only)
  * - Expected: one call of z_sched_wake() with the wait queue, 0 and value 0.
  *   Entry 0 is value 0.
  *
- * @ingroup kernel_unit_stack_handover
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_handover_no_thread_stores_value)
@@ -1457,7 +1608,7 @@ static void other_thread_pushes(void)
  * - Expected: return value 0. The data is value 7. The stack is empty, and
  *   the buffer did not change.
  *
- * @ingroup kernel_unit_stack_handover
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop(), z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_handover_push_reaches_waiting_pop)
@@ -1476,23 +1627,10 @@ ZTEST(stack_unit, test_handover_push_reaches_waiting_pop)
 	zassert_equal(buffer[0], FILL_DATA);
 }
 
-/**
- * @defgroup kernel_unit_stack_pop Pop
- * @ingroup kernel_unit_stack
- * @brief k_stack_pop() takes the last pushed value, or waits for a value.
- *
- * k_stack_pop() locks the stack. If the stack is not empty, it decrements
- * @c next, writes the entry at @c next to @c *data, and returns 0. It does
- * not wait in this case, also not with a timeout. If the stack is empty, it
- * returns -EBUSY for K_NO_WAIT. Else it waits with z_pend_curr(). After the
- * wait, -EAGAIN from z_pend_curr() is a timeout: k_stack_pop() returns
- * -EAGAIN and does not write @c *data. Each other result is a wake by
- * k_stack_push(): k_stack_pop() writes @c _current->base.swap_data to
- * @c *data and returns 0.
- *
- * The API says that an ISR must use K_NO_WAIT. stack.c has no check of this
- * rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler refuses
- * it with a panic in every build.
+/*
+ * Tests: Pop. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -1505,7 +1643,7 @@ ZTEST(stack_unit, test_handover_push_reaches_waiting_pop)
  * - Expected: return value 0. The data is value 1. next is the buffer plus
  *   1 entry. The entries do not change.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_takes_last_value)
@@ -1534,7 +1672,7 @@ ZTEST(stack_unit, test_pop_takes_last_value)
  *   z_impl_k_stack_pop() 4 times.
  * - Expected: the pops give values 3, 2, 1, 0. The stack is empty.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop(), z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_pop_last_in_first_out)
@@ -1563,7 +1701,7 @@ ZTEST(stack_unit, test_pop_last_in_first_out)
  * - Action: z_impl_k_stack_pop() with K_FOREVER.
  * - Expected: return value 0. The data is value 0. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_with_values_does_not_wait)
@@ -1590,7 +1728,7 @@ ZTEST(stack_unit, test_pop_with_values_does_not_wait)
  * - Expected: return value -EBUSY. The data keeps the pattern. next is
  *   base. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_empty_no_wait_returns_ebusy)
@@ -1618,7 +1756,7 @@ ZTEST(stack_unit, test_pop_empty_no_wait_returns_ebusy)
  * - Expected: two calls of z_pend_curr() with the lock of the stack, the
  *   wait queue of the stack and the timeout of the call.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_empty_waits_with_timeout)
@@ -1650,7 +1788,7 @@ ZTEST(stack_unit, test_pop_empty_waits_with_timeout)
  * - Expected: return value 0. The data is value 5. The stack and the buffer
  *   do not change.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_after_wake_gives_swap_data)
@@ -1677,7 +1815,7 @@ ZTEST(stack_unit, test_pop_after_wake_gives_swap_data)
  * - Action: z_impl_k_stack_pop() with a timeout.
  * - Expected: return value -EAGAIN. The data keeps the pattern.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_timeout_returns_eagain)
@@ -1705,7 +1843,7 @@ ZTEST(stack_unit, test_pop_timeout_returns_eagain)
  * - Action: z_impl_k_stack_pop() with a timeout.
  * - Expected: return value 0. The data is value 5.
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_other_wait_result_is_wake)
@@ -1741,7 +1879,7 @@ ZTEST(stack_unit, test_pop_other_wait_result_is_wake)
  *   k_stack_pop() writes the swap data (see
  *   test_pop_other_wait_result_is_wake).
  *
- * @ingroup kernel_unit_stack_pop
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_pop_in_isr_with_wait_refused_by_scheduler)
@@ -1767,19 +1905,10 @@ ZTEST(stack_unit, test_pop_in_isr_with_wait_refused_by_scheduler)
 #endif
 }
 
-/**
- * @defgroup kernel_unit_stack_locking Locking
- * @ingroup kernel_unit_stack
- * @brief The spinlock of the stack protects the pointers and the wait queue. Each path releases it
- * exactly once.
- *
- * Each path of k_stack_push(), k_stack_pop() and k_stack_cleanup() locks
- * the spinlock of its stack once, as its first call to the layers below.
- * Each path releases the lock once, as its last call, with the key of the
- * lock. The release is k_spin_unlock() (seen as arch_irq_unlock()),
- * z_reschedule() or z_pend_curr(). The pointers and the buffer change only
- * while the lock is held. k_free() runs while the lock is held.
- * k_stack_init() and k_stack_alloc_init() do not lock the stack.
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /**
@@ -1791,7 +1920,7 @@ ZTEST(stack_unit, test_pop_in_isr_with_wait_refused_by_scheduler)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_lock_push_store_unlocks)
@@ -1816,7 +1945,7 @@ ZTEST(stack_unit, test_lock_push_store_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_reschedule() with the
  *   lock of the stack and the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_lock_push_handover_reschedules)
@@ -1841,7 +1970,7 @@ ZTEST(stack_unit, test_lock_push_handover_reschedules)
  * - Action: z_impl_k_stack_push().
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_lock_push_full_unlocks)
@@ -1870,7 +1999,7 @@ ZTEST(stack_unit, test_lock_push_full_unlocks)
  * - Action: z_impl_k_stack_push().
  * - Expected: 1 value at the lock, 2 values at the release.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_lock_push_changes_under_lock)
@@ -1899,7 +2028,7 @@ ZTEST(stack_unit, test_lock_push_changes_under_lock)
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key. 2
  *   values at the lock. 1 value and the data value 1 at the release.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_lock_pop_value_unlocks)
@@ -1928,7 +2057,7 @@ ZTEST(stack_unit, test_lock_pop_value_unlocks)
  * - Action: z_impl_k_stack_pop() with K_NO_WAIT.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_lock_pop_no_wait_unlocks)
@@ -1954,7 +2083,7 @@ ZTEST(stack_unit, test_lock_pop_no_wait_unlocks)
  * - Expected calls: arch_irq_lock(), z_pend_curr() with the lock of the
  *   stack and the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_lock_pop_wait_pends)
@@ -1981,7 +2110,7 @@ ZTEST(stack_unit, test_lock_pop_wait_pends)
  * - Expected calls: arch_irq_lock(), z_pend_curr() with the lock of the
  *   stack and the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_lock_pop_timeout_pends)
@@ -2008,7 +2137,7 @@ ZTEST(stack_unit, test_lock_pop_timeout_pends)
  * - Expected calls: arch_irq_lock(), z_waitq_head() (with CHECKIF()
  *   active), k_free(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_lock_cleanup_frees_under_lock)
@@ -2035,7 +2164,7 @@ ZTEST(stack_unit, test_lock_cleanup_frees_under_lock)
  * - Expected calls: arch_irq_lock(), z_waitq_head(), arch_irq_unlock() with
  *   the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_lock_cleanup_thread_waits_unlocks)
@@ -2068,7 +2197,7 @@ ZTEST(stack_unit, test_lock_cleanup_thread_waits_unlocks)
  * - Expected calls: arch_irq_lock(), z_waitq_head_locked() (with CHECKIF()
  *   active), k_free(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_z_stack_cleanup
  * @see z_stack_cleanup()
  */
 ZTEST(stack_unit, test_lock_cleanup_locked_takes_stack_lock)
@@ -2094,7 +2223,7 @@ ZTEST(stack_unit, test_lock_cleanup_locked_takes_stack_lock)
  * - Expected calls: arch_irq_lock(), z_waitq_head() (with CHECKIF()
  *   active), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup(), z_stack_cleanup()
  */
 ZTEST(stack_unit, test_lock_cleanup_caller_buffer_unlocks)
@@ -2119,7 +2248,7 @@ ZTEST(stack_unit, test_lock_cleanup_caller_buffer_unlocks)
  * - Expected: two calls of z_reschedule(), the first with the lock of the
  *   first stack, the second with the lock of the second stack.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_impl_k_stack_push()
  */
 ZTEST(stack_unit, test_lock_one_lock_per_stack)
@@ -2146,7 +2275,7 @@ ZTEST(stack_unit, test_lock_one_lock_per_stack)
  * - Action: k_stack_init(), then z_impl_k_stack_alloc_init().
  * - Expected: no call of arch_irq_lock().
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init(), z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_lock_not_used_by_init)
@@ -2172,7 +2301,7 @@ ZTEST(stack_unit, test_lock_not_used_by_init)
  * - Expected: one call of z_spin_lock_valid() and one call of
  *   z_spin_unlock_valid(), each with the lock of the stack.
  *
- * @ingroup kernel_unit_stack_locking
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_impl_k_stack_pop()
  */
 ZTEST(stack_unit, test_lock_validation_sees_stack_lock)
@@ -2192,30 +2321,10 @@ ZTEST(stack_unit, test_lock_validation_sees_stack_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_stack_syscall System call verification
- * @ingroup kernel_unit_stack
- * @brief With CONFIG_USERSPACE, each verification function checks its arguments before it calls
- * the implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_stack_*(). This function
- * checks that the pointer is a stack object of the kernel that the thread
- * has access to:
- * - z_vrfy_k_stack_alloc_init() uses K_SYSCALL_OBJ_NEVER_INIT(): the object
- *   must not be initialized yet. It also checks that the number of entries
- *   is not 0 and that the size of the buffer fits into @c size_t.
- * - z_vrfy_k_stack_push() and z_vrfy_k_stack_pop() use K_SYSCALL_OBJ(): the
- *   object must be initialized. z_vrfy_k_stack_pop() also checks with
- *   K_SYSCALL_MEMORY_WRITE() that the thread can write @c data.
- *
- * If a check fails, K_OOPS() stops the thread. Otherwise the function calls
- * z_impl_k_stack_*() with the same arguments and returns its result.
- * k_stack_init() and k_stack_cleanup() are not system calls.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that the
- * oops occurs before the implementation allocates, locks or changes the
- * stack.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 /* Assert one object check of stack with the type K_OBJ_STACK and init state, and no oops. */
@@ -2243,7 +2352,7 @@ static void assert_object_check(struct k_stack *stack, enum _obj_init_check init
  *   _OBJ_INIT_FALSE, before z_thread_malloc(). No oops. The stack has the
  *   allocated buffer.
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_vrfy_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_syscall_alloc_init_checks_new_object)
@@ -2268,7 +2377,7 @@ ZTEST(stack_unit, test_syscall_alloc_init_checks_new_object)
  * - Action: z_vrfy_k_stack_alloc_init() with 4 entries.
  * - Expected: return value -ENOMEM. No oops.
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_vrfy_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_syscall_alloc_init_returns_error)
@@ -2291,7 +2400,7 @@ ZTEST(stack_unit, test_syscall_alloc_init_returns_error)
  * - Action: z_vrfy_k_stack_alloc_init() with 4 entries.
  * - Expected: one oops, before z_thread_malloc().
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_vrfy_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_syscall_alloc_init_oops_on_bad_object)
@@ -2316,7 +2425,7 @@ ZTEST(stack_unit, test_syscall_alloc_init_oops_on_bad_object)
  * - Expected: one oops, after the object check and before
  *   z_thread_malloc().
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_vrfy_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_syscall_alloc_init_oops_on_zero_entries)
@@ -2346,7 +2455,7 @@ ZTEST(stack_unit, test_syscall_alloc_init_oops_on_zero_entries)
  * - Expected: one oops. No call of z_thread_malloc() (the implementation
  *   also rejects the size).
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_vrfy_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_syscall_alloc_init_oops_on_size_overflow)
@@ -2378,7 +2487,7 @@ ZTEST(stack_unit, test_syscall_alloc_init_oops_on_size_overflow)
  *   the lock. No oops. Entry 0 is value 0. With CONFIG_RUNTIME_ERROR_CHECKS,
  *   the last push returns -ENOMEM.
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_vrfy_k_stack_push()
  */
 ZTEST(stack_unit, test_syscall_push_checks_initialized_object)
@@ -2411,7 +2520,7 @@ ZTEST(stack_unit, test_syscall_push_checks_initialized_object)
  * - Action: z_vrfy_k_stack_push().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_push
  * @see z_vrfy_k_stack_push()
  */
 ZTEST(stack_unit, test_syscall_push_oops_on_bad_object)
@@ -2439,7 +2548,7 @@ ZTEST(stack_unit, test_syscall_push_oops_on_bad_object)
  *   with the data, sizeof(stack_data_t) and write access. Both checks come
  *   before the lock. No oops.
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_vrfy_k_stack_pop()
  */
 ZTEST(stack_unit, test_syscall_pop_checks_object_and_data)
@@ -2473,7 +2582,7 @@ ZTEST(stack_unit, test_syscall_pop_checks_object_and_data)
  * - Expected: return value -EAGAIN. One call of z_pend_curr() with the
  *   timeout.
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_vrfy_k_stack_pop()
  */
 ZTEST(stack_unit, test_syscall_pop_passes_timeout)
@@ -2499,7 +2608,7 @@ ZTEST(stack_unit, test_syscall_pop_passes_timeout)
  * - Action: z_vrfy_k_stack_pop() with K_NO_WAIT.
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_vrfy_k_stack_pop()
  */
 ZTEST(stack_unit, test_syscall_pop_oops_on_bad_object)
@@ -2526,7 +2635,7 @@ ZTEST(stack_unit, test_syscall_pop_oops_on_bad_object)
  * - Expected: one oops, after arch_buffer_validate() and before
  *   arch_irq_lock().
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_vrfy_k_stack_pop()
  */
 ZTEST(stack_unit, test_syscall_pop_oops_on_bad_data)
@@ -2559,7 +2668,7 @@ ZTEST(stack_unit, test_syscall_pop_oops_on_bad_data)
  *   arch_buffer_validate(). (The fake oops returns, and the empty stack
  *   returns -EBUSY without a write to the data.)
  *
- * @ingroup kernel_unit_stack_syscall
+ * @ingroup kernel_unit_stack_k_stack_pop
  * @see z_vrfy_k_stack_pop()
  */
 ZTEST(stack_unit, test_syscall_pop_oops_on_data_overflow)
@@ -2577,19 +2686,10 @@ ZTEST(stack_unit, test_syscall_pop_oops_on_data_overflow)
 }
 #endif /* CONFIG_USERSPACE */
 
-/**
- * @defgroup kernel_unit_stack_obj_core Object core
- * @ingroup kernel_unit_stack
- * @brief With CONFIG_OBJ_CORE_STACK, stack.c defines the object type of the stacks and links each
- * stack that k_stack_init() initializes.
- *
- * stack.c defines the object type @c obj_type_stack. K_OBJ_TYPE_DEFINE()
- * puts one descriptor of this type into the iterable section
- * @c k_obj_core_desc. At boot, the object core code initializes the type from
- * the descriptor and links the stacks that K_STACK_DEFINE() defines (the
- * section @c k_stack). k_stack_init() links each stack that it initializes
- * with k_obj_core_init_and_link(). k_stack_alloc_init() calls k_stack_init(),
- * so it also links the stack. k_stack_cleanup() does not unlink the stack.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_stack, at the top of this file.
  */
 
 #ifdef CONFIG_OBJ_CORE_STACK
@@ -2620,7 +2720,7 @@ static const struct k_obj_core_desc *obj_core_desc(struct k_obj_type *type, int 
  *   size is the size of @c struct @c k_stack, and its object core offset is
  *   the offset of @c obj_core. Its object range is the section @c k_stack.
  *
- * @ingroup kernel_unit_stack_obj_core
+ * @ingroup kernel_unit_stack_static
  */
 ZTEST(stack_unit, test_obj_core_type_descriptor)
 {
@@ -2647,7 +2747,7 @@ ZTEST(stack_unit, test_obj_core_type_descriptor)
  * - Expected: the stack is in the range, at a multiple of the object size
  *   from the start.
  *
- * @ingroup kernel_unit_stack_obj_core
+ * @ingroup kernel_unit_stack_static
  */
 ZTEST(stack_unit, test_obj_core_descriptor_covers_static_stacks)
 {
@@ -2669,7 +2769,7 @@ ZTEST(stack_unit, test_obj_core_descriptor_covers_static_stacks)
  * - Expected: one call of k_obj_core_init_and_link() with the object core of
  *   the stack and @c obj_type_stack. It is the last call.
  *
- * @ingroup kernel_unit_stack_obj_core
+ * @ingroup kernel_unit_stack_k_stack_init
  * @see k_stack_init()
  */
 ZTEST(stack_unit, test_obj_core_init_links_stack)
@@ -2694,7 +2794,7 @@ ZTEST(stack_unit, test_obj_core_init_links_stack)
  * - Expected: one call of k_obj_core_init_and_link() with the object core of
  *   the stack and @c obj_type_stack, after z_thread_malloc().
  *
- * @ingroup kernel_unit_stack_obj_core
+ * @ingroup kernel_unit_stack_k_stack_alloc_init
  * @see z_impl_k_stack_alloc_init()
  */
 ZTEST(stack_unit, test_obj_core_alloc_init_links_stack)
@@ -2718,7 +2818,7 @@ ZTEST(stack_unit, test_obj_core_alloc_init_links_stack)
  * - Action: k_stack_cleanup().
  * - Expected: no call of k_obj_core_unlink().
  *
- * @ingroup kernel_unit_stack_obj_core
+ * @ingroup kernel_unit_stack_k_stack_cleanup
  * @see k_stack_cleanup()
  */
 ZTEST(stack_unit, test_obj_core_cleanup_does_not_unlink)

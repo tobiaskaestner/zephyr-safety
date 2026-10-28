@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_mutex Mutex unit (kernel/mutex.c)
+ * @defgroup kernel_unit_mutex kernel/mutex.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/mutex.c, written as unit tests.
  *
@@ -121,7 +121,8 @@
  * headers (user decision of 2026-10-20), so the tests check the inheritance
  * rules with the real priority semantics. A drift guard keeps the copies
  * equal to the real headers. All functions with side effects are FFF
- * fakes. The tests use these models (see also @ref kernel_unit_models):
+ * fakes. The tests use these models (see also the group kernel_unit_models
+ * in @c kernel_unit_models.h):
  * - Lock: the lock model of kernel_unit_models.h counts the holds of
  *   @c mutex_lock and of the nested scheduler spinlock.
  * - Wait queues: an array of waiting threads for each mutex, sorted by
@@ -139,6 +140,214 @@
  *
  * The models state assumptions about the scheduler. They do not show that
  * the real scheduler meets them.
+ *
+ * @par Structure of the tests
+ * Each public function of mutex.c has one group below this group. A system
+ * call has one group for z_impl_k_mutex_*() and z_vrfy_k_mutex_*(). The
+ * static functions and the data of mutex.c have the last group. Each test is
+ * in the group of the function under test. The rules below (assertions,
+ * system call verification, object core, debug logging) apply to more than
+ * one function. Their tests are in the group of the function that they call.
+ *
+ * @par Assertions
+ * With CONFIG_ASSERT, k_mutex_lock() and k_mutex_unlock() assert that they
+ * do not run in an ISR, and k_mutex_unlock() asserts a lock count above 0.
+ * The ISR checks are the first calls of k_mutex_lock() and
+ * k_mutex_unlock(). In the test, the assertion hook returns, and the unit
+ * continues.
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, z_vrfy_k_mutex_*() check the mutex object before
+ * the implementation.
+ * A system call from a user thread goes to z_vrfy_k_mutex_*(). This
+ * function checks that the pointer is a mutex object of the kernel that the
+ * thread has access to. z_vrfy_k_mutex_init() uses K_SYSCALL_OBJ_INIT():
+ * the object can be initialized or not. The lock and the unlock use
+ * K_SYSCALL_OBJ(): the object must be initialized. If the check fails,
+ * K_OOPS() stops the thread. Otherwise the function calls
+ * z_impl_k_mutex_*() with the same arguments and returns its result.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(). The tests use
+ * zassert_stopped_by_oops() (kernel_unit_models.h): the oops jumps back to
+ * the test, so the implementation does not run.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_MUTEX, each mutex has an object core of the mutex
+ * type.
+ *
+ * @par Debug logging
+ * The LOG_DBG() calls read the thread state, and they do not change the
+ * behavior.
+ * With @kconfig{CONFIG_KERNEL_LOG_LEVEL} DBG, mutex.c logs each lock, each
+ * priority change and each hand-over. The arguments read the state of the
+ * owner (z_is_thread_ready()) and the priority of the new owner. With a
+ * lower level, the log calls do not run. The history helpers ignore the
+ * log calls, so all tests run in all scenarios: they show the same results
+ * with and without the logging.
+ */
+
+/**
+ * @defgroup kernel_unit_mutex_k_mutex_init k_mutex_init()
+ * @ingroup kernel_unit_mutex
+ * @brief k_mutex_init() makes a free mutex.
+ *
+ * k_mutex_init() sets the owner to NULL and the lock count to 0. It
+ * initializes the wait queue, the node of the list of held mutexes (with
+ * priority inheritance), the kernel object (with
+ * @kconfig{CONFIG_USERSPACE}) and the object core (with
+ * @kconfig{CONFIG_OBJ_CORE_MUTEX}). It does not lock: until k_mutex_init()
+ * returns, only the caller uses the mutex. It has no error path.
+ *
+ * @par Functions in kernel/mutex.c
+ * - z_impl_k_mutex_init()
+ * - z_vrfy_k_mutex_init(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_mutex_k_mutex_lock k_mutex_lock()
+ * @ingroup kernel_unit_mutex
+ * @brief k_mutex_lock() takes a free mutex, counts a recursive lock, or waits for the owner and
+ * raises its priority.
+ *
+ * @par Lock without a wait
+ * k_mutex_lock() of a free mutex, a recursive lock, and K_NO_WAIT.
+ * If the mutex is free (lock count 0) or the current thread holds it,
+ * k_mutex_lock() increments the lock count, makes the current thread the
+ * owner and returns 0. On the first lock of a mutex, the unit adds the
+ * mutex to the list of held mutexes of the thread. If this list was empty,
+ * the unit records the priority of the thread as its original priority.
+ * If another thread holds the mutex, K_NO_WAIT gives -EBUSY and changes
+ * nothing. These paths lock @c mutex_lock and release it with
+ * k_spin_unlock().
+ *
+ * @par Lock with a wait
+ * k_mutex_lock() of a mutex that another thread holds.
+ * With a timeout other than K_NO_WAIT, k_mutex_lock() waits on the wait
+ * queue of the mutex with z_pend_curr(). z_pend_curr() releases
+ * @c mutex_lock. If the owner unlocks the mutex, the unlock gives the
+ * mutex to the first waiting thread and wakes it with the result 0. Thus
+ * the waiting thread is the owner when k_mutex_lock() returns 0: it does
+ * not lock again.
+ *
+ * With priority inheritance, the thread records the mutex in
+ * @c mutex_pended_on before the wait and clears it after the wait. After
+ * a timeout, k_mutex_lock() locks @c mutex_lock again, lowers the priority
+ * of the owner (see "Priority restore" in @ref kernel_unit_mutex_static)
+ * and returns -EAGAIN.
+ * Without priority inheritance, k_mutex_lock() returns the result of
+ * z_pend_curr() without a change.
+ *
+ * @par Priority inheritance
+ * A waiting thread raises the priority of the owners along the chain.
+ * Before the wait, k_mutex_lock() computes the boost priority: the higher
+ * of the priorities of the current thread and of the owner, limited by
+ * @kconfig{CONFIG_PRIORITY_CEILING}. Then it walks the chain of owners:
+ * the owner of the mutex, the owner of the mutex that this owner waits for,
+ * and so on. It raises each owner with a lower priority to the boost
+ * priority with z_thread_prio_set(). The walk stops at an owner that does
+ * not wait (no @c mutex_pended_on, or not in the state "pending"), at a
+ * cycle back to the first mutex, or after @c MUTEX_CHAIN_WALK_MAX_HOPS
+ * steps. All priority changes occur while the unit holds @c mutex_lock.
+ *
+ * These tests exist only with priority inheritance (@c Z_MUTEX_PI_ENABLED).
+ *
+ * @par Chain walk and hop limit
+ * The boost of a waiting thread follows the chain of owners, with a bound
+ * on the steps.
+ * If the owner of the mutex waits for a second mutex, k_mutex_lock() also
+ * raises the owner of that mutex, and so on. All owners get the same boost
+ * priority: the higher of the waiter and the first owner, limited by the
+ * ceiling. The walk stops:
+ * - at an owner with no @c mutex_pended_on, or that is not in the state
+ *   "pending" (a stale @c mutex_pended_on after a timeout),
+ * - when the next mutex is the first mutex (a cycle through the first
+ *   mutex),
+ * - after @c MUTEX_CHAIN_WALK_MAX_HOPS (16) steps. This is a bound of the
+ *   time with @c mutex_lock held, not a limit of the chain length: owners
+ *   after the limit keep their priority (a documented limit of mutex.c).
+ *
+ * These tests exist only with priority inheritance.
+ *
+ * @par Deadlock detection
+ * With CONFIG_MUTEX_DEADLOCK_DETECT, a K_FOREVER lock that closes a cycle
+ * of waits asserts.
+ * The chain walk of k_mutex_lock() also looks for a deadlock. A deadlock
+ * is a cycle: an owner in the chain waits for a mutex that the current
+ * thread holds. The unit asserts only if the current thread and each
+ * owner in the chain up to the cycle wait forever (K_FOREVER, no active
+ * timeout). A cycle with a finite timeout ends with -EAGAIN, so it is not a
+ * deadlock. After the assertion, the walk stops. In the test, the
+ * assertion hook returns, and the unit continues with the wait.
+ *
+ * These tests exist only with @kconfig{CONFIG_MUTEX_DEADLOCK_DETECT}
+ * (scenarios "deadlock_detect" and "all").
+ *
+ * @par Functions in kernel/mutex.c
+ * - z_impl_k_mutex_lock(). The priority inheritance code is in it only if
+ *   @c Z_MUTEX_PI_ENABLED is 1. The deadlock detection is in it only with
+ *   @kconfig{CONFIG_MUTEX_DEADLOCK_DETECT}.
+ * - z_vrfy_k_mutex_lock(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_mutex_k_mutex_unlock k_mutex_unlock()
+ * @ingroup kernel_unit_mutex
+ * @brief k_mutex_unlock() checks the owner, counts down a recursive lock, and gives the mutex to
+ * the first waiting thread.
+ *
+ * k_mutex_unlock() returns -EINVAL if the mutex has no owner and -EPERM if
+ * the current thread is not the owner. These checks are CHECKIF():
+ * @kconfig{CONFIG_NO_RUNTIME_CHECKS} removes them, and
+ * @kconfig{CONFIG_ASSERT_ON_ERRORS} makes them assertions. They occur
+ * before the lock. If the lock count is above 1, k_mutex_unlock() only
+ * decrements it, without a lock. The last unlock locks @c mutex_lock,
+ * removes the mutex from the held list of the owner, lowers the priority
+ * of the owner (see "Priority restore" in @ref kernel_unit_mutex_static),
+ * and gives the mutex
+ * to the first waiting thread. The new owner gets the lock count 1, the
+ * wait result 0 and the state "ready". Then the unit releases the lock with
+ * z_reschedule(). If no thread waits, the mutex becomes free, and the unit
+ * releases the lock with k_spin_unlock().
+ *
+ * @par Functions in kernel/mutex.c
+ * - z_impl_k_mutex_unlock()
+ * - z_vrfy_k_mutex_unlock(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_mutex_static Static functions and data
+ * @ingroup kernel_unit_mutex
+ * @brief The static functions of mutex.c, and the data that mutex.c defines.
+ *
+ * @par Priority restore
+ * The unit lowers a raised priority on the last unlock and after a timeout.
+ * The new priority of the owner is the highest priority of the first
+ * waiting threads of the mutexes that the owner still holds, each limited
+ * by @kconfig{CONFIG_PRIORITY_CEILING}, and at least the original priority
+ * of the owner. On the last unlock, the released mutex is no longer in the
+ * held list, so its waiters do not count. The unit calls
+ * z_thread_prio_set() only if the priority changes. After a timeout, the
+ * unit reschedules if a priority change of the lock asked for it. The
+ * unlock ignores this hint.
+ *
+ * These tests exist only with priority inheritance. The static function
+ * held_mutexes_highest_waiter_prio() does the calculation. The tests call
+ * k_mutex_unlock() or k_mutex_lock(), so they are in the groups of these
+ * functions.
+ *
+ * @par Functions in kernel/mutex.c
+ * All static functions are in the code only if @c Z_MUTEX_PI_ENABLED is 1.
+ * They have no test of their own. The tests of k_mutex_lock() and
+ * k_mutex_unlock() call them.
+ * - new_prio_for_inheritance(): the boost priority, limited by the ceiling.
+ * - adjust_owner_prio(): the priority change of an owner.
+ * - held_mutexes_highest_waiter_prio(): the priority restore (see above).
+ *
+ * @par Data in kernel/mutex.c
+ * - @c mutex_lock: the spinlock of all mutexes.
+ * - @c obj_type_mutex and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_MUTEX}. The test of the descriptor is in this
+ *   group.
  */
 
 #include <string.h>
@@ -590,17 +799,10 @@ static void mutex_unit_before(void *fixture)
 
 ZTEST_SUITE(mutex_unit, NULL, NULL, mutex_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_mutex_init Initialization
- * @ingroup kernel_unit_mutex
- * @brief k_mutex_init() makes a free mutex.
- *
- * k_mutex_init() sets the owner to NULL and the lock count to 0. It
- * initializes the wait queue, the node of the list of held mutexes (with
- * priority inheritance), the kernel object (with
- * @kconfig{CONFIG_USERSPACE}) and the object core (with
- * @kconfig{CONFIG_OBJ_CORE_MUTEX}). It does not lock: until k_mutex_init()
- * returns, only the caller uses the mutex. It has no error path.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -611,7 +813,7 @@ ZTEST_SUITE(mutex_unit, NULL, NULL, mutex_unit_before, NULL, NULL);
  * - Action: z_impl_k_mutex_init().
  * - Expected: return value 0. The owner is NULL, and the lock count is 0.
  *
- * @ingroup kernel_unit_mutex_init
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_init_makes_mutex_free)
@@ -632,7 +834,7 @@ ZTEST(mutex_unit, test_init_makes_mutex_free)
  * - Action: z_impl_k_mutex_init().
  * - Expected: one call of z_waitq_init() with the wait queue of the mutex.
  *
- * @ingroup kernel_unit_mutex_init
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_init_initializes_wait_queue)
@@ -655,7 +857,7 @@ ZTEST(mutex_unit, test_init_initializes_wait_queue)
  * - Action: z_impl_k_mutex_init().
  * - Expected: @c held_node.next is NULL.
  *
- * @ingroup kernel_unit_mutex_init
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_init_clears_held_node)
@@ -679,7 +881,7 @@ ZTEST(mutex_unit, test_init_clears_held_node)
  *   CONFIG_USERSPACE), k_obj_core_init_and_link() (with
  *   CONFIG_OBJ_CORE_MUTEX). No lock.
  *
- * @ingroup kernel_unit_mutex_init
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_init_call_sequence)
@@ -703,7 +905,7 @@ ZTEST(mutex_unit, test_init_call_sequence)
  * - Action: z_impl_k_mutex_init().
  * - Expected: one call of k_object_init() with the mutex.
  *
- * @ingroup kernel_unit_mutex_init
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_init_marks_kernel_object)
@@ -715,19 +917,10 @@ ZTEST(mutex_unit, test_init_marks_kernel_object)
 }
 #endif
 
-/**
- * @defgroup kernel_unit_mutex_lock Lock without a wait
- * @ingroup kernel_unit_mutex
- * @brief k_mutex_lock() of a free mutex, a recursive lock, and K_NO_WAIT.
- *
- * If the mutex is free (lock count 0) or the current thread holds it,
- * k_mutex_lock() increments the lock count, makes the current thread the
- * owner and returns 0. On the first lock of a mutex, the unit adds the
- * mutex to the list of held mutexes of the thread. If this list was empty,
- * the unit records the priority of the thread as its original priority.
- * If another thread holds the mutex, K_NO_WAIT gives -EBUSY and changes
- * nothing. These paths lock @c mutex_lock and release it with
- * k_spin_unlock().
+/*
+ * Tests: Lock without a wait. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -740,7 +933,7 @@ ZTEST(mutex_unit, test_init_marks_kernel_object)
  * - Expected: return value 0. The owner is the current thread, the lock
  *   count is 1. No wait, no priority change.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_free_mutex_takes_ownership)
@@ -761,7 +954,7 @@ ZTEST(mutex_unit, test_lock_free_mutex_takes_ownership)
  * - Action: z_impl_k_mutex_lock() with K_NO_WAIT.
  * - Expected: return value 0. The current thread is the owner.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_free_mutex_with_no_wait)
@@ -783,7 +976,7 @@ ZTEST(mutex_unit, test_lock_free_mutex_with_no_wait)
  * - Expected: return value 0. The current thread is the owner, with the
  *   lock count 1.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_count_zero_means_free)
@@ -807,7 +1000,7 @@ ZTEST(mutex_unit, test_lock_count_zero_means_free)
  * - Expected: return value 0 each time. The lock count is 3. The owner did
  *   not change. No wait.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_recursive_increments_count)
@@ -832,7 +1025,7 @@ ZTEST(mutex_unit, test_lock_recursive_increments_count)
  * - Expected: the call history is the ISR check (with CONFIG_ASSERT), the
  *   lock and the unlock. The lock invariant holds.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_free_mutex_lock_sequence)
@@ -852,7 +1045,7 @@ ZTEST(mutex_unit, test_lock_free_mutex_lock_sequence)
  * - Action: z_impl_k_mutex_lock() with K_FOREVER.
  * - Expected: the lock invariant holds, with the release by k_spin_unlock().
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_recursive_lock_sequence)
@@ -876,7 +1069,7 @@ ZTEST(mutex_unit, test_lock_recursive_lock_sequence)
  *   wait and no priority change: K_NO_WAIT does not raise the owner. The
  *   lock invariant holds, with the release by k_spin_unlock().
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_busy_no_wait_returns_ebusy)
@@ -904,7 +1097,7 @@ ZTEST(mutex_unit, test_lock_busy_no_wait_returns_ebusy)
  * - Action: z_impl_k_mutex_lock() of a free mutex.
  * - Expected: @c orig_prio is the priority of the thread.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_first_mutex_records_orig_prio)
@@ -927,7 +1120,7 @@ ZTEST(mutex_unit, test_lock_first_mutex_records_orig_prio)
  * - Action: z_impl_k_mutex_lock() of the free mutex m2.
  * - Expected: @c orig_prio stays low. The thread holds m1 and m2.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_second_mutex_keeps_orig_prio)
@@ -952,7 +1145,7 @@ ZTEST(mutex_unit, test_lock_second_mutex_keeps_orig_prio)
  * - Expected: after the first lock, the list has the mutex. After the
  *   second lock, the list has exactly one node.
  *
- * @ingroup kernel_unit_mutex_lock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_lock_adds_mutex_to_held_list_once)
@@ -966,24 +1159,10 @@ ZTEST(mutex_unit, test_lock_adds_mutex_to_held_list_once)
 }
 #endif /* Z_MUTEX_PI_ENABLED */
 
-/**
- * @defgroup kernel_unit_mutex_wait Lock with a wait
- * @ingroup kernel_unit_mutex
- * @brief k_mutex_lock() of a mutex that another thread holds.
- *
- * With a timeout other than K_NO_WAIT, k_mutex_lock() waits on the wait
- * queue of the mutex with z_pend_curr(). z_pend_curr() releases
- * @c mutex_lock. If the owner unlocks the mutex, the unlock gives the
- * mutex to the first waiting thread and wakes it with the result 0. Thus
- * the waiting thread is the owner when k_mutex_lock() returns 0: it does
- * not lock again.
- *
- * With priority inheritance, the thread records the mutex in
- * @c mutex_pended_on before the wait and clears it after the wait. After
- * a timeout, k_mutex_lock() locks @c mutex_lock again, lowers the priority
- * of the owner (see the group "Priority restore") and returns -EAGAIN.
- * Without priority inheritance, k_mutex_lock() returns the result of
- * z_pend_curr() without a change.
+/*
+ * Tests: Lock with a wait. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -998,7 +1177,7 @@ ZTEST(mutex_unit, test_lock_adds_mutex_to_held_list_once)
  *   lock, the wait queue of the mutex and TEST_TIMEOUT. At the call, the
  *   lock model has one hold.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_pends_on_mutex_wait_queue)
@@ -1028,7 +1207,7 @@ ZTEST(mutex_unit, test_wait_pends_on_mutex_wait_queue)
  *   count is 1. The unlock of the other thread returned 0. The wait queue
  *   is empty.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_wait_handover_gives_ownership)
@@ -1056,7 +1235,7 @@ ZTEST(mutex_unit, test_wait_handover_gives_ownership)
  *   other calls after it come from the unlock of the other thread (lock,
  *   unpend, ready, reschedule). The current thread locked mutex_lock once.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_handover_no_relock)
@@ -1087,7 +1266,7 @@ ZTEST(mutex_unit, test_wait_handover_no_relock)
  * - Expected: return value -EAGAIN. Owner and lock count did not change.
  *   The current thread is not in the wait queue.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_timeout_returns_eagain)
@@ -1119,7 +1298,7 @@ static void record_pended_on(void)
  * - Action: z_impl_k_mutex_lock() with TEST_TIMEOUT.
  * - Expected: at z_pend_curr(), @c mutex_pended_on is the mutex.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_records_mutex_pended_on)
@@ -1142,7 +1321,7 @@ ZTEST(mutex_unit, test_wait_records_mutex_pended_on)
  * - Expected: @c mutex_pended_on of the current thread is NULL. The current
  *   thread holds the mutex in its list of held mutexes.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_handover_clears_pended_on)
@@ -1172,7 +1351,7 @@ ZTEST(mutex_unit, test_wait_handover_clears_pended_on)
  * - Expected: return value 0. @c mutex_pended_on of the current thread is
  *   NULL.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_success_clears_pended_on)
@@ -1198,7 +1377,7 @@ ZTEST(mutex_unit, test_wait_success_clears_pended_on)
  *   wait, the current thread locked mutex_lock a second time: the lock
  *   invariant holds with 2 locks.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_timeout_clears_pended_on)
@@ -1223,7 +1402,7 @@ ZTEST(mutex_unit, test_wait_timeout_clears_pended_on)
  * - Action: z_impl_k_mutex_lock() with K_FOREVER.
  * - Expected: return value -EAGAIN.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_other_result_is_eagain)
@@ -1247,7 +1426,7 @@ ZTEST(mutex_unit, test_wait_other_result_is_eagain)
  *   does not lock mutex_lock again: the lock invariant holds with 1 lock
  *   and the release by z_pend_curr().
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_without_pi_returns_pend_result)
@@ -1273,7 +1452,7 @@ ZTEST(mutex_unit, test_wait_without_pi_returns_pend_result)
  * - Expected: no call of z_thread_prio_set(). The owner keeps the low
  *   priority.
  *
- * @ingroup kernel_unit_mutex_wait
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_wait_without_pi_no_boost)
@@ -1288,22 +1467,10 @@ ZTEST(mutex_unit, test_wait_without_pi_no_boost)
 #endif /* Z_MUTEX_PI_ENABLED */
 
 #if Z_MUTEX_PI_ENABLED
-/**
- * @defgroup kernel_unit_mutex_inheritance Priority inheritance
- * @ingroup kernel_unit_mutex
- * @brief A waiting thread raises the priority of the owners along the chain.
- *
- * Before the wait, k_mutex_lock() computes the boost priority: the higher
- * of the priorities of the current thread and of the owner, limited by
- * @kconfig{CONFIG_PRIORITY_CEILING}. Then it walks the chain of owners:
- * the owner of the mutex, the owner of the mutex that this owner waits for,
- * and so on. It raises each owner with a lower priority to the boost
- * priority with z_thread_prio_set(). The walk stops at an owner that does
- * not wait (no @c mutex_pended_on, or not in the state "pending"), at a
- * cycle back to the first mutex, or after @c MUTEX_CHAIN_WALK_MAX_HOPS
- * steps. All priority changes occur while the unit holds @c mutex_lock.
- *
- * These tests exist only with priority inheritance (@c Z_MUTEX_PI_ENABLED).
+/*
+ * Tests: Priority inheritance. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 static int owner_prio_at_pend;
@@ -1324,7 +1491,7 @@ static void record_owner_prio(void)
  *   priority, before z_pend_curr(). The original priority of the owner
  *   stays low.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_raises_owner_to_waiter_prio)
@@ -1354,7 +1521,7 @@ ZTEST(mutex_unit, test_pi_raises_owner_to_waiter_prio)
  * - Expected: no call of z_thread_prio_set(). The owners keep their
  *   priorities.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_no_change_for_lower_or_equal_waiter)
@@ -1384,7 +1551,7 @@ ZTEST(mutex_unit, test_pi_no_change_for_lower_or_equal_waiter)
  * - Expected: two calls of z_thread_prio_set() (raise and lower). The lock
  *   model held mutex_lock at each call.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_prio_changes_under_lock)
@@ -1410,7 +1577,7 @@ ZTEST(mutex_unit, test_pi_prio_changes_under_lock)
  * - Expected: z_thread_prio_set() with the owner and
  *   CONFIG_PRIORITY_CEILING.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), new_prio_for_inheritance()
  */
 ZTEST(mutex_unit, test_pi_boost_limited_by_ceiling)
@@ -1436,7 +1603,7 @@ ZTEST(mutex_unit, test_pi_boost_limited_by_ceiling)
  * - Expected: z_thread_prio_set() with the owner and the priority -5,
  *   limited by the ceiling.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), new_prio_for_inheritance()
  */
 ZTEST(mutex_unit, test_pi_boost_to_coop_prio)
@@ -1461,7 +1628,7 @@ ZTEST(mutex_unit, test_pi_boost_to_coop_prio)
  * - Action: z_impl_k_mutex_lock() with TEST_TIMEOUT.
  * - Expected: no priority change before the wait. The owner keeps -3.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), new_prio_for_inheritance()
  */
 ZTEST(mutex_unit, test_pi_ceiling_never_lowers_owner)
@@ -1481,24 +1648,10 @@ ZTEST(mutex_unit, test_pi_ceiling_never_lowers_owner)
 	zassert_equal(owner.base.prio, PRIO_COOP + 2);
 }
 
-/**
- * @defgroup kernel_unit_mutex_chain Chain walk and hop limit
- * @ingroup kernel_unit_mutex
- * @brief The boost of a waiting thread follows the chain of owners, with a bound on the steps.
- *
- * If the owner of the mutex waits for a second mutex, k_mutex_lock() also
- * raises the owner of that mutex, and so on. All owners get the same boost
- * priority: the higher of the waiter and the first owner, limited by the
- * ceiling. The walk stops:
- * - at an owner with no @c mutex_pended_on, or that is not in the state
- *   "pending" (a stale @c mutex_pended_on after a timeout),
- * - when the next mutex is the first mutex (a cycle through the first
- *   mutex),
- * - after @c MUTEX_CHAIN_WALK_MAX_HOPS (16) steps. This is a bound of the
- *   time with @c mutex_lock held, not a limit of the chain length: owners
- *   after the limit keep their priority (a documented limit of mutex.c).
- *
- * These tests exist only with priority inheritance.
+/*
+ * Tests: Chain walk and hop limit. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -1512,7 +1665,7 @@ ZTEST(mutex_unit, test_pi_ceiling_never_lowers_owner)
  * - Expected: z_thread_prio_set() with the middle priority thread, then with
  *   the low priority thread, each with the high priority, before the wait.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_raises_next_owner)
@@ -1546,7 +1699,7 @@ ZTEST(mutex_unit, test_pi_chain_raises_next_owner)
  * - Expected: no change of the first owner. z_thread_prio_set() with the
  *   low priority thread and the high priority.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), new_prio_for_inheritance()
  */
 ZTEST(mutex_unit, test_pi_chain_uses_higher_of_waiter_and_owner)
@@ -1576,7 +1729,7 @@ ZTEST(mutex_unit, test_pi_chain_uses_higher_of_waiter_and_owner)
  * - Expected: z_thread_prio_set() only with the middle priority thread
  *   before the wait. The low priority thread keeps its priority.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_stops_at_stale_pended_on)
@@ -1610,7 +1763,7 @@ static void record_prio_sets(void)
  * - Expected: one z_thread_prio_set() before the wait, with the middle
  *   priority thread.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_stops_at_owner_without_mutex)
@@ -1638,7 +1791,7 @@ ZTEST(mutex_unit, test_pi_chain_stops_at_owner_without_mutex)
  * - Expected: exactly two priority raises before the wait (middle, then
  *   low). No assertion.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_stops_at_cycle_to_first_mutex)
@@ -1672,7 +1825,7 @@ ZTEST(mutex_unit, test_pi_chain_stops_at_cycle_to_first_mutex)
  * - Expected: z_thread_prio_set() only for the low priority thread (to the
  *   middle priority). The cooperative thread keeps -5.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_never_lowers_owner)
@@ -1705,7 +1858,7 @@ ZTEST(mutex_unit, test_pi_chain_never_lowers_owner)
  * - Expected: one priority raise before the wait (the middle priority
  *   thread). No crash.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_ends_at_mutex_without_owner)
@@ -1734,7 +1887,7 @@ ZTEST(mutex_unit, test_pi_chain_ends_at_mutex_without_owner)
  * - Expected: after the timeout, the unit releases mutex_lock with
  *   z_reschedule().
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_resched_hint_of_any_owner)
@@ -1764,7 +1917,7 @@ ZTEST(mutex_unit, test_pi_chain_resched_hint_of_any_owner)
  * - Expected: before the wait, z_thread_prio_set() raises the threads 0 to
  *   15, in this order. Threads 16 and 17 keep the low priority.
  *
- * @ingroup kernel_unit_mutex_chain
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_chain_walk_hop_limit)
@@ -1808,7 +1961,7 @@ ZTEST(mutex_unit, test_pi_chain_walk_hop_limit)
  * - Expected: return value 0. The only z_reschedule() is the one of the
  *   unlock of the other thread.
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_pi_boost_no_reschedule_after_handover)
@@ -1826,21 +1979,10 @@ ZTEST(mutex_unit, test_pi_boost_no_reschedule_after_handover)
 #endif /* Z_MUTEX_PI_ENABLED */
 
 #ifdef CONFIG_MUTEX_DEADLOCK_DETECT
-/**
- * @defgroup kernel_unit_mutex_deadlock Deadlock detection
- * @ingroup kernel_unit_mutex
- * @brief With CONFIG_MUTEX_DEADLOCK_DETECT, a K_FOREVER lock that closes a cycle of waits asserts.
- *
- * The chain walk of k_mutex_lock() also looks for a deadlock. A deadlock
- * is a cycle: an owner in the chain waits for a mutex that the current
- * thread holds. The unit asserts only if the current thread and each
- * owner in the chain up to the cycle wait forever (K_FOREVER, no active
- * timeout). A cycle with a finite timeout ends with -EAGAIN, so it is not a
- * deadlock. After the assertion, the walk stops. In the test, the
- * assertion hook returns, and the unit continues with the wait.
- *
- * These tests exist only with @kconfig{CONFIG_MUTEX_DEADLOCK_DETECT}
- * (scenarios "deadlock_detect" and "all").
+/*
+ * Tests: Deadlock detection. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -1853,7 +1995,7 @@ ZTEST(mutex_unit, test_pi_boost_no_reschedule_after_handover)
  * - Expected: one failed assertion, before z_pend_curr(). The walk stops at
  *   the assertion: the owner keeps the low priority.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_two_threads_asserts)
@@ -1882,7 +2024,7 @@ ZTEST(mutex_unit, test_deadlock_two_threads_asserts)
  * - Expected: one failed assertion. Before it, the walk raised the low
  *   priority thread. It did not raise the middle priority thread.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_three_threads_asserts)
@@ -1908,7 +2050,7 @@ ZTEST(mutex_unit, test_deadlock_three_threads_asserts)
  * - Action: z_impl_k_mutex_lock() of m1 with TEST_TIMEOUT.
  * - Expected: no assertion. The owner gets the boost.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_finite_timeout_of_current_no_assert)
@@ -1932,7 +2074,7 @@ ZTEST(mutex_unit, test_deadlock_finite_timeout_of_current_no_assert)
  * - Action: z_impl_k_mutex_lock() of m1 with K_FOREVER.
  * - Expected: no assertion.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_finite_timeout_in_chain_no_assert)
@@ -1959,7 +2101,7 @@ ZTEST(mutex_unit, test_deadlock_finite_timeout_in_chain_no_assert)
  * - Action: z_impl_k_mutex_lock() of m1 with K_FOREVER.
  * - Expected: no assertion.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_stale_pended_on_no_assert)
@@ -1983,7 +2125,7 @@ ZTEST(mutex_unit, test_deadlock_stale_pended_on_no_assert)
  * - Action: z_impl_k_mutex_lock() of m1 with K_FOREVER.
  * - Expected: no assertion. The walk stops at the cycle to m1.
  *
- * @ingroup kernel_unit_mutex_deadlock
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_cycle_without_current_no_assert)
@@ -2011,7 +2153,7 @@ ZTEST(mutex_unit, test_deadlock_cycle_without_current_no_assert)
  * - Expected: z_thread_prio_set() with the low priority thread, then
  *   z_pend_curr(). No assertion (with CONFIG_ASSERT).
  *
- * @ingroup kernel_unit_mutex_inheritance
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_deadlock_not_detected_without_option)
@@ -2030,24 +2172,10 @@ ZTEST(mutex_unit, test_deadlock_not_detected_without_option)
 }
 #endif
 
-/**
- * @defgroup kernel_unit_mutex_unlock Unlock
- * @ingroup kernel_unit_mutex
- * @brief k_mutex_unlock() checks the owner, counts down a recursive lock, and gives the mutex to
- * the first waiting thread.
- *
- * k_mutex_unlock() returns -EINVAL if the mutex has no owner and -EPERM if
- * the current thread is not the owner. These checks are CHECKIF():
- * @kconfig{CONFIG_NO_RUNTIME_CHECKS} removes them, and
- * @kconfig{CONFIG_ASSERT_ON_ERRORS} makes them assertions. They occur
- * before the lock. If the lock count is above 1, k_mutex_unlock() only
- * decrements it, without a lock. The last unlock locks @c mutex_lock,
- * removes the mutex from the held list of the owner, lowers the priority
- * of the owner (see the group "Priority restore"), and gives the mutex
- * to the first waiting thread. The new owner gets the lock count 1, the
- * wait result 0 and the state "ready". Then the unit releases the lock with
- * z_reschedule(). If no thread waits, the mutex becomes free, and the unit
- * releases the lock with k_spin_unlock().
+/*
+ * Tests: Unlock. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -2059,7 +2187,7 @@ ZTEST(mutex_unit, test_deadlock_not_detected_without_option)
  * - Action: z_impl_k_mutex_unlock().
  * - Expected: return value -EINVAL. No lock, no change of the mutex.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_free_mutex_returns_einval)
@@ -2086,7 +2214,7 @@ ZTEST(mutex_unit, test_unlock_free_mutex_returns_einval)
  * - Expected: return value -EPERM. No lock. Owner, lock count and wait
  *   queue did not change.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_not_owner_returns_eperm)
@@ -2117,7 +2245,7 @@ ZTEST(mutex_unit, test_unlock_not_owner_returns_eperm)
  * - Action: z_impl_k_mutex_unlock() by the current thread.
  * - Expected: return value 0. The mutex is free.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_no_checks_releases_other_owner)
@@ -2141,7 +2269,7 @@ ZTEST(mutex_unit, test_unlock_no_checks_releases_other_owner)
  * - Action: z_impl_k_mutex_unlock() of each.
  * - Expected: one failed assertion for each call, before the lock.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_checks_assert_on_errors)
@@ -2170,7 +2298,7 @@ ZTEST(mutex_unit, test_unlock_checks_assert_on_errors)
  * - Expected: return value 0. The lock count is 2, the owner did not
  *   change. No lock, no hand-over, no priority change.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_recursive_decrements_count)
@@ -2198,7 +2326,7 @@ ZTEST(mutex_unit, test_unlock_recursive_decrements_count)
  * - Expected: return value 0. The owner is NULL, the lock count is 0. No
  *   thread became ready.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_last_without_waiter_frees_mutex)
@@ -2223,7 +2351,7 @@ ZTEST(mutex_unit, test_unlock_last_without_waiter_frees_mutex)
  *   k_spin_unlock(). One z_unpend_first_thread_locked() with the wait queue
  *   of the mutex.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_last_without_waiter_lock_sequence)
@@ -2247,7 +2375,7 @@ ZTEST(mutex_unit, test_unlock_last_without_waiter_lock_sequence)
  * - Expected: return value 0. The owner is the middle priority thread, the
  *   lock count is 1. The low priority thread still waits.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_hands_over_to_first_waiter)
@@ -2276,7 +2404,7 @@ ZTEST(mutex_unit, test_unlock_hands_over_to_first_waiter)
  *   z_sched_ready_locked() with the new owner, both while the unit holds
  *   mutex_lock (and the scheduler spinlock with more than one CPU).
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_handover_wakes_new_owner)
@@ -2308,7 +2436,7 @@ ZTEST(mutex_unit, test_unlock_handover_wakes_new_owner)
  *   scheduler spinlock around unpend and ready if there is more than one
  *   CPU. The lock invariant holds.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_handover_lock_sequence)
@@ -2337,7 +2465,7 @@ ZTEST(mutex_unit, test_unlock_handover_lock_sequence)
  * - Expected: the current thread holds only m2. The middle priority thread
  *   holds m1. Its @c mutex_pended_on is NULL.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_moves_held_node_to_new_owner)
@@ -2363,7 +2491,7 @@ ZTEST(mutex_unit, test_unlock_moves_held_node_to_new_owner)
  * - Action: z_impl_k_mutex_unlock() of m1.
  * - Expected: @c orig_prio of the new owner is its priority.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_new_owner_records_orig_prio)
@@ -2386,7 +2514,7 @@ ZTEST(mutex_unit, test_unlock_new_owner_records_orig_prio)
  * - Action: z_impl_k_mutex_unlock() of m1.
  * - Expected: @c orig_prio of the new owner stays low. It holds m1 and m2.
  *
- * @ingroup kernel_unit_mutex_unlock
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_unlock_new_owner_keeps_orig_prio)
@@ -2405,21 +2533,10 @@ ZTEST(mutex_unit, test_unlock_new_owner_keeps_orig_prio)
 #endif /* Z_MUTEX_PI_ENABLED */
 
 #if Z_MUTEX_PI_ENABLED
-/**
- * @defgroup kernel_unit_mutex_restore Priority restore
- * @ingroup kernel_unit_mutex
- * @brief The unit lowers a raised priority on the last unlock and after a timeout.
- *
- * The new priority of the owner is the highest priority of the first
- * waiting threads of the mutexes that the owner still holds, each limited
- * by @kconfig{CONFIG_PRIORITY_CEILING}, and at least the original priority
- * of the owner. On the last unlock, the released mutex is no longer in the
- * held list, so its waiters do not count. The unit calls
- * z_thread_prio_set() only if the priority changes. After a timeout, the
- * unit reschedules if a priority change of the lock asked for it. The
- * unlock ignores this hint.
- *
- * These tests exist only with priority inheritance.
+/*
+ * Tests: Priority restore. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -2432,7 +2549,7 @@ ZTEST(mutex_unit, test_unlock_new_owner_keeps_orig_prio)
  * - Expected: z_thread_prio_set() with the current thread and the low
  *   priority, before the hand-over, while the unit holds mutex_lock.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_unlock_to_orig_prio)
@@ -2462,7 +2579,7 @@ ZTEST(mutex_unit, test_restore_unlock_to_orig_prio)
  * - Expected: z_thread_prio_set() with the middle priority (limited by the
  *   ceiling).
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_unlock_keeps_boost_of_other_mutex)
@@ -2487,7 +2604,7 @@ ZTEST(mutex_unit, test_restore_unlock_keeps_boost_of_other_mutex)
  * - Action: z_impl_k_mutex_unlock() of m1.
  * - Expected: z_thread_prio_set() with the low priority.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_unlock_ignores_released_mutex)
@@ -2512,7 +2629,7 @@ ZTEST(mutex_unit, test_restore_unlock_ignores_released_mutex)
  * - Expected: no priority change: the cooperative waiter (limited by the
  *   ceiling) keeps the current priority.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_unlock_highest_of_all_held)
@@ -2542,7 +2659,8 @@ ZTEST(mutex_unit, test_restore_unlock_highest_of_all_held)
  * - Expected: z_thread_prio_set() with the high priority, not the low
  *   priority.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
+ * @see z_impl_k_mutex_unlock()
  * @see held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_orig_prio_is_floor)
@@ -2568,7 +2686,7 @@ ZTEST(mutex_unit, test_restore_orig_prio_is_floor)
  * - Action: z_impl_k_mutex_unlock() of m1.
  * - Expected: no z_waitq_head_locked() and no z_thread_prio_set().
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_restore_unlock_skips_unboosted_owner)
@@ -2595,7 +2713,7 @@ ZTEST(mutex_unit, test_restore_unlock_skips_unboosted_owner)
  * - Expected: z_thread_prio_set() with the low priority. No z_reschedule():
  *   the lock invariant holds with the release by k_spin_unlock().
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_restore_unlock_ignores_resched_hint)
@@ -2625,7 +2743,8 @@ ZTEST(mutex_unit, test_restore_unlock_ignores_resched_hint)
  *   ceiling. With more than one CPU, the scheduler spinlock nests twice:
  *   for the scan and for the hand-over.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
+ * @see z_impl_k_mutex_unlock()
  * @see held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_scan_under_sched_lock)
@@ -2655,7 +2774,7 @@ ZTEST(mutex_unit, test_restore_scan_under_sched_lock)
  * - Expected: return value -EAGAIN. The second z_thread_prio_set() gives the
  *   owner the low priority. The owner has the low priority at the end.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_timeout_to_orig_prio)
@@ -2681,7 +2800,7 @@ ZTEST(mutex_unit, test_restore_timeout_to_orig_prio)
  * - Expected: the owner gets the high priority, and after the timeout the
  *   middle priority (limited by the ceiling).
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), held_mutexes_highest_waiter_prio()
  */
 ZTEST(mutex_unit, test_restore_timeout_keeps_partial_boost)
@@ -2707,7 +2826,7 @@ ZTEST(mutex_unit, test_restore_timeout_keeps_partial_boost)
  * - Expected: return value -EAGAIN. The second lock is released with
  *   z_reschedule(): the lock invariant holds with 2 locks.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_restore_timeout_reschedules_on_hint)
@@ -2732,7 +2851,7 @@ ZTEST(mutex_unit, test_restore_timeout_reschedules_on_hint)
  *   TEST_TIMEOUT.
  * - Expected: the second lock is released with z_reschedule().
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_restore_timeout_keeps_boost_hint)
@@ -2769,7 +2888,7 @@ ZTEST(mutex_unit, test_restore_timeout_keeps_boost_hint)
  *   changes: the boost of the lock and the restore of the unlock of the
  *   other thread.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_restore_timeout_after_unlock_no_change)
@@ -2798,7 +2917,7 @@ ZTEST(mutex_unit, test_restore_timeout_after_unlock_no_change)
  * - Expected: the middle priority thread has its original priority again.
  *   The low priority thread keeps the high priority.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_restore_timeout_only_first_owner)
@@ -2833,7 +2952,7 @@ static void record_prio_then_unlock(void)
  *   priority. At the end, the owner has the low priority, and the current
  *   thread holds the mutex.
  *
- * @ingroup kernel_unit_mutex_restore
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_restore_end_to_end)
@@ -2853,15 +2972,10 @@ ZTEST(mutex_unit, test_restore_end_to_end)
 #endif /* Z_MUTEX_PI_ENABLED */
 
 #ifdef CONFIG_ASSERT
-/**
- * @defgroup kernel_unit_mutex_asserts Assertions
- * @ingroup kernel_unit_mutex
- * @brief With CONFIG_ASSERT, k_mutex_lock() and k_mutex_unlock() assert that they do not run in an
- * ISR, and k_mutex_unlock() asserts a lock count above 0.
- *
- * The ISR checks are the first calls of k_mutex_lock() and
- * k_mutex_unlock(). In the test, the assertion hook returns, and the unit
- * continues.
+/*
+ * Tests: Assertions. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -2875,7 +2989,7 @@ ZTEST(mutex_unit, test_restore_end_to_end)
  *   z_impl_k_mutex_unlock().
  * - Expected: one failed assertion for each call, before the first lock.
  *
- * @ingroup kernel_unit_mutex_asserts
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_assert_not_in_isr)
@@ -2898,7 +3012,7 @@ ZTEST(mutex_unit, test_assert_not_in_isr)
  * - Action: z_impl_k_mutex_lock(), then z_impl_k_mutex_unlock().
  * - Expected: no failed assertion. One ISR check for each call.
  *
- * @ingroup kernel_unit_mutex_asserts
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_assert_thread_context_ok)
@@ -2918,7 +3032,7 @@ ZTEST(mutex_unit, test_assert_thread_context_ok)
  * - Action: z_impl_k_mutex_unlock().
  * - Expected: one failed assertion before the lock.
  *
- * @ingroup kernel_unit_mutex_asserts
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_assert_unlock_count_zero)
@@ -2933,23 +3047,10 @@ ZTEST(mutex_unit, test_assert_unlock_count_zero)
 #endif /* CONFIG_ASSERT */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_mutex_syscall System call verification
- * @ingroup kernel_unit_mutex
- * @brief With CONFIG_USERSPACE, z_vrfy_k_mutex_*() check the mutex object before the
- * implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_mutex_*(). This
- * function checks that the pointer is a mutex object of the kernel that the
- * thread has access to. z_vrfy_k_mutex_init() uses K_SYSCALL_OBJ_INIT():
- * the object can be initialized or not. The lock and the unlock use
- * K_SYSCALL_OBJ(): the object must be initialized. If the check fails,
- * K_OOPS() stops the thread. Otherwise the function calls
- * z_impl_k_mutex_*() with the same arguments and returns its result.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(). The tests use
- * zassert_stopped_by_oops() (kernel_unit_models.h): the oops jumps back to
- * the test, so the implementation does not run.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -2962,7 +3063,7 @@ ZTEST(mutex_unit, test_assert_unlock_count_zero)
  * - Expected: return value 0. One object check with the mutex, K_OBJ_MUTEX
  *   and _OBJ_INIT_ANY, before z_waitq_init(). No oops.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_vrfy_k_mutex_init()
  */
 ZTEST(mutex_unit, test_vrfy_init_checks_object)
@@ -2985,7 +3086,7 @@ ZTEST(mutex_unit, test_vrfy_init_checks_object)
  * - Expected: an oops stops the call. No z_waitq_init(). The mutex did not
  *   change.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_vrfy_k_mutex_init()
  */
 ZTEST(mutex_unit, test_vrfy_init_oops)
@@ -3010,7 +3111,7 @@ ZTEST(mutex_unit, test_vrfy_init_oops)
  * - Expected: return value -EBUSY. One object check with the mutex,
  *   K_OBJ_MUTEX and _OBJ_INIT_TRUE, before the lock.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_vrfy_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_vrfy_lock_checks_object)
@@ -3033,7 +3134,7 @@ ZTEST(mutex_unit, test_vrfy_lock_checks_object)
  * - Action: z_vrfy_k_mutex_lock() with TEST_TIMEOUT.
  * - Expected: z_pend_curr() with TEST_TIMEOUT.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_vrfy_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_vrfy_lock_passes_timeout)
@@ -3054,7 +3155,7 @@ ZTEST(mutex_unit, test_vrfy_lock_passes_timeout)
  * - Action: z_vrfy_k_mutex_lock() with K_FOREVER.
  * - Expected: an oops stops the call. No lock, the mutex is still free.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_vrfy_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_vrfy_lock_oops)
@@ -3078,7 +3179,7 @@ ZTEST(mutex_unit, test_vrfy_lock_oops)
  * - Expected: return value 0, the lock count is 1. One object check with
  *   the mutex, K_OBJ_MUTEX and _OBJ_INIT_TRUE.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_vrfy_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_vrfy_unlock_checks_object)
@@ -3102,7 +3203,7 @@ ZTEST(mutex_unit, test_vrfy_unlock_checks_object)
  * - Action: z_vrfy_k_mutex_unlock().
  * - Expected: an oops stops the call. The lock count is still 2.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_unlock
  * @see z_vrfy_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_vrfy_unlock_oops)
@@ -3126,7 +3227,7 @@ ZTEST(mutex_unit, test_vrfy_unlock_oops)
  * - Action: z_vrfy_k_mutex_lock() with K_NO_WAIT.
  * - Expected: the oops comes before the first lock.
  *
- * @ingroup kernel_unit_mutex_syscall
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_vrfy_k_mutex_lock()
  */
 ZTEST(mutex_unit, test_vrfy_lock_oops_before_lock)
@@ -3140,10 +3241,10 @@ ZTEST(mutex_unit, test_vrfy_lock_oops_before_lock)
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_MUTEX
-/**
- * @defgroup kernel_unit_mutex_obj_core Object core
- * @ingroup kernel_unit_mutex
- * @brief With CONFIG_OBJ_CORE_MUTEX, each mutex has an object core of the mutex type.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -3156,7 +3257,7 @@ ZTEST(mutex_unit, test_vrfy_lock_oops_before_lock)
  * - Expected: one k_obj_core_init_and_link() with the object core of the
  *   mutex and the type obj_type_mutex.
  *
- * @ingroup kernel_unit_mutex_obj_core
+ * @ingroup kernel_unit_mutex_k_mutex_init
  * @see z_impl_k_mutex_init()
  */
 ZTEST(mutex_unit, test_obj_core_init_links)
@@ -3178,7 +3279,7 @@ ZTEST(mutex_unit, test_obj_core_init_links)
  * - Expected: one descriptor for obj_type_mutex, with the ID
  *   K_OBJ_TYPE_MUTEX_ID.
  *
- * @ingroup kernel_unit_mutex_obj_core
+ * @ingroup kernel_unit_mutex_static
  * @see K_OBJ_TYPE_DEFINE()
  */
 ZTEST(mutex_unit, test_obj_core_type_descriptor)
@@ -3196,17 +3297,10 @@ ZTEST(mutex_unit, test_obj_core_type_descriptor)
 #endif /* CONFIG_OBJ_CORE_MUTEX */
 
 #if Z_MUTEX_PI_ENABLED
-/**
- * @defgroup kernel_unit_mutex_logging Debug logging
- * @ingroup kernel_unit_mutex
- * @brief The LOG_DBG() calls read the thread state, and they do not change the behavior.
- *
- * With @kconfig{CONFIG_KERNEL_LOG_LEVEL} DBG, mutex.c logs each lock, each
- * priority change and each hand-over. The arguments read the state of the
- * owner (z_is_thread_ready()) and the priority of the new owner. With a
- * lower level, the log calls do not run. The history helpers ignore the
- * log calls, so all tests run in all scenarios: they show the same results
- * with and without the logging.
+/*
+ * Tests: Debug logging. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mutex, at the top of this file.
  */
 
 /**
@@ -3220,7 +3314,8 @@ ZTEST(mutex_unit, test_obj_core_type_descriptor)
  * - Action: z_impl_k_mutex_lock() of m1 and of m2 with TEST_TIMEOUT.
  * - Expected: each owner gets the high priority first.
  *
- * @ingroup kernel_unit_mutex_logging
+ * @ingroup kernel_unit_mutex_k_mutex_lock
+ * @see z_impl_k_mutex_lock()
  * @see adjust_owner_prio()
  */
 ZTEST(mutex_unit, test_log_ready_and_pending_owner)
@@ -3250,7 +3345,7 @@ ZTEST(mutex_unit, test_log_ready_and_pending_owner)
  * - Expected: calls of the log backend for the lock, the unlock, the
  *   priority change and the new owner.
  *
- * @ingroup kernel_unit_mutex_logging
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock(), adjust_owner_prio()
  */
 ZTEST(mutex_unit, test_log_debug_messages)
@@ -3277,7 +3372,7 @@ ZTEST(mutex_unit, test_log_debug_messages)
  * - Action: z_impl_k_mutex_lock() of m2, then z_impl_k_mutex_unlock() of m1.
  * - Expected: no call of the log backend.
  *
- * @ingroup kernel_unit_mutex_logging
+ * @ingroup kernel_unit_mutex_k_mutex_lock
  * @see z_impl_k_mutex_lock(), z_impl_k_mutex_unlock()
  */
 ZTEST(mutex_unit, test_log_silent_below_debug)

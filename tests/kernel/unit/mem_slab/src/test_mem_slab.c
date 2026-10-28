@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_mem_slab Memory slab unit (kernel/mem_slab.c)
+ * @defgroup kernel_unit_mem_slab kernel/mem_slab.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/mem_slab.c, written as unit tests.
  *
@@ -135,6 +135,193 @@
  * @c testcase.yaml build the tests once for each Kconfig option above. A
  * test that applies only to some configurations is in an @c \#ifdef block,
  * or it calls ztest_test_skip().
+ *
+ * @par Structure of the tests
+ * Each public function of mem_slab.c has one group below this group. The
+ * static functions and the data of mem_slab.c have the last group. Each
+ * test is in the group of the function under test. The rules below
+ * (locking, object core) apply to more than one function. Their tests are
+ * in the group of the function that they call.
+ *
+ * @par Locking
+ * The spinlock of the slab protects the free list and the counts. Each path
+ * releases it exactly once.
+ * Each path of k_mem_slab_alloc(), k_mem_slab_free() and the statistics
+ * functions locks the spinlock of its slab once, as its first call to the
+ * layers below. Each path releases the lock once, as its last call, with
+ * the key of the lock: k_spin_unlock() (seen as arch_irq_unlock()),
+ * z_reschedule() or z_pend_curr(). The free list and the counts change only
+ * while the lock is held. The pointer check and the NULL checks occur
+ * before the lock, and their error paths do not lock.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_MEM_SLAB, mem_slab.c defines the object type of the
+ * slabs and links each slab of k_mem_slab_init() to it.
+ * mem_slab.c defines the object type @c obj_type_mem_slab.
+ * K_OBJ_TYPE_DEFINE() (or K_OBJ_TYPE_DEFINE_STATS() with
+ * CONFIG_OBJ_CORE_STATS_MEM_SLAB) puts one descriptor into the iterable
+ * section @c k_obj_core_desc. At boot, the object core code initializes the
+ * type and links the slabs of K_MEM_SLAB_DEFINE() (the section
+ * @c k_mem_slab). With statistics, it also registers @c info of each static
+ * slab. k_mem_slab_init() links a slab at run time.
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_k_mem_slab_init k_mem_slab_init()
+ * @ingroup kernel_unit_mem_slab
+ * @brief k_mem_slab_init() checks the block size and the buffer, builds the free list and
+ * initializes the other parts.
+ *
+ * k_mem_slab_init() first writes the block data, the buffer, the count 0
+ * and the initial lock. Then create_free_list() checks the data and links
+ * the blocks. Only if the check passes, k_mem_slab_init() links the object
+ * core, registers the statistics, and initializes the wait queue and the
+ * kernel object. It does not lock the slab: until k_mem_slab_init()
+ * returns, only the caller uses the slab.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_init()
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_k_mem_slab_alloc k_mem_slab_alloc()
+ * @ingroup kernel_unit_mem_slab
+ * @brief k_mem_slab_alloc() takes the head of the free list, or fails, or waits.
+ *
+ * If the free list is not empty, k_mem_slab_alloc() takes its head and
+ * increments the number of used blocks. If the list is empty and the
+ * timeout is K_NO_WAIT (or without CONFIG_MULTITHREADING), it writes NULL to
+ * @p mem and returns -ENOMEM. Else the current thread waits in
+ * z_pend_curr() on the wait queue of the slab. After a wait with the result
+ * 0, the block is @c _current->base.swap_data.
+ *
+ * @par Limits of the checks
+ * mem_slab.c relies on the caller and on the scheduler for the context of a
+ * wait.
+ * The API says that an ISR must use K_NO_WAIT. mem_slab.c has no check of
+ * this rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler
+ * refuses it with a panic in every build. See also the double free in the
+ * pointer check of @ref kernel_unit_mem_slab_static.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_alloc()
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_k_mem_slab_free k_mem_slab_free()
+ * @ingroup kernel_unit_mem_slab
+ * @brief k_mem_slab_free() gives the block to a waiting thread, or puts it at the head of the free
+ * list.
+ *
+ * k_mem_slab_free() tries a hand-over only if the free list is empty (a
+ * thread can wait only then) and with CONFIG_MULTITHREADING. In the
+ * hand-over, z_sched_wake() gives the block to the thread as swap data with
+ * the return value 0. The free list and the count do not change. Else the
+ * first word of the block becomes the link to the old head of the free
+ * list, the block becomes the head, and the count decrements.
+ *
+ * Before the lock, k_mem_slab_free() checks the address with the static
+ * slab_ptr_is_good() (see the pointer check in
+ * @ref kernel_unit_mem_slab_static). The tests of the pointer check call
+ * k_mem_slab_free(), so they are in this group.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_free()
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_get k_mem_slab_runtime_stats_get()
+ * @ingroup kernel_unit_mem_slab
+ * @brief The statistics functions report the used, free and maximum bytes of the slab.
+ *
+ * k_mem_slab_runtime_stats_get() computes the bytes from the counts and the
+ * block size. With CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION, @c info.max_used
+ * is the maximum of the used blocks since k_mem_slab_init() or since the
+ * last k_mem_slab_runtime_stats_reset_max(). Only k_mem_slab_alloc() from
+ * the free list increments it. The statistics functions return -EINVAL for
+ * a NULL argument in all configurations (plain @c if, not CHECKIF()).
+ * Without CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION, the maximum bytes are 0.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_runtime_stats_get()
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_reset_max k_mem_slab_runtime_stats_reset_max()
+ * @ingroup kernel_unit_mem_slab
+ * @brief k_mem_slab_runtime_stats_reset_max() sets the maximum number of used blocks to the
+ * current number.
+ *
+ * The function locks the slab. It returns -EINVAL for a NULL slab, before
+ * the lock. The statistics of the slab are described in
+ * @ref kernel_unit_mem_slab_k_mem_slab_runtime_stats_get.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_runtime_stats_reset_max(), with
+ *   @kconfig{CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION}
+ */
+
+/**
+ * @defgroup kernel_unit_mem_slab_static Static functions and data
+ * @ingroup kernel_unit_mem_slab
+ * @brief The static functions of mem_slab.c, and the data that mem_slab.c defines.
+ *
+ * @par Boot-time initialization
+ * init_mem_slab_module() builds the free list of each slab of
+ * K_MEM_SLAB_DEFINE() at boot.
+ * The static initializer of K_MEM_SLAB_DEFINE() sets the buffer, the block
+ * data and the wait queue, and leaves the free list NULL. The boot runs
+ * init_mem_slab_module() in the PRE_KERNEL phase, through the entry of
+ * K_KERNEL_INIT_PRE(). The function walks the section @c k_mem_slab in
+ * order. For each slab, it builds the free list and initializes the kernel
+ * object. It stops at the first slab that is not valid. The function
+ * returns nothing, so the boot does not see the error.
+ *
+ * The test defines four static slabs: a and b are valid, c_bad has a buffer
+ * size that overflows, d_after is valid and comes after c_bad.
+ *
+ * @par Pointer check
+ * With CONFIG_MEM_SLAB_POINTER_VALIDATE, k_mem_slab_free() calls k_panic()
+ * for an address that is not the start of a block in the buffer.
+ * slab_ptr_is_good() accepts an address if its offset from the buffer
+ * start is not negative, is less than the buffer size, and is a multiple
+ * of the block size. Without CONFIG_MEM_SLAB_POINTER_VALIDATE, it accepts
+ * each address. k_mem_slab_free() checks the address before it locks the
+ * slab. For an address that is not valid, it fails an assertion (with
+ * CONFIG_ASSERT), calls k_panic() and returns. On the unit_testing
+ * architecture, k_panic() is z_fatal_error(K_ERR_KERNEL_PANIC, NULL). The
+ * tests of the pointer check are in the group of k_mem_slab_free().
+ *
+ * @par Object core statistics
+ * With CONFIG_OBJ_CORE_STATS_MEM_SLAB, the object core framework reads the
+ * statistics of a slab through the functions of mem_slab_stats_desc.
+ * k_mem_slab_init() registers @c info of the slab as the raw statistics.
+ * The descriptor @c mem_slab_stats_desc gives three functions:
+ * k_mem_slab_stats_raw() copies @c info, k_mem_slab_stats_query() computes
+ * the bytes as k_mem_slab_runtime_stats_get() does, and
+ * k_mem_slab_stats_reset() sets the maximum to the current count. There is
+ * no enable and no disable function. Each function locks the slab. With
+ * CONFIG_ASSERT, each function asserts that its arguments are not NULL,
+ * before the lock.
+ *
+ * @par Functions in kernel/mem_slab.c
+ * - k_mem_slab_stats_raw(), k_mem_slab_stats_query() and
+ *   k_mem_slab_stats_reset(), with @kconfig{CONFIG_OBJ_CORE_MEM_SLAB} and
+ *   @kconfig{CONFIG_OBJ_CORE_STATS_MEM_SLAB}
+ * - create_free_list(). It has no test of its own. The tests of
+ *   k_mem_slab_init() and of init_mem_slab_module() call it.
+ * - init_mem_slab_module(), registered with K_KERNEL_INIT_PRE()
+ * - slab_ptr_is_good(). The tests of k_mem_slab_free() and of
+ *   k_mem_slab_alloc() call it.
+ *
+ * @par Data in kernel/mem_slab.c
+ * - @c obj_type_mem_slab and its descriptor, with
+ *   @kconfig{CONFIG_OBJ_CORE_MEM_SLAB}: K_OBJ_TYPE_DEFINE(), or
+ *   K_OBJ_TYPE_DEFINE_STATS() with @kconfig{CONFIG_OBJ_CORE_STATS_MEM_SLAB}.
+ * - @c mem_slab_stats_desc, with @kconfig{CONFIG_OBJ_CORE_MEM_SLAB} and
+ *   @kconfig{CONFIG_OBJ_CORE_STATS_MEM_SLAB}.
+ *
+ * The tests of the descriptors are in this group.
  */
 
 #include <string.h>
@@ -368,18 +555,10 @@ static void mem_slab_unit_before(void *fixture)
 
 ZTEST_SUITE(mem_slab_unit, NULL, NULL, mem_slab_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_mem_slab_init Initialization
- * @ingroup kernel_unit_mem_slab
- * @brief k_mem_slab_init() checks the block size and the buffer, builds the free list and
- * initializes the other parts.
- *
- * k_mem_slab_init() first writes the block data, the buffer, the count 0
- * and the initial lock. Then create_free_list() checks the data and links
- * the blocks. Only if the check passes, k_mem_slab_init() links the object
- * core, registers the statistics, and initializes the wait queue and the
- * kernel object. It does not lock the slab: until k_mem_slab_init()
- * returns, only the caller uses the slab.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -392,7 +571,7 @@ ZTEST_SUITE(mem_slab_unit, NULL, NULL, mem_slab_unit_before, NULL, NULL);
  * - Expected: return value 0. The buffer, the block size and the number of
  *   blocks are the arguments. The number of used blocks is 0.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_sets_slab_data)
@@ -421,7 +600,7 @@ ZTEST(mem_slab_unit, test_init_sets_slab_data)
  *   block points to the next block, and the first word of block 3 is
  *   NULL.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_links_blocks_in_address_order)
@@ -444,7 +623,8 @@ ZTEST(mem_slab_unit, test_init_links_blocks_in_address_order)
  * - Expected: in each block, the bytes after the first word keep the
  *   pattern.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
+ * @see k_mem_slab_init()
  * @see create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_writes_only_first_word)
@@ -467,7 +647,7 @@ ZTEST(mem_slab_unit, test_init_writes_only_first_word)
  * - Expected: all bytes of the lock are 0 (the value of an unlocked
  *   spinlock).
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_resets_lock)
@@ -489,7 +669,7 @@ ZTEST(mem_slab_unit, test_init_resets_lock)
  * - Action: k_mem_slab_init().
  * - Expected: one call of z_waitq_init() with the wait queue of the slab.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_initializes_wait_queue)
@@ -510,7 +690,7 @@ ZTEST(mem_slab_unit, test_init_initializes_wait_queue)
  * - Action: k_mem_slab_init().
  * - Expected: one call of k_object_init() with the slab.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_initializes_kernel_object)
@@ -535,7 +715,7 @@ ZTEST(mem_slab_unit, test_init_initializes_kernel_object)
  *   CONFIG_OBJ_CORE_STATS_MEM_SLAB), z_waitq_init(), k_object_init() (with
  *   CONFIG_USERSPACE). No lock.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_call_order)
@@ -558,7 +738,7 @@ ZTEST(mem_slab_unit, test_init_call_order)
  * - Expected: return value 0. The free list is empty. The buffer does not
  *   change. k_mem_slab_alloc() with K_NO_WAIT returns -ENOMEM.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_zero_blocks_gives_empty_free_list)
@@ -582,7 +762,7 @@ ZTEST(mem_slab_unit, test_init_zero_blocks_gives_empty_free_list)
  * - Expected: return value -EINVAL. The buffer does not change. No call of
  *   z_waitq_init().
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_rejects_zero_block_size)
@@ -607,7 +787,7 @@ ZTEST(mem_slab_unit, test_init_rejects_zero_block_size)
  * - Action: k_mem_slab_init() with the block size 17.
  * - Expected: return value -EINVAL. The buffer does not change.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_rejects_unaligned_block_size)
@@ -632,7 +812,7 @@ ZTEST(mem_slab_unit, test_init_rejects_unaligned_block_size)
  * - Action: k_mem_slab_init() with the buffer at slab_buf + 1.
  * - Expected: return value -EINVAL. The buffer does not change.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_rejects_unaligned_buffer)
@@ -658,7 +838,7 @@ ZTEST(mem_slab_unit, test_init_rejects_unaligned_buffer)
  * - Expected: return value -EINVAL. The buffer does not change. No call of
  *   z_waitq_init().
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_rejects_size_overflow)
@@ -682,7 +862,7 @@ ZTEST(mem_slab_unit, test_init_rejects_size_overflow)
  *   word-aligned address.
  * - Expected: return value -EINVAL. No call of z_waitq_init().
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_rejects_address_overflow)
@@ -702,7 +882,7 @@ ZTEST(mem_slab_unit, test_init_rejects_address_overflow)
  * - Action: k_mem_slab_init() with a buffer size that overflows.
  * - Expected: return value -EINVAL. No call to the layers below.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_error_calls_nothing)
@@ -726,7 +906,7 @@ ZTEST(mem_slab_unit, test_init_error_calls_nothing)
  * - Expected: return value -EINVAL. The block size, the number of blocks,
  *   the buffer and the count 0 are set. The free list is still block 2.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_init_error_keeps_old_free_list)
@@ -758,7 +938,7 @@ ZTEST(mem_slab_unit, test_init_error_keeps_old_free_list)
  *   the start of the buffer. The number of used blocks is 3, more than the
  *   number of blocks.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_no_runtime_checks_accepts_zero_block_size)
@@ -793,7 +973,7 @@ ZTEST(mem_slab_unit, test_init_no_runtime_checks_accepts_zero_block_size)
  *   failed assertion for the fourth call. The fake assertion hook returns,
  *   so each call continues and returns 0.
  *
- * @ingroup kernel_unit_mem_slab_init
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_init_assert_on_errors)
@@ -814,21 +994,10 @@ ZTEST(mem_slab_unit, test_init_assert_on_errors)
 }
 #endif /* CONFIG_ASSERT_ON_ERRORS */
 
-/**
- * @defgroup kernel_unit_mem_slab_boot Boot-time initialization
- * @ingroup kernel_unit_mem_slab
- * @brief init_mem_slab_module() builds the free list of each slab of K_MEM_SLAB_DEFINE() at boot.
- *
- * The static initializer of K_MEM_SLAB_DEFINE() sets the buffer, the block
- * data and the wait queue, and leaves the free list NULL. The boot runs
- * init_mem_slab_module() in the PRE_KERNEL phase, through the entry of
- * K_KERNEL_INIT_PRE(). The function walks the section @c k_mem_slab in
- * order. For each slab, it builds the free list and initializes the kernel
- * object. It stops at the first slab that is not valid. The function
- * returns nothing, so the boot does not see the error.
- *
- * The test defines four static slabs: a and b are valid, c_bad has a buffer
- * size that overflows, d_after is valid and comes after c_bad.
+/*
+ * Tests: Boot-time initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -839,7 +1008,7 @@ ZTEST(mem_slab_unit, test_init_assert_on_errors)
  * - Action: read the entry of K_KERNEL_INIT_PRE() in mem_slab.c.
  * - Expected: the init function of the entry is init_mem_slab_module().
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module()
  */
 ZTEST(mem_slab_unit, test_boot_registers_pre_kernel_init)
@@ -858,7 +1027,7 @@ ZTEST(mem_slab_unit, test_boot_registers_pre_kernel_init)
  *   buffer. The free list of slab b has 3 blocks, from the start of its
  *   buffer.
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module(), create_free_list()
  */
 ZTEST(mem_slab_unit, test_boot_builds_free_lists)
@@ -881,7 +1050,7 @@ ZTEST(mem_slab_unit, test_boot_builds_free_lists)
  * - Expected: the free lists of slab c_bad and slab d_after are NULL.
  *   k_mem_slab_alloc() on slab d_after with K_NO_WAIT returns -ENOMEM.
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module()
  */
 ZTEST(mem_slab_unit, test_boot_stops_at_invalid_slab)
@@ -906,7 +1075,7 @@ ZTEST(mem_slab_unit, test_boot_stops_at_invalid_slab)
  * - Expected: the free lists of slab a, b, c_bad and d_after have 4, 3, 1
  *   and 2 blocks.
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module()
  */
 ZTEST(mem_slab_unit, test_boot_walks_whole_section)
@@ -931,7 +1100,7 @@ ZTEST(mem_slab_unit, test_boot_walks_whole_section)
  * - Expected calls: k_object_init() for slab a and for slab b (with
  *   CONFIG_USERSPACE), and nothing else.
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module()
  */
 ZTEST(mem_slab_unit, test_boot_call_history)
@@ -957,7 +1126,7 @@ ZTEST(mem_slab_unit, test_boot_call_history)
  * - Expected: the block size of slab b is WB_UP(12). Its buffer address is
  *   a multiple of the word size. The free list has 3 blocks.
  *
- * @ingroup kernel_unit_mem_slab_boot
+ * @ingroup kernel_unit_mem_slab_static
  * @see init_mem_slab_module(), K_MEM_SLAB_DEFINE()
  */
 ZTEST(mem_slab_unit, test_boot_static_block_size_is_word_aligned)
@@ -969,17 +1138,10 @@ ZTEST(mem_slab_unit, test_boot_static_block_size_is_word_aligned)
 	zassert_equal(free_list_len(&unit_slab_b), 3U);
 }
 
-/**
- * @defgroup kernel_unit_mem_slab_alloc Allocation
- * @ingroup kernel_unit_mem_slab
- * @brief k_mem_slab_alloc() takes the head of the free list, or fails, or waits.
- *
- * If the free list is not empty, k_mem_slab_alloc() takes its head and
- * increments the number of used blocks. If the list is empty and the
- * timeout is K_NO_WAIT (or without CONFIG_MULTITHREADING), it writes NULL to
- * @p mem and returns -ENOMEM. Else the current thread waits in
- * z_pend_curr() on the wait queue of the slab. After a wait with the result
- * 0, the block is @c _current->base.swap_data.
+/*
+ * Tests: Allocation. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -991,7 +1153,7 @@ ZTEST(mem_slab_unit, test_boot_static_block_size_is_word_aligned)
  * - Expected: return value 0. @p mem is block 0. The free list is block 1,
  *   2, 3. The number of used blocks is 1.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_takes_head_of_free_list)
@@ -1017,7 +1179,7 @@ ZTEST(mem_slab_unit, test_alloc_takes_head_of_free_list)
  * - Expected: the blocks 0, 1, 2, 3. Then the free list is empty and the
  *   number of used blocks is 4. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_gives_blocks_until_empty)
@@ -1044,7 +1206,7 @@ ZTEST(mem_slab_unit, test_alloc_gives_blocks_until_empty)
  * - Expected: each call returns 0 and the next block. No call of
  *   z_pend_curr().
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_with_free_block_does_not_wait)
@@ -1072,7 +1234,7 @@ ZTEST(mem_slab_unit, test_alloc_with_free_block_does_not_wait)
  * - Expected: return value -ENOMEM. @p mem is NULL. The number of used
  *   blocks is 4. No call of z_pend_curr().
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_empty_no_wait_returns_enomem)
@@ -1101,7 +1263,7 @@ ZTEST(mem_slab_unit, test_alloc_empty_no_wait_returns_enomem)
  * - Expected: one call of z_pend_curr() with the lock of the slab, the
  *   wait queue of the slab and the timeout.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_empty_waits_with_timeout)
@@ -1137,7 +1299,7 @@ ZTEST(mem_slab_unit, test_alloc_empty_waits_with_timeout)
  * - Expected: return value 0. @p mem is block 2. The free list is empty.
  *   The number of used blocks is 4.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_after_wait_returns_handed_block)
@@ -1172,7 +1334,7 @@ ZTEST(mem_slab_unit, test_alloc_after_wait_returns_handed_block)
  * - Action: k_mem_slab_alloc() with a timeout of 10 ticks.
  * - Expected: return value -EAGAIN. @p mem still has the marker value.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_after_timeout_keeps_mem)
@@ -1206,7 +1368,7 @@ ZTEST(mem_slab_unit, test_alloc_after_timeout_keeps_mem)
  * - Expected: each call returns -ENOMEM and writes NULL to @p mem. No call
  *   of z_pend_curr().
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_alloc_single_thread_does_not_wait)
@@ -1239,7 +1401,7 @@ ZTEST(mem_slab_unit, test_alloc_single_thread_does_not_wait)
  * - Expected: one failed assertion, before the release of the lock. The
  *   fake assertion hook returns, so the call returns 0 and block 0.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_alloc_asserts_corrupt_free_list)
@@ -1270,7 +1432,7 @@ ZTEST(mem_slab_unit, test_alloc_asserts_corrupt_free_list)
  * - Expected: one failed assertion: the free list is empty, but only 1 of
  *   4 blocks is used.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_alloc_asserts_count_of_empty_free_list)
@@ -1298,7 +1460,7 @@ ZTEST(mem_slab_unit, test_alloc_asserts_count_of_empty_free_list)
  * - Action: k_mem_slab_alloc() with K_NO_WAIT, 4 times.
  * - Expected: no failed assertion.
  *
- * @ingroup kernel_unit_mem_slab_alloc
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_alloc_valid_slab_passes_assertion)
@@ -1313,18 +1475,10 @@ ZTEST(mem_slab_unit, test_alloc_valid_slab_passes_assertion)
 }
 #endif /* CONFIG_ASSERT */
 
-/**
- * @defgroup kernel_unit_mem_slab_free Free
- * @ingroup kernel_unit_mem_slab
- * @brief k_mem_slab_free() gives the block to a waiting thread, or puts it at the head of the free
- * list.
- *
- * k_mem_slab_free() tries a hand-over only if the free list is empty (a
- * thread can wait only then) and with CONFIG_MULTITHREADING. In the
- * hand-over, z_sched_wake() gives the block to the thread as swap data with
- * the return value 0. The free list and the count do not change. Else the
- * first word of the block becomes the link to the old head of the free
- * list, the block becomes the head, and the count decrements.
+/*
+ * Tests: Free. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -1336,7 +1490,7 @@ ZTEST(mem_slab_unit, test_alloc_valid_slab_passes_assertion)
  * - Expected: the free list is block 0, 2, 3. The first word of block 0
  *   points to block 2. The number of used blocks is 1.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_free_puts_block_at_head)
@@ -1363,7 +1517,7 @@ ZTEST(mem_slab_unit, test_free_puts_block_at_head)
  *   k_mem_slab_alloc() two times.
  * - Expected: the allocations give block 3, then block 1.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_free_last_freed_is_next_allocated)
@@ -1393,7 +1547,7 @@ ZTEST(mem_slab_unit, test_free_last_freed_is_next_allocated)
  *   the return value 0 and block 2. The free list is empty. The number of
  *   used blocks is 4. Block 2 keeps the pattern.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_free_hands_block_to_waiting_thread)
@@ -1432,7 +1586,7 @@ ZTEST(mem_slab_unit, test_free_hands_block_to_waiting_thread)
  *   list is block 1. The first word of block 1 is NULL. The number of used
  *   blocks is 3.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_free_empty_list_without_waiter_puts_block)
@@ -1464,7 +1618,7 @@ ZTEST(mem_slab_unit, test_free_empty_list_without_waiter_puts_block)
  * - Expected: no call of z_sched_wake(). The free list is block 0, 1, 2,
  *   3.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_free_with_free_blocks_does_not_wake)
@@ -1495,7 +1649,7 @@ ZTEST(mem_slab_unit, test_free_with_free_blocks_does_not_wake)
  * - Expected: k_mem_slab_alloc() returns 0 and block 3. The number of used
  *   blocks is 4.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_free_handover_reaches_alloc)
@@ -1530,7 +1684,7 @@ ZTEST(mem_slab_unit, test_free_handover_reaches_alloc)
  * - Expected: no call of z_sched_wake(). The free list is block 0. The
  *   number of used blocks is 3.
  *
- * @ingroup kernel_unit_mem_slab_free
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_free_single_thread_does_not_wake)
@@ -1549,19 +1703,10 @@ ZTEST(mem_slab_unit, test_free_single_thread_does_not_wake)
 }
 #endif /* !CONFIG_MULTITHREADING */
 
-/**
- * @defgroup kernel_unit_mem_slab_validate Pointer check
- * @ingroup kernel_unit_mem_slab
- * @brief With CONFIG_MEM_SLAB_POINTER_VALIDATE, k_mem_slab_free() calls k_panic() for an address
- * that is not the start of a block in the buffer.
- *
- * slab_ptr_is_good() accepts an address if its offset from the buffer
- * start is not negative, is less than the buffer size, and is a multiple
- * of the block size. Without CONFIG_MEM_SLAB_POINTER_VALIDATE, it accepts
- * each address. k_mem_slab_free() checks the address before it locks the
- * slab. For an address that is not valid, it fails an assertion (with
- * CONFIG_ASSERT), calls k_panic() and returns. On the unit_testing
- * architecture, k_panic() is z_fatal_error(K_ERR_KERNEL_PANIC, NULL).
+/*
+ * Tests: Pointer check. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /* Assert that the last k_mem_slab_free() called k_panic() and changed nothing. */
@@ -1586,7 +1731,7 @@ static void assert_free_panicked(struct k_mem_slab *slab, size_t free_blocks, ui
  * - Expected: one call of z_fatal_error() with K_ERR_KERNEL_PANIC and NULL.
  *   No lock. The free list has 3 blocks, and 1 block is used.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_validate_free_before_buffer_panics)
@@ -1616,7 +1761,7 @@ ZTEST(mem_slab_unit, test_validate_free_before_buffer_panics)
  * - Expected: one call of z_fatal_error() with K_ERR_KERNEL_PANIC. No lock.
  *   The slab does not change.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_validate_free_at_buffer_end_panics)
@@ -1646,7 +1791,7 @@ ZTEST(mem_slab_unit, test_validate_free_at_buffer_end_panics)
  * - Expected: one call of z_fatal_error() with K_ERR_KERNEL_PANIC. No lock.
  *   The slab does not change.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_validate_free_inside_block_panics)
@@ -1675,7 +1820,7 @@ ZTEST(mem_slab_unit, test_validate_free_inside_block_panics)
  * - Action: k_mem_slab_free() of block 3, then of block 0.
  * - Expected: no call of z_fatal_error(). The free list is block 0, 3.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_validate_free_accepts_block_start)
@@ -1702,7 +1847,7 @@ ZTEST(mem_slab_unit, test_validate_free_accepts_block_start)
  * - Action: k_mem_slab_free() of an address outside of the buffer.
  * - Expected: one failed assertion, then one call of z_fatal_error().
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_validate_free_asserts_before_panic)
@@ -1734,7 +1879,7 @@ ZTEST(mem_slab_unit, test_validate_free_asserts_before_panic)
  * - Expected: no call of z_fatal_error(). The head of the free list is the
  *   foreign block. The number of used blocks is 0.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), slab_ptr_is_good()
  */
 ZTEST(mem_slab_unit, test_validate_off_accepts_foreign_block)
@@ -1765,7 +1910,7 @@ ZTEST(mem_slab_unit, test_validate_off_accepts_foreign_block)
  *   block 0, and the first word of block 0 points to block 0. The number
  *   of used blocks is UINT32_MAX.
  *
- * @ingroup kernel_unit_mem_slab_validate
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_validate_double_free_not_found)
@@ -1784,17 +1929,10 @@ ZTEST(mem_slab_unit, test_validate_double_free_not_found)
 	zassert_equal(slab.info.num_used, UINT32_MAX);
 }
 
-/**
- * @defgroup kernel_unit_mem_slab_stats Statistics
- * @ingroup kernel_unit_mem_slab
- * @brief The statistics functions report the used, free and maximum bytes of the slab.
- *
- * k_mem_slab_runtime_stats_get() computes the bytes from the counts and the
- * block size. With CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION, @c info.max_used
- * is the maximum of the used blocks since k_mem_slab_init() or since the
- * last k_mem_slab_runtime_stats_reset_max(). Only k_mem_slab_alloc() from
- * the free list increments it. The statistics functions return -EINVAL for
- * a NULL argument in all configurations (plain @c if, not CHECKIF()).
+/*
+ * Tests: Statistics. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -1805,7 +1943,7 @@ ZTEST(mem_slab_unit, test_validate_double_free_not_found)
  * - Action: k_mem_slab_runtime_stats_get().
  * - Expected: return value 0. allocated_bytes is 48, free_bytes is 16.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_get
  * @see k_mem_slab_runtime_stats_get()
  */
 ZTEST(mem_slab_unit, test_stats_get_reports_bytes)
@@ -1833,7 +1971,7 @@ ZTEST(mem_slab_unit, test_stats_get_reports_bytes)
  * - Action: k_mem_slab_runtime_stats_get().
  * - Expected: max_allocated_bytes is 0.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_get
  * @see k_mem_slab_runtime_stats_get()
  */
 ZTEST(mem_slab_unit, test_stats_get_max_without_trace)
@@ -1863,7 +2001,7 @@ ZTEST(mem_slab_unit, test_stats_get_max_without_trace)
  *   the statistics NULL.
  * - Expected: each call returns -EINVAL. No calls to the layers below.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_get
  * @see k_mem_slab_runtime_stats_get()
  */
 ZTEST(mem_slab_unit, test_stats_get_rejects_null)
@@ -1891,7 +2029,7 @@ ZTEST(mem_slab_unit, test_stats_get_rejects_null)
  *   frees and after the last allocation. k_mem_slab_max_used_get() returns
  *   3. k_mem_slab_runtime_stats_get() reports 48 maximum bytes.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc(), k_mem_slab_free(), k_mem_slab_runtime_stats_get()
  */
 ZTEST(mem_slab_unit, test_trace_max_used_keeps_peak)
@@ -1925,7 +2063,7 @@ ZTEST(mem_slab_unit, test_trace_max_used_keeps_peak)
  * - Action: k_mem_slab_init().
  * - Expected: max_used is 0.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_trace_init_resets_max_used)
@@ -1949,7 +2087,7 @@ ZTEST(mem_slab_unit, test_trace_init_resets_max_used)
  *   the woken thread.
  * - Expected: max_used is 4.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free(), k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_trace_handover_keeps_max_used)
@@ -1981,7 +2119,7 @@ ZTEST(mem_slab_unit, test_trace_handover_keeps_max_used)
  * - Action: k_mem_slab_runtime_stats_reset_max().
  * - Expected: return value 0. max_used is 1.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_reset_max
  * @see k_mem_slab_runtime_stats_reset_max()
  */
 ZTEST(mem_slab_unit, test_trace_reset_max_sets_current_count)
@@ -2007,7 +2145,7 @@ ZTEST(mem_slab_unit, test_trace_reset_max_sets_current_count)
  * - Action: k_mem_slab_runtime_stats_reset_max() with NULL.
  * - Expected: return value -EINVAL. No calls to the layers below.
  *
- * @ingroup kernel_unit_mem_slab_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_reset_max
  * @see k_mem_slab_runtime_stats_reset_max()
  */
 ZTEST(mem_slab_unit, test_trace_reset_max_rejects_null)
@@ -2018,19 +2156,10 @@ ZTEST(mem_slab_unit, test_trace_reset_max_rejects_null)
 }
 #endif /* CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION */
 
-/**
- * @defgroup kernel_unit_mem_slab_locking Locking
- * @ingroup kernel_unit_mem_slab
- * @brief The spinlock of the slab protects the free list and the counts. Each path releases it
- * exactly once.
- *
- * Each path of k_mem_slab_alloc(), k_mem_slab_free() and the statistics
- * functions locks the spinlock of its slab once, as its first call to the
- * layers below. Each path releases the lock once, as its last call, with
- * the key of the lock: k_spin_unlock() (seen as arch_irq_unlock()),
- * z_reschedule() or z_pend_curr(). The free list and the counts change only
- * while the lock is held. The pointer check and the NULL checks occur
- * before the lock, and their error paths do not lock.
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -2042,7 +2171,7 @@ ZTEST(mem_slab_unit, test_trace_reset_max_rejects_null)
  * - Action: k_mem_slab_alloc() with K_FOREVER.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_lock_alloc_from_list_unlocks)
@@ -2066,7 +2195,7 @@ ZTEST(mem_slab_unit, test_lock_alloc_from_list_unlocks)
  * - Action: k_mem_slab_alloc() with K_NO_WAIT.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_lock_alloc_enomem_unlocks)
@@ -2095,7 +2224,7 @@ ZTEST(mem_slab_unit, test_lock_alloc_enomem_unlocks)
  * - Expected calls: arch_irq_lock(), z_pend_curr() with the lock of the
  *   slab and the key. No call after z_pend_curr().
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_lock_alloc_wait_hands_lock_to_pend)
@@ -2127,7 +2256,7 @@ ZTEST(mem_slab_unit, test_lock_alloc_wait_hands_lock_to_pend)
  * - Action: k_mem_slab_free() of block 0.
  * - Expected calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_lock_free_to_list_unlocks)
@@ -2154,7 +2283,7 @@ ZTEST(mem_slab_unit, test_lock_free_to_list_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake() (with
  *   CONFIG_MULTITHREADING), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_lock_free_no_waiter_unlocks)
@@ -2184,7 +2313,7 @@ ZTEST(mem_slab_unit, test_lock_free_no_waiter_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_reschedule() with
  *   the lock of the slab and the key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_lock_free_handover_reschedules)
@@ -2216,7 +2345,7 @@ ZTEST(mem_slab_unit, test_lock_free_handover_reschedules)
  * - Expected: no call of arch_irq_lock(), arch_irq_unlock(),
  *   z_sched_wake() and z_reschedule(). The last call is z_fatal_error().
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_free
  * @see k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_lock_free_invalid_does_not_lock)
@@ -2253,7 +2382,7 @@ ZTEST(mem_slab_unit, test_lock_free_invalid_does_not_lock)
  * - Expected calls each time: arch_irq_lock(), arch_irq_unlock() with the
  *   key.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_runtime_stats_get
  * @see k_mem_slab_runtime_stats_get(), k_mem_slab_runtime_stats_reset_max()
  */
 ZTEST(mem_slab_unit, test_lock_stats_unlock)
@@ -2286,7 +2415,7 @@ ZTEST(mem_slab_unit, test_lock_stats_unlock)
  *   the block. The spies are reset before each call.
  * - Expected: at the lock, the old values. At the release, the new values.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc(), k_mem_slab_free()
  */
 ZTEST(mem_slab_unit, test_lock_protects_free_list)
@@ -2322,7 +2451,7 @@ ZTEST(mem_slab_unit, test_lock_protects_free_list)
  *   CONFIG_SPIN_VALIDATE, the validation sees the lock of the first slab,
  *   then the lock of the second slab. The lock members are different.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_lock_one_lock_per_slab)
@@ -2359,7 +2488,7 @@ ZTEST(mem_slab_unit, test_lock_one_lock_per_slab)
  * - Action: k_mem_slab_init(), then init_mem_slab_module().
  * - Expected: no call of arch_irq_lock().
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init(), init_mem_slab_module()
  */
 ZTEST(mem_slab_unit, test_lock_not_used_by_init)
@@ -2383,7 +2512,7 @@ ZTEST(mem_slab_unit, test_lock_not_used_by_init)
  * - Expected: one call of z_spin_lock_valid() and one call of
  *   z_spin_unlock_valid(), each with the lock of the slab.
  *
- * @ingroup kernel_unit_mem_slab_locking
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_lock_validation_sees_slab_lock)
@@ -2401,15 +2530,10 @@ ZTEST(mem_slab_unit, test_lock_validation_sees_slab_lock)
 }
 #endif /* CONFIG_SPIN_VALIDATE */
 
-/**
- * @defgroup kernel_unit_mem_slab_limits Limits of the checks
- * @ingroup kernel_unit_mem_slab
- * @brief mem_slab.c relies on the caller and on the scheduler for the context of a wait.
- *
- * The API says that an ISR must use K_NO_WAIT. mem_slab.c has no check of
- * this rule. In an ISR, a wait reaches z_pend_curr(), and the scheduler
- * refuses it with a panic in every build. See also the double free in
- * @ref kernel_unit_mem_slab_validate.
+/*
+ * Tests: Limits of the checks. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -2430,7 +2554,7 @@ ZTEST(mem_slab_unit, test_lock_validation_sees_slab_lock)
  *   returns KERNEL_UNIT_PEND_REFUSED, and k_mem_slab_alloc() gives this
  *   value to the caller.
  *
- * @ingroup kernel_unit_mem_slab_limits
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_alloc
  * @see k_mem_slab_alloc()
  */
 ZTEST(mem_slab_unit, test_limits_alloc_does_not_check_isr)
@@ -2464,19 +2588,10 @@ ZTEST(mem_slab_unit, test_limits_alloc_does_not_check_isr)
 }
 
 #ifdef CONFIG_OBJ_CORE_MEM_SLAB
-/**
- * @defgroup kernel_unit_mem_slab_obj_core Object core
- * @ingroup kernel_unit_mem_slab
- * @brief With CONFIG_OBJ_CORE_MEM_SLAB, mem_slab.c defines the object type of the slabs and links
- * each slab of k_mem_slab_init() to it.
- *
- * mem_slab.c defines the object type @c obj_type_mem_slab.
- * K_OBJ_TYPE_DEFINE() (or K_OBJ_TYPE_DEFINE_STATS() with
- * CONFIG_OBJ_CORE_STATS_MEM_SLAB) puts one descriptor into the iterable
- * section @c k_obj_core_desc. At boot, the object core code initializes the
- * type and links the slabs of K_MEM_SLAB_DEFINE() (the section
- * @c k_mem_slab). With statistics, it also registers @c info of each static
- * slab. k_mem_slab_init() links a slab at run time.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /* Return the descriptor of a type, and count the descriptors of this type. */
@@ -2507,7 +2622,7 @@ static const struct k_obj_core_desc *obj_core_desc(struct k_obj_type *type, int 
  *   offset is the offset of @c obj_core. Its object range is the section
  *   @c k_mem_slab.
  *
- * @ingroup kernel_unit_mem_slab_obj_core
+ * @ingroup kernel_unit_mem_slab_static
  */
 ZTEST(mem_slab_unit, test_obj_core_type_descriptor)
 {
@@ -2533,7 +2648,7 @@ ZTEST(mem_slab_unit, test_obj_core_type_descriptor)
  * - Expected: each slab is in the range, at a multiple of the object size
  *   from the start.
  *
- * @ingroup kernel_unit_mem_slab_obj_core
+ * @ingroup kernel_unit_mem_slab_static
  */
 ZTEST(mem_slab_unit, test_obj_core_descriptor_covers_static_slabs)
 {
@@ -2558,7 +2673,7 @@ ZTEST(mem_slab_unit, test_obj_core_descriptor_covers_static_slabs)
  * - Expected: one call of k_obj_core_init_and_link() with the object core
  *   of the slab and @c obj_type_mem_slab.
  *
- * @ingroup kernel_unit_mem_slab_obj_core
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_obj_core_init_links_slab)
@@ -2585,7 +2700,7 @@ ZTEST(mem_slab_unit, test_obj_core_init_links_slab)
  *   @c info, and the size is the size of @c struct @c k_mem_slab_info.
  *   Else they are NULL, 0 and 0.
  *
- * @ingroup kernel_unit_mem_slab_obj_core
+ * @ingroup kernel_unit_mem_slab_static
  */
 ZTEST(mem_slab_unit, test_obj_core_descriptor_stats_fields)
 {
@@ -2607,20 +2722,10 @@ ZTEST(mem_slab_unit, test_obj_core_descriptor_stats_fields)
 #endif /* CONFIG_OBJ_CORE_MEM_SLAB */
 
 #ifdef CONFIG_OBJ_CORE_STATS_MEM_SLAB
-/**
- * @defgroup kernel_unit_mem_slab_obj_core_stats Object core statistics
- * @ingroup kernel_unit_mem_slab
- * @brief With CONFIG_OBJ_CORE_STATS_MEM_SLAB, the object core framework reads the statistics of a
- * slab through the functions of mem_slab_stats_desc.
- *
- * k_mem_slab_init() registers @c info of the slab as the raw statistics.
- * The descriptor @c mem_slab_stats_desc gives three functions:
- * k_mem_slab_stats_raw() copies @c info, k_mem_slab_stats_query() computes
- * the bytes as k_mem_slab_runtime_stats_get() does, and
- * k_mem_slab_stats_reset() sets the maximum to the current count. There is
- * no enable and no disable function. Each function locks the slab. With
- * CONFIG_ASSERT, each function asserts that its arguments are not NULL,
- * before the lock.
+/*
+ * Tests: Object core statistics. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_mem_slab, at the top of this file.
  */
 
 /**
@@ -2633,7 +2738,7 @@ ZTEST(mem_slab_unit, test_obj_core_descriptor_stats_fields)
  *   of the slab, @c info of the slab and the size of
  *   @c struct @c k_mem_slab_info, after k_obj_core_init_and_link().
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_init_registers_info)
@@ -2657,7 +2762,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_init_registers_info)
  * - Action: k_mem_slab_init().
  * - Expected: return value 0. The wait queue is initialized.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_k_mem_slab_init
  * @see k_mem_slab_init()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_register_error_ignored)
@@ -2682,7 +2787,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_register_error_ignored)
  *   functions are k_mem_slab_stats_raw(), k_mem_slab_stats_query() and
  *   k_mem_slab_stats_reset(). The enable and disable functions are NULL.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_static
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_descriptor)
 {
@@ -2705,7 +2810,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_descriptor)
  * - Expected: return value 0. The copy is equal to @c info. Calls:
  *   arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_static
  * @see k_mem_slab_stats_raw()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_raw_copies_info)
@@ -2737,7 +2842,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_raw_copies_info)
  *   max_allocated_bytes is 48 with CONFIG_MEM_SLAB_TRACE_MAX_UTILIZATION,
  *   else 0. Calls: arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_static
  * @see k_mem_slab_stats_query()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_query_reports_bytes)
@@ -2775,7 +2880,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_query_reports_bytes)
  *   info of the slab is otherwise unchanged. Calls: arch_irq_lock(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_static
  * @see k_mem_slab_stats_reset()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_reset_sets_max_to_count)
@@ -2817,7 +2922,7 @@ ZTEST(mem_slab_unit, test_obj_core_stats_reset_sets_max_to_count)
  *   k_mem_slab_stats_reset() with the object core NULL.
  * - Expected: a failed assertion for each of the 5 calls. No lock.
  *
- * @ingroup kernel_unit_mem_slab_obj_core_stats
+ * @ingroup kernel_unit_mem_slab_static
  * @see k_mem_slab_stats_raw(), k_mem_slab_stats_query(), k_mem_slab_stats_reset()
  */
 ZTEST(mem_slab_unit, test_obj_core_stats_assert_null_arguments)

@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_condvar Condition variable unit (kernel/condvar.c)
+ * @defgroup kernel_unit_condvar kernel/condvar.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/condvar.c, written as unit tests.
  *
@@ -117,6 +117,142 @@
  * layers below. They do not show that the real scheduler and the real
  * mutex keep their side of the contract. The scenarios in
  * @c testcase.yaml build the tests once for each Kconfig option above.
+ *
+ * @par Structure of the tests
+ * Each public function of condvar.c has one group below this group. A
+ * system call has one group for z_impl_k_condvar_*() and
+ * z_vrfy_k_condvar_*(). The data of condvar.c has the last group. Each test
+ * is in the group of the function under test. The rules below (locking,
+ * system call verification, object core) apply to more than one function.
+ * Their tests are in the group of the function that they call.
+ *
+ * @par Locking
+ * Each path locks condvar_lock once and releases it once with the same key.
+ * All condition variables share one spinlock, @c condvar_lock. A path
+ * releases it with k_spin_unlock() if no thread became ready, with
+ * z_reschedule() if a thread became ready, and with z_pend_curr() if the
+ * current thread waits. Each path test asserts the full call sequence and
+ * the lock invariant: one lock as the first call, one release with the key
+ * of the lock, and the release as the last call (after z_pend_curr(), only
+ * k_mutex_lock() follows).
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks the objects
+ * before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_condvar_*(). This
+ * function checks that the pointer is a condition variable object of the
+ * kernel that the thread has access to. z_vrfy_k_condvar_init() uses
+ * K_SYSCALL_OBJ_INIT(): the object can be initialized or not. The other
+ * functions use K_SYSCALL_OBJ(): the object must be initialized.
+ * z_vrfy_k_condvar_wait() also checks that the mutex pointer is an
+ * initialized mutex object. If a check fails, K_OOPS() stops the thread.
+ * Otherwise the function calls z_impl_k_condvar_*() with the same
+ * arguments and returns its result.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that
+ * the oops occurs before the implementation locks or changes an object.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_CONDVAR, condvar.c defines the object type of the
+ * condition variables and links each initialized condition variable to it.
+ * condvar.c defines the object type @c obj_type_condvar. K_OBJ_TYPE_DEFINE()
+ * puts one descriptor of this type into the iterable section
+ * @c k_obj_core_desc. At boot, the object core code initializes the type
+ * from the descriptor and links the condition variables that
+ * K_CONDVAR_DEFINE() defines (the section @c k_condvar). k_condvar_init()
+ * links each condition variable that it initializes.
+ */
+
+/**
+ * @defgroup kernel_unit_condvar_k_condvar_init k_condvar_init()
+ * @ingroup kernel_unit_condvar
+ * @brief k_condvar_init() initializes the wait queue and the object data.
+ *
+ * k_condvar_init() initializes the wait queue, the kernel object (with
+ * @kconfig{CONFIG_USERSPACE}) and the object core (with
+ * @kconfig{CONFIG_OBJ_CORE_CONDVAR}). It does not lock: until
+ * k_condvar_init() returns, only the caller uses the condition variable.
+ * It has no error path.
+ *
+ * @par Functions in kernel/condvar.c
+ * - z_impl_k_condvar_init()
+ * - z_vrfy_k_condvar_init(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_condvar_k_condvar_signal k_condvar_signal()
+ * @ingroup kernel_unit_condvar
+ * @brief k_condvar_signal() wakes at most one waiting thread.
+ *
+ * k_condvar_signal() calls z_sched_wake() once, with the wait result 0 and
+ * no data. If a thread waits, the scheduler makes it ready, and its
+ * k_condvar_wait() returns 0. If no thread waits, the signal has no effect:
+ * the condition variable does not remember it.
+ *
+ * @par Functions in kernel/condvar.c
+ * - z_impl_k_condvar_signal()
+ * - z_vrfy_k_condvar_signal(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_condvar_k_condvar_broadcast k_condvar_broadcast()
+ * @ingroup kernel_unit_condvar
+ * @brief k_condvar_broadcast() wakes all waiting threads and returns their number.
+ *
+ * k_condvar_broadcast() calls z_sched_wake() until it returns false. Each
+ * call has the wait result 0 and no data. The return value is the number of
+ * calls that returned true.
+ *
+ * @par Functions in kernel/condvar.c
+ * - z_impl_k_condvar_broadcast()
+ * - z_vrfy_k_condvar_broadcast(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_condvar_k_condvar_wait k_condvar_wait()
+ * @ingroup kernel_unit_condvar
+ * @brief k_condvar_wait() releases the mutex, waits, and locks the mutex again.
+ *
+ * The caller holds the mutex. k_condvar_wait() releases it, waits on the
+ * wait queue with the timeout of the caller, and locks the mutex again
+ * with K_FOREVER. It returns the result of z_pend_curr() without a change.
+ * With K_NO_WAIT, it does nothing and returns -EAGAIN: the caller keeps
+ * the mutex. For the order of the steps, see "Wait protocol" below.
+ *
+ * condvar.c has no check that k_condvar_wait() runs in a thread. In an ISR,
+ * a wait reaches z_pend_curr(), and the scheduler refuses it with a panic
+ * in every build. At this time, k_condvar_wait() has already released the
+ * mutex.
+ *
+ * @par Wait protocol (no lost wake-up)
+ * k_condvar_wait() releases the mutex and starts the wait as one step for
+ * the other threads.
+ * k_condvar_wait() locks @c condvar_lock, releases the mutex, and hands the
+ * lock to z_pend_curr(). It does not release @c condvar_lock between
+ * k_mutex_unlock() and z_pend_curr(). A thread that gets the mutex after
+ * the release must lock @c condvar_lock to signal. It gets the lock only
+ * after z_pend_curr() has put the waiting thread into the wait queue. Thus
+ * the signal finds the waiting thread. After the wait, k_mutex_lock() runs
+ * without @c condvar_lock, because it can block.
+ *
+ * @par Functions in kernel/condvar.c
+ * - z_impl_k_condvar_wait()
+ * - z_vrfy_k_condvar_wait(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_condvar_static Static functions and data
+ * @ingroup kernel_unit_condvar
+ * @brief The static functions of condvar.c, and the data that condvar.c defines.
+ *
+ * @par Functions in kernel/condvar.c
+ * condvar.c has no static functions.
+ *
+ * @par Data in kernel/condvar.c
+ * - @c obj_type_condvar and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_CONDVAR}. The tests of the descriptor are in
+ *   this group.
  */
 
 #include <string.h>
@@ -341,16 +477,10 @@ static void condvar_unit_before(void *fixture)
 
 ZTEST_SUITE(condvar_unit, NULL, NULL, condvar_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_condvar_init Initialization
- * @ingroup kernel_unit_condvar
- * @brief k_condvar_init() initializes the wait queue and the object data.
- *
- * k_condvar_init() initializes the wait queue, the kernel object (with
- * @kconfig{CONFIG_USERSPACE}) and the object core (with
- * @kconfig{CONFIG_OBJ_CORE_CONDVAR}). It does not lock: until
- * k_condvar_init() returns, only the caller uses the condition variable.
- * It has no error path.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -362,7 +492,7 @@ ZTEST_SUITE(condvar_unit, NULL, NULL, condvar_unit_before, NULL, NULL);
  * - Expected: one call of z_waitq_init() with the wait queue of the
  *   condition variable.
  *
- * @ingroup kernel_unit_condvar_init
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_init_initializes_wait_queue)
@@ -382,7 +512,7 @@ ZTEST(condvar_unit, test_init_initializes_wait_queue)
  * - Action: z_impl_k_condvar_init().
  * - Expected: return value 0.
  *
- * @ingroup kernel_unit_condvar_init
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_init_returns_zero)
@@ -399,7 +529,7 @@ ZTEST(condvar_unit, test_init_returns_zero)
  * - Action: z_impl_k_condvar_init().
  * - Expected: one call of k_object_init() with the condition variable.
  *
- * @ingroup kernel_unit_condvar_init
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_init_initializes_kernel_object)
@@ -422,7 +552,7 @@ ZTEST(condvar_unit, test_init_initializes_kernel_object)
  *   CONFIG_OBJ_CORE_CONDVAR). No lock, no call to the scheduler or to a
  *   mutex.
  *
- * @ingroup kernel_unit_condvar_init
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_init_call_order)
@@ -434,15 +564,10 @@ ZTEST(condvar_unit, test_init_call_order)
 		KERNEL_UNIT_IF_ENABLED(CONFIG_OBJ_CORE_CONDVAR, k_obj_core_init_and_link));
 }
 
-/**
- * @defgroup kernel_unit_condvar_signal Signal
- * @ingroup kernel_unit_condvar
- * @brief k_condvar_signal() wakes at most one waiting thread.
- *
- * k_condvar_signal() calls z_sched_wake() once, with the wait result 0 and
- * no data. If a thread waits, the scheduler makes it ready, and its
- * k_condvar_wait() returns 0. If no thread waits, the signal has no effect:
- * the condition variable does not remember it.
+/*
+ * Tests: Signal. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -454,7 +579,7 @@ ZTEST(condvar_unit, test_init_call_order)
  * - Expected: return value 0. One call of z_sched_wake() with the wait
  *   queue of the condition variable, and it returns false.
  *
- * @ingroup kernel_unit_condvar_signal
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_signal_no_waiter_returns_zero)
@@ -477,7 +602,7 @@ ZTEST(condvar_unit, test_signal_no_waiter_returns_zero)
  *   queue, the wait result 0 and the data NULL. No thread waits after the
  *   call.
  *
- * @ingroup kernel_unit_condvar_signal
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_signal_wakes_waiter_with_result_zero)
@@ -501,7 +626,7 @@ ZTEST(condvar_unit, test_signal_wakes_waiter_with_result_zero)
  * - Action: z_impl_k_condvar_signal().
  * - Expected: one call of z_sched_wake(). Two threads still wait.
  *
- * @ingroup kernel_unit_condvar_signal
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_signal_wakes_one_thread_only)
@@ -525,7 +650,7 @@ ZTEST(condvar_unit, test_signal_wakes_one_thread_only)
  * - Expected: the wait calls z_pend_curr(), and it returns -EAGAIN (the
  *   timeout).
  *
- * @ingroup kernel_unit_condvar_signal
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal(), z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_signal_without_waiter_is_not_remembered)
@@ -537,14 +662,10 @@ ZTEST(condvar_unit, test_signal_without_waiter_is_not_remembered)
 	zassert_equal(z_pend_curr_fake.call_count, 1);
 }
 
-/**
- * @defgroup kernel_unit_condvar_broadcast Broadcast
- * @ingroup kernel_unit_condvar
- * @brief k_condvar_broadcast() wakes all waiting threads and returns their number.
- *
- * k_condvar_broadcast() calls z_sched_wake() until it returns false. Each
- * call has the wait result 0 and no data. The return value is the number of
- * calls that returned true.
+/*
+ * Tests: Broadcast. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -556,7 +677,7 @@ ZTEST(condvar_unit, test_signal_without_waiter_is_not_remembered)
  * - Expected: return value 0. One call of z_sched_wake() with the wait
  *   queue of the condition variable.
  *
- * @ingroup kernel_unit_condvar_broadcast
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_broadcast_no_waiter_returns_zero)
@@ -577,7 +698,7 @@ ZTEST(condvar_unit, test_broadcast_no_waiter_returns_zero)
  *   wait result 0 and the data NULL. The last call returns false. No
  *   thread waits after the call.
  *
- * @ingroup kernel_unit_condvar_broadcast
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_broadcast_wakes_all_threads)
@@ -604,7 +725,7 @@ ZTEST(condvar_unit, test_broadcast_wakes_all_threads)
  * - Action: z_impl_k_condvar_broadcast() for each n.
  * - Expected: return value n.
  *
- * @ingroup kernel_unit_condvar_broadcast
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_broadcast_returns_number_of_woken_threads)
@@ -618,22 +739,10 @@ ZTEST(condvar_unit, test_broadcast_returns_number_of_woken_threads)
 	}
 }
 
-/**
- * @defgroup kernel_unit_condvar_wait Wait
- * @ingroup kernel_unit_condvar
- * @brief k_condvar_wait() releases the mutex, waits, and locks the mutex again.
- *
- * The caller holds the mutex. k_condvar_wait() releases it, waits on the
- * wait queue with the timeout of the caller, and locks the mutex again
- * with K_FOREVER. It returns the result of z_pend_curr() without a change.
- * With K_NO_WAIT, it does nothing and returns -EAGAIN: the caller keeps
- * the mutex. For the order of the steps, see
- * @ref kernel_unit_condvar_protocol.
- *
- * condvar.c has no check that k_condvar_wait() runs in a thread. In an ISR,
- * a wait reaches z_pend_curr(), and the scheduler refuses it with a panic
- * in every build. At this time, k_condvar_wait() has already released the
- * mutex.
+/*
+ * Tests: Wait. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -645,7 +754,7 @@ ZTEST(condvar_unit, test_broadcast_returns_number_of_woken_threads)
  * - Expected: return value -EAGAIN. The call history is empty: no lock, no
  *   mutex call, no wait.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_no_wait_returns_eagain)
@@ -664,7 +773,7 @@ ZTEST(condvar_unit, test_wait_no_wait_returns_eagain)
  * - Expected: no call of k_mutex_unlock() and of k_mutex_lock(). The mutex
  *   is held.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_no_wait_keeps_mutex)
@@ -687,7 +796,7 @@ ZTEST(condvar_unit, test_wait_no_wait_keeps_mutex)
  *   condition variable, the first with TEST_TIMEOUT, the second with
  *   K_FOREVER.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_pends_with_timeout)
@@ -711,7 +820,7 @@ ZTEST(condvar_unit, test_wait_pends_with_timeout)
  * - Expected: one call of k_mutex_unlock() with the mutex, before
  *   z_pend_curr(). At z_pend_curr(), the mutex is not held.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_releases_mutex_before_wait)
@@ -743,7 +852,7 @@ ZTEST(condvar_unit, test_wait_releases_mutex_before_wait)
  *   @c condvar_lock stays locked. Before the call, k_condvar_wait() released
  *   the mutex. There is no k_mutex_lock() after the panic.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_in_isr_refused_by_scheduler)
@@ -777,7 +886,7 @@ ZTEST(condvar_unit, test_wait_in_isr_refused_by_scheduler)
  * - Expected: return value 0. One call of k_mutex_lock() with the mutex and
  *   K_FOREVER, after z_pend_curr(). The mutex is held.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_relocks_mutex_after_wake)
@@ -802,7 +911,7 @@ ZTEST(condvar_unit, test_wait_relocks_mutex_after_wake)
  * - Expected: return value -EAGAIN. One call of k_mutex_lock() with the
  *   mutex, after z_pend_curr(). The mutex is held.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_relocks_mutex_after_timeout)
@@ -824,7 +933,7 @@ ZTEST(condvar_unit, test_wait_relocks_mutex_after_timeout)
  * - Expected: z_pend_curr() gets TEST_TIMEOUT. k_mutex_lock() gets
  *   K_FOREVER.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_timeout_does_not_limit_mutex_lock)
@@ -844,7 +953,7 @@ ZTEST(condvar_unit, test_wait_timeout_does_not_limit_mutex_lock)
  * - Action: z_impl_k_condvar_wait() with K_FOREVER for each result.
  * - Expected: the return value is the result of z_pend_curr() each time.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_returns_wait_result)
@@ -871,7 +980,7 @@ ZTEST(condvar_unit, test_wait_returns_wait_result)
  * - Expected: z_pend_curr() and k_mutex_lock() are called. The return
  *   value is the wait result -EAGAIN, not -EPERM.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_ignores_mutex_unlock_result)
@@ -893,7 +1002,7 @@ ZTEST(condvar_unit, test_wait_ignores_mutex_unlock_result)
  * - Action: z_impl_k_condvar_wait() with K_FOREVER.
  * - Expected: return value 0, the result of the wait.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_wait_ignores_mutex_lock_result)
@@ -914,7 +1023,7 @@ ZTEST(condvar_unit, test_wait_ignores_mutex_lock_result)
  * - Action: z_impl_k_condvar_wait() with K_FOREVER.
  * - Expected: return value 0. The broadcast returns 3. No thread waits.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait(), z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_wait_woken_by_broadcast)
@@ -941,7 +1050,7 @@ ZTEST(condvar_unit, test_wait_woken_by_broadcast)
  *   wait queue (priority, then time of arrival); condvar.c does not change
  *   it.
  *
- * @ingroup kernel_unit_condvar_wait
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait(), z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_wait_signal_wakes_first_waiter)
@@ -955,18 +1064,10 @@ ZTEST(condvar_unit, test_wait_signal_wakes_first_waiter)
 	zassert_true(z_sched_wake_fake.return_val_history[0]);
 }
 
-/**
- * @defgroup kernel_unit_condvar_protocol Wait protocol (no lost wake-up)
- * @ingroup kernel_unit_condvar
- * @brief k_condvar_wait() releases the mutex and starts the wait as one step for the other threads.
- *
- * k_condvar_wait() locks @c condvar_lock, releases the mutex, and hands the
- * lock to z_pend_curr(). It does not release @c condvar_lock between
- * k_mutex_unlock() and z_pend_curr(). A thread that gets the mutex after
- * the release must lock @c condvar_lock to signal. It gets the lock only
- * after z_pend_curr() has put the waiting thread into the wait queue. Thus
- * the signal finds the waiting thread. After the wait, k_mutex_lock() runs
- * without @c condvar_lock, because it can block.
+/*
+ * Tests: Wait protocol (no lost wake-up). Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -978,7 +1079,7 @@ ZTEST(condvar_unit, test_wait_signal_wakes_first_waiter)
  * - Expected: arch_irq_lock() comes before k_mutex_unlock(). At
  *   k_mutex_unlock(), condvar_lock is held.
  *
- * @ingroup kernel_unit_condvar_protocol
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_protocol_lock_before_mutex_unlock)
@@ -1001,7 +1102,7 @@ ZTEST(condvar_unit, test_protocol_lock_before_mutex_unlock)
  *   and the mutex is not held. No release of condvar_lock comes between
  *   k_mutex_unlock() and z_pend_curr().
  *
- * @ingroup kernel_unit_condvar_protocol
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_protocol_no_release_between_unlock_and_pend)
@@ -1026,7 +1127,7 @@ ZTEST(condvar_unit, test_protocol_no_release_between_unlock_and_pend)
  * - Expected: the signal wakes the current thread, and the return value
  *   is 0 (not the timeout -EAGAIN). The signal found one waiting thread.
  *
- * @ingroup kernel_unit_condvar_protocol
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait(), z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_protocol_signal_after_mutex_unlock_is_not_lost)
@@ -1049,7 +1150,7 @@ ZTEST(condvar_unit, test_protocol_signal_after_mutex_unlock_is_not_lost)
  * - Expected: at k_mutex_lock(), condvar_lock is not held. k_mutex_lock()
  *   can block, so it must not run with the interrupts locked.
  *
- * @ingroup kernel_unit_condvar_protocol
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_protocol_mutex_lock_without_condvar_lock)
@@ -1062,18 +1163,10 @@ ZTEST(condvar_unit, test_protocol_mutex_lock_without_condvar_lock)
 	zassert_equal(at_mutex_lock.lock_depth, 0);
 }
 
-/**
- * @defgroup kernel_unit_condvar_locking Locking
- * @ingroup kernel_unit_condvar
- * @brief Each path locks condvar_lock once and releases it once with the same key.
- *
- * All condition variables share one spinlock, @c condvar_lock. A path
- * releases it with k_spin_unlock() if no thread became ready, with
- * z_reschedule() if a thread became ready, and with z_pend_curr() if the
- * current thread waits. Each path test asserts the full call sequence and
- * the lock invariant: one lock as the first call, one release with the key
- * of the lock, and the release as the last call (after z_pend_curr(), only
- * k_mutex_lock() follows).
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /**
@@ -1085,7 +1178,7 @@ ZTEST(condvar_unit, test_protocol_mutex_lock_without_condvar_lock)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), arch_irq_unlock()
  *   with the key.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_lock_signal_no_waiter_unlocks)
@@ -1105,7 +1198,7 @@ ZTEST(condvar_unit, test_lock_signal_no_waiter_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), z_reschedule() with
  *   condvar_lock and the key.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_lock_signal_wake_reschedules)
@@ -1127,7 +1220,7 @@ ZTEST(condvar_unit, test_lock_signal_wake_reschedules)
  * - Expected calls: arch_irq_lock(), z_sched_wake(), arch_irq_unlock()
  *   with the key.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_lock_broadcast_no_waiter_unlocks)
@@ -1148,7 +1241,7 @@ ZTEST(condvar_unit, test_lock_broadcast_no_waiter_unlocks)
  * - Expected calls: arch_irq_lock(), four times z_sched_wake(),
  *   z_reschedule() with condvar_lock and the key.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_lock_broadcast_reschedules_once_after_last_wake)
@@ -1171,7 +1264,7 @@ ZTEST(condvar_unit, test_lock_broadcast_reschedules_once_after_last_wake)
  * - Action: z_impl_k_condvar_signal(), then z_impl_k_condvar_broadcast().
  * - Expected: at each call of z_sched_wake(), condvar_lock is held.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal(), z_impl_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_lock_wake_under_lock)
@@ -1197,7 +1290,7 @@ ZTEST(condvar_unit, test_lock_wake_under_lock)
  * - Expected calls: arch_irq_lock(), k_mutex_unlock(), z_pend_curr() with
  *   condvar_lock and the key, k_mutex_lock(). No arch_irq_unlock().
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_lock_wait_hands_lock_to_pend)
@@ -1218,7 +1311,7 @@ ZTEST(condvar_unit, test_lock_wait_hands_lock_to_pend)
  * - Expected: both calls of z_reschedule() and the call of z_pend_curr()
  *   get the same lock, condvar_lock.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal(), z_impl_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_lock_one_lock_for_all_condvars)
@@ -1245,7 +1338,7 @@ ZTEST(condvar_unit, test_lock_one_lock_for_all_condvars)
  * - Action: z_impl_k_condvar_init().
  * - Expected: no call of arch_irq_lock().
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_lock_not_used_by_init)
@@ -1266,7 +1359,7 @@ ZTEST(condvar_unit, test_lock_not_used_by_init)
  * - Expected: one call of z_spin_lock_valid() and one call of
  *   z_spin_unlock_valid(), each with condvar_lock.
  *
- * @ingroup kernel_unit_condvar_locking
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_impl_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_lock_validation_sees_condvar_lock)
@@ -1281,25 +1374,10 @@ ZTEST(condvar_unit, test_lock_validation_sees_condvar_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_condvar_syscall System call verification
- * @ingroup kernel_unit_condvar
- * @brief With CONFIG_USERSPACE, each verification function checks the objects before it calls the
- * implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_condvar_*(). This
- * function checks that the pointer is a condition variable object of the
- * kernel that the thread has access to. z_vrfy_k_condvar_init() uses
- * K_SYSCALL_OBJ_INIT(): the object can be initialized or not. The other
- * functions use K_SYSCALL_OBJ(): the object must be initialized.
- * z_vrfy_k_condvar_wait() also checks that the mutex pointer is an
- * initialized mutex object. If a check fails, K_OOPS() stops the thread.
- * Otherwise the function calls z_impl_k_condvar_*() with the same
- * arguments and returns its result.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that
- * the oops occurs before the implementation locks or changes an object.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /* Make only the check of the condition variable object fail. */
@@ -1348,7 +1426,7 @@ static void assert_object_check(enum _obj_init_check init)
  *   k_object_validation_check() with the condition variable, K_OBJ_CONDVAR
  *   and _OBJ_INIT_ANY, before z_waitq_init(). No oops.
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_vrfy_k_condvar_init()
  */
 ZTEST(condvar_unit, test_syscall_init_checks_any_object)
@@ -1370,7 +1448,7 @@ ZTEST(condvar_unit, test_syscall_init_checks_any_object)
  * - Action: z_vrfy_k_condvar_init().
  * - Expected: one oops, before z_waitq_init().
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_vrfy_k_condvar_init()
  */
 ZTEST(condvar_unit, test_syscall_init_oops_on_bad_object)
@@ -1393,7 +1471,7 @@ ZTEST(condvar_unit, test_syscall_init_oops_on_bad_object)
  *   _OBJ_INIT_TRUE, before the lock. No oops. One call of z_sched_wake()
  *   with the wait queue.
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_vrfy_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_syscall_signal_checks_initialized_object)
@@ -1418,7 +1496,7 @@ ZTEST(condvar_unit, test_syscall_signal_checks_initialized_object)
  * - Action: z_vrfy_k_condvar_signal().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_signal
  * @see z_vrfy_k_condvar_signal()
  */
 ZTEST(condvar_unit, test_syscall_signal_oops_on_bad_object)
@@ -1440,7 +1518,7 @@ ZTEST(condvar_unit, test_syscall_signal_oops_on_bad_object)
  * - Expected: return value 2. The object check with K_OBJ_CONDVAR and
  *   _OBJ_INIT_TRUE, before the lock. No oops.
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_vrfy_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_syscall_broadcast_checks_initialized_object)
@@ -1463,7 +1541,7 @@ ZTEST(condvar_unit, test_syscall_broadcast_checks_initialized_object)
  * - Action: z_vrfy_k_condvar_broadcast().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_broadcast
  * @see z_vrfy_k_condvar_broadcast()
  */
 ZTEST(condvar_unit, test_syscall_broadcast_oops_on_bad_object)
@@ -1487,7 +1565,7 @@ ZTEST(condvar_unit, test_syscall_broadcast_oops_on_bad_object)
  *   K_OBJ_MUTEX, both with _OBJ_INIT_TRUE, before the lock. No oops.
  *   z_pend_curr() gets TEST_TIMEOUT.
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_vrfy_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_syscall_wait_checks_condvar_and_mutex)
@@ -1515,7 +1593,7 @@ ZTEST(condvar_unit, test_syscall_wait_checks_condvar_and_mutex)
  * - Expected: one oops, after the first object check and before the
  *   second object check, arch_irq_lock() and k_mutex_unlock().
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_vrfy_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_syscall_wait_oops_on_bad_condvar)
@@ -1543,7 +1621,7 @@ ZTEST(condvar_unit, test_syscall_wait_oops_on_bad_condvar)
  * - Expected: one oops, after the second object check and before
  *   arch_irq_lock() and k_mutex_unlock().
  *
- * @ingroup kernel_unit_condvar_syscall
+ * @ingroup kernel_unit_condvar_k_condvar_wait
  * @see z_vrfy_k_condvar_wait()
  */
 ZTEST(condvar_unit, test_syscall_wait_oops_on_bad_mutex)
@@ -1562,18 +1640,10 @@ ZTEST(condvar_unit, test_syscall_wait_oops_on_bad_mutex)
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_CONDVAR
-/**
- * @defgroup kernel_unit_condvar_obj_core Object core
- * @ingroup kernel_unit_condvar
- * @brief With CONFIG_OBJ_CORE_CONDVAR, condvar.c defines the object type of the condition
- * variables and links each initialized condition variable to it.
- *
- * condvar.c defines the object type @c obj_type_condvar. K_OBJ_TYPE_DEFINE()
- * puts one descriptor of this type into the iterable section
- * @c k_obj_core_desc. At boot, the object core code initializes the type
- * from the descriptor and links the condition variables that
- * K_CONDVAR_DEFINE() defines (the section @c k_condvar). k_condvar_init()
- * links each condition variable that it initializes.
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_condvar, at the top of this file.
  */
 
 /* Return the descriptor of a type, and count the descriptors of this type. */
@@ -1604,7 +1674,7 @@ K_CONDVAR_DEFINE(unit_static_condvar);
  *   of the condition variable and @c obj_type_condvar, after
  *   z_waitq_init().
  *
- * @ingroup kernel_unit_condvar_obj_core
+ * @ingroup kernel_unit_condvar_k_condvar_init
  * @see z_impl_k_condvar_init()
  */
 ZTEST(condvar_unit, test_obj_core_init_links_condvar)
@@ -1629,7 +1699,7 @@ ZTEST(condvar_unit, test_obj_core_init_links_condvar)
  *   offset is the offset of @c obj_core. Its object range is the section
  *   @c k_condvar.
  *
- * @ingroup kernel_unit_condvar_obj_core
+ * @ingroup kernel_unit_condvar_static
  */
 ZTEST(condvar_unit, test_obj_core_type_descriptor)
 {
@@ -1655,7 +1725,7 @@ ZTEST(condvar_unit, test_obj_core_type_descriptor)
  * - Expected: the condition variable is in the range, at a multiple of the
  *   object size from the start.
  *
- * @ingroup kernel_unit_condvar_obj_core
+ * @ingroup kernel_unit_condvar_static
  */
 ZTEST(condvar_unit, test_obj_core_descriptor_covers_static_condvars)
 {

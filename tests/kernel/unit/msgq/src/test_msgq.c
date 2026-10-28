@@ -5,7 +5,7 @@
  */
 
 /**
- * @defgroup kernel_unit_msgq Message queue unit (kernel/msg_q.c)
+ * @defgroup kernel_unit_msgq kernel/msg_q.c
  * @ingroup kernel_unit_tests
  * @brief Design specification of kernel/msg_q.c, written as unit tests.
  *
@@ -138,6 +138,375 @@
  * The scenarios in @c testcase.yaml build the tests once for each Kconfig
  * option above. A test that applies only to some configurations is in an
  * @c \#ifdef block, or it calls ztest_test_skip().
+ *
+ * @par Structure of the tests
+ * Each public function of msg_q.c has one group below this group. A system
+ * call has one group for z_impl_k_msgq_*() and z_vrfy_k_msgq_*(). The static
+ * functions and the data of msg_q.c have the last group. Each test is in the
+ * group of the function under test. The rules below (hand-over, locking,
+ * assertions, system call verification, object core) apply to more than one
+ * function. Their tests are in the group of the function that they call.
+ *
+ * @par Rules of the hand-over
+ * A message goes directly to a waiting reader, and a waiting writer gets the
+ * free slot.
+ * Put: if the ring buffer is not full, put_msg_in_queue() asks the scheduler
+ * for the first waiting thread with z_unpend_first_thread_locked(). A thread
+ * waits on a message queue that is not full only if it is a reader. If there
+ * is a reader, put_msg_in_queue() copies the message to the buffer of the
+ * reader (@c swap_data of the thread), sets the return value of the reader
+ * to 0 and makes it ready. The ring buffer and @c used_msgs do not change.
+ *
+ * Get: after k_msgq_get() removes the head message, it asks for the first
+ * waiting thread. A thread waits on a message queue with messages only if it
+ * is a writer. If there is a writer, k_msgq_get() copies the message of the
+ * writer (@c swap_data) to @c write_ptr, moves @c write_ptr one slot forward
+ * and increments @c used_msgs. Then it sets the return value of the writer to
+ * 0 and makes it ready. Thus the message of the writer is the new tail.
+ *
+ * In both cases the copy comes before arch_thread_return_value_set(), and
+ * this comes before z_sched_ready_locked(). One operation makes at most one
+ * thread ready. The other side of the hand-over is the wait in
+ * k_msgq_get() or k_msgq_put(), which sets @c swap_data (see
+ * @ref kernel_unit_msgq_k_msgq_get and @ref kernel_unit_msgq_k_msgq_put).
+ *
+ * @par Locking
+ * The spinlock of the message queue protects its state. Each path releases
+ * it exactly once.
+ * Each path of the operations, except the initialization,
+ * k_msgq_get_attrs() and the static inline functions, locks the spinlock of
+ * its message queue once, as its first call to the layers below. Only the
+ * ISR check of an __ASSERT() (@kconfig{CONFIG_ASSERT}) comes before it. Each
+ * path releases the lock once, as its last call, with the key of the lock.
+ * The release is k_spin_unlock() (seen as arch_irq_unlock()),
+ * z_reschedule() or z_pend_curr().
+ *
+ * The hand-over (z_unpend_first_thread_locked(), the copy,
+ * arch_thread_return_value_set() and z_sched_ready_locked()) is in a block
+ * @c LOCK_SCHED_SPINLOCK. With more than one CPU, this block locks and
+ * unlocks the scheduler spinlock inside the lock of the message queue. The
+ * block runs on each put to a message queue that is not full and on each get
+ * of a message, also if no thread waits. The ring buffer and @c used_msgs
+ * change only while the lock is held. k_free() in z_msgq_cleanup() runs
+ * while the lock is held.
+ *
+ * @par Assertions
+ * With CONFIG_ASSERT, msg_q.c asserts that an ISR does not wait and that the
+ * write pointer is in the ring buffer.
+ * k_msgq_put(), k_msgq_put_front() and k_msgq_get() assert, before the lock,
+ * that the caller is not an ISR or that the timeout is K_NO_WAIT. Before a
+ * put writes to @c write_ptr, and before a get can give the slot at
+ * @c write_ptr to a writer, they assert that @c write_ptr is in the ring
+ * buffer with space for one message. The initialization asserts are in
+ * @ref kernel_unit_msgq_k_msgq_init. In the test, the assertion hook returns,
+ * so the operation continues.
+ *
+ * @par System call verification
+ * With CONFIG_USERSPACE, each verification function checks the message
+ * queue object and the user buffer before it calls the implementation.
+ * A system call from a user thread goes to z_vrfy_k_msgq_*(). This function
+ * first checks that the pointer is a message queue object of the kernel that
+ * the thread has access to. z_vrfy_k_msgq_alloc_init() uses
+ * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet. The
+ * other functions use K_SYSCALL_OBJ(): the object must be initialized.
+ *
+ * Then the functions with a user buffer check that the thread can access
+ * it: K_SYSCALL_MEMORY_READ() of @c msg_size bytes for the message of
+ * k_msgq_put() and k_msgq_put_front(); K_SYSCALL_MEMORY_WRITE() of
+ * @c msg_size bytes for the buffer of k_msgq_get(), k_msgq_peek() and
+ * k_msgq_peek_at(); K_SYSCALL_MEMORY_WRITE() of the attribute structure for
+ * k_msgq_get_attrs(). The size comes from the message queue, so the object
+ * check comes first. If a check fails, K_OOPS() stops the thread. Else the
+ * function calls z_impl_k_msgq_*() with the same arguments and returns its
+ * result.
+ *
+ * k_msgq_init() and k_msgq_cleanup() are not system calls.
+ *
+ * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
+ * returns. The real K_OOPS() does not return. Thus the tests check that the
+ * oops occurs before the implementation locks or changes the message queue.
+ *
+ * @par Object core
+ * With CONFIG_OBJ_CORE_MSGQ, msg_q.c defines the object type of the message
+ * queues and links each initialized message queue to it.
+ * msg_q.c defines the object type @c obj_type_msgq. K_OBJ_TYPE_DEFINE() puts
+ * one descriptor of this type into the iterable section @c k_obj_core_desc.
+ * At boot, the object core code initializes the type from the descriptor and
+ * links the message queues that K_MSGQ_DEFINE() defines (the section
+ * @c k_msgq). k_msgq_init() links each message queue that it initializes,
+ * with k_obj_core_init_and_link().
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_init k_msgq_init()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_init() makes an empty message queue on a buffer of the caller.
+ *
+ * k_msgq_init() sets the size of the messages, the number of slots and the
+ * ring buffer. It sets the read and write pointers to the start of the ring
+ * buffer, the number of messages to 0 and the flags to 0. It initializes the
+ * lock, the wait queue, the poll events, the object core and the kernel
+ * object. It does not lock the message queue: until k_msgq_init() returns,
+ * only the caller uses it. It does not write to the ring buffer. With
+ * @kconfig{CONFIG_ASSERT}, it asserts that the size of the ring buffer and
+ * its end address do not overflow.
+ *
+ * @par Static definition
+ * K_MSGQ_DEFINE() gives the state of k_msgq_init().
+ * K_MSGQ_DEFINE() in @c zephyr/kernel.h defines the ring buffer and the
+ * message queue in the iterable section @c k_msgq. Its initializer
+ * Z_MSGQ_INITIALIZER() gives the same state as k_msgq_init(). The test of
+ * K_MSGQ_DEFINE() is in this group.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - k_msgq_init(). It is not a system call.
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_alloc_init k_msgq_alloc_init()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_alloc_init() allocates the ring buffer, and k_msgq_cleanup() frees it.
+ *
+ * k_msgq_alloc_init() calculates the size of the ring buffer as
+ * msg_size * max_msgs. If the multiplication overflows, it returns -EINVAL.
+ * Else it allocates the buffer with z_thread_malloc() from the resource pool
+ * of the current thread. If the allocation fails, it returns -ENOMEM and
+ * does not change the message queue. Else it calls k_msgq_init() on the
+ * buffer and then sets the flag K_MSGQ_FLAG_ALLOC. It does not lock the
+ * message queue.
+ *
+ * k_msgq_cleanup() and z_msgq_cleanup() are in
+ * @ref kernel_unit_msgq_k_msgq_cleanup.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_alloc_init()
+ * - z_vrfy_k_msgq_alloc_init(), with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_z_msgq_cleanup z_msgq_cleanup()
+ * @ingroup kernel_unit_msgq
+ * @brief z_msgq_cleanup() is the cleanup of k_msgq_cleanup(), with a parameter for the lock state
+ * of the caller.
+ *
+ * k_msgq_cleanup() calls z_msgq_cleanup() with @c locked false. The test in
+ * this group calls z_msgq_cleanup() with @c locked true. Some tests of
+ * k_msgq_cleanup() also call z_msgq_cleanup() with @c locked true on a
+ * second message queue. The design text of both functions is in
+ * @ref kernel_unit_msgq_k_msgq_cleanup.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_msgq_cleanup(). It is not a system call. The object code of the kernel
+ *   (@c kernel/userspace/userspace.c) calls it.
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_cleanup k_msgq_cleanup()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_cleanup() frees an allocated ring buffer if no thread waits.
+ *
+ * k_msgq_cleanup() calls z_msgq_cleanup() with @c locked false. The object
+ * code of the kernel (@c kernel/userspace/userspace.c) calls
+ * z_msgq_cleanup() when a message queue has no more references. Then
+ * @c locked is true: the caller holds the scheduler spinlock. Thus
+ * z_msgq_cleanup() reads the wait queue with z_waitq_head_locked(), which
+ * does not lock the scheduler spinlock again. With @c locked false, it uses
+ * z_waitq_head().
+ *
+ * z_msgq_cleanup() locks the message queue. If a thread waits, it returns
+ * -EBUSY. This check is a CHECKIF(): with @kconfig{CONFIG_NO_RUNTIME_CHECKS}
+ * there is no check, and with @kconfig{CONFIG_ASSERT_ON_ERRORS} it is an
+ * assertion. If the flag K_MSGQ_FLAG_ALLOC is set, z_msgq_cleanup() frees
+ * the buffer with k_free() and clears the flag. Thus a second call does not
+ * free the buffer again. z_msgq_cleanup() does not change the other fields.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - k_msgq_cleanup(). It is not a system call.
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_put k_msgq_put()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_put() copies a message to the tail, and k_msgq_put_front() to the head.
+ *
+ * Both functions share the static function put_msg_in_queue(). If the ring
+ * buffer is not full and no reader waits, k_msgq_put() copies @c msg_size
+ * bytes to @c write_ptr and moves @c write_ptr one slot forward, with
+ * wrap-around. k_msgq_put_front() moves @c read_ptr one slot back, with
+ * wrap-around, and copies the message to the new @c read_ptr. Both
+ * increment @c used_msgs and return 0. If a reader waits, see the rules of
+ * the hand-over in @ref kernel_unit_msgq.
+ *
+ * If the ring buffer is full, k_msgq_put() returns -ENOMSG for the timeout
+ * K_NO_WAIT. For another timeout it waits: it sets
+ * @c _current->base.swap_data to the message and calls z_pend_curr(). The
+ * result of z_pend_curr() is the return value. k_msgq_put_front() always
+ * uses K_NO_WAIT, so it never waits.
+ *
+ * The poll events are in @ref kernel_unit_msgq_static.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_put()
+ * - z_vrfy_k_msgq_put(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_put_front k_msgq_put_front()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_put_front() copies a message to the head and never waits.
+ *
+ * k_msgq_put_front() shares the static function put_msg_in_queue() with
+ * k_msgq_put(). The design text of both functions is in
+ * @ref kernel_unit_msgq_k_msgq_put. The poll events are in
+ * @ref kernel_unit_msgq_static.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_put_front()
+ * - z_vrfy_k_msgq_put_front(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_get_attrs k_msgq_get_attrs()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_get_attrs() reads the state of the message queue without the lock.
+ *
+ * k_msgq_get_attrs() (in msg_q.c), k_msgq_num_free_get() and
+ * k_msgq_num_used_get() (static inline in @c zephyr/kernel.h) read the state
+ * without the lock. Each reads @c used_msgs once, so the result is a value
+ * that the message queue had during the call.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_get_attrs()
+ * - z_vrfy_k_msgq_get_attrs(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_get k_msgq_get()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_get() copies the head message to the caller and removes it.
+ *
+ * If the ring buffer has a message, k_msgq_get() copies @c msg_size bytes
+ * from @c read_ptr to the caller, moves @c read_ptr one slot forward with
+ * wrap-around, decrements @c used_msgs and returns 0. Then it gives the free
+ * slot to a waiting writer, if there is one (see the rules of the hand-over
+ * in @ref kernel_unit_msgq). If the ring buffer is empty, k_msgq_get()
+ * returns -ENOMSG for the timeout K_NO_WAIT. For another timeout it waits:
+ * it sets @c _current->base.swap_data to the buffer of the caller and calls
+ * z_pend_curr(). The result of z_pend_curr() is the return value.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_get()
+ * - z_vrfy_k_msgq_get(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_peek k_msgq_peek()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_peek() and k_msgq_peek_at() copy a message and do not remove it.
+ *
+ * k_msgq_peek() copies the head message. k_msgq_peek_at() copies the message
+ * at index @a idx from the head: index 0 is the head. If @a idx is not less
+ * than @c used_msgs, k_msgq_peek_at() returns -ENOMSG. If the message is
+ * after the end of the ring buffer, k_msgq_peek_at() calculates its address
+ * from the start (wrap-around). Both functions never wait and do not change
+ * the message queue.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_peek()
+ * - z_vrfy_k_msgq_peek(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_peek_at k_msgq_peek_at()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_peek_at() copies the message at an index from the head and does not remove it.
+ *
+ * The design text of k_msgq_peek() and k_msgq_peek_at() is in
+ * @ref kernel_unit_msgq_k_msgq_peek.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_peek_at()
+ * - z_vrfy_k_msgq_peek_at(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_purge k_msgq_purge()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_purge() discards all messages and wakes all waiting threads with -ENOMSG.
+ *
+ * k_msgq_purge() wakes each thread of the wait queue with z_sched_wake(),
+ * with the return value -ENOMSG and the data NULL, until z_sched_wake()
+ * returns false. Then it sets @c used_msgs to 0 and @c read_ptr to
+ * @c write_ptr. It does not write to the ring buffer. Readers and writers
+ * share one wait queue, so k_msgq_purge() wakes the waiting writers of a
+ * full message queue and the waiting readers of an empty message queue.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_impl_k_msgq_purge()
+ * - z_vrfy_k_msgq_purge(), static inline, with @kconfig{CONFIG_USERSPACE}
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_num_free_get k_msgq_num_free_get()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_num_free_get() returns the number of free slots without the lock.
+ *
+ * z_impl_k_msgq_num_free_get() is static inline in @c zephyr/kernel.h. It
+ * reads the state without the lock (see
+ * @ref kernel_unit_msgq_k_msgq_get_attrs).
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_vrfy_k_msgq_num_free_get(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}. msg_q.c has no z_impl_k_msgq_num_free_get().
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_k_msgq_num_used_get k_msgq_num_used_get()
+ * @ingroup kernel_unit_msgq
+ * @brief k_msgq_num_used_get() returns the number of messages without the lock.
+ *
+ * z_impl_k_msgq_num_used_get() is static inline in @c zephyr/kernel.h. It
+ * reads the state without the lock (see
+ * @ref kernel_unit_msgq_k_msgq_get_attrs). The test of the two queries
+ * k_msgq_num_used_get() and k_msgq_num_free_get() on a static message queue
+ * is in this group.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - z_vrfy_k_msgq_num_used_get(), static inline, with
+ *   @kconfig{CONFIG_USERSPACE}. msg_q.c has no z_impl_k_msgq_num_used_get().
+ */
+
+/**
+ * @defgroup kernel_unit_msgq_static Static functions and data
+ * @ingroup kernel_unit_msgq
+ * @brief The static functions of msg_q.c, and the data that msg_q.c defines.
+ *
+ * @par Poll events
+ * With CONFIG_POLL, a message in the ring buffer signals
+ * K_POLL_STATE_MSGQ_DATA_AVAILABLE.
+ * After put_msg_in_queue() writes a message into the ring buffer and
+ * increments @c used_msgs, it calls z_handle_obj_poll_events() with the poll
+ * events of the message queue and K_POLL_STATE_MSGQ_DATA_AVAILABLE. If this
+ * makes a polling thread ready (return value true), put_msg_in_queue()
+ * releases the lock with z_reschedule(). A message that goes directly to a
+ * waiting reader does not signal the poll events. k_msgq_get(),
+ * k_msgq_peek(), k_msgq_peek_at() and k_msgq_purge() do not signal the poll
+ * events. Without @kconfig{CONFIG_POLL}, msgq_handle_poll_events() returns
+ * false and calls nothing.
+ *
+ * Most tests of the poll events call k_msgq_put() or k_msgq_put_front().
+ * They are in the groups of these functions.
+ *
+ * @par Functions in kernel/msg_q.c
+ * - msgq_handle_poll_events(), static inline. With @kconfig{CONFIG_POLL}, it
+ *   calls z_handle_obj_poll_events(). Without it, it returns false.
+ * - put_msg_in_queue(), static inline. k_msgq_put() and k_msgq_put_front()
+ *   call it. Its tests are in the groups of these two functions.
+ *
+ * @par Data in kernel/msg_q.c
+ * - @c obj_type_msgq and its descriptor (K_OBJ_TYPE_DEFINE()), with
+ *   @kconfig{CONFIG_OBJ_CORE_MSGQ}. The tests of the descriptor are in this
+ *   group.
  */
 
 #include <limits.h>
@@ -560,19 +929,10 @@ static void msgq_unit_before(void *fixture)
 
 ZTEST_SUITE(msgq_unit, NULL, NULL, msgq_unit_before, NULL, NULL);
 
-/**
- * @defgroup kernel_unit_msgq_init Initialization
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_init() makes an empty message queue on a buffer of the caller.
- *
- * k_msgq_init() sets the size of the messages, the number of slots and the
- * ring buffer. It sets the read and write pointers to the start of the ring
- * buffer, the number of messages to 0 and the flags to 0. It initializes the
- * lock, the wait queue, the poll events, the object core and the kernel
- * object. It does not lock the message queue: until k_msgq_init() returns,
- * only the caller uses it. It does not write to the ring buffer. With
- * @kconfig{CONFIG_ASSERT}, it asserts that the size of the ring buffer and
- * its end address do not overflow.
+/*
+ * Tests: Initialization. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -586,7 +946,7 @@ ZTEST_SUITE(msgq_unit, NULL, NULL, msgq_unit_before, NULL, NULL);
  *   @c buffer_start is the buffer, and @c buffer_end is MAX_MSGS * MSG_SIZE
  *   bytes after it.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_sets_geometry)
@@ -613,7 +973,7 @@ ZTEST(msgq_unit, test_init_sets_geometry)
  *   @c used_msgs is 0. k_msgq_num_used_get() returns 0 and
  *   k_msgq_num_free_get() returns MAX_MSGS.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_makes_queue_empty)
@@ -640,7 +1000,7 @@ ZTEST(msgq_unit, test_init_makes_queue_empty)
  * - Action: k_msgq_init().
  * - Expected: @c flags is 0.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_clears_flags)
@@ -664,7 +1024,7 @@ ZTEST(msgq_unit, test_init_clears_flags)
  * - Expected: all bytes of the lock are 0 (the value of an unlocked
  *   spinlock).
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_resets_lock)
@@ -687,7 +1047,7 @@ ZTEST(msgq_unit, test_init_resets_lock)
  * - Expected: one call of z_waitq_init() with the wait queue of the message
  *   queue.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_initializes_wait_queue)
@@ -708,7 +1068,7 @@ ZTEST(msgq_unit, test_init_initializes_wait_queue)
  * - Action: k_msgq_init().
  * - Expected: all bytes of the ring buffer keep the pattern.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_does_not_write_buffer)
@@ -731,7 +1091,7 @@ ZTEST(msgq_unit, test_init_does_not_write_buffer)
  * - Action: k_msgq_init().
  * - Expected: the list @c poll_events is a valid, empty list.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_empties_poll_events)
@@ -755,7 +1115,7 @@ ZTEST(msgq_unit, test_init_empties_poll_events)
  * - Action: k_msgq_init().
  * - Expected: one call of k_object_init() with the message queue.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_initializes_kernel_object)
@@ -779,7 +1139,7 @@ ZTEST(msgq_unit, test_init_initializes_kernel_object)
  *   (with CONFIG_OBJ_CORE_MSGQ), k_object_init() (with CONFIG_USERSPACE). No
  *   lock, no allocation.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_call_order)
@@ -802,7 +1162,7 @@ ZTEST(msgq_unit, test_init_call_order)
  * - Expected: one failed assertion. The fake assertion hook returns, so
  *   k_msgq_init() continues. It does not write to the buffer.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_asserts_size_overflow)
@@ -824,7 +1184,7 @@ ZTEST(msgq_unit, test_init_asserts_size_overflow)
  *   end of the address space, and MAX_MSGS slots. The buffer is not used.
  * - Expected: one failed assertion. The size check passes.
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_asserts_end_address_overflow)
@@ -846,7 +1206,7 @@ ZTEST(msgq_unit, test_init_asserts_end_address_overflow)
  * - Expected: no failed assertion. A message queue with no slots is valid
  *   for k_msgq_init().
  *
- * @ingroup kernel_unit_msgq_init
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_init_valid_buffer_does_not_assert)
@@ -860,18 +1220,10 @@ ZTEST(msgq_unit, test_init_valid_buffer_does_not_assert)
 }
 #endif /* CONFIG_ASSERT */
 
-/**
- * @defgroup kernel_unit_msgq_static Static definition and state queries
- * @ingroup kernel_unit_msgq
- * @brief K_MSGQ_DEFINE() gives the state of k_msgq_init(). The state queries do not lock.
- *
- * K_MSGQ_DEFINE() in @c zephyr/kernel.h defines the ring buffer and the
- * message queue in the iterable section @c k_msgq. Its initializer
- * Z_MSGQ_INITIALIZER() gives the same state as k_msgq_init().
- * k_msgq_get_attrs() (in msg_q.c), k_msgq_num_free_get() and
- * k_msgq_num_used_get() (static inline in @c zephyr/kernel.h) read the state
- * without the lock. Each reads @c used_msgs once, so the result is a value
- * that the message queue had during the call.
+/*
+ * Tests: Static definition and state queries. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 K_MSGQ_DEFINE(unit_static_msgq, MSG_SIZE, MAX_MSGS, 4);
@@ -887,7 +1239,7 @@ K_MSGQ_DEFINE(unit_static_msgq, MSG_SIZE, MAX_MSGS, 4);
  *   equal. The buffer has MAX_MSGS * MSG_SIZE bytes. The message queue is in
  *   the iterable section @c k_msgq.
  *
- * @ingroup kernel_unit_msgq_static
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see K_MSGQ_DEFINE(), k_msgq_init()
  */
 ZTEST(msgq_unit, test_static_define_equals_init)
@@ -923,7 +1275,7 @@ ZTEST(msgq_unit, test_static_define_equals_init)
  * - Action: k_msgq_num_used_get(), k_msgq_num_free_get().
  * - Expected: 3 and MAX_MSGS - 3. No calls to the layers below.
  *
- * @ingroup kernel_unit_msgq_static
+ * @ingroup kernel_unit_msgq_k_msgq_num_used_get
  * @see z_impl_k_msgq_num_used_get(), z_impl_k_msgq_num_free_get()
  */
 ZTEST(msgq_unit, test_static_num_used_and_free)
@@ -949,7 +1301,7 @@ ZTEST(msgq_unit, test_static_num_used_and_free)
  * - Expected: @c msg_size is MSG_SIZE, @c max_msgs is MAX_MSGS, @c used_msgs
  *   is 3. No calls to the layers below. The message queue does not change.
  *
- * @ingroup kernel_unit_msgq_static
+ * @ingroup kernel_unit_msgq_k_msgq_get_attrs
  * @see z_impl_k_msgq_get_attrs()
  */
 ZTEST(msgq_unit, test_static_get_attrs)
@@ -970,20 +1322,10 @@ ZTEST(msgq_unit, test_static_get_attrs)
 	zassert_msgq_contents(&msgq, 1, 2, 3);
 }
 
-/**
- * @defgroup kernel_unit_msgq_alloc Allocated ring buffer
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_alloc_init() allocates the ring buffer, and k_msgq_cleanup() frees it.
- *
- * k_msgq_alloc_init() calculates the size of the ring buffer as
- * msg_size * max_msgs. If the multiplication overflows, it returns -EINVAL.
- * Else it allocates the buffer with z_thread_malloc() from the resource pool
- * of the current thread. If the allocation fails, it returns -ENOMEM and
- * does not change the message queue. Else it calls k_msgq_init() on the
- * buffer and then sets the flag K_MSGQ_FLAG_ALLOC. It does not lock the
- * message queue.
- *
- * k_msgq_cleanup() and z_msgq_cleanup() are in @ref kernel_unit_msgq_cleanup.
+/*
+ * Tests: Allocated ring buffer. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -997,7 +1339,7 @@ ZTEST(msgq_unit, test_static_get_attrs)
  *   MSG_SIZE * MAX_MSGS. The message queue is empty, with the allocated
  *   buffer, MSG_SIZE and MAX_MSGS.
  *
- * @ingroup kernel_unit_msgq_alloc
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_alloc_init_allocates_buffer)
@@ -1029,7 +1371,7 @@ ZTEST(msgq_unit, test_alloc_init_allocates_buffer)
  *   with the options, k_obj_core_init_and_link() and k_object_init()). No
  *   lock.
  *
- * @ingroup kernel_unit_msgq_alloc
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_alloc_init_sets_alloc_flag)
@@ -1057,7 +1399,7 @@ ZTEST(msgq_unit, test_alloc_init_sets_alloc_flag)
  * - Expected: return value -EINVAL. No calls to the layers below. All bytes
  *   of the message queue keep the pattern.
  *
- * @ingroup kernel_unit_msgq_alloc
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_alloc_init_overflow_returns_einval)
@@ -1083,7 +1425,7 @@ ZTEST(msgq_unit, test_alloc_init_overflow_returns_einval)
  * - Expected: return value -ENOMEM. One call of z_thread_malloc() and no
  *   other call. All bytes of the message queue keep the pattern.
  *
- * @ingroup kernel_unit_msgq_alloc
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_alloc_init_no_memory_returns_enomem)
@@ -1108,7 +1450,7 @@ ZTEST(msgq_unit, test_alloc_init_no_memory_returns_enomem)
  * - Expected: one call of z_thread_malloc() with 0. Return value 0. The
  *   message queue has no slots: @c buffer_end is @c buffer_start.
  *
- * @ingroup kernel_unit_msgq_alloc
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_alloc_init_zero_size)
@@ -1124,25 +1466,10 @@ ZTEST(msgq_unit, test_alloc_init_zero_size)
 	zassert_equal(z_impl_k_msgq_num_free_get(&msgq), 0U);
 }
 
-/**
- * @defgroup kernel_unit_msgq_cleanup Cleanup
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_cleanup() frees an allocated ring buffer if no thread waits.
- *
- * k_msgq_cleanup() calls z_msgq_cleanup() with @c locked false. The object
- * code of the kernel (@c kernel/userspace/userspace.c) calls
- * z_msgq_cleanup() when a message queue has no more references. Then
- * @c locked is true: the caller holds the scheduler spinlock. Thus
- * z_msgq_cleanup() reads the wait queue with z_waitq_head_locked(), which
- * does not lock the scheduler spinlock again. With @c locked false, it uses
- * z_waitq_head().
- *
- * z_msgq_cleanup() locks the message queue. If a thread waits, it returns
- * -EBUSY. This check is a CHECKIF(): with @kconfig{CONFIG_NO_RUNTIME_CHECKS}
- * there is no check, and with @kconfig{CONFIG_ASSERT_ON_ERRORS} it is an
- * assertion. If the flag K_MSGQ_FLAG_ALLOC is set, z_msgq_cleanup() frees
- * the buffer with k_free() and clears the flag. Thus a second call does not
- * free the buffer again. z_msgq_cleanup() does not change the other fields.
+/*
+ * Tests: Cleanup. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /* Make an allocated message queue on the ring buffer of the test. */
@@ -1162,7 +1489,7 @@ static void msgq_prepare_alloc(struct k_msgq *msgq)
  * - Expected: return value 0. One call of k_free() with @c buffer_start.
  *   @c flags is 0.
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_frees_allocated_buffer)
@@ -1186,7 +1513,7 @@ ZTEST(msgq_unit, test_cleanup_frees_allocated_buffer)
  * - Action: k_msgq_cleanup().
  * - Expected: return value 0. No call of k_free().
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_keeps_caller_buffer)
@@ -1208,7 +1535,7 @@ ZTEST(msgq_unit, test_cleanup_keeps_caller_buffer)
  * - Action: k_msgq_cleanup() two times.
  * - Expected: both return 0. One call of k_free().
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_frees_once)
@@ -1233,7 +1560,7 @@ ZTEST(msgq_unit, test_cleanup_frees_once)
  *   @c used_msgs are as before. Thus the message queue still points to the
  *   freed buffer.
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_keeps_pointers)
@@ -1266,7 +1593,7 @@ ZTEST(msgq_unit, test_cleanup_keeps_pointers)
  *   z_waitq_head_locked() with the wait queue and not z_waitq_head().
  *   With CONFIG_NO_RUNTIME_CHECKS, the test does not apply.
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_locked_selects_wait_queue_reader)
@@ -1305,7 +1632,7 @@ ZTEST(msgq_unit, test_cleanup_locked_selects_wait_queue_reader)
  * - Expected: return value -EBUSY. No call of k_free(). The flag
  *   K_MSGQ_FLAG_ALLOC stays set.
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_waiting_thread_returns_ebusy)
@@ -1336,7 +1663,7 @@ ZTEST(msgq_unit, test_cleanup_waiting_thread_returns_ebusy)
  * - Expected: return value -EBUSY. No call of k_free() and no call of
  *   z_waitq_head().
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_z_msgq_cleanup
  * @see z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_locked_waiting_thread_returns_ebusy)
@@ -1370,7 +1697,7 @@ ZTEST(msgq_unit, test_cleanup_locked_waiting_thread_returns_ebusy)
  * - Expected: both return 0. Each frees the buffer. No call of
  *   z_waitq_head() or z_waitq_head_locked().
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_no_runtime_checks_frees_with_waiting_thread)
@@ -1407,7 +1734,7 @@ ZTEST(msgq_unit, test_cleanup_no_runtime_checks_frees_with_waiting_thread)
  *   k_free(). No failed assertion for the third call. The fake assertion
  *   hook returns, so each call continues, frees the buffer and returns 0.
  *
- * @ingroup kernel_unit_msgq_cleanup
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_cleanup_assert_on_errors)
@@ -1434,24 +1761,10 @@ ZTEST(msgq_unit, test_cleanup_assert_on_errors)
 }
 #endif /* CONFIG_ASSERT_ON_ERRORS */
 
-/**
- * @defgroup kernel_unit_msgq_put Put
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_put() copies a message to the tail, and k_msgq_put_front() to the head.
- *
- * Both functions share the static function put_msg_in_queue(). If the ring
- * buffer is not full and no reader waits, k_msgq_put() copies @c msg_size
- * bytes to @c write_ptr and moves @c write_ptr one slot forward, with
- * wrap-around. k_msgq_put_front() moves @c read_ptr one slot back, with
- * wrap-around, and copies the message to the new @c read_ptr. Both
- * increment @c used_msgs and return 0. If a reader waits, see
- * @ref kernel_unit_msgq_handover.
- *
- * If the ring buffer is full, k_msgq_put() returns -ENOMSG for the timeout
- * K_NO_WAIT. For another timeout it waits: it sets
- * @c _current->base.swap_data to the message and calls z_pend_curr(). The
- * result of z_pend_curr() is the return value. k_msgq_put_front() always
- * uses K_NO_WAIT, so it never waits.
+/*
+ * Tests: Put. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -1465,7 +1778,7 @@ ZTEST(msgq_unit, test_cleanup_assert_on_errors)
  *   @c read_ptr is slot 0, @c used_msgs is 1. The other slots keep the
  *   pattern.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_put_copies_message_to_tail)
@@ -1493,7 +1806,7 @@ ZTEST(msgq_unit, test_put_copies_message_to_tail)
  *   caller.
  * - Expected: the ring buffer has the message as it was at the call.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_copies_data)
@@ -1517,7 +1830,7 @@ ZTEST(msgq_unit, test_put_copies_data)
  * - Action: k_msgq_put() of message 3.
  * - Expected: the messages from the head are 1, 2, 3.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_appends_after_tail)
@@ -1544,7 +1857,7 @@ ZTEST(msgq_unit, test_put_appends_after_tail)
  * - Expected: message 1 is in the last slot, message 2 in slot 0.
  *   @c write_ptr is slot 1. The guard slot after the end keeps the pattern.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_wraps_write_pointer)
@@ -1573,7 +1886,7 @@ ZTEST(msgq_unit, test_put_wraps_write_pointer)
  * - Expected: each call returns 0. @c used_msgs is MAX_MSGS,
  *   k_msgq_num_free_get() returns 0. @c write_ptr is @c read_ptr again.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_fills_queue)
@@ -1599,7 +1912,7 @@ ZTEST(msgq_unit, test_put_fills_queue)
  * - Expected: return value -ENOMSG. The messages are 1, 2, 3, 4. No call of
  *   z_unpend_first_thread_locked() and no call of z_pend_curr().
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_full_no_wait_returns_enomsg)
@@ -1628,7 +1941,7 @@ ZTEST(msgq_unit, test_put_full_no_wait_returns_enomsg)
  *   message queue and TEST_TIMEOUT. At this call, @c _current->base.swap_data
  *   is the message of the caller. The ring buffer does not change.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_full_waits_with_message)
@@ -1659,9 +1972,9 @@ ZTEST(msgq_unit, test_put_full_waits_with_message)
  *   reader took the message), then -EAGAIN (timeout), then -ENOMSG (purge).
  * - Expected: the return values are 0, -EAGAIN and -ENOMSG. The ring buffer
  *   does not change. The reader, not k_msgq_put(), copies the message after
- *   the wait (see @ref kernel_unit_msgq_handover).
+ *   the wait (see the rules of the hand-over in @ref kernel_unit_msgq).
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_returns_wait_result)
@@ -1693,7 +2006,7 @@ ZTEST(msgq_unit, test_put_returns_wait_result)
  * - Expected: return value 0. @c read_ptr is slot 0, and slot 0 has message
  *   9. The messages from the head are 9, 1, 2. @c write_ptr does not change.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_put_front_puts_message_at_head)
@@ -1726,7 +2039,7 @@ ZTEST(msgq_unit, test_put_front_puts_message_at_head)
  *   slot. The messages from the head are 9, 1. The guard slot keeps the
  *   pattern.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_put_front_wraps_read_pointer)
@@ -1756,7 +2069,7 @@ ZTEST(msgq_unit, test_put_front_wraps_read_pointer)
  * - Expected: return value -ENOMSG. No call of z_pend_curr(). The messages
  *   are 1, 2, 3, 4.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_put_front_full_returns_enomsg)
@@ -1785,7 +2098,7 @@ ZTEST(msgq_unit, test_put_front_full_returns_enomsg)
  *   change. Thus such a message queue is not a rendezvous point: the readers
  *   and the writers both wait.
  *
- * @ingroup kernel_unit_msgq_put
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_put_zero_slots_is_full)
@@ -1803,19 +2116,10 @@ ZTEST(msgq_unit, test_put_zero_slots_is_full)
 	kernel_unit_assert_filled(&reader_buf, sizeof(reader_buf));
 }
 
-/**
- * @defgroup kernel_unit_msgq_get Get
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_get() copies the head message to the caller and removes it.
- *
- * If the ring buffer has a message, k_msgq_get() copies @c msg_size bytes
- * from @c read_ptr to the caller, moves @c read_ptr one slot forward with
- * wrap-around, decrements @c used_msgs and returns 0. Then it gives the free
- * slot to a waiting writer, if there is one (see
- * @ref kernel_unit_msgq_handover). If the ring buffer is empty, k_msgq_get()
- * returns -ENOMSG for the timeout K_NO_WAIT. For another timeout it waits:
- * it sets @c _current->base.swap_data to the buffer of the caller and calls
- * z_pend_curr(). The result of z_pend_curr() is the return value.
+/*
+ * Tests: Get. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -1827,7 +2131,7 @@ ZTEST(msgq_unit, test_put_zero_slots_is_full)
  * - Expected: return value 0. The caller has message 1. @c read_ptr is
  *   slot 1. The message queue has message 2.
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_removes_head_message)
@@ -1856,7 +2160,7 @@ ZTEST(msgq_unit, test_get_removes_head_message)
  * - Expected: the caller gets 1, then 2. After the first call, @c read_ptr
  *   is slot 0. The message queue is then empty.
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_wraps_read_pointer)
@@ -1887,7 +2191,7 @@ ZTEST(msgq_unit, test_get_wraps_read_pointer)
  * - Expected: the caller gets 1, 2, then 3, 4, 5, 6. The message queue is
  *   then empty.
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get(), z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_get_fifo_order)
@@ -1921,7 +2225,7 @@ ZTEST(msgq_unit, test_get_fifo_order)
  * - Expected: return value -ENOMSG. The buffer keeps the pattern. No call of
  *   z_pend_curr() and no call of z_unpend_first_thread_locked().
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_empty_no_wait_returns_enomsg)
@@ -1950,7 +2254,7 @@ ZTEST(msgq_unit, test_get_empty_no_wait_returns_enomsg)
  *   TEST_TIMEOUT. At this call, @c _current->base.swap_data is the buffer of
  *   the caller.
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_empty_waits_with_buffer)
@@ -1978,10 +2282,10 @@ ZTEST(msgq_unit, test_get_empty_waits_with_buffer)
  *   writer gave a message), then -EAGAIN (timeout), then -ENOMSG (purge).
  * - Expected: the return values are 0, -EAGAIN and -ENOMSG. k_msgq_get()
  *   does not read the ring buffer after the wait: the writer copies the
- *   message into the buffer of the caller (see
- *   @ref kernel_unit_msgq_handover).
+ *   message into the buffer of the caller (see the rules of the hand-over
+ *   in @ref kernel_unit_msgq).
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_returns_wait_result)
@@ -2013,7 +2317,7 @@ ZTEST(msgq_unit, test_get_returns_wait_result)
  * - Expected: return value 0, the caller has message 1. No call of
  *   z_pend_curr().
  *
- * @ingroup kernel_unit_msgq_get
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_get_does_not_wait_if_message)
@@ -2030,17 +2334,10 @@ ZTEST(msgq_unit, test_get_does_not_wait_if_message)
 	zassert_equal(z_pend_curr_fake.call_count, 0);
 }
 
-/**
- * @defgroup kernel_unit_msgq_peek Peek
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_peek() and k_msgq_peek_at() copy a message and do not remove it.
- *
- * k_msgq_peek() copies the head message. k_msgq_peek_at() copies the message
- * at index @a idx from the head: index 0 is the head. If @a idx is not less
- * than @c used_msgs, k_msgq_peek_at() returns -ENOMSG. If the message is
- * after the end of the ring buffer, k_msgq_peek_at() calculates its address
- * from the start (wrap-around). Both functions never wait and do not change
- * the message queue.
+/*
+ * Tests: Peek. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -2052,7 +2349,7 @@ ZTEST(msgq_unit, test_get_does_not_wait_if_message)
  * - Expected: return value 0. The caller has message 1. The message queue
  *   still has 1, 2 at the same pointers.
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_impl_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_peek_copies_head_message)
@@ -2079,7 +2376,7 @@ ZTEST(msgq_unit, test_peek_copies_head_message)
  * - Action: k_msgq_peek().
  * - Expected: return value -ENOMSG. The buffer keeps the pattern.
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_impl_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_peek_empty_returns_enomsg)
@@ -2104,7 +2401,7 @@ ZTEST(msgq_unit, test_peek_empty_returns_enomsg)
  * - Expected: each returns 0. The caller gets 1, 2 and 3. Index 0 gives the
  *   same message as k_msgq_peek(). The message queue does not change.
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_impl_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_peek_at_copies_indexed_message)
@@ -2135,7 +2432,7 @@ ZTEST(msgq_unit, test_peek_at_copies_indexed_message)
  *   after the wrap-around: its offset from the read pointer is equal to the
  *   bytes to the end.
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_impl_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_peek_at_wraps_around)
@@ -2165,7 +2462,7 @@ ZTEST(msgq_unit, test_peek_at_wraps_around)
  *   k_msgq_peek_at() with the index 0 on an empty message queue.
  * - Expected: each returns -ENOMSG. The buffer keeps the pattern.
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_impl_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_peek_at_index_out_of_range_returns_enomsg)
@@ -2195,7 +2492,7 @@ ZTEST(msgq_unit, test_peek_at_index_out_of_range_returns_enomsg)
  * - Expected: no call of z_unpend_first_thread_locked(), z_sched_wake(),
  *   z_handle_obj_poll_events() or z_reschedule().
  *
- * @ingroup kernel_unit_msgq_peek
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_impl_k_msgq_peek(), z_impl_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_peek_does_not_wake)
@@ -2216,17 +2513,10 @@ ZTEST(msgq_unit, test_peek_does_not_wake)
 	zassert_equal(z_reschedule_fake.call_count, 0);
 }
 
-/**
- * @defgroup kernel_unit_msgq_purge Purge
- * @ingroup kernel_unit_msgq
- * @brief k_msgq_purge() discards all messages and wakes all waiting threads with -ENOMSG.
- *
- * k_msgq_purge() wakes each thread of the wait queue with z_sched_wake(),
- * with the return value -ENOMSG and the data NULL, until z_sched_wake()
- * returns false. Then it sets @c used_msgs to 0 and @c read_ptr to
- * @c write_ptr. It does not write to the ring buffer. Readers and writers
- * share one wait queue, so k_msgq_purge() wakes the waiting writers of a
- * full message queue and the waiting readers of an empty message queue.
+/*
+ * Tests: Purge. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -2239,7 +2529,7 @@ ZTEST(msgq_unit, test_peek_does_not_wake)
  *   k_msgq_num_free_get() returns MAX_MSGS. The ring buffer still has the
  *   bytes of the messages.
  *
- * @ingroup kernel_unit_msgq_purge
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_purge_discards_messages)
@@ -2271,7 +2561,7 @@ ZTEST(msgq_unit, test_purge_discards_messages)
  *   queue is empty. The messages of the writers do not go into the ring
  *   buffer.
  *
- * @ingroup kernel_unit_msgq_purge
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_purge_wakes_all_waiting_threads)
@@ -2302,7 +2592,7 @@ ZTEST(msgq_unit, test_purge_wakes_all_waiting_threads)
  * - Expected: three calls of z_sched_wake() with -ENOMSG. The message queue
  *   is empty.
  *
- * @ingroup kernel_unit_msgq_purge
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_purge_wakes_waiting_readers)
@@ -2327,7 +2617,7 @@ ZTEST(msgq_unit, test_purge_wakes_waiting_readers)
  * - Action: put 5 to 8, then get four messages.
  * - Expected: each put returns 0. The caller gets 5, 6, 7, 8.
  *
- * @ingroup kernel_unit_msgq_purge
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_purge_then_reuse)
@@ -2346,30 +2636,10 @@ ZTEST(msgq_unit, test_purge_then_reuse)
 	}
 }
 
-/**
- * @defgroup kernel_unit_msgq_handover Hand-over to a waiting thread
- * @ingroup kernel_unit_msgq
- * @brief A message goes directly to a waiting reader, and a waiting writer gets the free slot.
- *
- * Put: if the ring buffer is not full, put_msg_in_queue() asks the scheduler
- * for the first waiting thread with z_unpend_first_thread_locked(). A thread
- * waits on a message queue that is not full only if it is a reader. If there
- * is a reader, put_msg_in_queue() copies the message to the buffer of the
- * reader (@c swap_data of the thread), sets the return value of the reader
- * to 0 and makes it ready. The ring buffer and @c used_msgs do not change.
- *
- * Get: after k_msgq_get() removes the head message, it asks for the first
- * waiting thread. A thread waits on a message queue with messages only if it
- * is a writer. If there is a writer, k_msgq_get() copies the message of the
- * writer (@c swap_data) to @c write_ptr, moves @c write_ptr one slot forward
- * and increments @c used_msgs. Then it sets the return value of the writer to
- * 0 and makes it ready. Thus the message of the writer is the new tail.
- *
- * In both cases the copy comes before arch_thread_return_value_set(), and
- * this comes before z_sched_ready_locked(). One operation makes at most one
- * thread ready. The other side of the hand-over is the wait in
- * k_msgq_get() or k_msgq_put(), which sets @c swap_data (see
- * @ref kernel_unit_msgq_get and @ref kernel_unit_msgq_put).
+/*
+ * Tests: Hand-over to a waiting thread. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -2383,7 +2653,7 @@ ZTEST(msgq_unit, test_purge_then_reuse)
  *   the wait queue. The buffer of the reader has message 1. The message
  *   queue is empty, and the ring buffer keeps the pattern.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_handover_put_copies_to_reader)
@@ -2414,7 +2684,7 @@ ZTEST(msgq_unit, test_handover_put_copies_to_reader)
  *   z_sched_ready_locked() with the reader. When z_sched_ready_locked() is
  *   called, the buffer of the reader already has message 1.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_handover_put_readies_reader_after_copy)
@@ -2445,7 +2715,7 @@ ZTEST(msgq_unit, test_handover_put_readies_reader_after_copy)
  * - Expected: return value 0. The reader has message 1 and is ready. The
  *   message queue is empty, and @c read_ptr does not change.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_handover_put_front_copies_to_reader)
@@ -2474,7 +2744,7 @@ ZTEST(msgq_unit, test_handover_put_front_copies_to_reader)
  *   Each put calls z_unpend_first_thread_locked() once, and
  *   z_sched_ready_locked() is called once in total.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_handover_put_wakes_one_reader)
@@ -2510,7 +2780,7 @@ ZTEST(msgq_unit, test_handover_put_wakes_one_reader)
  * - Expected: the buffer of k_msgq_get() has message 5. The message queue is
  *   empty.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get(), z_impl_k_msgq_put()
  */
 ZTEST(msgq_unit, test_handover_get_buffer_receives_put_message)
@@ -2542,7 +2812,7 @@ ZTEST(msgq_unit, test_handover_get_buffer_receives_put_message)
  *   has 2, 3, 4, 9: it is full again. The writer has the return value 0
  *   and is ready.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_handover_get_takes_writer_message)
@@ -2576,7 +2846,7 @@ ZTEST(msgq_unit, test_handover_get_takes_writer_message)
  *   MAX_MSGS again. arch_thread_return_value_set() comes before
  *   z_sched_ready_locked().
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_handover_get_readies_writer_after_copy)
@@ -2605,7 +2875,7 @@ ZTEST(msgq_unit, test_handover_get_readies_writer_after_copy)
  * - Expected: message 9 is in the last slot, and @c write_ptr is slot 0. The
  *   message queue has 2, 3, 4, 9. The guard slot keeps the pattern.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_handover_get_wraps_write_pointer)
@@ -2639,7 +2909,7 @@ ZTEST(msgq_unit, test_handover_get_wraps_write_pointer)
  * - Action: k_msgq_put() of message 7 with K_FOREVER, then k_msgq_get().
  * - Expected: the reader gets message 1. The message queue has 2, 3, 4, 7.
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_handover_put_message_reaches_queue_via_get)
@@ -2670,7 +2940,7 @@ ZTEST(msgq_unit, test_handover_put_message_reaches_queue_via_get)
  *   queue, which returns NULL. No call of arch_thread_return_value_set() or
  *   z_sched_ready_locked().
  *
- * @ingroup kernel_unit_msgq_handover
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_handover_get_no_writer)
@@ -2689,20 +2959,10 @@ ZTEST(msgq_unit, test_handover_get_no_writer)
 	zassert_equal(z_sched_ready_locked_fake.call_count, 0);
 }
 
-/**
- * @defgroup kernel_unit_msgq_poll Poll events
- * @ingroup kernel_unit_msgq
- * @brief With CONFIG_POLL, a message in the ring buffer signals K_POLL_STATE_MSGQ_DATA_AVAILABLE.
- *
- * After put_msg_in_queue() writes a message into the ring buffer and
- * increments @c used_msgs, it calls z_handle_obj_poll_events() with the poll
- * events of the message queue and K_POLL_STATE_MSGQ_DATA_AVAILABLE. If this
- * makes a polling thread ready (return value true), put_msg_in_queue()
- * releases the lock with z_reschedule(). A message that goes directly to a
- * waiting reader does not signal the poll events. k_msgq_get(),
- * k_msgq_peek(), k_msgq_peek_at() and k_msgq_purge() do not signal the poll
- * events. Without @kconfig{CONFIG_POLL}, msgq_handle_poll_events() returns
- * false and calls nothing.
+/*
+ * Tests: Poll events. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -2716,7 +2976,7 @@ ZTEST(msgq_unit, test_handover_get_no_writer)
  *   the message queue and K_POLL_STATE_MSGQ_DATA_AVAILABLE. At this call,
  *   @c used_msgs is 1. The lock is held.
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), msgq_handle_poll_events()
  */
 ZTEST(msgq_unit, test_poll_put_signals_data_available)
@@ -2751,7 +3011,7 @@ ZTEST(msgq_unit, test_poll_put_signals_data_available)
  * - Expected: one call of z_handle_obj_poll_events(). At this call,
  *   @c used_msgs is 2.
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front(), msgq_handle_poll_events()
  */
 ZTEST(msgq_unit, test_poll_put_front_signals_data_available)
@@ -2780,7 +3040,7 @@ ZTEST(msgq_unit, test_poll_put_front_signals_data_available)
  * - Action: k_msgq_put() of message 1.
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_poll_handover_does_not_signal)
@@ -2805,7 +3065,7 @@ ZTEST(msgq_unit, test_poll_handover_does_not_signal)
  *   k_msgq_put_front().
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), z_impl_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_poll_full_put_does_not_signal)
@@ -2833,7 +3093,7 @@ ZTEST(msgq_unit, test_poll_full_put_does_not_signal)
  *   message of the writer), k_msgq_purge().
  * - Expected: no call of z_handle_obj_poll_events().
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get(), z_impl_k_msgq_peek(), z_impl_k_msgq_peek_at(),
  * z_impl_k_msgq_purge()
  */
@@ -2864,7 +3124,7 @@ ZTEST(msgq_unit, test_poll_read_operations_do_not_signal)
  * - Expected: no call of z_handle_obj_poll_events(). Each releases the lock
  *   with k_spin_unlock().
  *
- * @ingroup kernel_unit_msgq_poll
+ * @ingroup kernel_unit_msgq_static
  * @see msgq_handle_poll_events()
  */
 ZTEST(msgq_unit, test_poll_disabled_no_signal)
@@ -2883,27 +3143,10 @@ ZTEST(msgq_unit, test_poll_disabled_no_signal)
 }
 #endif /* CONFIG_POLL */
 
-/**
- * @defgroup kernel_unit_msgq_locking Locking
- * @ingroup kernel_unit_msgq
- * @brief The spinlock of the message queue protects its state. Each path releases it exactly once.
- *
- * Each path of the operations, except the initialization,
- * k_msgq_get_attrs() and the static inline functions, locks the spinlock of
- * its message queue once, as its first call to the layers below. Only the
- * ISR check of an __ASSERT() (@kconfig{CONFIG_ASSERT}) comes before it. Each
- * path releases the lock once, as its last call, with the key of the lock.
- * The release is k_spin_unlock() (seen as arch_irq_unlock()),
- * z_reschedule() or z_pend_curr().
- *
- * The hand-over (z_unpend_first_thread_locked(), the copy,
- * arch_thread_return_value_set() and z_sched_ready_locked()) is in a block
- * @c LOCK_SCHED_SPINLOCK. With more than one CPU, this block locks and
- * unlocks the scheduler spinlock inside the lock of the message queue. The
- * block runs on each put to a message queue that is not full and on each get
- * of a message, also if no thread waits. The ring buffer and @c used_msgs
- * change only while the lock is held. k_free() in z_msgq_cleanup() runs
- * while the lock is held.
+/*
+ * Tests: Locking. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -2918,7 +3161,7 @@ ZTEST(msgq_unit, test_poll_disabled_no_signal)
  *   z_unpend_first_thread_locked(), z_handle_obj_poll_events() (with
  *   CONFIG_POLL), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_lock_put_no_ready_thread_unlocks)
@@ -2948,7 +3191,7 @@ ZTEST(msgq_unit, test_lock_put_no_ready_thread_unlocks)
  *   arch_thread_return_value_set(), z_sched_ready_locked(); then
  *   z_reschedule() with the lock of the message queue and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_lock_put_handover_reschedules)
@@ -2979,7 +3222,7 @@ ZTEST(msgq_unit, test_lock_put_handover_reschedules)
  * - Expected calls: as for a put without a ready thread, but the release is
  *   z_reschedule() with the lock and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_lock_put_poll_ready_reschedules)
@@ -3013,7 +3256,7 @@ ZTEST(msgq_unit, test_lock_put_poll_ready_reschedules)
  * - Expected calls for each: arch_is_in_isr() (with CONFIG_ASSERT),
  *   arch_irq_lock(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), z_impl_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_lock_put_full_unlocks)
@@ -3045,7 +3288,7 @@ ZTEST(msgq_unit, test_lock_put_full_unlocks)
  * - Expected calls: arch_is_in_isr() (with CONFIG_ASSERT), arch_irq_lock(),
  *   z_pend_curr() with the lock of the message queue and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_lock_put_wait_releases_in_pend)
@@ -3073,7 +3316,7 @@ ZTEST(msgq_unit, test_lock_put_wait_releases_in_pend)
  *   second with z_reschedule(). Both lock the scheduler spinlock section
  *   once (with more than one CPU).
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_impl_k_msgq_put_front(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_lock_put_front_paths)
@@ -3103,7 +3346,7 @@ ZTEST(msgq_unit, test_lock_put_front_paths)
  *   the scheduler spinlock section around z_unpend_first_thread_locked(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_get_no_writer_unlocks)
@@ -3134,7 +3377,7 @@ ZTEST(msgq_unit, test_lock_get_no_writer_unlocks)
  *   arch_thread_return_value_set(), z_sched_ready_locked(); then
  *   z_reschedule() with the lock and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_get_handover_reschedules)
@@ -3165,7 +3408,7 @@ ZTEST(msgq_unit, test_lock_get_handover_reschedules)
  * - Expected calls: arch_is_in_isr() (with CONFIG_ASSERT), arch_irq_lock(),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_get_empty_unlocks)
@@ -3190,7 +3433,7 @@ ZTEST(msgq_unit, test_lock_get_empty_unlocks)
  * - Expected calls: arch_is_in_isr() (with CONFIG_ASSERT), arch_irq_lock(),
  *   z_pend_curr() with the lock and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_get_wait_releases_in_pend)
@@ -3216,7 +3459,7 @@ ZTEST(msgq_unit, test_lock_get_wait_releases_in_pend)
  * - Expected calls for each: arch_irq_lock(), arch_irq_unlock() with the
  *   key. No ISR check: the peek functions never wait.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_impl_k_msgq_peek(), z_impl_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_lock_peek_unlocks)
@@ -3255,7 +3498,7 @@ ZTEST(msgq_unit, test_lock_peek_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake() (returns false),
  *   arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_lock_purge_no_waiter_unlocks)
@@ -3281,7 +3524,7 @@ ZTEST(msgq_unit, test_lock_purge_no_waiter_unlocks)
  * - Expected calls: arch_irq_lock(), z_sched_wake() three times,
  *   z_reschedule() with the lock and the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_lock_purge_waiters_reschedules)
@@ -3315,7 +3558,7 @@ ZTEST(msgq_unit, test_lock_purge_waiters_reschedules)
  *   arch_irq_unlock() with the key. At the call of k_free(), the lock is
  *   held.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_lock_cleanup_frees_under_lock)
@@ -3354,7 +3597,7 @@ ZTEST(msgq_unit, test_lock_cleanup_frees_under_lock)
  *   arch_irq_unlock() with the key. Of the second: arch_irq_lock(),
  *   z_waitq_head_locked(), arch_irq_unlock() with the key.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_cleanup
  * @see k_msgq_cleanup(), z_msgq_cleanup()
  */
 ZTEST(msgq_unit, test_lock_cleanup_busy_unlocks)
@@ -3391,7 +3634,7 @@ ZTEST(msgq_unit, test_lock_cleanup_busy_unlocks)
  *   k_msgq_num_free_get(), k_msgq_num_used_get().
  * - Expected: no call of arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init(), z_impl_k_msgq_alloc_init(), z_impl_k_msgq_get_attrs()
  */
 ZTEST(msgq_unit, test_lock_init_and_queries_do_not_lock)
@@ -3420,7 +3663,7 @@ ZTEST(msgq_unit, test_lock_init_and_queries_do_not_lock)
  * - Expected: at the lock, the number of messages is the value before the
  *   operation. At the release, it is the value after the operation.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), z_impl_k_msgq_get(), z_impl_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_lock_state_changes_under_lock)
@@ -3458,7 +3701,8 @@ ZTEST(msgq_unit, test_lock_state_changes_under_lock)
  *   one CPU). With CONFIG_SPIN_VALIDATE and more than one CPU, the second
  *   lock is @c _sched_spinlock.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_put
+ * @see z_impl_k_msgq_put()
  * @see put_msg_in_queue(), z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_handover_under_locks)
@@ -3498,7 +3742,7 @@ ZTEST(msgq_unit, test_lock_handover_under_locks)
  *   the lock of the second. With CONFIG_SPIN_VALIDATE, the validation sees
  *   the two locks.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_lock_each_msgq_has_own_lock)
@@ -3535,7 +3779,7 @@ ZTEST(msgq_unit, test_lock_each_msgq_has_own_lock)
  * - Expected: z_spin_lock_valid() with the lock of the message queue, and
  *   z_spin_unlock_valid() with the same lock.
  *
- * @ingroup kernel_unit_msgq_locking
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_impl_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_lock_spin_validate_sees_msgq_lock)
@@ -3560,19 +3804,10 @@ ZTEST(msgq_unit, test_lock_spin_validate_sees_msgq_lock)
 #endif /* CONFIG_SPIN_VALIDATE */
 
 #ifdef CONFIG_ASSERT
-/**
- * @defgroup kernel_unit_msgq_assert Assertions
- * @ingroup kernel_unit_msgq
- * @brief With CONFIG_ASSERT, msg_q.c asserts that an ISR does not wait and that the write pointer
- * is in the ring buffer.
- *
- * k_msgq_put(), k_msgq_put_front() and k_msgq_get() assert, before the lock,
- * that the caller is not an ISR or that the timeout is K_NO_WAIT. Before a
- * put writes to @c write_ptr, and before a get can give the slot at
- * @c write_ptr to a writer, they assert that @c write_ptr is in the ring
- * buffer with space for one message. The initialization asserts are in
- * @ref kernel_unit_msgq_init. In the test, the assertion hook returns, so
- * the operation continues.
+/*
+ * Tests: Assertions. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /**
@@ -3584,7 +3819,7 @@ ZTEST(msgq_unit, test_lock_spin_validate_sees_msgq_lock)
  * - Expected: one failed assertion for the first call, before the lock. No
  *   failed assertion for the second call.
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_assert_put_isr_must_not_wait)
@@ -3611,7 +3846,7 @@ ZTEST(msgq_unit, test_assert_put_isr_must_not_wait)
  * - Action: k_msgq_put() with K_FOREVER, k_msgq_get() with K_FOREVER.
  * - Expected: no failed assertion. Each call checks arch_is_in_isr() once.
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_impl_k_msgq_put(), z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_assert_thread_may_wait)
@@ -3638,7 +3873,7 @@ ZTEST(msgq_unit, test_assert_thread_may_wait)
  * - Expected: one failed assertion for the first call, before the lock. No
  *   failed assertion for the second call.
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_assert_get_isr_must_not_wait)
@@ -3694,7 +3929,8 @@ static void set_bad_write_ptr(struct k_msgq *msgq, int n)
  * - Expected: one failed assertion for each case. The fake hook returns, so
  *   the put writes at the bad pointer (in the memory of the test).
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_put
+ * @see z_impl_k_msgq_put()
  * @see put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_assert_put_write_pointer_in_buffer)
@@ -3723,7 +3959,7 @@ ZTEST(msgq_unit, test_assert_put_write_pointer_in_buffer)
  * - Expected: for each case, return value 0, the caller has message 1, and
  *   one failed assertion.
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_impl_k_msgq_get()
  */
 ZTEST(msgq_unit, test_assert_get_write_pointer_in_buffer)
@@ -3756,7 +3992,8 @@ ZTEST(msgq_unit, test_assert_get_write_pointer_in_buffer)
  * - Expected: no failed assertion in k_msgq_init(). One failed assertion in
  *   k_msgq_put(). The put continues, returns 0 and counts one message.
  *
- * @ingroup kernel_unit_msgq_assert
+ * @ingroup kernel_unit_msgq_k_msgq_put
+ * @see z_impl_k_msgq_put()
  * @see k_msgq_init(), put_msg_in_queue()
  */
 ZTEST(msgq_unit, test_assert_put_zero_message_size)
@@ -3775,33 +4012,10 @@ ZTEST(msgq_unit, test_assert_put_zero_message_size)
 #endif /* CONFIG_ASSERT */
 
 #ifdef CONFIG_USERSPACE
-/**
- * @defgroup kernel_unit_msgq_syscall System call verification
- * @ingroup kernel_unit_msgq
- * @brief With CONFIG_USERSPACE, each verification function checks the message queue object and the
- * user buffer before it calls the implementation.
- *
- * A system call from a user thread goes to z_vrfy_k_msgq_*(). This function
- * first checks that the pointer is a message queue object of the kernel that
- * the thread has access to. z_vrfy_k_msgq_alloc_init() uses
- * K_SYSCALL_OBJ_NEVER_INIT(): the object must not be initialized yet. The
- * other functions use K_SYSCALL_OBJ(): the object must be initialized.
- *
- * Then the functions with a user buffer check that the thread can access
- * it: K_SYSCALL_MEMORY_READ() of @c msg_size bytes for the message of
- * k_msgq_put() and k_msgq_put_front(); K_SYSCALL_MEMORY_WRITE() of
- * @c msg_size bytes for the buffer of k_msgq_get(), k_msgq_peek() and
- * k_msgq_peek_at(); K_SYSCALL_MEMORY_WRITE() of the attribute structure for
- * k_msgq_get_attrs(). The size comes from the message queue, so the object
- * check comes first. If a check fails, K_OOPS() stops the thread. Else the
- * function calls z_impl_k_msgq_*() with the same arguments and returns its
- * result.
- *
- * k_msgq_init() and k_msgq_cleanup() are not system calls.
- *
- * In the test, K_OOPS() calls the fake unit_syscall_oops(), and this fake
- * returns. The real K_OOPS() does not return. Thus the tests check that the
- * oops occurs before the implementation locks or changes the message queue.
+/*
+ * Tests: System call verification. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /* Make the object check pass and the memory check fail. */
@@ -3845,7 +4059,7 @@ static void assert_memory_check(const void *ptr, size_t size, int write)
  *   _OBJ_INIT_FALSE, before z_thread_malloc() with MSG_SIZE * MAX_MSGS. No
  *   oops.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_vrfy_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_syscall_alloc_init_checks_new_object)
@@ -3872,7 +4086,7 @@ ZTEST(msgq_unit, test_syscall_alloc_init_checks_new_object)
  * - Action: z_vrfy_k_msgq_alloc_init().
  * - Expected: one oops, before z_thread_malloc().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_vrfy_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_syscall_alloc_init_oops_on_bad_object)
@@ -3897,7 +4111,7 @@ ZTEST(msgq_unit, test_syscall_alloc_init_oops_on_bad_object)
  *   _OBJ_INIT_TRUE, then the memory check of the message for MSG_SIZE bytes
  *   and read access, then the lock. z_pend_curr() gets TEST_TIMEOUT.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_vrfy_k_msgq_put()
  */
 ZTEST(msgq_unit, test_syscall_put_checks_object_and_message)
@@ -3927,7 +4141,7 @@ ZTEST(msgq_unit, test_syscall_put_checks_object_and_message)
  * - Action: z_vrfy_k_msgq_put().
  * - Expected: an oops before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_vrfy_k_msgq_put()
  */
 ZTEST(msgq_unit, test_syscall_put_oops_on_bad_object)
@@ -3953,7 +4167,7 @@ ZTEST(msgq_unit, test_syscall_put_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_put().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_vrfy_k_msgq_put()
  */
 ZTEST(msgq_unit, test_syscall_put_oops_on_bad_message)
@@ -3980,7 +4194,7 @@ ZTEST(msgq_unit, test_syscall_put_oops_on_bad_message)
  *   _OBJ_INIT_TRUE, then the memory check for MSG_SIZE bytes and read
  *   access, then the lock. The messages are 2, 1.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_vrfy_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_syscall_put_front_checks_object_and_message)
@@ -4009,7 +4223,7 @@ ZTEST(msgq_unit, test_syscall_put_front_checks_object_and_message)
  * - Action: z_vrfy_k_msgq_put_front().
  * - Expected: an oops before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_vrfy_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_syscall_put_front_oops_on_bad_object)
@@ -4034,7 +4248,7 @@ ZTEST(msgq_unit, test_syscall_put_front_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_put_front().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put_front
  * @see z_vrfy_k_msgq_put_front()
  */
 ZTEST(msgq_unit, test_syscall_put_front_oops_on_bad_message)
@@ -4061,7 +4275,7 @@ ZTEST(msgq_unit, test_syscall_put_front_oops_on_bad_message)
  *   memory check of the attributes for sizeof(struct k_msgq_attrs) bytes and
  *   write access. @c used_msgs of the attributes is 3.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get_attrs
  * @see z_vrfy_k_msgq_get_attrs()
  */
 ZTEST(msgq_unit, test_syscall_get_attrs_checks_object_and_attrs)
@@ -4088,7 +4302,7 @@ ZTEST(msgq_unit, test_syscall_get_attrs_checks_object_and_attrs)
  * - Action: z_vrfy_k_msgq_get_attrs().
  * - Expected: an oops, before the memory check.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get_attrs
  * @see z_vrfy_k_msgq_get_attrs()
  */
 ZTEST(msgq_unit, test_syscall_get_attrs_oops_on_bad_object)
@@ -4113,7 +4327,7 @@ ZTEST(msgq_unit, test_syscall_get_attrs_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_get_attrs().
  * - Expected: one oops.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get_attrs
  * @see z_vrfy_k_msgq_get_attrs()
  */
 ZTEST(msgq_unit, test_syscall_get_attrs_oops_on_bad_attrs)
@@ -4141,7 +4355,7 @@ ZTEST(msgq_unit, test_syscall_get_attrs_oops_on_bad_attrs)
  *   _OBJ_INIT_TRUE, then the memory check of the buffer for MSG_SIZE bytes
  *   and write access, then the lock. z_pend_curr() gets TEST_TIMEOUT.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_vrfy_k_msgq_get()
  */
 ZTEST(msgq_unit, test_syscall_get_checks_object_and_buffer)
@@ -4170,7 +4384,7 @@ ZTEST(msgq_unit, test_syscall_get_checks_object_and_buffer)
  * - Action: z_vrfy_k_msgq_get().
  * - Expected: an oops before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_vrfy_k_msgq_get()
  */
 ZTEST(msgq_unit, test_syscall_get_oops_on_bad_object)
@@ -4195,7 +4409,7 @@ ZTEST(msgq_unit, test_syscall_get_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_get().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_get
  * @see z_vrfy_k_msgq_get()
  */
 ZTEST(msgq_unit, test_syscall_get_oops_on_bad_buffer)
@@ -4222,7 +4436,7 @@ ZTEST(msgq_unit, test_syscall_get_oops_on_bad_buffer)
  *   with K_OBJ_MSGQ and _OBJ_INIT_TRUE, then the memory check for MSG_SIZE
  *   bytes and write access, then the lock.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_vrfy_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_syscall_peek_checks_object_and_buffer)
@@ -4251,7 +4465,7 @@ ZTEST(msgq_unit, test_syscall_peek_checks_object_and_buffer)
  * - Action: z_vrfy_k_msgq_peek().
  * - Expected: an oops before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_vrfy_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_syscall_peek_oops_on_bad_object)
@@ -4276,7 +4490,7 @@ ZTEST(msgq_unit, test_syscall_peek_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_peek().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek
  * @see z_vrfy_k_msgq_peek()
  */
 ZTEST(msgq_unit, test_syscall_peek_oops_on_bad_buffer)
@@ -4303,7 +4517,7 @@ ZTEST(msgq_unit, test_syscall_peek_oops_on_bad_buffer)
  *   with K_OBJ_MSGQ and _OBJ_INIT_TRUE, then the memory check for MSG_SIZE
  *   bytes and write access, then the lock.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_vrfy_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_syscall_peek_at_checks_object_and_buffer)
@@ -4332,7 +4546,7 @@ ZTEST(msgq_unit, test_syscall_peek_at_checks_object_and_buffer)
  * - Action: z_vrfy_k_msgq_peek_at().
  * - Expected: an oops before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_vrfy_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_syscall_peek_at_oops_on_bad_object)
@@ -4357,7 +4571,7 @@ ZTEST(msgq_unit, test_syscall_peek_at_oops_on_bad_object)
  * - Action: z_vrfy_k_msgq_peek_at().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_peek_at
  * @see z_vrfy_k_msgq_peek_at()
  */
 ZTEST(msgq_unit, test_syscall_peek_at_oops_on_bad_buffer)
@@ -4383,7 +4597,7 @@ ZTEST(msgq_unit, test_syscall_peek_at_oops_on_bad_buffer)
  * - Expected: the object check with K_OBJ_MSGQ and _OBJ_INIT_TRUE, before
  *   the lock. No memory check. The message queue is empty.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_vrfy_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_syscall_purge_checks_object)
@@ -4411,7 +4625,7 @@ ZTEST(msgq_unit, test_syscall_purge_checks_object)
  * - Action: z_vrfy_k_msgq_purge().
  * - Expected: one oops, before arch_irq_lock().
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_purge
  * @see z_vrfy_k_msgq_purge()
  */
 ZTEST(msgq_unit, test_syscall_purge_oops_on_bad_object)
@@ -4436,7 +4650,7 @@ ZTEST(msgq_unit, test_syscall_purge_oops_on_bad_object)
  * - Expected: MAX_MSGS - 3 and 3. Each call checks the object with
  *   K_OBJ_MSGQ and _OBJ_INIT_TRUE. No oops, no memory check, no lock.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_num_free_get
  * @see z_vrfy_k_msgq_num_free_get(), z_vrfy_k_msgq_num_used_get()
  */
 ZTEST(msgq_unit, test_syscall_num_free_and_used_check_object)
@@ -4469,7 +4683,7 @@ ZTEST(msgq_unit, test_syscall_num_free_and_used_check_object)
  * - Action: z_vrfy_k_msgq_num_free_get(), then z_vrfy_k_msgq_num_used_get().
  * - Expected: one oops for each call.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_num_free_get
  * @see z_vrfy_k_msgq_num_free_get(), z_vrfy_k_msgq_num_used_get()
  */
 ZTEST(msgq_unit, test_syscall_num_free_and_used_oops_on_bad_object)
@@ -4499,7 +4713,7 @@ ZTEST(msgq_unit, test_syscall_num_free_and_used_oops_on_bad_object)
  * - Expected: one oops for each call. No call of arch_buffer_validate() and
  *   no lock.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_vrfy_k_msgq_put(), z_vrfy_k_msgq_put_front(), z_vrfy_k_msgq_get(),
  * z_vrfy_k_msgq_peek(), z_vrfy_k_msgq_peek_at(), z_vrfy_k_msgq_get_attrs()
  */
@@ -4535,7 +4749,7 @@ ZTEST(msgq_unit, test_syscall_wrapping_buffer_oops)
  * - Expected: each returns -ENOMSG. Five calls of arch_buffer_validate(), each
  *   with the size 0. No oops.
  *
- * @ingroup kernel_unit_msgq_syscall
+ * @ingroup kernel_unit_msgq_k_msgq_put
  * @see z_vrfy_k_msgq_put(), z_vrfy_k_msgq_put_front(), z_vrfy_k_msgq_get(),
  * z_vrfy_k_msgq_peek(), z_vrfy_k_msgq_peek_at()
  */
@@ -4563,18 +4777,10 @@ ZTEST(msgq_unit, test_syscall_zero_message_size_check)
 #endif /* CONFIG_USERSPACE */
 
 #ifdef CONFIG_OBJ_CORE_MSGQ
-/**
- * @defgroup kernel_unit_msgq_obj_core Object core
- * @ingroup kernel_unit_msgq
- * @brief With CONFIG_OBJ_CORE_MSGQ, msg_q.c defines the object type of the message queues and links
- * each initialized message queue to it.
- *
- * msg_q.c defines the object type @c obj_type_msgq. K_OBJ_TYPE_DEFINE() puts
- * one descriptor of this type into the iterable section @c k_obj_core_desc.
- * At boot, the object core code initializes the type from the descriptor and
- * links the message queues that K_MSGQ_DEFINE() defines (the section
- * @c k_msgq). k_msgq_init() links each message queue that it initializes,
- * with k_obj_core_init_and_link().
+/*
+ * Tests: Object core. Each test is in the group of the function that it
+ * tests. The design text is in that group, or in the introduction of
+ * the group kernel_unit_msgq, at the top of this file.
  */
 
 /* Return the descriptor of a type, and count the descriptors of this type. */
@@ -4604,7 +4810,7 @@ static const struct k_obj_core_desc *obj_core_desc(struct k_obj_type *type, int 
  *   size is the size of @c struct @c k_msgq, and its object core offset is
  *   the offset of @c obj_core. Its object range is the section @c k_msgq.
  *
- * @ingroup kernel_unit_msgq_obj_core
+ * @ingroup kernel_unit_msgq_static
  */
 ZTEST(msgq_unit, test_obj_core_type_descriptor)
 {
@@ -4630,7 +4836,7 @@ ZTEST(msgq_unit, test_obj_core_type_descriptor)
  * - Expected: the message queue is in the range, at a multiple of the object
  *   size from the start.
  *
- * @ingroup kernel_unit_msgq_obj_core
+ * @ingroup kernel_unit_msgq_static
  */
 ZTEST(msgq_unit, test_obj_core_descriptor_covers_static_msgqs)
 {
@@ -4652,7 +4858,7 @@ ZTEST(msgq_unit, test_obj_core_descriptor_covers_static_msgqs)
  * - Expected: one call of k_obj_core_init_and_link() with the object core of
  *   the message queue and @c obj_type_msgq, after z_waitq_init().
  *
- * @ingroup kernel_unit_msgq_obj_core
+ * @ingroup kernel_unit_msgq_k_msgq_init
  * @see k_msgq_init()
  */
 ZTEST(msgq_unit, test_obj_core_init_links_msgq)
@@ -4676,7 +4882,7 @@ ZTEST(msgq_unit, test_obj_core_init_links_msgq)
  * - Expected: no call of k_obj_core_init_and_link() after the first call. One
  *   call with the object core of the message queue after the second call.
  *
- * @ingroup kernel_unit_msgq_obj_core
+ * @ingroup kernel_unit_msgq_k_msgq_alloc_init
  * @see z_impl_k_msgq_alloc_init()
  */
 ZTEST(msgq_unit, test_obj_core_alloc_init_links_on_success)

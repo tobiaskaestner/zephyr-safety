@@ -4,26 +4,10 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-/**
- * @defgroup kernel_unit_obj_core_sem Second init through k_sem_init()
- * @ingroup kernel_unit_obj_core
- * @brief k_sem_init() of a linked semaphore keeps each semaphore in the list of the semaphore type
- * exactly one time.
- *
- * This test source includes @c kernel/sem.c. Its calls into the object core
- * go to the real obj_core.c of the other test source, not to fakes. The
- * scheduler and the wait queue are fakes (fake group @c sched), as in the
- * @c sem application.
- *
- * k_sem_init() calls k_obj_core_init_and_link() on each call
- * (sem.c:69). It does not unlink the semaphore first. Thus a second
- * k_sem_init() of a linked semaphore has the effects of finding F-1.
- * A semaphore of K_SEM_DEFINE() is linked at boot, so its first
- * k_sem_init() is already a second link. With @kconfig{CONFIG_USERSPACE},
- * z_vrfy_k_sem_init() checks the object with K_SYSCALL_OBJ_INIT()
- * (@c _OBJ_INIT_ANY), so a user thread can also init a semaphore again.
- *
- * The tests that state the correct behavior have ZTEST_EXPECT_FAIL().
+/*
+ * Tests: Second init through k_sem_init(). These tests are in the groups of
+ * the file group kernel_unit_obj_core (test_obj_core.c). The design text is
+ * in the group kernel_unit_obj_core_k_obj_core_init_and_link.
  */
 
 #include <string.h>
@@ -98,7 +82,7 @@ ZTEST_SUITE(obj_core_sem, NULL, NULL, obj_core_sem_before, NULL, NULL);
  * - Expected: k_obj_type_find() with K_OBJ_TYPE_SEM_ID returns
  *   @c obj_type_sem. Its list is unit_sem_a, unit_sem_b, unit_sem_c.
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_static
  * @see z_obj_core_init_all()
  */
 ZTEST(obj_core_sem, test_boot_links_static_semaphores)
@@ -118,7 +102,8 @@ ZTEST(obj_core_sem, test_boot_links_static_semaphores)
  * - Expected: return value 0. The list is unit_sem_a, unit_sem_b,
  *   unit_sem_c, dyn_sem_1.
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_impl_k_sem_init()
  */
 ZTEST(obj_core_sem, test_sem_init_links_new_semaphore)
@@ -145,7 +130,8 @@ ZTEST(obj_core_sem, test_sem_init_links_new_semaphore)
  * semaphore type does not end. If this test passes, the defect is fixed:
  * remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_impl_k_sem_init()
  */
 ZTEST(obj_core_sem, test_sem_init_twice_keeps_list_acyclic)
@@ -178,7 +164,8 @@ ZTEST_EXPECT_FAIL(obj_core_sem, test_sem_init_twice_keeps_list_acyclic);
  * dyn_sem_1, which is not involved. If this test passes, the defect is fixed:
  * remove ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_impl_k_sem_init()
  */
 ZTEST(obj_core_sem, test_sem_init_of_static_semaphore_keeps_others)
@@ -204,7 +191,8 @@ ZTEST_EXPECT_FAIL(obj_core_sem, test_sem_init_of_static_semaphore_keeps_others);
  *   -EINVAL and the list is unchanged. sem.c checks the arguments before
  *   the link.
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_impl_k_sem_init()
  */
 ZTEST(obj_core_sem, test_sem_init_with_bad_limit_does_not_link)
@@ -235,7 +223,8 @@ ZTEST(obj_core_sem, test_sem_init_with_bad_limit_does_not_link)
  *   the init check @c _OBJ_INIT_ANY. Thus a user thread with access to a
  *   semaphore can init it again, as often as it wants.
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_vrfy_k_sem_init()
  */
 ZTEST(obj_core_sem, test_user_sem_init_accepts_initialized_semaphore)
@@ -263,7 +252,8 @@ ZTEST(obj_core_sem, test_user_sem_init_accepts_initialized_semaphore)
  * interrupts locked. If this test passes, the defect is fixed: remove
  * ZTEST_EXPECT_FAIL().
  *
- * @ingroup kernel_unit_obj_core_sem
+ * @ingroup kernel_unit_obj_core_k_obj_core_init_and_link
+ * @see k_obj_core_init_and_link()
  * @see z_vrfy_k_sem_init()
  */
 ZTEST(obj_core_sem, test_user_sem_init_twice_keeps_list_acyclic)
