@@ -221,14 +221,16 @@ def cmd_lab_hwcheck(args):
     lab = labmod.require()
     import hwmap
     try:
-        ok, lines = hwcheck.check(lab, args.board, tree=args.tree)
+        ok, lines, path = hwcheck.check(lab, args.board, tree=args.tree)
     except (hwcheck.HwCheckError, trees.TreeError, hwmap.HwMapError, OSError) as e:
         # the check cannot run (build, flash, board, hardware map, tree, SDK, console)
         print(f"error: {type(e).__name__}: {e}")
+        if getattr(e, "record", None):
+            print(f"record {e.record}")
         return 2
     for ln in lines:
         print("  " + ln)
-    print(f"{args.board}: loopback wire {'ok' if ok else 'FAILED'}")
+    print(f"{args.board}: loopback wire {'ok' if ok else 'FAILED'}; record {path}")
     return 0 if ok else 1
 
 

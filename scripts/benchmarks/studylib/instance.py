@@ -89,6 +89,10 @@ def new(design, results, top_name, study_path, board=None):
 
     def make(folder, spath, ipath, board_here, inherited):
         folder.mkdir(parents=True, exist_ok=True)
+        with locked(folder):
+            return make_locked(folder, spath, ipath, board_here, inherited)
+
+    def make_locked(folder, spath, ipath, board_here, inherited):
         f = folder / "instance.json"
         if f.exists():
             return load(folder)
@@ -133,9 +137,10 @@ def new(design, results, top_name, study_path, board=None):
             subs.append(ip)
             children(sf, sp, ip)
         if subs:
-            data = load(folder)
-            data["substudies"] = sorted(set(data.get("substudies", [])) | {f"{top_name}/{x}" for x in subs})
-            save(folder, data)
+            with locked(folder):
+                data = load(folder)
+                data["substudies"] = sorted(set(data.get("substudies", [])) | {f"{top_name}/{x}" for x in subs})
+                save(folder, data)
 
     if board:
         children(top_folder, study_path, ipath if names else "")
@@ -148,11 +153,12 @@ def link_parents(root):
     """Set the substudies list of each instance to its sub-instance folders."""
     root = Path(root)
     for f in layout.instance_folders(root):
-        data = load(f)
         subs = sorted(load(c)["instance"] for c in f.iterdir() if c.is_dir() and (c / "instance.json").is_file())
-        if subs != data.get("substudies", []):
-            data["substudies"] = subs
-            save(f, data)
+        with locked(f):
+            data = load(f)
+            if subs != data.get("substudies", []):
+                data["substudies"] = subs
+                save(f, data)
 
 
 def board_of(folder):
@@ -166,6 +172,28 @@ def board_of(folder):
         if b:
             return b
     return None
+
+
+def check_role(role, reason):
+    if role not in ROLES:
+        raise InstanceError(f"role {role!r}: use one of {', '.join(ROLES)} (a reference is not a run of this instance)")
+    if role != "evidence" and not reason:
+        raise InstanceError(f"role {role} needs a reason")
+
+
+def check_target(design, folder, experiment, board):
+    """InstanceError if a run of the experiment for the board cannot go into the instance folder
+    (run.py checks this before it builds anything)."""
+    folder = Path(folder).resolve()
+    exp = design.canonical(experiment)
+    root = layout.find_root(folder)
+    study = design.study(layout.strip_board(layout.instance_path_of(folder, root)))
+    rerun = {i["experiment"] for i in study.imports if i.get("mode") == "rerun"}
+    if exp not in study.experiments and exp not in rerun:
+        raise InstanceError(f"study {study.path}: {exp} is not one of its experiments, and it does not re-run it")
+    b = board_of(folder)
+    if b and board != b:
+        raise InstanceError(f"the run is for board {board}, the instance for {b}")
 
 
 def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campaign=None):

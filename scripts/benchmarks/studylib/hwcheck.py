@@ -6,16 +6,20 @@
 Builds the app tests/benchmarks/loopback_check for the board from a pinned
 tree (with the build cache, like the points of a run: run.Builder), flashes
 it with the flash commands of boards.yaml and reads the console until the
-line "RESULT: OK" or "RESULT: FAIL". Each check writes the record
-.lab/hwcheck/<board>.json: the time, the host, the tree, the image (digest,
-cache key, from build or cache), the result and all console lines. A
-campaign refers to that record. If the design repo has changes that are
+line "RESULT: OK" or "RESULT: FAIL". Each check writes its record
+.lab/hwcheck/history/<board>/<UTC>.json (also a check that cannot run:
+result "error"), and a copy as .lab/hwcheck/<board>.json: the time, the
+host, the tree, the image (digest, cache key, from build or cache), the
+result and all console lines. A campaign names the record of each check.
+The check takes the board lock (as a campaign does), unless a campaign
+that holds it runs the check, and opens the console exclusively. If the design repo has changes that are
 not committed, the image cannot go into the cache: the check builds in
 .lab/hwcheck/<board>/ and the record says "dirty".
 """
 
 import datetime
 import hashlib
+import os
 import platform
 import subprocess
 import time
@@ -38,12 +42,55 @@ def tree_for(cfg, repos):
     raise HwCheckError(f"no tree pins {repos}")
 
 
+def board_tag(board):
+    return board.replace("/", "_").replace("@", "_")
+
+
 def record_path(lab, board):
-    return lab.folder / ".lab" / "hwcheck" / f"{board.replace('/', '_').replace('@', '_')}.json"
+    """The record of the newest check of a board (a copy of the newest history record)."""
+    return lab.folder / ".lab" / "hwcheck" / f"{board_tag(board)}.json"
 
 
-def check(lab, board, log=print, tree=None):
-    """Return (ok, lines). Raise HwCheckError if it cannot run (build, flash, no board)."""
+def history_path(lab, board, started):
+    """The record of one check: .lab/hwcheck/history/<board>/<UTC>.json (each check keeps its own)."""
+    return lab.folder / ".lab" / "hwcheck" / "history" / board_tag(board) / f"{started:%Y%m%dT%H%M%SZ}.json"
+
+
+def check(lab, board, log=print, tree=None, locked=False):
+    """Return (ok, lines, record). Raise HwCheckError if it cannot run (build, flash, no RESULT line);
+    the error has .record. Each check writes its record, also a failed one (history_path) and the
+    copy record_path. locked: the caller (a campaign) holds the board lock; else the check takes it."""
+    from . import campaign
+    started = datetime.datetime.now(datetime.timezone.utc)
+    cid = f"lab-hwcheck-{os.getpid()}"
+    if not locked:
+        campaign.take_lock(lab, cid, [board])
+    rec = {"format": "latbench-hwcheck/2", "board": board, "host": platform.node(), "time": started.isoformat(),
+           "result": "error", "lines": []}
+    try:
+        ok, lines = _check(lab, board, log, tree, rec)
+        rec["result"] = "ok" if ok else "fail"
+        return ok, lines, _write(lab, board, started, rec)
+    except (HwCheckError, trees.TreeError, hwmap.HwMapError, OSError) as e:
+        rec["error"] = f"{type(e).__name__}: {e}"
+        path = _write(lab, board, started, rec)
+        err = e if isinstance(e, HwCheckError) else HwCheckError(rec["error"])
+        err.record = path
+        raise err from None
+    finally:
+        if not locked:
+            campaign.drop_lock(lab, cid)
+
+
+def _write(lab, board, started, rec):
+    from . import jsonout
+    path = history_path(lab, board, started)
+    jsonout.write(path, rec)
+    jsonout.write(record_path(lab, board), rec)
+    return path
+
+
+def _check(lab, board, log, tree, rec):
     import serial
 
     import run
@@ -52,6 +99,7 @@ def check(lab, board, log=print, tree=None):
     boards = trees.load_boards()
     repos = trees.board_repos(boards, board)
     tree = tree or tree_for(cfg, repos)
+    rec["tree"] = tree
     trees.check_tree(cfg, tree, repos)
     sdk = trees.check_toolchain(cfg)
     bcfg = boards["boards"][board]
@@ -59,13 +107,14 @@ def check(lab, board, log=print, tree=None):
     schema = zephyr / hwmap.SCHEMA
     hw = hwmap.hardware(hwmap.select(hwmap.load(lab.hw_map, schema if schema.is_file() else None), board,
                                      path=str(lab.hw_map)))
-    started = datetime.datetime.now(datetime.timezone.utc)
-    pdir = lab.folder / ".lab" / "hwcheck" / board.replace("/", "_").replace("@", "_")
+    rec.update(probe=hw["probe"], console=hw["serial"])
+    pdir = lab.folder / ".lab" / "hwcheck" / board_tag(board)
     if pdir.exists():
         import shutil
         shutil.rmtree(pdir)
     pdir.mkdir(parents=True)
     repo_root, repo_rev, dirty = run.safety_repo_state()
+    rec["repo"] = {"rev": repo_rev, "dirty": bool(dirty)}
     exp = {"name": "loopback-check", "app": "loopback_check", "trees": [tree]}
     point = {"id": "default", "kconfig": {}, "conf_files": [], "dtc_overlays": []}
     log(f"{board}: build loopback_check ({tree})")
@@ -88,10 +137,14 @@ def check(lab, board, log=print, tree=None):
                         (pdir / "build" / "zephyr" / f).read_bytes())
     except SystemExit as e:
         raise HwCheckError(f"build failed: {e}") from None
+    from . import images
+    elf = images.find(pdir, ".elf")
+    rec["image"] = {"elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest() if elf else None,
+                    **built.get("build", {})}
     flash = run.flash_command(bcfg, zephyr, pdir, hw["probe"])
     log(f"{board}: flash, probe {hw['probe']}, console {hw['serial']}")
-    lines, ok = [], None
-    with serial.Serial(hw["serial"], hw["baud"], timeout=1) as s:
+    lines, ok = rec["lines"], None
+    with serial.Serial(hw["serial"], hw["baud"], timeout=1, exclusive=True) as s:
         s.reset_input_buffer()
         r = subprocess.run(flash, capture_output=True, text=True)
         if r.returncode:
@@ -104,14 +157,6 @@ def check(lab, board, log=print, tree=None):
             if line.startswith("RESULT:"):
                 ok = "OK" in line
                 break
-    from . import images, jsonout
-    elf = images.find(pdir, ".elf")
-    rec = {"format": "latbench-hwcheck/1", "board": board, "host": platform.node(), "time": started.isoformat(),
-           "tree": tree, "repo": {"rev": repo_rev, "dirty": bool(dirty)}, "probe": hw["probe"],
-           "console": hw["serial"], "image": {"elf_sha256": hashlib.sha256(elf.read_bytes()).hexdigest() if elf else None,
-                                              **built.get("build", {})},
-           "result": None if ok is None else ("ok" if ok else "fail"), "lines": lines}
-    jsonout.write(record_path(lab, board), rec)
     if ok is None:
         raise HwCheckError(f"no RESULT line in {TIMEOUT} s: {lines[-5:]}")
     return ok, lines

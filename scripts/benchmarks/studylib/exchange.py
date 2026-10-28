@@ -288,9 +288,9 @@ def import_(lab, in_file, log=print, dry=False):
                     # its end comes with a later export (or "lab import --close")
                     d["running_at_export"] = index["created"]
                 target = lab.campaigns / f"{p.stem}@{other['id']}.json"
-                if target.is_file() and json.loads(target.read_text()).get("status") == "closed" \
+                if target.is_file() and json.loads(target.read_text()).get("status") not in ("running", "planned") \
                         and d.get("status") in ("running", "planned"):
-                    continue                            # closed by hand here: an old export does not open it
+                    continue        # ended or closed here: an older export does not open it again
                 jsonout.write(target, d)
             if (work / "repo.bundle").is_file():
                 try:

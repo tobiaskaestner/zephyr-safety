@@ -338,14 +338,23 @@ def take_lock(lab, cid, boards):
     for b in sorted(set(boards)):
         path = lock_file(lab, b)
         f = open(path, "a+")
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            f.seek(0)
+        d = None
+        for _ in range(20):
             try:
-                d = json.loads(f.read() or "{}")
-            except ValueError:
-                d = {}
+                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                d = None
+                break
+            except BlockingIOError:
+                f.seek(0)
+                text = f.read()
+                try:
+                    d = json.loads(text or "{}")
+                except ValueError:
+                    d = {}
+                if text:
+                    break                   # a holder (it writes its id at once)
+                time.sleep(0.05)            # no holder text: a short probe of lock_holder()
+        if d is not None:
             f.close()
             for t in taken:
                 drop_one(t)
@@ -357,6 +366,11 @@ def take_lock(lab, cid, boards):
         f.flush()
         _LOCKS[(str(path), cid)] = f
         taken.append((str(path), cid))
+
+
+def lock_fds(cid):
+    """The file descriptors of the board locks that the campaign cid holds."""
+    return [f.fileno() for (path, c), f in _LOCKS.items() if c == cid]
 
 
 def drop_one(key):
@@ -390,14 +404,17 @@ class results_lock:
 
 
 # ------------------------------------------------------------ check
-def run_subprocess(cmd, log, cwd, nice=False):
+def run_subprocess(cmd, log, cwd, nice=False, pass_fds=()):
     """Run cmd in a session of its own; on an interrupt, stop its whole process group (run.py and
-    its flash tools, which hold the probe), then raise again."""
+    its flash tools, which hold the probe), then raise again. pass_fds: the board locks of the
+    campaign: the child holds them too, so a board stays locked while a run.py of a dead campaign
+    still runs."""
     with open(log, "a") as f:
         f.write(f"$ {' '.join(map(str, cmd))}\n")
         f.flush()
         p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=f, stderr=subprocess.STDOUT,
-                             start_new_session=True, preexec_fn=(lambda: os.nice(10)) if nice else None)
+                             start_new_session=True, preexec_fn=(lambda: os.nice(10)) if nice else None,
+                             pass_fds=tuple(pass_fds))
         try:
             return p.wait()
         except BaseException:
@@ -435,7 +452,7 @@ def estimate(lab, design, exp):
     return best or (None, None)
 
 
-def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
+def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, locked=False):
     """The pre-flight check: [(status, what, text)] with status ok / warn / fail."""
     import hwmap
     import run
@@ -513,11 +530,12 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print):
             add("fail", f"console of {b}", f"not free: {x}")
         if hwcheck:
             try:
-                ok, lines = hwc.check(lab, b, log=lambda m: None)
+                ok, lines, path = hwc.check(lab, b, log=lambda m: None, locked=locked)
                 add("ok" if ok else "fail", f"loopback wire of {b}",
-                    (lines[-1] if lines else "") + f" (record {hwc.record_path(lab, b).relative_to(lab.folder)})")
+                    (lines[-1] if lines else "") + f" (record {path.relative_to(lab.folder)})")
             except Exception as x:
-                add("fail", f"loopback wire of {b}", f"{type(x).__name__}: {(str(x).splitlines() or [''])[0]}")
+                where = f" (record {x.record.relative_to(lab.folder)})" if getattr(x, "record", None) else ""
+                add("fail", f"loopback wire of {b}", f"{type(x).__name__}: {(str(x).splitlines() or [''])[0]}{where}")
     free = shutil.disk_usage(lab.results if lab.results.exists() else lab.folder).free
     add("ok" if free > 2 * size else "fail", "disk", f"{free / 2**30:.0f} GiB free, the runs need about {size / 2**20:.0f} MiB")
     dur = f"about {secs / 3600:.1f} h" if secs else "unknown"
@@ -595,10 +613,12 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         raise KeyboardInterrupt
 
     old = signal.signal(signal.SIGTERM, on_term)
+    old_hup = signal.signal(signal.SIGHUP, on_term)      # the ssh connection of a campaign without --detach
     try:
         trees.git("update-ref", d["ref"], d["repo"]["rev"], cwd=trees.REPO_DIR)
         log(f"campaign {rec.id}: pre-flight check")
-        res = preflight(lab, d["experiments"], design, hwcheck=hwcheck, warn_as_error=warn_as_error, log=log)
+        res = preflight(lab, d["experiments"], design, hwcheck=hwcheck, warn_as_error=warn_as_error, log=log,
+                        locked=True)
         d["preflight"] = [{"status": s, "what": w, "text": t} for s, w, t in res]
         if any(s == "fail" for s, _, _ in res):
             rec.set(status=FAILED, finished=utc_now().isoformat(), stopped="the pre-flight check failed")
@@ -624,7 +644,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             rec.save()
             log(f"=== {e['experiment']} ({e['instance']})")
             if d.get("hwcheck_each") and hwcheck:
-                why = wire_check(lab, e["board"])
+                why = wire_check(lab, e["board"], e)
                 if why:
                     e.update(state=FAILED, finished=utc_now().isoformat(), note=why)
                     failed += 1
@@ -638,11 +658,13 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             if warn_as_error:
                 cmd.append("--warn-as-error")
             t0 = time.monotonic()
-            rc = run_subprocess(cmd, lab.folder / e["log"], cwd=lab.folder)
+            rc = run_subprocess(cmd, lab.folder / e["log"], cwd=lab.folder, pass_fds=lock_fds(rec.id))
             e.update(rc=rc, finished=utc_now().isoformat())
             added, run_dir = None, None
             for line in (lab.folder / e["log"]).read_text().splitlines():
-                if line.startswith("results in "):
+                if line.startswith("run folder "):          # printed by run.py when it makes it
+                    run_dir = Path(line.split(maxsplit=2)[2])
+                elif line.startswith("results in "):
                     run_dir = Path(line.split()[2])
                 elif line.startswith("run ") and " added to the instance " in line:
                     added = line.split()[1]
@@ -672,25 +694,44 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
             if e["state"] == RUNNING:
                 e.update(state=FAILED, note=f"stopped ({stop['why'] or 'interrupt'})")
         rec.set(status="aborted", finished=utc_now().isoformat(), stopped=stop["why"] or "interrupt")
+        final_build(locals().get("post"), log)
         raise CampaignError(f"campaign {rec.id} aborted") from None
     except Exception as x:
         for e in d["experiments"]:
             if e["state"] == RUNNING:
                 e.update(state=FAILED, note=f"stopped ({type(x).__name__})")
         rec.set(status="aborted", finished=utc_now().isoformat(), stopped=f"{type(x).__name__}: {x}")
+        final_build(locals().get("post"), log)
         raise
     finally:
         signal.signal(signal.SIGTERM, old)
+        signal.signal(signal.SIGHUP, old_hup)
         drop_lock(lab, rec.id)
 
 
-def wire_check(lab, board):
-    """None if the loopback wire of the board is good, else the reason (for --hwcheck-each)."""
+def final_build(post, log):
+    """After an abort: one more results build, so that no verdict stays provisional."""
+    if post is None:
+        return
+    try:
+        log("one more build of the results (the campaign is aborted: the verdicts become final)")
+        post.kick()
+        post.wait()
+    except BaseException as x:          # a second Ctrl-C: the next build does it
+        log(f"no final build ({type(x).__name__})")
+
+
+def wire_check(lab, board, e):
+    """None if the loopback wire of the board is good, else the reason (for --hwcheck-each); the
+    experiment e gets the record of the check."""
     from . import hwcheck as hwc
     try:
-        ok, lines = hwc.check(lab, board, log=lambda m: None)
+        ok, lines, path = hwc.check(lab, board, log=lambda m: None, locked=True)
     except Exception as x:
+        if getattr(x, "record", None):
+            e["hwcheck"] = str(x.record.relative_to(lab.folder))
         return f"the loopback wire check could not run: {type(x).__name__}: {(str(x).splitlines() or [''])[0]}"
+    e["hwcheck"] = str(path.relative_to(lab.folder))
     return None if ok else f"the loopback wire check failed: {lines[-1] if lines else ''}"
 
 
@@ -712,11 +753,7 @@ def images_note(folder, run_id):
 def failed_note(folder, exp, run_dir, lab):
     """Why an experiment failed: the <UTC>.failed.json of its run, or the newest run folder without a seal."""
     if run_dir is None:
-        runs = sorted((Path(folder) / f"{layout.EXPERIMENT_PREFIX}{exp}").glob("2*Z"))
-        runs = [r for r in runs if r.is_dir()]
-        run_dir = runs[-1] if runs else None
-    if run_dir is None:
-        return "no run folder (see the log)"
+        return "run.py stopped before it made a run folder (see the log)"
     rel = run_dir.relative_to(lab.results) if run_dir.is_relative_to(lab.results) else run_dir
     f = run_dir.parent / f"{run_dir.name}.failed.json"
     if f.is_file():

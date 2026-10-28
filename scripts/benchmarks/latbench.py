@@ -59,7 +59,7 @@ def run_capture(out, flash_cmd=None, port="/dev/ttyACM0", baud=115200, timeout=6
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    ser = serial.Serial(port, baud, timeout=0.2)
+    ser = serial.Serial(port, baud, timeout=0.2, exclusive=True)      # no second reader of the console
     ser.reset_input_buffer()
 
     flash = None

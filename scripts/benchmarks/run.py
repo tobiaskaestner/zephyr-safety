@@ -364,6 +364,7 @@ class Builder:
         self.module_tree = tree_hash(repo_root, repo_rev, "zephyr")
         self.build_versions = {}
         self.run_id = None          # <experiment>/<UTC> of the run, once its folder exists
+        self.last_log = None        # the log of the newest build (for <UTC>.failed.json)
         self.builder = builder_name()
         self.builder_id = builder_id(self.builder)
 
@@ -420,6 +421,7 @@ class Builder:
             log = bdir.parent / f"{key}.log"
         else:
             bdir, log = pdir / "build", pdir / "build.log"
+        self.last_log = log
         cmake = build_point(self.tree_cfg, tree, pt, BENCH_DIR, self.exp["app"], self.bench_tree, self.board,
                             self.board_cfg, self.sdk, bdir, log, self.build_version(tree), self.builder)
         # CMake and Ninja read the worktree: a change during the build stops the run before the
@@ -750,7 +752,9 @@ def main():
     p.add_argument("--build-only", action="store_true", help="build each point in a temporary folder, do not flash")
     p.add_argument("--keep-build", action="store_true")
     p.add_argument("--no-cache", action="store_true", help="do not use the build cache of the lab space")
-    p.add_argument("--role", default="evidence", help="the role of the run in the run list of the instance")
+    p.add_argument("--role", choices=["evidence", "adjustment", "excluded"],
+                   help="the role of the run in the run list of the instance (default evidence; "
+                        "with --only it must be given)")
     p.add_argument("--reason", help="the reason of a role other than evidence")
     p.add_argument("--campaign", help="the id of the campaign that starts the run (in the run-list entry)")
     p.add_argument("--warn-as-error", action="store_true",
@@ -811,6 +815,20 @@ def main():
         points = [pt for pt in points if pt["id"] in args.only]
     if not points:
         fail("no points to run")
+    # the run list of an instance: check the role and the target now, not after hours of capture
+    if args.out and (Path(args.out) / "instance.json").is_file() and not args.build_only:
+        from studylib import instance as instmod
+        from studylib.design import Design
+        if args.only and args.role is None:
+            fail("a run of some points (--only) into an instance needs --role (adjustment or excluded with "
+                 "--reason, or evidence)")
+        args.role = args.role or "evidence"
+        try:
+            instmod.check_role(args.role, args.reason)
+            instmod.check_target(Design(), args.out, exp["name"], board)
+        except instmod.InstanceError as e:
+            fail(str(e))
+    args.role = args.role or "evidence"
 
     print(f"safety {repo_rev[:12]}  trees {', '.join(exp['trees'])}  {len(points)} points x {exp.get('repeat', 1)}")
     for pt in points:
@@ -818,6 +836,13 @@ def main():
     if args.dry_run:
         return
     if not args.build_only:
+        if lab and not args.campaign:
+            # a run by hand takes the board lock (a campaign holds it already and gives it to run.py)
+            from studylib import campaign as campmod
+            try:
+                campmod.take_lock(lab, f"run.py-{os.getpid()}", [board])
+            except campmod.CampaignError as e:
+                fail(str(e))
         hw = select_hardware(args, board, trees.repo_dir(tree_cfg, exp["trees"][0], "zephyr"))
         port = hw["serial"]
         print(f"board {board}: probe {hw['probe']} ({hw['product']}), console {port}")
@@ -855,6 +880,7 @@ def main():
     exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
     run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
     run_dir.mkdir(parents=True)
+    print(f"run folder {run_dir}", flush=True)       # the campaign reads this line
     builder.run_id = f"{exp['name']}/{run_dir.name}"
     # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
     # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
@@ -945,12 +971,16 @@ def write_failed(run_dir, exp, state, x):
         error = "interrupt"
     else:
         error = f"{type(x).__name__}: {x}"
+    if state.get("log") is None and state.get("builder") is not None:
+        state["log"] = state["builder"].last_log          # a build failure: the build log
     tail = []
     if state.get("log") and Path(state["log"]).is_file():
         tail = Path(state["log"]).read_text(errors="replace").splitlines()[-20:]
     rec = {"format": "latbench-failed/1", "run": f"{exp['name']}/{run_dir.name}", "step": state["step"],
            "error": error, "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-           "host": platform.node(), "log": state.get("log") and str(Path(state["log"]).relative_to(run_dir)),
+           "host": platform.node(),
+           "log": state.get("log") and (str(Path(state["log"]).relative_to(run_dir))
+                                        if Path(state["log"]).is_relative_to(run_dir) else str(state["log"])),
            "log_tail": tail}
     f = run_dir.parent / f"{run_dir.name}.failed.json"
     f.write_text(json.dumps(rec, indent=2) + "\n")
@@ -966,7 +996,7 @@ def capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manife
             pdir = run_dir / tree / pt["id"]
             bdir = pdir / "build"
             pdir.mkdir(parents=True)
-            state["step"] = f"build {tree}/{pt['id']}"
+            state.update(step=f"build {tree}/{pt['id']}", log=None, builder=builder)
             built = builder.build(tree, pt, pdir)
             entry = {
                 "tree": tree,

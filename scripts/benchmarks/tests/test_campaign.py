@@ -131,6 +131,7 @@ while run.exists():
     time.sleep(0.2)
     run = out / ("ex-" + exp) / time.strftime("%Y%m%dT%H%M%SZ", time.gmtime())
 run.mkdir(parents=True)
+print("run folder", run, flush=True)
 if exp == "exp-fail":
     (run.parent / (run.name + ".failed.json")).write_text(json.dumps({{"step": "flash", "error": "no answer"}}))
     sys.exit("error: the board did not answer")
