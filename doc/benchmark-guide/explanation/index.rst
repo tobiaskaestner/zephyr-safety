@@ -8,6 +8,7 @@ work in this way.
    :maxdepth: 1
 
    purpose
+   architecture
    method
    timing-diagrams
    apps
@@ -19,3 +20,4 @@ work in this way.
    code-placement
    measurement-effects
    documentation-guidelines
+   decisions/index

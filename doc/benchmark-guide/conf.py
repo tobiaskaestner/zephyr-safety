@@ -20,9 +20,11 @@ configure(
     project="Zephyr Latency Benchmark Guide",
     author="Zephyr Project Contributors",
     copyright_holder="Zephyr Project Contributors",
-    extensions=["timeline_viz"],
+    # graphviz: the diagram of explanation/architecture.rst (the build host needs "dot").
+    extensions=["timeline_viz", "sphinx.ext.graphviz"],
 )
 
 # All timing diagrams of the guide get the same width, so they have the
 # same scale. It is the width of the widest diagram (thread-latency-preempt).
 timeline_viz_width = 1032
+graphviz_output_format = "svg"
