@@ -49,7 +49,7 @@ class CaptureError(Exception):
     pass
 
 
-def run_capture(out, flash_cmd=None, port="/dev/ttyACM0", baud=115200, timeout=600, echo=False):
+def run_capture(out, flash_cmd, port, baud=115200, timeout=600, echo=False):
     """Run flash_cmd (if any) and save the serial output to out until 'LAT DONE'.
 
     The port is open before the flash starts, so the boot output is not lost.
@@ -294,7 +294,7 @@ def main():
     sub = p.add_subparsers(dest="cmd", required=True)
 
     c = sub.add_parser("capture")
-    c.add_argument("--port", default="/dev/ttyACM0")
+    c.add_argument("--port", required=True, help="the console, a /dev/serial/by-id/ name")
     c.add_argument("--baud", type=int, default=115200)
     c.add_argument("--timeout", type=float, default=600)
     c.add_argument("--flash", metavar="BUILD_DIR", help="run 'west flash' for this build first")

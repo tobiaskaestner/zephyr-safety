@@ -56,7 +56,7 @@ Summary and parse (``latbench.py``)
 
    scripts/benchmarks/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
    scripts/benchmarks/latbench.py parse LOG
-   scripts/benchmarks/latbench.py capture [--port P] [--baud B] [--timeout S] [--flash BUILD_DIR] [--runner R] [--echo] OUT
+   scripts/benchmarks/latbench.py capture --port P [--baud B] [--timeout S] [--flash BUILD_DIR] [--runner R] [--echo] OUT
 
 ``summary``
    Prints one row for each histogram of each log. The columns are
@@ -89,7 +89,8 @@ Summary and parse (``latbench.py``)
    Flashes a build with ``west flash`` (optional) and saves the serial
    output until ``LAT DONE``. The script reads the port all the time, so
    that the buffer of the host does not overflow. ``--port`` gives the
-   serial port (default ``/dev/ttyACM0``), ``--baud`` the baud rate
+   serial port and is necessary. Use the ``/dev/serial/by-id/`` name of
+   the console: a ``/dev/ttyACM<n>`` name can change. ``--baud`` the baud rate
    (default 115200), ``--timeout`` the maximum time in seconds (default
    600). ``--flash`` gives the build folder to flash, ``--runner`` the
    runner of ``west flash`` (default ``openocd``). ``--echo`` prints the lines without the
