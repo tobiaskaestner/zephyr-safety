@@ -17,10 +17,13 @@ question: >
   256 periodic timers?
 
 experiments:
-  - wake-threads-1m
-  - wake-timers-1m
-  - timeout-backends-1m
   - timeout-skiplist-1m
+
+# The experiments that the study zephyr-versions owns and this study reads.
+imports:
+  - {study: zephyr-versions, experiment: timeout-backends-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-threads-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-timers-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.

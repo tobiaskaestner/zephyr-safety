@@ -14,9 +14,10 @@ question: >
   instruction of the woken thread, for each kernel object, with the
   legacy and the new (USE_SWITCH) context switch?
 
-experiments:
-  - thread2thread-1m
-  - thread2thread-switch
+# The experiments that the study zephyr-versions owns and this study reads.
+imports:
+  - {study: zephyr-versions, experiment: thread2thread-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: thread2thread-switch, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

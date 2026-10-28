@@ -16,7 +16,6 @@ question: >
 
 experiments:
   - wake-isr-1m
-  - wake-anchors-1m
   - fast-mode
 
 # The results that answer the question. For now all are characterisation:

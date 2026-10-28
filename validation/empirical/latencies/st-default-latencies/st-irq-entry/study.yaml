@@ -16,8 +16,11 @@ question: >
 
 experiments:
   - irq-smoke                      # first check of the method
-  - irq-baseline-1m
   - irq-checks-1m
+
+# The experiments that the study zephyr-versions owns and this study reads.
+imports:
+  - {study: zephyr-versions, experiment: irq-baseline-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

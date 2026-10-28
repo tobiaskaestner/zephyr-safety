@@ -17,7 +17,6 @@ question: >
 experiments:
   - code-layout
   - code-place-q4
-  - code-place-q4-up
 
 # The check of a code shift in the CCM SRAM (H2 k) reads the default seed
 # of stim-seed-1m.
@@ -38,7 +37,6 @@ imports:
 # New statistics:
 #   drift_per_wake       LAT META clock_drift_cyc / samples (one wake per sample)
 #   spread_abs: [s, ..]  max - min of each statistic s over the points, for each anchor
-#   tree_diff: s         s of ws-up (code-place-q4-up) - s of ws-safety (code-place-q4), same point
 #   ram_cost: [s, ..]    median of s over the RAM pads - median of s over the flash pads, for each anchor
 central_results:
   - id: flash-pad-spread
@@ -72,16 +70,6 @@ central_results:
     stat: {spread_abs: [p50, drift_per_wake]}
     group_by: [anchor]
     unit: cycles, cycles per wake (max - min over the pads)
-
-  - id: tree-diff
-    statement: >
-      At the point {point}, the {metric} p50 of ws-up minus that of
-      ws-safety is {tree_diff:+.0f} cycles.
-    from: {experiment: [code-place-q4, code-place-q4-up], point: [f0-default, f4-default, r0-default, r4-default,
-                                                                   f0-noslice, f4-noslice, r0-noslice, r4-noslice],
-           metric: [irq, isr2thr]}
-    stat: {tree_diff: p50}
-    unit: cycles
 
   - id: ram-cost
     statement: >

@@ -14,16 +14,14 @@ question: >
   at the same priority as the device IRQ? Does a lower SysTick priority
   make the irq tail, the irq max and the ISR to thread wake smaller?
 
-experiments:
-  - systick-prio-1m
-
 imports:
   # The irq tail with 0..256 periodic load timers and SysTick at the same
   # priority as EXTI0.
-  - {study: load-scaling/timeout-queue-cost, experiment: wake-timers-1m, mode: reuse}
+  - {study: zephyr-versions, experiment: wake-timers-1m, mode: reuse}
   # The tail of the t64 point over 8 stimulus seeds and 4 load seeds.
   - {study: measurement-validity/stimulus-sampling, experiment: stim-seed-1m, mode: reuse}
   - {study: measurement-validity/stimulus-sampling, experiment: load-seed-tail, mode: reuse}
+  - {study: zephyr-versions, experiment: systick-prio-1m, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values. There are no requirement limits yet.

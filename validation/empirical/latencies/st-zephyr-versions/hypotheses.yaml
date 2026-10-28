@@ -1,0 +1,75 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study zephyr-versions. A hypothesis is one claim
+# about a mechanism. Its checks test the claim on points, metrics and
+# statistics. The hypothesis is wrong if one check is wrong.
+#
+# H1 came from the study code-placement (H2 f..j, criterion C2 of
+# code-place-q4), when the version comparison left that study
+# (2026-10-28). Its checks compare code-place-q4-up with code-place-q4 at
+# the same point. They compare two Zephyr versions only when the two
+# experiments run on different trees. Now both run on ws-up.
+#
+# Keys: as in st-measurement-validity/st-code-placement/hypotheses.yaml.
+
+hypotheses:
+  - id: H1
+    type: method
+    statement: >
+      With hot code in RAM (the CCM SRAM), the difference between two
+      Zephyr versions does not change with the code address: it is the
+      same at the pads r0 and r4.
+    basis: >
+      In flash, the difference between the trees of the ISR to thread p50
+      changed from 0 to 190 cycles from build to build (wake-threads-1m).
+      Code in the CCM SRAM does not go through the flash and its cache
+      (code-placement, H2).
+    wrong_if: >
+      The difference between two versions changes with the code address
+      also in RAM. Then a version comparison needs a range over the pads.
+    checks:
+      - id: a
+        formerly: code-placement/H2 f (code-place-q4/C2)
+        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+        experiment: code-place-q4-up
+        select: {point: [r0-default, r4-default]}
+        metric: irq
+        stat: p50
+        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+        basis: The limit of code-placement/H2 a (the C1 limit of the metric).
+      - id: b
+        formerly: code-placement/H2 g (code-place-q4/C2)
+        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+        experiment: code-place-q4-up
+        select: {point: [r0-noslice, r4-noslice]}
+        metric: irq
+        stat: p50
+        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
+        basis: The limit of code-placement/H2 b.
+      - id: c
+        formerly: code-placement/H2 h (code-place-q4/C2)
+        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+        experiment: code-place-q4-up
+        select: {point: [r0-default, r4-default]}
+        stat: drift_per_wake
+        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 0.2}}
+        basis: The limit of code-placement/H2 c.
+      - id: d
+        formerly: code-placement/H2 i (code-place-q4/C2)
+        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+        experiment: code-place-q4-up
+        select: {point: [r0-default, r4-default]}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+        basis: The limit of code-placement/H2 d.
+      - id: e
+        formerly: code-placement/H2 j (code-place-q4/C2)
+        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
+        experiment: code-place-q4-up
+        select: {point: [r0-noslice, r4-noslice]}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
+        basis: The limit of code-placement/H2 e.

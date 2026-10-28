@@ -14,9 +14,12 @@ question: >
   timer (same clock), and does the loss change the latency data?
 
 experiments:
-  - clock-drift
   - clock-drift-fix
-  - clock-drift-layout
+
+# The experiments that the study zephyr-versions owns and this study reads.
+imports:
+  - {study: zephyr-versions, experiment: clock-drift, mode: reuse}
+  - {study: zephyr-versions, experiment: clock-drift-layout, mode: reuse}
 
 # The results that answer the question. For now all are characterisation:
 # measured values, with a confidence bound where the value is a

@@ -18,6 +18,7 @@ substudies:
   - use: load-scaling
   - use: kconfig-factors
   - use: mask-time
+  - use: zephyr-versions
 
 # The answer of the study: the central results of its sub-studies.
 central_results:

@@ -66,8 +66,8 @@ hypotheses:
     type: method
     statement: >
       Hot code in RAM (the CCM SRAM) removes the effect of the code
-      address: the pad, the build of another tree and a shift of the CCM
-      code do not change the latency and the drift.
+      address: the pad and a shift of the CCM code do not change the
+      latency and the drift.
     basis: >
       In flash, the code address changes the latency: the IRQ p50 changes
       by 5 cycles over the pads 0..28 (code-layout), and the tree
@@ -77,8 +77,7 @@ hypotheses:
     wrong_if: >
       Code in RAM does not remove the effect of the code address, or the
       result for the pads 0..28 does not cover a code shift of 16 bytes in
-      the CCM SRAM. Then a comparison in RAM, also a comparison of two
-      trees, still depends on the layout.
+      the CCM SRAM. Then a comparison in RAM still depends on the layout.
     checks:
       # Criterion C1: the pad in RAM.
       - id: a
@@ -136,52 +135,6 @@ hypotheses:
         basis: >
           Estimate, as d. The spread in flash over the pads is 35 cycles
           (code-layout/20261025T060257Z, 763..798).
-      # Criterion C2: the tree difference D = ws-up - ws-safety is the
-      # same at r0 and at r4.
-      - id: f
-        formerly: code-place-q4/C2
-        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
-        select: {point: [r0-default, r4-default]}
-        metric: irq
-        stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
-        basis: The limit of a (the C1 limit of the metric).
-      - id: g
-        formerly: code-place-q4/C2
-        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
-        select: {point: [r0-noslice, r4-noslice]}
-        metric: irq
-        stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 2}}
-        basis: The limit of b.
-      - id: h
-        formerly: code-place-q4/C2
-        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
-        select: {point: [r0-default, r4-default]}
-        stat: drift_per_wake
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 0.2}}
-        basis: The limit of c.
-      - id: i
-        formerly: code-place-q4/C2
-        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
-        select: {point: [r0-default, r4-default]}
-        metric: isr2thr
-        stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
-        basis: The limit of d.
-      - id: j
-        formerly: code-place-q4/C2
-        written: 2026-10-25, before code-place-q4-up/20261025T185845Z
-        experiment: code-place-q4-up
-        select: {point: [r0-noslice, r4-noslice]}
-        metric: isr2thr
-        stat: p50
-        expect: {diff_to: {experiment: code-place-q4, point: same, spread_abs_le: 5}}
-        basis: The limit of e.
       # A shift of the CCM code by 16 bytes (a new LAT META line in
       # stim_init(), see stim-seed-1m).
       - id: k

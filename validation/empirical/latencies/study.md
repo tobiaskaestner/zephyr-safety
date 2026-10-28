@@ -14,13 +14,18 @@ the delay, and by how much? The study measures three latencies:
 - M3, thread to thread (`t2t`): the time from a wake call in one thread
   to the first instruction of the woken thread.
 
+The study measures one Zephyr version: the tree `ws-up` (upstream
+Zephyr) and the trees with patches on it (`ws-up-irqoff`,
+`ws-up-driftfix`). A comparison of versions is the sub-study
+`zephyr-versions`.
+
 The board is not fixed at this level. The instances of the sub-studies
 name the board. Each experiment is in the folder of the study that owns
 it. Other studies refer to an experiment by its name, which is unique.
 
 ## Experiments
 
-The study has no experiments of its own. Its five sub-studies give the
+The study has no experiments of its own. Its six sub-studies give the
 answer:
 
 - `measurement-validity`: do the benchmark apps measure the latency of
@@ -38,6 +43,10 @@ answer:
 - `mask-time`: which call sites of the kernel mask the interrupts, for
   how long, and how the longest mask section grows with the load. It
   gives the central result `longest-by-load`.
+- `zephyr-versions`: how the latencies change from one Zephyr version
+  to the next. It owns the experiments that ran on more than one tree.
+  For now they run on `ws-up` only, and the other sub-studies read
+  them with imports.
 
 ## References
 
@@ -47,6 +56,7 @@ answer:
 - `st-load-scaling/study.md`: the growth with the load.
 - `st-kconfig-factors/study.md`: the Kconfig factors.
 - `st-mask-time/study.md`: the interrupt mask time.
+- `st-zephyr-versions/study.md`: the comparison of Zephyr versions.
 - `doc/benchmark-guide/reference/files/study-yaml.rst` and
   `doc/benchmark-guide/reference/files/results-tree.rst`: the files of a
   study design and the results tree.
