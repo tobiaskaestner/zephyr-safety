@@ -44,8 +44,11 @@ The seal
    a2844fe0b792dffa4b90d5207d2a70802385a3bdb7781e2ae9e4b352ee84c9f3  ws-safety/direct-busy/.config
 
 ``instance verify`` computes the SHA-256 of each file of the run folder
-again and compares it with the seal. The digest is the one of the run
-list. A changed file, a changed log or a missing image gives an error.
+again and compares it with the :term:`seal`. A changed file, a changed
+log or a missing image gives an error. The command prints the digest of
+the run. It does not read the run list. Compare the digest with
+``digest`` of the run entry in ``instance.json``: the two must be the
+same.
 
 The source
 ----------
@@ -74,7 +77,9 @@ images:
    record: /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T011256Z.rebuild-20261028T012530Z.json
 
 The flashed image (the ``.hex`` file and the loadable parts of the ELF),
-the ``.config`` and the devicetree are the same. The ELF file itself is
+the ``.config`` and the devicetree are the same (see
+:doc:`../explanation/decisions/0003-build-from-the-repository` and
+:doc:`../explanation/decisions/0004-firmware-hash`). The ELF file itself is
 different only in its debug information, which has the path of the build
 folder. The record of the rebuild goes beside the run folder.
 
@@ -94,5 +99,8 @@ then check:
 ``analysis check`` checks each seal and builds all aggregates again in
 memory: the same runs and the same tools give the same bytes. Thus each
 verdict comes from the sealed runs and nothing else.
+
+:doc:`../howto/reproduce-a-data-point` gives the steps to reproduce a
+data point, also the measurement.
 
 Next: :doc:`combine-two-labs`.
