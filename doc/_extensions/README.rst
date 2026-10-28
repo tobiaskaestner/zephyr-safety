@@ -94,6 +94,10 @@ Tag                        Meaning                                        Need f
 =========================  =============================================  =====================
 ``@expresses <UID>``       the requirement that the property expresses    link ``expresses``
                            (one UID for each line, repeatable)
+``@source <source>``       the source of a property of the normative      ``tla_source``
+                           layer: a requirement UID, or ``doc:<page>``    (joined, ``;``) and
+                           for a document (repeatable). A UID is also     link ``expresses``
+                           an ``expresses`` link.
 ``@kind <kind>``           ``invariant``, ``action-property``,            ``kind``
                            ``liveness``, ``probe``, ``action`` or
                            ``definition`` (default)
@@ -119,7 +123,7 @@ unknown tag or value gives a warning.
 with the id ``PROP-<Module>-<Name>`` (``tla_property_id``). Its title is
 the name, its content is the doc comment and the formula. With
 ``:property-needs:``, the body makes a need of each definition that has an
-``@expresses`` tag or the kind ``invariant``, ``action-property``,
+``@expresses`` tag, a ``@source`` tag or the kind ``invariant``, ``action-property``,
 ``liveness`` or ``probe``. The kind ``action`` (a step of the system, for
 example a model of a C function) does not make a need. The kind
 ``action-property`` is a rule for each step (``[][A]_v``), the term of the

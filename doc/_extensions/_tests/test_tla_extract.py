@@ -72,7 +72,11 @@ def test_doc_comment_and_tags(ksem):
     give = ksem.definition("Give")
     assert give.doc.startswith("z_impl_k_sem_give(). z_sched_wake()")
     assert "@" not in give.doc
-    assert give.tags == {"kind": ["action"], "c-function": ["z_impl_k_sem_give"]}
+    assert give.tags == {
+        "kind": ["action"],
+        "c-function": ["z_impl_k_sem_give"],
+        "source": ["doc:api#k_sem_give"],
+    }
     nwa = ksem.definition("NoWaitWhileAvailable")
     assert nwa.tags == {"expresses": ["TEST-REQ-2", "TEST-REQ-3"]}
     assert nwa.doc == "No thread waits while the semaphore is available."

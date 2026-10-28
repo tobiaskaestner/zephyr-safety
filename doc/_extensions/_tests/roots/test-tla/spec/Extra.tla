@@ -53,6 +53,12 @@ Step == x' = x ++ 1
 \* @kind action-property
 StepIncrements == [][x' = x ++ 1]_x
 
+\* x stays a natural number. A property with @source tags only: the
+\* source makes the need, and the requirement UID of the source is a link.
+\* @source TEST-REQ-1
+\* @source doc:api#x
+XIsNat == x \in Nat
+
 Init == x = 0
 Spec == Init /\ [][Step]_x
 

@@ -8,13 +8,19 @@
 (* thread states (PendCurr, WakeFirst, WakeAll, WakeWalk), then the end of *)
 (* the critical section (Release). PendCurr includes its Release.          *)
 (*                                                                         *)
+(* Two layers. The operators are the descriptive layer: they follow the    *)
+(* code (@c-function), also where the code is surprising. The properties   *)
+(* with a @source tag are the normative layer: each one states a           *)
+(* requirement or a documented rule, written from that source and not from *)
+(* the code. A property that fails on the model is a design finding.       *)
+(*                                                                         *)
 (* CPUs are explicit. cur[c] is the thread that runs on CPU c. One CPU is  *)
-(* the default. At each reschedule point, the CPU selects a thread with    *)
-(* the rule of next_up() and should_preempt(): the highest priority runs,  *)
-(* a cooperative thread keeps the CPU, the current thread wins a tie. The  *)
-(* run queue is not in the model: among the ready threads with the same    *)
-(* priority, the model selects any one (the code selects the thread that   *)
-(* became ready first). The model has no time slices, no k_yield(), no     *)
+(* the default, and level 1 claims one CPU only. On one CPU the model has  *)
+(* the run queue order (rqStamp) and the cache of the code: the argument   *)
+(* of the last update_cache() (preemptOk). Each reschedule point switches  *)
+(* to the cache (CacheOf). On SMP the selection is the old free rule       *)
+(* (SmpChoices), a design exploration: the run queue variables keep their  *)
+(* initial values. The model has no time slices, no k_yield(), no          *)
 (* scheduler lock (k_sched_lock()), no meta-IRQ threads and no CPU masks.  *)
 (*                                                                         *)
 (* ISRs: an ISR is an actor that runs on one CPU (IsrCpu). At level 1 an   *)
@@ -85,6 +91,26 @@ VARIABLES
     \* "none", or the cause of the panic.
     \* @type: Str;
     panic,
+    \* The position of each ready thread in the run queue, among the threads
+    \* with the same priority: 1..N over all ready threads, 0 for a thread
+    \* that is not ready. On one CPU the current thread stays in the run
+    \* queue (next_up()). On SMP the value stays at 0.
+    \* @type: THREAD -> Int;
+    rqStamp,
+    \* The argument preempt_ok of the last update_cache() call (one CPU).
+    \* The code stores the result, _kernel.ready_q.cache. The model stores
+    \* the argument and computes the cache when it needs it (CacheOf). The
+    \* two agree, because each change of the run queue, of a priority of a
+    \* ready thread or of a thread state calls update_cache().
+    \* @type: Bool;
+    preemptOk,
+    \* A history variable of the normative layer, not a field of the code:
+    \* the order in which the ready threads became ready (1..N, threads
+    \* that became ready in the same step have the same value), 0 for a
+    \* thread that is not ready. A priority change does not change it. The
+    \* property TieGoesToLongestReady reads it. On SMP the value stays at 0.
+    \* @type: THREAD -> Int;
+    readySince,
     \* The variables of WaitQueue and Timeout.
     \* @type: THREAD -> OBJ;
     pendedOn,
@@ -108,7 +134,10 @@ WQ == INSTANCE WaitQueue
 \* The timeouts of the waiting threads.
 TO == INSTANCE Timeout WITH Entries <- Threads
 
-schedVars == <<tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+rqVars == <<rqStamp, preemptOk, readySince>>
+
+schedVars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
+               pendedOn, stamp, tq, tqCost>>
 
 \* Return values, with the values of the C error codes.
 OK     == 0
@@ -121,6 +150,9 @@ NoRet  == 1
 WaitTimeouts == {"FOREVER", "TICKS"}
 
 ThreadStates == {"ready", "pending", "dead"}
+
+\* One CPU: the run queue order and the cache are in the model.
+UP == Cardinality(CPUS) = 1
 
 -----------------------------------------------------------------------------
 (* Priorities *)
@@ -156,9 +188,117 @@ TimedWait(t) == t \in TO!Armed
 \* @type: (Set(THREAD), a) => (THREAD -> a);
 Const(S, v) == [t \in S |-> v]
 
+\* The ready threads.
+Ready == {t \in Threads : tstate[t] = "ready"}
+
+-----------------------------------------------------------------------------
+(* The run queue on one CPU (kernel/include/run_q.h, priority_q.h). The    *)
+(* arguments are the state after the critical section: ts (tstate), pr     *)
+(* (prio), cu (cur), rs (rqStamp) and po (preemptOk).                      *)
+
+\* The run queue order: a comes before b. A higher priority first, then
+\* the position. z_priq_simple_add() inserts a thread after each thread with
+\* the same priority, z_priq_rb_add() and z_priq_mq_add() do the same.
+\* @type: (THREAD -> Int, THREAD -> Int, THREAD, THREAD) => Bool;
+RqBefore(pr, rs, a, b) ==
+    \/ pr[a] > pr[b]
+    \/ /\ pr[a] = pr[b]
+       /\ rs[a] < rs[b]
+
+\* The head of the run queue, or Idle if no thread is ready. The ready
+\* threads have different positions (invariant RqStampsNormal), so the
+\* CHOOSE has exactly one witness.
+\* @kind definition
+\* @c-function runq_best
+\* @type: (THREAD -> Str, THREAD -> Int, THREAD -> Int) => THREAD;
+RunqBest(ts, pr, rs) ==
+    LET R == {t \in Threads : ts[t] = "ready"}
+    IN  IF R = {} THEN Idle
+        ELSE CHOOSE t \in R : \A u \in R \ {t} : RqBefore(pr, rs, t, u)
+
+\* The cache of CPU c: update_cache(po) on one CPU. next_up() gives the
+\* head of the run queue, which can be the current thread.
+\* should_preempt() accepts the head if po is TRUE, if the current thread
+\* cannot run (pending, dead) or is the idle thread, or if the current
+\* thread is preemptible. Else the cache is the current thread. Thus with
+\* po TRUE the cooperative rule does not apply. "The current thread wins a
+\* tie" is only a result of its position in the run queue.
+\* @kind definition
+\* @c-function update_cache
+\* @c-function next_up
+\* @c-function should_preempt
+\* @type: (CPU, THREAD -> Str, THREAD -> Int, CPU -> THREAD, THREAD -> Int, Bool) => THREAD;
+CacheOf(c, ts, pr, cu, rs, po) ==
+    LET u == cu[c] IN
+    IF \/ po
+       \/ u = Idle
+       \/ ts[u] # "ready"
+       \/ ~Cooperative(pr[u])
+      THEN RunqBest(ts, pr, rs)
+      ELSE u
+
+\* The positions of N ready threads: each order of 1..N.
+RqOrders == {f \in [Threads -> 1..Cardinality(Threads)] :
+                \A a, b \in Threads : a # b => f[a] # f[b]}
+
+\* The stamps rs, renumbered to 1..N over the ready threads R.
+\* @type: (THREAD -> Int, Set(THREAD)) => (THREAD -> Int);
+RqNormal(rs, R) == WQ!Renumber(rs, R)
+
+\* A position after each position of a ready thread.
+NextRq == Cardinality(Ready) + 1
+
+\* The run queue part of a step on one CPU: the new positions rs, the
+\* argument po of the last update_cache() of the step, and the new
+\* history rsince. On SMP the three variables do not change.
+\* @type: (THREAD -> Int, Bool, THREAD -> Int) => Bool;
+RqStep(rs, po, rsince) ==
+    IF UP
+      THEN /\ rqStamp' = rs
+           /\ preemptOk' = po
+           /\ readySince' = rsince
+      ELSE UNCHANGED rqVars
+
+\* The threads in S become ready (they were not ready): ready_thread() for
+\* each one. queue_thread() adds each one at the end of its priority, and
+\* update_cache(0) follows. The code adds them in the order of its wake
+\* loop: the wait queue order for z_sched_wake() in a loop, the walk order
+\* for z_sched_waitq_walk() (the reverse with CONFIG_WAITQ_SCALABLE, see
+\* k_event_post_internal()). No document gives an order among threads
+\* that become ready in one critical section, so the model accepts each
+\* order (k, an order of all threads, of which only the order on S
+\* counts). In the history, the threads of S have the same value. If S is
+\* empty, the code calls no ready_thread(): no change.
+\* @kind action
+\* @c-function ready_thread
+\* @c-function queue_thread
+\* @type: (Set(THREAD)) => Bool;
+QueueReady(S) ==
+    IF S = {}
+      THEN UNCHANGED rqVars
+      ELSE \E k \in RqOrders :
+             RqStep(RqNormal([t \in Threads |-> IF t \in S THEN NextRq + k[t] ELSE rqStamp[t]],
+                             Ready \cup S),
+                    FALSE,
+                    RqNormal([t \in Threads |-> IF t \in S THEN NextRq ELSE readySince[t]],
+                             Ready \cup S))
+
+\* The positions after thread t (ready) leaves the run queue and comes
+\* back: dequeue_thread() and queue_thread(). t comes after each ready
+\* thread with the same priority (prio' gives the priority).
+\* @type: (THREAD) => (THREAD -> Int);
+Requeue(t) == RqNormal([rqStamp EXCEPT ![t] = NextRq], Ready)
+
+\* Thread t stops to be ready: dequeue_thread() and update_cache(1). The
+\* argument is 1 for the current thread in unready_thread() and always in
+\* halt_thread().
+\* @type: (THREAD) => Bool;
+Unqueue(t) ==
+    RqStep(RqNormal(rqStamp, Ready \ {t}), TRUE, RqNormal(readySince, Ready \ {t}))
+
 -----------------------------------------------------------------------------
 (* The selection rule. The arguments are the state after the critical      *)
-(* section: ts (tstate), pr (prio) and cu (cur).                           *)
+(* section.                                                                *)
 
 \* The threads that CPU c can select: ready, and not current on another
 \* CPU.
@@ -170,13 +310,13 @@ Candidates(c, ts, cu) ==
 \* @type: (Set(THREAD), THREAD -> Int) => Set(THREAD);
 Top(S, pr) == {t \in S : \A u \in S : pr[u] <= pr[t]}
 
-\* The threads that CPU c can select at a reschedule point: next_up() and
-\* should_preempt() with preempt_ok = 0, in the order of the code.
+\* The selection on SMP (design exploration, not a claim of level 1): a
+\* ready cooperative thread keeps the CPU, else the current thread wins a
+\* tie, else any thread with the highest priority. This is the rule of
+\* next_up() with swap_ok = 0, without the run queue order.
 \* @kind definition
-\* @c-function next_up
-\* @c-function should_preempt
 \* @type: (CPU, THREAD -> Str, THREAD -> Int, CPU -> THREAD) => Set(THREAD);
-Choices(c, ts, pr, cu) ==
+SmpChoices(c, ts, pr, cu) ==
     LET u == cu[c]
         S == Candidates(c, ts, cu)
     IN  IF u # Idle /\ ts[u] = "ready" /\ Cooperative(pr[u]) THEN {u}
@@ -184,10 +324,20 @@ Choices(c, ts, pr, cu) ==
         ELSE IF u \in Top(S, pr) THEN {u}
         ELSE Top(S, pr)
 
-\* CPU c selects a thread. The caller sets tstate' and prio' first.
+\* The threads that CPU c can select at a reschedule point. On one CPU this
+\* is the cache (one thread), on SMP the free rule SmpChoices.
+\* @kind definition
+\* @c-function z_reschedule
+\* @c-function need_swap
+\* @type: (CPU, THREAD -> Str, THREAD -> Int, CPU -> THREAD, THREAD -> Int, Bool) => Set(THREAD);
+Choices(c, ts, pr, cu, rs, po) ==
+    IF UP THEN {CacheOf(c, ts, pr, cu, rs, po)} ELSE SmpChoices(c, ts, pr, cu)
+
+\* CPU c selects a thread. The caller sets tstate', prio', rqStamp' and
+\* preemptOk' first.
 \* @kind action
 Select(c) ==
-    \E t \in Choices(c, tstate', prio', cur) : cur' = [cur EXCEPT ![c] = t]
+    \E t \in Choices(c, tstate', prio', cur, rqStamp', preemptOk') : cur' = [cur EXCEPT ![c] = t]
 
 \* The end of the critical section of actor a. kind:
 \* "unlock"  k_spin_unlock(): a thread keeps its CPU.
@@ -210,29 +360,33 @@ Release(a, kind) ==
 \* one. From an ISR: panic, and no other change (the check is the first
 \* statement of z_pend_curr()). A finite timeout on a full heap: panic in
 \* z_add_timeout(). The model then stops; the state of the wait queue at
-\* the panic is not modeled.
+\* the panic is not modeled. unready_thread() of the current thread calls
+\* update_cache(1).
 \* @kind action
 \* @c-function z_pend_curr
 PendCurr(a, o, to) ==
     IF a \in Isrs
       THEN /\ panic' = "pend_in_isr"
            /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, pendedOn, stamp, tq, tqCost>>
+           /\ UNCHANGED rqVars
     ELSE IF to = "TICKS" /\ TO!Full
       THEN /\ panic' = "timeout_heap_full"
            /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, pendedOn, stamp, tq, tqCost>>
+           /\ UNCHANGED rqVars
     ELSE /\ WQ!Add(a, o)
          /\ IF to = "TICKS" THEN TO!InsertAny(a) ELSE UNCHANGED <<tq, tqCost>>
          /\ tstate' = [tstate EXCEPT ![a] = "pending"]
          /\ swapRet' = [swapRet EXCEPT ![a] = EAGAIN]
          /\ swapData' = [swapData EXCEPT ![a] = NoData]
          /\ UNCHANGED <<prio, panic>>
+         /\ Unqueue(a)
          /\ Release(a, "swap")
 
 \* The threads in S stop to wait: they leave the wait queue, their
 \* timeouts are cancelled, each one gets its return value ret[t] and its
-\* data dat[t], and each one is ready. This is z_sched_wake_thread_locked()
-\* with the cancellation of the timeout that its callers do first
-\* (z_unpend_first_thread_locked(), event_walk_op()).
+\* data dat[t], and each one is ready (QueueReady). This is
+\* z_sched_wake_thread_locked() with the cancellation of the timeout that
+\* its callers do first (z_unpend_first_thread_locked(), event_walk_op()).
 \* @kind action
 \* @c-function z_sched_wake_thread_locked
 \* @type: (Set(THREAD), THREAD -> Int, THREAD -> DATA) => Bool;
@@ -243,6 +397,7 @@ WakeSet(S, ret, dat) ==
     /\ swapRet' = [t \in Threads |-> IF t \in S THEN ret[t] ELSE swapRet[t]]
     /\ swapData' = [t \in Threads |-> IF t \in S THEN dat[t] ELSE swapData[t]]
     /\ UNCHANGED <<prio, panic>>
+    /\ QueueReady(S)
 
 \* The wait queue of o is not empty: z_sched_wake() returns true.
 HasWaiters(o) == WQ!W(o) # {}
@@ -286,15 +441,25 @@ WakeWalk(o, P(_), D(_)) ==
     LET S == {t \in WQ!W(o) : P(t)}
     IN  WakeSet(S, Const(S, OK), [t \in S |-> D(t)])
 
-\* z_thread_prio_set(): the priority of t becomes p. A waiter goes to the
-\* end of the waiters of its object with the priority p. No reschedule:
-\* the caller decides (k_thread_priority_set(), the mutex).
+\* z_thread_prio_set(): the priority of t becomes p, also if p is the old
+\* priority. A ready thread leaves the run queue and comes back at the end
+\* of the threads with the priority p (dequeue_thread(), queue_thread()).
+\* On one CPU this is also true for the current thread. Then
+\* update_cache(1): the next reschedule point selects the head of the run
+\* queue, without the cooperative rule (see CacheOf). A waiter goes to the
+\* end of the waiters of its object with the priority p, without
+\* update_cache(). No reschedule: the caller decides
+\* (k_thread_priority_set(), the mutex). The history readySince does not
+\* change: the thread stays ready.
 \* @kind action
 \* @c-function z_thread_prio_set
 PrioSet(t, p) ==
     /\ tstate[t] # "dead"
     /\ prio' = [prio EXCEPT ![t] = p]
     /\ IF t \in WQ!Waiting THEN WQ!Restamp(t) ELSE UNCHANGED <<pendedOn, stamp>>
+    /\ IF tstate[t] = "ready"
+         THEN RqStep(Requeue(t), TRUE, readySince)
+         ELSE UNCHANGED rqVars
     /\ UNCHANGED <<tstate, swapRet, swapData, panic, tq, tqCost>>
 
 -----------------------------------------------------------------------------
@@ -303,8 +468,9 @@ PrioSet(t, p) ==
 
 \* z_thread_timeout() from sys_clock_announce() on CPU c: the first entry of
 \* the timeout queue expires. Its thread stops to wait and keeps the return
-\* value -EAGAIN. The exit of the timer ISR selects a thread for c. Only
-\* thread waits use this atomic form (see Timeout).
+\* value -EAGAIN. It becomes ready (ready_thread(), update_cache(0)). The
+\* exit of the timer ISR selects a thread for c. Only thread waits use this
+\* atomic form (see Timeout).
 \* @kind action
 \* @c-function z_thread_timeout
 ThreadTimeout(c) ==
@@ -315,12 +481,16 @@ ThreadTimeout(c) ==
        /\ WQ!Remove(t)
        /\ tstate' = [tstate EXCEPT ![t] = "ready"]
        /\ UNCHANGED <<prio, swapRet, swapData, panic>>
+       /\ QueueReady({t})
        /\ Select(c)
 
 \* k_thread_abort(t) by actor a. t is dead: it leaves the CPU, its wait
-\* queue and the timeout queue. If a aborts itself, its CPU selects a
-\* thread (z_swap()). An ISR selects a thread at its exit. A thread that
-\* aborts another thread does not reschedule.
+\* queue and the timeout queue. halt_thread() calls update_cache(1) for
+\* each target, also for a target that is not ready. If a aborts itself,
+\* its CPU selects a thread (z_swap()). An ISR selects a thread at its
+\* exit. A thread that aborts another thread does not reschedule: the
+\* cache can then differ from the current thread until the next
+\* reschedule point (finding P7-c).
 \* Not in the model: the join queue (an object, later), essential threads
 \* (panic), and the abort of a thread that runs on another CPU (level 2:
 \* the target halts itself in an IPI, roadmap step 5).
@@ -338,6 +508,7 @@ Abort(a, t) ==
     /\ swapRet' = [swapRet EXCEPT ![t] = NoRet]
     /\ swapData' = [swapData EXCEPT ![t] = NoData]
     /\ UNCHANGED <<prio, panic>>
+    /\ Unqueue(t)
     /\ Release(a, IF a = t THEN "swap" ELSE "unlock")
 
 \* k_thread_priority_set(t, p) by actor a. It reschedules only if t is
@@ -360,19 +531,25 @@ Resume(t) ==
     /\ swapRet' = [swapRet EXCEPT ![t] = NoRet]
     /\ swapData' = [swapData EXCEPT ![t] = NoData]
     /\ UNCHANGED <<tstate, prio, cur, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED rqVars
 
 \* An interrupt on CPU c without a kernel call (a tick, an IPI). Its exit
-\* selects a thread. Enabled only if the selection changes cur[c]. On SMP
-\* this is the IPI that a wake on another CPU sends (flag_ipi()).
+\* selects a thread: on one CPU the cache, without a new update_cache().
+\* Enabled only if the selection changes cur[c]. On SMP this is the IPI
+\* that a wake on another CPU sends (flag_ipi()).
 \* @kind action
 Preempt(c) ==
     /\ panic = "none"
-    /\ cur[c] \notin Choices(c, tstate, prio, cur)
-    /\ \E t \in Choices(c, tstate, prio, cur) : cur' = [cur EXCEPT ![c] = t]
+    /\ cur[c] \notin Choices(c, tstate, prio, cur, rqStamp, preemptOk)
+    /\ \E t \in Choices(c, tstate, prio, cur, rqStamp, preemptOk) : cur' = [cur EXCEPT ![c] = t]
     /\ UNCHANGED <<tstate, prio, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED rqVars
 
-\* The initial state: all threads ready with the priorities p0, no waiter,
-\* and on each CPU a thread that the rule can select.
+\* The initial state: all threads ready with the priorities p0, no waiter.
+\* On one CPU: any run queue order, the history is the run queue order,
+\* and the CPU runs the head of the run queue (the state after a switch).
+\* On SMP: the run queue variables are 0, and on each CPU a thread that the
+\* rule can select.
 \* @kind definition
 InitState(p0) ==
     /\ tstate = [t \in Threads |-> "ready"]
@@ -380,12 +557,15 @@ InitState(p0) ==
     /\ swapRet = [t \in Threads |-> NoRet]
     /\ swapData = [t \in Threads |-> NoData]
     /\ panic = "none"
+    /\ rqStamp \in IF UP THEN RqOrders ELSE {[t \in Threads |-> 0]}
+    /\ readySince = rqStamp
+    /\ preemptOk = FALSE
     /\ pendedOn = [t \in Threads |-> None]
     /\ stamp = [t \in Threads |-> 0]
     /\ tq = <<>>
     /\ tqCost = TO!NoCost
     /\ cur \in [CPUS -> Threads \cup {Idle}]
-    /\ \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur)
+    /\ \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur, rqStamp, TRUE)
     /\ \A c, d \in CPUS : c # d /\ cur[c] # Idle => cur[c] # cur[d]
 
 \* Fairness of the environment: an armed timeout expires, an IPI arrives.
@@ -394,7 +574,7 @@ Fairness ==
     /\ \A c \in CPUS : WF_schedVars(Preempt(c))
 
 -----------------------------------------------------------------------------
-(* Properties *)
+(* Properties of the descriptive layer: the consistency of the model.     *)
 
 \* @kind invariant
 TypeOK ==
@@ -404,6 +584,9 @@ TypeOK ==
     /\ DOMAIN swapRet = Threads
     /\ swapData \in [Threads -> Data \cup {NoData}]
     /\ panic \in {"none", "pend_in_isr", "timeout_heap_full"}
+    /\ rqStamp \in [Threads -> 0..Cardinality(Threads)]
+    /\ preemptOk \in BOOLEAN
+    /\ readySince \in [Threads -> 0..Cardinality(Threads)]
 
 \* A thread runs on at most one CPU.
 \* @kind invariant
@@ -435,12 +618,24 @@ DeadIsInert ==
         /\ swapRet[t] = NoRet
         /\ ~Running(t)
 
-\* Each CPU runs a thread that the rule can select. On one CPU this holds
-\* after each step, if each critical section that makes a thread ready
-\* ends with a reschedule point. On SMP it can fail until the IPI arrives
-\* (see SelectionHappens).
+\* On one CPU the positions of the ready threads are 1..N and different,
+\* a thread that is not ready has 0. Thus RunqBest has one witness. The
+\* history has the values 1..N (with equal values), 0 if not ready.
 \* @kind invariant
-RunRuleHolds == \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur)
+RqStampsNormal ==
+    UP =>
+        /\ \A t \in Ready : 1 <= rqStamp[t] /\ rqStamp[t] <= Cardinality(Ready)
+        /\ \A a, b \in Ready : a # b => rqStamp[a] # rqStamp[b]
+        /\ \A t \in Threads \ Ready : rqStamp[t] = 0 /\ readySince[t] = 0
+        /\ \A t \in Ready : 1 <= readySince[t] /\ readySince[t] <= Cardinality(Ready)
+
+\* Each CPU runs a thread that the rule can select: on one CPU the cache.
+\* This holds after each step if each critical section that changes the
+\* cache ends with a reschedule point. k_thread_abort() of another thread
+\* does not (finding P7-c): the configuration coop_rule shows it. On SMP
+\* it can fail until the IPI arrives (see SelectionHappens).
+\* @kind invariant
+RunRuleHolds == \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur, rqStamp, preemptOk)
 
 \* No panic. This is an environment assumption: no ISR calls a wait, and
 \* the heap of the timeouts is large enough.
@@ -468,7 +663,74 @@ TimedWaitEnds ==
 \* (with the fairness of Preempt).
 \* @kind liveness
 SelectionHappens ==
-    \A c \in CPUS : (cur[c] \notin Choices(c, tstate, prio, cur)) ~>
-                    (cur[c] \in Choices(c, tstate, prio, cur))
+    \A c \in CPUS : (cur[c] \notin Choices(c, tstate, prio, cur, rqStamp, preemptOk)) ~>
+                    (cur[c] \in Choices(c, tstate, prio, cur, rqStamp, preemptOk))
+
+-----------------------------------------------------------------------------
+(* Properties of the normative layer. Each one states a requirement, with  *)
+(* the reading that the workspace note p7-pilot.md gives. They are for one *)
+(* CPU (level 1). "Candidates" and the priorities are the values after the *)
+(* step.                                                                   *)
+
+\* While the current thread is preemptible, no ready thread has a higher
+\* priority: a thread with a higher priority that becomes ready (also by a
+\* priority change) is the current thread at the end of the step. The idle
+\* thread runs only if no thread is ready.
+\* @kind invariant
+\* @source ZEP-SRS-2-9
+\* @source ZEP-SRS-2-12
+PreemptibleRunsHighest ==
+    \A c \in CPUS :
+        LET S == Candidates(c, tstate, cur)
+        IN  /\ cur[c] = Idle => S = {}
+            /\ (cur[c] # Idle /\ ~Cooperative(prio[cur[c]])) =>
+                   \A t \in S : prio[t] <= prio[cur[c]]
+
+\* A step that selects a new current thread selects a ready thread with
+\* the highest priority among the threads that the CPU can run, or the
+\* idle thread if no thread is ready. (A "scheduling decision" is a step
+\* that changes the current thread.)
+\* @kind action-property
+\* @source ZEP-SRS-2-12
+SwitchSelectsHighest ==
+    [][\A c \in CPUS :
+         cur'[c] # cur[c] =>
+             LET S == Candidates(c, tstate', cur')
+             IN  IF S = {} THEN cur'[c] = Idle
+                 ELSE /\ cur'[c] \in S
+                      /\ \A u \in S : prio'[u] <= prio'[cur'[c]]]_schedVars
+
+\* A step that selects a new current thread t selects, among the ready
+\* threads with the priority of t, a thread that has been ready the
+\* longest. The old current thread is one of these ready threads if it is
+\* still ready. A priority change does not make a thread "ready again".
+\* TLC finds a violation (finding P7-a): z_thread_prio_set() puts the
+\* current thread after its peers, also for the same priority.
+\* @kind action-property
+\* @source ZEP-SRS-2-13
+\* @expected violation
+TieGoesToLongestReady ==
+    [][\A c \in CPUS :
+         (cur'[c] # cur[c] /\ cur'[c] # Idle) =>
+             \A u \in Candidates(c, tstate', cur') :
+                 prio'[u] = prio'[cur'[c]] => readySince'[cur'[c]] <= readySince'[u]]_schedVars
+
+\* A running cooperative thread stays the current thread until it yields
+\* or blocks: if it is ready and cooperative before and after the step, it
+\* still runs on its CPU. The model has no yield call (k_yield()). A thread
+\* that becomes preemptible in the step is not protected. TLC finds
+\* violations (findings P7-b, P7-c): z_thread_prio_set() and halt_thread()
+\* call update_cache(1), which skips the cooperative rule.
+\* @kind action-property
+\* @source ZEP-SRS-2-14
+\* @expected violation
+CoopKeepsCpu ==
+    [][\A c \in CPUS :
+         LET a == cur[c]
+         IN  (/\ a # Idle
+              /\ tstate[a] = "ready"
+              /\ tstate'[a] = "ready"
+              /\ Cooperative(prio[a])
+              /\ Cooperative(prio'[a])) => cur'[c] = a]_schedVars
 
 =============================================================================
