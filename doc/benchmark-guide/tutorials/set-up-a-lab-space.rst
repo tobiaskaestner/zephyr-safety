@@ -142,7 +142,7 @@ The trees that you did not set up are information, not errors.
 Check the wire
 --------------
 
-The loopback check builds a small app, flashes the board, and measures
+The :term:`wire check` builds a small app, flashes the board, and measures
 the wire:
 
 .. code-block:: console
@@ -160,6 +160,6 @@ the wire:
 
 If you see ``RESULT: FAIL``, look at the wire D2 to A3 (see
 :doc:`../howto/troubleshoot-a-run`). The record keeps all lines of the
-:term:`wire check`.
+wire check.
 
 You have a lab space that works. Next: :doc:`first-experiment`.
