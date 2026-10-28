@@ -17,7 +17,7 @@ packages of the Zephyr build (``pyelftools`` and others) and ``pyocd``.
    * - ``study.py``
      - Study designs (lint, scaffold), lab spaces, pinned trees
        (``study.py trees``), campaigns, and the aggregates of a results
-       tree (see :doc:`../studies` and :doc:`../lab`).
+       tree (see :doc:`../reference/cli/study-py` and :doc:`../lab`).
    * - ``trees.py``
      - The library of the pinned trees of ``validation/trees/``. It
        has no commands of its own: use ``study.py trees``. It reads

@@ -54,7 +54,7 @@ Add an experiment
    <experiment folder>`` (see :doc:`lab`). The campaign adds the run to
    the run list of its instance. Without a campaign, use ``--out
    <instance folder>``: ``run.py`` then adds the run to the run list of
-   the instance itself (see :doc:`studies`).
+   the instance itself (see :doc:`reference/cli/study-py`).
 
 Each value in ``kconfig`` of a point must be an option of the app or of
 the tree. If the tree does not define the option, the build stops. Thus
@@ -166,7 +166,7 @@ Add an app
    ``latextract.main("<app>")``; the plot script calls
    ``latplot.main("<app>", ["<main metric>"])`` (both in
    ``common/scripts/``). The results build needs both: the extractor for the
-   app data, the plot script for the standard plots (see :doc:`studies`).
+   app data, the plot script for the standard plots (see :doc:`reference/files/results-tree`).
    A value or a plot that only this app gives goes into these files.
 #. Add the app to the table in ``tests/benchmarks/README.md`` and to
    :doc:`explanation/apps` and :doc:`reference/apps` in this guide.

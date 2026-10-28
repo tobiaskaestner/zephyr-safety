@@ -138,3 +138,8 @@ The experiment folders in the study folders below
 ``validation/empirical/latencies/`` are the current experiments. The
 description ``experiment.md`` in each folder gives the question of the
 experiment.
+
+``experiment.yaml`` can have ``acceptance``: checks of each run, for
+example ``{id: A1, metric: [irq, isr2thr], stat: invalid, expect:
+{equals: 0}}``. A run that fails one is not evidence: the hypotheses
+and the central results do not read it.

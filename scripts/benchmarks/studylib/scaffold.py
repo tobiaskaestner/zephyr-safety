@@ -225,7 +225,7 @@ TODO: the sources of the background and of the predictions.
 # Hypotheses of the study {name}: 1-4 claims about a mechanism. A
 # hypothesis is wrong if one of its checks is wrong. Write each statement
 # and each limit before the run of its experiment. The check forms are in
-# doc/benchmark-guide/studies.rst.
+# doc/benchmark-guide/reference/check-forms.rst.
 #
 # Keys of a hypothesis: id, type (method | model), statement, basis,
 # wrong_if, checks. Keys of a check: id, written, experiment, select,

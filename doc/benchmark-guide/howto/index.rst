@@ -11,6 +11,8 @@ the tools work as they do.
    wire-the-nucleo-g474re
    make-a-hardware-map
    add-a-tree
+   add-a-study
    add-a-board
+   write-a-central-result
    reproduce-a-data-point
    run-the-unit-tests

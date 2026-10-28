@@ -47,5 +47,6 @@ answer:
 - `st-load-scaling/study.md`: the growth with the load.
 - `st-kconfig-factors/study.md`: the Kconfig factors.
 - `st-mask-time/study.md`: the interrupt mask time.
-- `doc/benchmark-guide/studies.rst`: the files of a study design and the
-  results tree.
+- `doc/benchmark-guide/reference/files/study-yaml.rst` and
+  `doc/benchmark-guide/reference/files/results-tree.rst`: the files of a
+  study design and the results tree.

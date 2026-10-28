@@ -1,3 +1,79 @@
+Results tree
+============
+
+.. code-block:: none
+
+   results/kernel-latency/                         top instance (no board)
+     instance.json  study.json
+     st-measurement-validity/
+       st-stimulus-sampling@nucleo_g474re/         the board is fixed here
+         instance.json  study.json
+         ex-stim-seed-1m/
+           experiment.json
+           20261026T155715Z/                       raw run (sealed)
+           20261026T155715Z.sha256                 seal
+           20261026T155715Z.run.json               framework data
+           20261026T155715Z.wake_latency.json      app data
+           20261026T155715Z.rebuild-<UTC>.json     a rebuild check (run.py --rebuild)
+
+The board is in the folder name only at the level that fixes it
+(``@<port>``); the sub-instances inherit it.
+
+``run.json`` has the run identity and provenance, and for each point its
+axes, the digests of ``.config``, ``zephyr.dts``, the images
+(``<app>-<tree>-<point>.elf`` and ``.hex``, or ``zephyr.elf`` and
+``zephyr.hex`` in an older run) and ``build.log``, the image digest (the loadable
+segments of the ELF) and the code digest. The image has the
+``LATBENCH_SRC_REV`` of the build: for the runs since 2026-10-27 this is the
+content hash of the firmware files (kind ``firmware/1``), so the same
+firmware at two commits gives the same image; older runs have the safety
+revision or a git tree hash there. The code digest counts these 40
+characters as zeros, so the same code gives the same code digest also
+over these kinds. The app data come from the extractor of the app,
+``tests/benchmarks/<app>/scripts/extract.py``: META, the histograms, the
+tick phase tables, the M4 sites, and a check of the ``LAT CFG`` values
+against ``.config``.
+
+The standard plots of an experiment come from the plot script of its app,
+``tests/benchmarks/<app>/scripts/plot.py`` (the common part is
+``tests/benchmarks/common/scripts/latplot.py``, like the extractor). The
+build runs it for each experiment of an instance, with the app data of
+the runs that are not excluded (evidence and adjustment, so a smoke
+campaign shows its graphs too; the legend names the role of an
+adjustment run), and it writes ``ex-<experiment>/plots/`` of the
+instance:
+
+- ``overview-<metric>.svg``: the exceedance probability (the share of
+  samples at or above x) of each point of the newest run, at most 8 points
+  in one chart (with more points: ``overview-<metric>-<k>.svg``);
+- ``ccdf-<metric>-<tree>-<point>.svg``: the exceedance probability of one
+  point, one line for each run (the newest 8);
+- ``hist-<metric>-<tree>-<point>.svg``: the histogram of one point of the
+  newest run;
+- ``plots.json``: the list of the plots and the digest of their inputs (the
+  app data and the plot scripts). With the same digest, the build does not
+  draw again.
+
+The metric is the main metric of the app (``irq``, ``isr2thr``, ``t2t``).
+The plots show repetition 1 of each point. A run that failed an
+acceptance check is in the plots, with ``acceptance failed`` in its label
+(it is not evidence for the checks).
+The SVG files have no date, so the same inputs and the same matplotlib
+give the same bytes. A failed plot gives a note in ``study.json``, not a
+failed build. In a campaign, the background build draws the plots of an
+experiment as soon as its run is done.
+
+``experiment.json`` has one row for each run, tree, point, repetition and
+metric, with the percentiles. ``study.json`` has the acceptance checks,
+the rebuild checks, the hypotheses with each check (measured value,
+limit, verdict) and the central results as filled sentences. The
+``measured`` text of a check has all values if there are 4 or fewer; else
+it has a short form (``6 values, min 100, max 105; 3 outside the limit:
+...``), and ``measured_lines`` has all of them (``values`` has them as
+data). A check or a central result that waits for a run has
+``missing_run`` (the experiment and the instance). A manual check that is
+open has the ``statement`` for the person.
+
 .. _benchguide-result-folder:
 
 Result folder
