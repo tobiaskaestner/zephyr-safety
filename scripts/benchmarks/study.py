@@ -26,6 +26,7 @@ Lab space (a folder with .lab/config, see studylib/lab.py):
                                           or all runs) to FILE and FILE.sha256
     study.py lab import FILE [--dry-run]  the runs of another lab space, after the
                                           consistency checks (studylib/exchange.py)
+    study.py lab import --close ID@LAB    end an imported campaign that never gets its end
 
 Campaigns (FOLDER: a design study or experiment folder, or an instance folder):
     study.py campaign prepare FOLDER [--board B] [--only EXP ...] [--skip EXP ...]
@@ -192,7 +193,9 @@ def cmd_lab_status(args):
             print(f"  hardware map {e}")
     else:
         print(f"  hardware map {lab.hw_map} is missing")
-    for rec in campaign.records(lab)[-3:]:
+    recs = campaign.records(lab)
+    open_imports = [r for r in recs if "@" in r.id and (r.data or {}).get("status") in ("planned", "running")]
+    for rec in [r for r in recs if "@" not in r.id][-3:] + open_imports:
         print("  " + campaign.status_lines(rec)[0])
 
 
@@ -218,6 +221,12 @@ def cmd_lab_export(args):
 def cmd_lab_import(args):
     from studylib import exchange
     lab = labmod.require()
+    if args.close:
+        exchange.close_import(lab, args.close)
+        print(f"{args.close}: closed (its experiments do not make verdicts provisional any more)")
+        return 0
+    if not args.file:
+        raise exchange.ExchangeError("give the export file (or --close <id>@<lab id>)")
     added, skipped, refused, warnings = exchange.import_(lab, args.file, dry=args.dry_run)
     if added and not args.dry_run:
         print(f"next: study.py analysis build {lab.results / Design().top.name}")
@@ -513,8 +522,9 @@ def parser():
     s.add_argument("--all", action="store_true", help="all runs, also those that come from another lab")
     s.set_defaults(func=cmd_lab_export)
     s = lab.add_parser("import", help="the runs of another lab space")
-    s.add_argument("file")
+    s.add_argument("file", nargs="?")
     s.add_argument("--dry-run", action="store_true", help="only the checks")
+    s.add_argument("--close", metavar="ID@LAB", help="end an imported campaign record that never gets its end")
     s.set_defaults(func=cmd_lab_import)
 
     camp = sub.add_parser("campaign", help="run the experiments below a folder").add_subparsers(

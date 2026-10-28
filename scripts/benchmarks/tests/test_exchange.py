@@ -51,7 +51,9 @@ def test_export_import_and_checks(two_labs):
     assert exchange.export(a, f, log=lambda *x: None) == 1
     assert Path(f"{f}.sha256").is_file()
     added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None)
-    assert added == ["exp1/20260101T000000Z"] and not refused and not warnings
+    assert added == ["exp1/20260101T000000Z"] and not refused
+    assert warnings == ["the export has not the commits r of its runs (the other lab does not have them; "
+                        "a rebuild here needs them)"]       # the test run has no real commit
     inst_b = b.results / "top" / "st-sub@nucleo_g474re"
     runs = instance.load(inst_b)["runs"]
     assert runs[0]["digest"] == instance.load(a.results / "top" / "st-sub@nucleo_g474re")["runs"][0]["digest"]
@@ -80,8 +82,57 @@ def test_import_refuses_other_experiment_file_and_collision(two_labs):
     d["repeat"] = 2
     ef.write_text(yaml.safe_dump(d))
     added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None, dry=True)
-    assert added == [] and "experiment.yaml differs between the two labs" in refused[0]
+    assert added == [] and "experiment.yaml of exp1 differs between the two labs (content)" in refused[0]
     assert any("hypotheses.yaml differs" in w for w in warnings)
+
+
+def test_import_accepts_comments_and_a_rename(two_labs):
+    a, b, root, tmp = two_labs
+    f = tmp / "a.tar.gz"
+    exchange.export(a, f, log=lambda *x: None)
+    ef = root / "st-sub" / "ex-exp1" / "experiment.yaml"
+    ef.write_text("# a new comment: the content stays\n" + ef.read_text())
+    assert exchange.import_(b, f, log=lambda *x: None, dry=True)[0] == ["exp1/20260101T000000Z"]
+    # the rename exp1 -> irq-exp1: the run keeps its id and goes into the renamed experiment
+    d = yaml.safe_load(ef.read_text())
+    d.update(name="irq-exp1", renamed_from=["exp1"])
+    (root / "st-sub" / "ex-exp1").rename(root / "st-sub" / "ex-irq-exp1")
+    (root / "st-sub" / "ex-irq-exp1" / "experiment.yaml").write_text(yaml.safe_dump(d))
+    st = root / "st-sub" / "study.yaml"
+    sd = yaml.safe_load(st.read_text())
+    sd["experiments"] = ["irq-exp1"]
+    sd["central_results"][0]["from"]["experiment"] = "irq-exp1"
+    st.write_text(yaml.safe_dump(sd))
+    hy = root / "st-sub" / "hypotheses.yaml"
+    hd = yaml.safe_load(hy.read_text())
+    hd["hypotheses"][0]["checks"][0]["experiment"] = "irq-exp1"
+    hy.write_text(yaml.safe_dump(hd))
+    design = Design(root)
+    assert design.canonical("exp1") == "irq-exp1" and design.run_experiment("exp1/20260101T000000Z") == "irq-exp1"
+    added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None)
+    assert added == ["exp1/20260101T000000Z"] and not refused
+
+
+def test_bundle_carries_the_commits(tmp_path):
+    import subprocess
+    def git(*a, cwd):
+        return subprocess.run(["git", *a], cwd=cwd, check=True, capture_output=True, text=True).stdout.strip()
+    src, dst = tmp_path / "src", tmp_path / "dst"
+    for r in (src, dst):
+        r.mkdir()
+        git("init", "-q", cwd=r)
+    (src / "f").write_text("1\n")
+    git("add", "f", cwd=src)
+    git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-q", "-m", "one", cwd=src)
+    rev = git("rev-parse", "HEAD", cwd=src)
+    out = exchange.make_bundle(src, [rev, "f" * 40], tmp_path / "b.bundle")
+    assert out == {"revs": [rev], "missing": ["f" * 40]}
+    assert git("for-each-ref", "refs/latbench", cwd=src) == ""          # the temporary refs are gone
+
+    class L:
+        repo = dst
+    assert exchange.fetch_bundle(L, tmp_path / "b.bundle", "lab-x", log=lambda *a: None) == [rev]
+    assert git("rev-parse", f"refs/latbench/import/lab-x/{rev}", cwd=dst) == rev
 
 
 def test_import_refuses_a_run_id_with_another_digest(two_labs):
@@ -116,3 +167,25 @@ def test_import_refuses_only_a_damaged_run(two_labs, monkeypatch):
     monkeypatch.setattr(exchange.seal, "verify", verify)
     added, skipped, refused, warnings = exchange.import_(b, f, log=lambda *x: None)
     assert added == ["exp1/20260102T000000Z"] and "differs from the seal" in refused[0]
+
+
+def test_an_imported_running_campaign_can_be_closed(two_labs):
+    from studylib import campaign, jsonout
+    a, b, root, tmp = two_labs
+    rid = instance.load(a.results / "top" / "st-sub@nucleo_g474re")["runs"][0]["id"]
+    jsonout.write(a.campaigns / "20260101T000000Z.json", {
+        "id": "20260101T000000Z", "status": "running", "lab": a.describe(), "host": "h",
+        "repo": {"rev": "r"}, "folder": "x",
+        "experiments": [{"experiment": "exp1", "state": "done", "run": rid,
+                         "instance": "top/st-sub@nucleo_g474re"}]})
+    f = tmp / "a.tar.gz"
+    exchange.export(a, f, campaigns=["20260101T000000Z"], log=lambda *x: None)
+    exchange.import_(b, f, log=lambda *x: None)
+    name = f"20260101T000000Z@{a.id}"
+    rec = campaign.Record(b, name)
+    assert rec.data["running_at_export"] and campaign.status_lines(rec)[0].startswith(
+        f"campaign {name}: imported, not complete (running at the export of")
+    exchange.close_import(b, name)
+    assert campaign.Record(b, name).data["status"] == "closed"
+    exchange.import_(b, f, log=lambda *x: None)                       # the old export does not open it again
+    assert campaign.Record(b, name).data["status"] == "closed"

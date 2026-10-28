@@ -5,21 +5,27 @@
 
 An export is one tar file and its digest file <file>.sha256. The tar has:
 
-    export.json          format latbench-export/1: the lab space, the host,
+    export.json          format latbench-export/2: the lab space, the host,
                          the design repo commit, the design files of the
-                         exporting lab (experiment.yaml of each experiment,
-                         study.yaml and hypotheses.yaml of each instance,
-                         with sha256), and for each run: the instance path,
-                         the run-list entry, the board, the tree pins
+                         exporting lab (each experiment: its file, sha256,
+                         parsed content and earlier names; study.yaml and
+                         hypotheses.yaml of each instance, with sha256), and
+                         for each run: the instance path, the run-list entry,
+                         the experiment, the board, the tree pins
     runs/<instance folder>/ex-<experiment>/<UTC>/ and <UTC>.sha256
     campaigns/<id>.json  the campaign records of the runs
+    repo.bundle          a git bundle of the design repo commits of the runs
+                         and campaigns (with their history)
 
 The import checks the digest of the file, then for each run:
 
 - the run id is new in the results tree, or the same run (same digest:
   skipped). A run id with another digest is refused (collision);
-- experiment.yaml of the exporting lab is the same as here, else the run
-  is refused: the two labs work from other design files;
+- the experiment of the exporting lab has the same content as here: the
+  parsed YAML without comments, name and renamed_from (an earlier name
+  maps to the current one). Else the run is refused: the two labs work
+  from other design files. An export of format 1 has only the sha256 of
+  the file: then the bytes are compared;
 - study.yaml or hypotheses.yaml of the instance differs: a warning (the
   import builds with its own design);
 - the tree pins of the run differ from validation/trees/ here: a
@@ -30,7 +36,11 @@ Then the run is copied into its instance (made, with the board level of the
 exporting lab, if there is none) and added with its role and reason;
 copied_from names the lab and the campaign. The campaign records go to
 .lab/campaigns/<id>@<lab id>.json, so that a run that is still planned in a
-running campaign of the other lab makes the verdicts provisional here too.
+running campaign of the other lab makes the verdicts provisional here too;
+such a record gets running_at_export, until a later import brings its end
+or "lab import --close <id>@<lab id>" ends it. The commits of the bundle go
+to refs/latbench/import/<lab id>/<rev> of the design repo, so that
+run.py --rebuild works here.
 """
 
 import datetime
@@ -48,7 +58,19 @@ from . import instance, jsonout, layout, seal
 from .design import Design, repo_rel
 from .seal import file_sha256
 
-FORMAT = "latbench-export/1"
+FORMAT = "latbench-export/2"
+FORMATS = ("latbench-export/1", FORMAT)     # format 1: no parsed experiments, no bundle
+BUNDLE_NS = "refs/latbench/export"
+
+
+def comparable(exp_data):
+    """The content of an experiment file that the two labs must share: the parsed YAML (no
+    comments) without its name and earlier names (a rename is not a change of the experiment)."""
+    from . import schema
+    d = schema.plain(dict(exp_data or {}))
+    d.pop("name", None)
+    d.pop("renamed_from", None)
+    return d
 
 
 class ExchangeError(Exception):
@@ -113,6 +135,7 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
              "campaigns": sorted({c for _, _, c in runs if c})}
     out_file = Path(out_file).resolve()
     tmp = out_file.with_name(out_file.name + ".part")
+    revs = set()
     with tarfile.open(tmp, "w:gz") as tar:
         for f, r, cid in runs:
             data = instance.load(f)
@@ -122,14 +145,19 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
             if seal.verify(run_dir) != r["digest"]:
                 raise ExchangeError(f"{run_dir}: the seal does not give the digest of the run list")
             m = json.loads((run_dir / "manifest.json").read_text())
+            exp = design.canonical(exp)
             if exp in design.experiments:
-                ef = design.experiment(exp).folder / "experiment.yaml"
-                index["experiments"][exp] = {"file": repo_rel(ef), "sha256": file_sha256(ef)}
+                e = design.experiment(exp)
+                ef = e.folder / "experiment.yaml"
+                index["experiments"][exp] = {"file": repo_rel(ef), "sha256": file_sha256(ef),
+                                             "content": comparable(e.data), "renamed_from": e.renamed_from}
+            if (m.get("safety") or {}).get("rev"):
+                revs.add(m["safety"]["rev"])
             index["instances"][ipath] = {"design": data["design"]["folder"],
                                          "files": design.study(study_path(ipath)).files()}
-            index["runs"].append({"instance": ipath, "entry": {k: r[k] for k in ("id", "digest", "role", "reason")
-                                                               if k in r},
-                                  "board": m.get("board"), "campaign": cid,
+            index["runs"].append({"instance": ipath, "entry": {k: r[k] for k in ("id", "digest", "role", "reason",
+                                                                                "campaign") if k in r},
+                                  "board": m.get("board"), "campaign": cid, "experiment": exp,
                                   "trees": {t: {n: v.get("rev") for n, v in c.get("repos", {}).items()}
                                             for t, c in m.get("trees", {}).items()}})
             rel = instance_rel(ipath) / layout.run_folder(r["id"])
@@ -139,6 +167,14 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
             p = lab.campaigns / f"{c}.json"
             if p.is_file():
                 tar.add(p, arcname=f"campaigns/{c}.json")
+                rev_c = (json.loads(p.read_text()).get("repo") or {}).get("rev")
+                if rev_c:
+                    revs.add(rev_c)
+        bundle = out_file.with_name(out_file.name + ".bundle.part")
+        index["bundle"] = make_bundle(trees.REPO_DIR, sorted(revs), bundle)
+        if index["bundle"]["revs"]:
+            tar.add(bundle, arcname="repo.bundle")
+        bundle.unlink(missing_ok=True)
         blob = (jsonout.dumps(index) + "\n").encode()
         info = tarfile.TarInfo("export.json")
         info.size = len(blob)
@@ -149,6 +185,49 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
     Path(f"{out_file}.sha256").write_text(f"{digest}  {out_file.name}\n")
     log(f"{len(runs)} runs of {len(index['instances'])} instances to {out_file} (sha256 {digest[:12]})")
     return len(runs)
+
+
+def make_bundle(repo, revs, out):
+    """A git bundle of the commits revs (with their history) of the design repo; return
+    {revs, missing}. Each commit gets the temporary ref refs/latbench/export/<rev> for the bundle."""
+    have = [r for r in revs if trees.git("cat-file", "-t", r, cwd=repo, check=False) == "commit"]
+    missing = [r for r in revs if r not in have]
+    if have:
+        refs = [f"{BUNDLE_NS}/{r}" for r in have]
+        try:
+            for ref, r in zip(refs, have):
+                trees.git("update-ref", ref, r, cwd=repo)
+            trees.git("bundle", "create", "-q", str(out), *refs, cwd=repo)
+        finally:
+            for ref in refs:
+                trees.git("update-ref", "-d", ref, cwd=repo, check=False)
+    return {"revs": have, "missing": missing}
+
+
+def fetch_bundle(lab, bundle, other_id, log=print):
+    """Fetch the commits of the bundle of an export into the design repo of the lab space, as
+    refs/latbench/import/<other lab>/<rev> (local refs; never pushed). Return the revs."""
+    repo = lab.repo
+    r = subprocess.run(["git", "bundle", "verify", "-q", str(bundle)], cwd=repo, capture_output=True, text=True)
+    if r.returncode != 0:
+        raise ExchangeError(f"the bundle of the export does not verify: {r.stderr.strip()}")
+    trees.git("fetch", "-q", str(bundle), f"+{BUNDLE_NS}/*:refs/latbench/import/{other_id}/*", cwd=repo)
+    revs = [ln.split()[0] for ln in trees.git("bundle", "list-heads", str(bundle), cwd=repo).splitlines() if ln]
+    log(f"{len(revs)} commits of the runs in refs/latbench/import/{other_id}/ of {repo}")
+    return revs
+
+
+def close_import(lab, name):
+    """End an imported campaign record that will never get its end (the other lab exports no more)."""
+    p = lab.campaigns / f"{name}.json"
+    if "@" not in name or not p.is_file():
+        raise ExchangeError(f"no imported campaign record {p} (the name is <id>@<lab id>)")
+    d = json.loads(p.read_text())
+    d["status_at_import"] = d.get("status")
+    d["status"] = "closed"
+    d["closed"] = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    jsonout.write(p, d)
+    return d
 
 
 def import_(lab, in_file, log=print, dry=False):
@@ -169,21 +248,28 @@ def import_(lab, in_file, log=print, dry=False):
         with tarfile.open(in_file) as tar:
             tar.extractall(work, filter="data")
         index = json.loads((work / "export.json").read_text())
-        if index.get("format") != FORMAT:
-            raise ExchangeError(f"{in_file}: format {index.get('format')}, expected {FORMAT}")
+        if index.get("format") not in FORMATS:
+            raise ExchangeError(f"{in_file}: format {index.get('format')}, expected one of {', '.join(FORMATS)}")
         other = index["lab"]
         if other["id"] == lab.id:
             raise ExchangeError(f"{in_file} comes from this lab space ({lab.id})")
         warnings, refused, added, skipped = [], [], [], []
         # design consistency
+        # an experiment: the parsed content (no comments, no name), with the earlier names of a
+        # rename; an export of format 1 has only the sha256 of the file
         bad_exp = {}
         for exp, ref in index["experiments"].items():
-            if exp not in design.experiments:
+            here_name = design.canonical(exp)
+            if here_name not in design.experiments:
                 bad_exp[exp] = "the experiment is not in the design here"
                 continue
-            here = file_sha256(design.experiment(exp).folder / "experiment.yaml")
-            if here != ref["sha256"]:
-                bad_exp[exp] = "experiment.yaml differs between the two labs"
+            e = design.experiment(here_name)
+            if "content" in ref:
+                if comparable(e.data) != ref["content"]:
+                    bad_exp[exp] = f"experiment.yaml of {here_name} differs between the two labs (content)"
+            elif file_sha256(e.folder / "experiment.yaml") != ref["sha256"]:
+                bad_exp[exp] = (f"experiment.yaml of {here_name} differs between the two labs (an export of format 1: "
+                                "the bytes are compared)")
         for ipath, ref in index["instances"].items():
             try:
                 files = design.study(study_path(ipath)).files()
@@ -197,7 +283,24 @@ def import_(lab, in_file, log=print, dry=False):
             # the campaign records first: a run of a running campaign is provisional at once
             lab.campaigns.mkdir(parents=True, exist_ok=True)
             for p in sorted((work / "campaigns").glob("*.json")) if (work / "campaigns").is_dir() else []:
-                shutil.copy2(p, lab.campaigns / f"{p.stem}@{other['id']}.json")
+                d = json.loads(p.read_text())
+                if d.get("status") in ("running", "planned"):
+                    # its end comes with a later export (or "lab import --close")
+                    d["running_at_export"] = index["created"]
+                target = lab.campaigns / f"{p.stem}@{other['id']}.json"
+                if target.is_file() and json.loads(target.read_text()).get("status") == "closed" \
+                        and d.get("status") in ("running", "planned"):
+                    continue                            # closed by hand here: an old export does not open it
+                jsonout.write(target, d)
+            if (work / "repo.bundle").is_file():
+                try:
+                    fetch_bundle(lab, work / "repo.bundle", other["id"], log=log)
+                except (ExchangeError, trees.TreeError) as x:
+                    warnings.append(f"the commits of the runs are not here: {x} (a rebuild here needs them)")
+            missing = (index.get("bundle") or {}).get("missing", [])
+            if missing:
+                warnings.append(f"the export has not the commits {', '.join(m[:12] for m in missing)} of its runs "
+                                "(the other lab does not have them; a rebuild here needs them)")
         pins = trees.load(lab=lab)["trees"]
         root = lab.results / design.top.name
         have = {}
@@ -207,7 +310,7 @@ def import_(lab, in_file, log=print, dry=False):
                     have[r["id"]] = (f, r)
         for item in index["runs"]:
             entry, rid = item["entry"], item["entry"]["id"]
-            exp = rid.split("/")[0]
+            exp = item.get("experiment") or rid.split("/")[0]      # the name in the export
             if exp in bad_exp or exp not in index["experiments"]:
                 refused.append(f"{rid}: {bad_exp.get(exp, 'the experiment is not in the design of the other lab')}")
                 continue

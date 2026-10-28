@@ -422,7 +422,8 @@ def estimate(lab, design, exp):
     """(seconds, bytes) of the last run of an experiment in the lab space, or (None, None)."""
     root = lab.results / design.top.name
     best = None
-    for m in sorted(root.glob(f"**/{layout.EXPERIMENT_PREFIX}{exp}/*/manifest.json")) if root.is_dir() else []:
+    found = [m for name in design.names(exp) for m in root.glob(f"**/{layout.EXPERIMENT_PREFIX}{name}/*/manifest.json")]
+    for m in sorted(found, key=lambda m: m.parent.name) if root.is_dir() else []:
         try:
             d = json.loads(m.read_text())
         except (OSError, ValueError):
@@ -739,7 +740,12 @@ def detach(rec, extra):
 
 def status_lines(rec):
     d = rec.data
-    out = [f"campaign {rec.id}: {d['status']}" + (f" ({d['stopped']})" if d.get("stopped") else ""),
+    status = d["status"]
+    if "@" in rec.id and status in (PLANNED, RUNNING):
+        status = f"imported, not complete ({status} at the export of {d.get('running_at_export', '?')})"
+    elif "@" in rec.id and status == "closed":
+        status = f"imported, closed here at {d.get('closed', '?')} (it was {d.get('status_at_import')})"
+    out = [f"campaign {rec.id}: {status}" + (f" ({d['stopped']})" if d.get("stopped") else ""),
            f"  lab {d['lab']['id']} on {d['host']}, repo {d['repo']['rev'][:12]}, folder {d['folder']}"]
     for e in d["experiments"]:
         extra = f"run {e['run']}" if e.get("run") else e.get("note", "")

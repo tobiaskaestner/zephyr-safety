@@ -145,7 +145,7 @@ class Tree:
             raise BuildError(f"{run_dir}: the run list has no digest for {run_id}")
         if digest != want_digest:
             raise BuildError(f"{run_dir}: digest {digest}, the run list has {want_digest}")
-        exp = run_id.split("/")[0]
+        exp = self.design.run_experiment(run_id)
         efile = None
         if exp in self.design.experiments:
             efile = self.design.experiment(exp).folder / "experiment.yaml"
@@ -183,7 +183,7 @@ class Tree:
     def own_runs(self, folder, exp=None, roles=("evidence",)):
         out = []
         for r in self.data[folder].get("runs", []):
-            if exp is not None and r["id"].split("/")[0] != exp:
+            if exp is not None and self.design.run_experiment(r["id"]) != self.design.canonical(exp):
                 continue
             if r["role"] not in roles:
                 continue
@@ -227,7 +227,7 @@ class Tree:
         for r in self.data[folder].get("runs", []):
             if r["role"] == "excluded" or (folder, r["id"]) not in self.obs:
                 continue
-            exp = r["id"].split("/")[0]
+            exp = self.design.run_experiment(r["id"])
             if exp not in self.design.experiments:
                 continue
             res = []
@@ -254,8 +254,9 @@ class Tree:
 
         # experiments of the instance
         experiments, notes = [], []
-        for exp in sorted({r["id"].split("/")[0] for r in data.get("runs", [])}):
-            runs = [r for r in data["runs"] if r["id"].split("/")[0] == exp and (folder, r["id"]) in self.loaded]
+        for exp in sorted({self.design.run_experiment(r["id"]) for r in data.get("runs", [])}):
+            runs = [r for r in data["runs"] if self.design.run_experiment(r["id"]) == exp
+                    and (folder, r["id"]) in self.loaded]
             if not runs:
                 continue
             ej = self.experiment_json(folder, exp, runs)
@@ -524,7 +525,7 @@ class Context:
         return None
 
     def axis_number(self, o, axis):
-        exp = o.run.split("/")[0]
+        exp = self.tree.design.run_experiment(o.run)
         e = self.tree.design.experiments.get(exp)
         if e is None:
             return None
@@ -533,7 +534,7 @@ class Context:
 
     def owner_point(self, o):
         """The same point of the run of the owner study (for a re-run)."""
-        exp = o.run.split("/")[0]
+        exp = self.tree.design.run_experiment(o.run)
         owner = self.tree.design.experiments.get(exp)
         if owner is None:
             return None

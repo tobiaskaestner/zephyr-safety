@@ -440,6 +440,13 @@ know. The keys of the experiment file are:
    * - ``name``
      - Name of the experiment. It is the name of the folder in the output.
        The experiment folder must be ``ex-<name>``.
+   * - ``renamed_from``
+     - Optional. The earlier names of a renamed experiment (a name or a
+       list). The runs, refs and imports with an earlier name stay valid:
+       the run ids do not change (``<earlier name>/<UTC>``, folder
+       ``ex-<earlier name>/<UTC>``), and the tools map the earlier name to
+       ``name``. An earlier name must not be the name of another
+       experiment.
    * - ``app``
      - The app folder in ``tests/benchmarks/``.
    * - ``trees``

@@ -83,6 +83,8 @@ class Experiment:
         self.data = load("experiment", folder / "experiment.yaml")
         self.name = self.data["name"]
         self.acceptance = list(self.data.get("acceptance") or [])
+        rf = self.data.get("renamed_from") or []
+        self.renamed_from = [rf] if isinstance(rf, str) else list(rf)
 
     def file_ref(self):
         f = self.folder / "experiment.yaml"
@@ -105,6 +107,14 @@ class Design:
                 if e in self.experiments:
                     raise DesignError(f"experiment {e}: owned by {self.experiments[e].study} and {path}")
                 self.experiments[e] = Experiment(folder, path)
+        # the earlier names of renamed experiments: runs, refs and imports with these names stay valid
+        self.aliases = {}
+        for name, e in self.experiments.items():
+            for old in e.renamed_from:
+                if old in self.experiments or old in self.aliases:
+                    raise DesignError(f"experiment {name}: renamed_from {old!r} is the name of another "
+                                      "experiment or an earlier name of one")
+                self.aliases[old] = name
         for path, st in self.studies.items():
             for i in st.imports:
                 owner = self.experiments.get(i["experiment"])
@@ -127,9 +137,23 @@ class Design:
         except KeyError:
             raise DesignError(f"no study {path!r}") from None
 
+    def canonical(self, name):
+        """The current name of an experiment (an earlier name of a renamed experiment maps to it)."""
+        return self.aliases.get(name, name)
+
+    def names(self, name):
+        """The current name and the earlier names of an experiment."""
+        name = self.canonical(name)
+        e = self.experiments.get(name)
+        return [name, *(e.renamed_from if e else [])]
+
+    def run_experiment(self, run_id):
+        """The current experiment name of a run id <experiment>/<UTC>."""
+        return self.canonical(run_id.split("/")[0])
+
     def experiment(self, name):
         try:
-            return self.experiments[name]
+            return self.experiments[self.canonical(name)]
         except KeyError:
             raise DesignError(f"no experiment {name!r}") from None
 

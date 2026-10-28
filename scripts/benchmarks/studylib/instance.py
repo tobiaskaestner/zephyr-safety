@@ -184,7 +184,7 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campa
     if role != "evidence" and not reason:
         raise InstanceError(f"role {role} needs a reason")
     manifest = json.loads((run_dir / "manifest.json").read_text())
-    exp = manifest["experiment"]
+    exp = design.canonical(manifest["experiment"])      # an earlier name of a renamed experiment
     data = load(folder)
     root = layout.find_root(folder)
     study = design.study(layout.strip_board(layout.instance_path_of(folder, root)))
@@ -194,7 +194,7 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campa
     board = board_of(folder)
     if board and manifest.get("board") != board:
         raise InstanceError(f"the run is for board {manifest.get('board')}, the instance for {board}")
-    run_id = f"{exp}/{run_dir.name}"
+    run_id = f"{manifest['experiment']}/{run_dir.name}"   # the name of the run, never changed
     target = folder / layout.run_folder(run_id)
     copied_from = None
     if run_dir != target:
