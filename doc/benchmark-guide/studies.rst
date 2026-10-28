@@ -238,7 +238,9 @@ The standard plots of an experiment come from the plot script of its app,
 ``tests/benchmarks/<app>/scripts/plot.py`` (the common part is
 ``tests/benchmarks/common/scripts/latplot.py``, like the extractor). The
 build runs it for each experiment of an instance, with the app data of
-the evidence runs, and it writes ``ex-<experiment>/plots/`` of the
+the runs that are not excluded (evidence and adjustment, so a smoke
+campaign shows its graphs too; the legend names the role of an
+adjustment run), and it writes ``ex-<experiment>/plots/`` of the
 instance:
 
 - ``overview-<metric>.svg``: the exceedance probability (the share of

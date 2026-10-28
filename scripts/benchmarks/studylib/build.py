@@ -373,8 +373,9 @@ class Tree:
 
     def plot(self, folder, exp, runs):
         """The standard plots of an experiment of an instance (the plot.py of its app), from the app data
-        of the evidence runs, in ex-<exp>/plots/; None, or the reason why they failed."""
-        ev = sorted((r for r in runs if r["role"] == "evidence"), key=lambda r: r["id"].split("/")[-1])
+        of the runs that are not excluded (evidence and adjustment: a smoke campaign shows its graphs
+        too), in ex-<exp>/plots/; None, or the reason why they failed."""
+        ev = sorted((r for r in runs if r["role"] != "excluded"), key=lambda r: r["id"].split("/")[-1])
         if not ev:
             return None
         app = self.loaded[(folder, ev[0]["id"])][0]["run"]["app"]
@@ -384,7 +385,8 @@ class Tree:
         args = []
         for r in ev:
             run_dir = folder / layout.run_folder(r["id"])
-            args.append(f"{r['id']}={run_dir.parent / f'{run_dir.name}.{app}.json'}")
+            label = r["id"] if r["role"] == "evidence" else f"{r['id']} ({r['role']})"
+            args.append(f"{label}={run_dir.parent / f'{run_dir.name}.{app}.json'}")
         out = folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "plots"
         res = subprocess.run([sys.executable, str(script), str(out), *args], capture_output=True, text=True)
         return None if res.returncode == 0 else (res.stderr.strip().splitlines() or ["?"])[-1][:300]

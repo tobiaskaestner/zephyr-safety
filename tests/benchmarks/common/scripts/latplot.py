@@ -9,8 +9,9 @@ analysis build) runs it once for each experiment of an instance:
 
     plot.py OUT_DIR RUN_ID=APP_JSON ...
 
-APP_JSON is the app data of an evidence run (<UTC>.<app>.json, from the
-extractor). The plots go to OUT_DIR (ex-<experiment>/plots/ of the instance):
+APP_JSON is the app data of a run that is not excluded (<UTC>.<app>.json,
+from the extractor); RUN_ID can have the role in parentheses, for example
+"irq-smoke/20261028T001313Z (adjustment)". The plots go to OUT_DIR (ex-<experiment>/plots/ of the instance):
 
     overview-<metric>[-<k>].svg   the exceedance probability of each point (the
                                   newest run), at most 8 points in one chart
@@ -151,7 +152,7 @@ def plot_experiment(app, metrics, out, runs, scripts):
             for rid, d in data[-PER_CHART:]:
                 q = next((x for x in d.get("points", []) if x["tree"] == p["tree"] and x["point"] == p["point"]), None)
                 if q and metric in q["reps"][0].get("hists", {}):
-                    series.append((rid.split("/")[-1], q["reps"][0]["hists"][metric]))
+                    series.append((rid.split("/", 1)[-1], q["reps"][0]["hists"][metric]))
             ccdf_chart(out / f"ccdf-{tag}.svg", f"{metric}: {p['tree']}/{p['point']}, each run", series)
             hist_chart(out / f"hist-{tag}.svg", f"{metric}: {p['tree']}/{p['point']}, run {data[-1][0]}",
                        p["reps"][0]["hists"][metric])

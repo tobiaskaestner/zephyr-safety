@@ -173,7 +173,7 @@ def experiment_page(folder, exp, root, studies, design_names=None):
     plots_file = edir / "plots" / "plots.json"
     if plots_file.is_file():
         plots = json.loads(plots_file.read_text())
-        out.append(f"<h2>Plots</h2><div class='small'>From the evidence runs {esc(', '.join(plots['runs']))} "
+        out.append(f"<h2>Plots</h2><div class='small'>From the runs {esc(', '.join(plots['runs']))} "
                    f"(the plot.py of {esc(plots['app'])}).</div>")
         for kind in ("overview", "ccdf", "hist"):
             for p in [p for p in plots["plots"] if p["kind"] == kind]:
