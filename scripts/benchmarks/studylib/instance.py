@@ -241,6 +241,27 @@ def add_reference(folder, other_folder, run_id, reason):
         save(folder, data)
 
 
+def exclude_campaign(root, campaign_id, reason):
+    """Give each run of a campaign (run-list entry "campaign") below root the role excluded with
+    the reason; return [(instance folder, run id)] of the changed entries."""
+    if not reason:
+        raise InstanceError("an exclusion needs a reason")
+    changed = []
+    for folder in layout.instance_folders(root):
+        with locked(folder):
+            data = load(folder)
+            hit = False
+            for r in data.get("runs", []):
+                if r.get("campaign") == campaign_id and r["role"] != "excluded":
+                    r["role_before"] = r["role"]
+                    r["role"], r["reason"] = "excluded", reason
+                    changed.append((folder, r["id"]))
+                    hit = True
+            if hit:
+                save(folder, data)
+    return changed
+
+
 def add_verdict(folder, verdict, by, text=None, hypothesis=None, check=None, central_result=None, date=None):
     """Set the manual verdict of a check (hypothesis + check) or of a conclusion (central_result)."""
     if not by:

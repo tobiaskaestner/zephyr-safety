@@ -23,7 +23,9 @@ COMMANDS = [
     ["instance", "verify", "r"],
     ["analysis", "build", "r"],
     ["analysis", "check", "r"],
-    ["analysis", "show", "r", "--brief"],
+    ["analysis", "show", "r", "--details"],
+    ["analysis", "missing"],
+    ["instance", "exclude", "r", "--campaign", "c", "--reason", "x"],
     ["analysis", "html", "r"],
 ]
 

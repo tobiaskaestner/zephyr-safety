@@ -237,7 +237,13 @@ against ``.config``.
 ``experiment.json`` has one row for each run, tree, point, repetition and
 metric, with the percentiles. ``study.json`` has the acceptance checks,
 the rebuild checks, the hypotheses with each check (measured value,
-limit, verdict) and the central results as filled sentences.
+limit, verdict) and the central results as filled sentences. The
+``measured`` text of a check has all values if there are 4 or fewer; else
+it has a short form (``6 values, min 100, max 105; 3 outside the limit:
+...``), and ``measured_lines`` has all of them (``values`` has them as
+data). A check or a central result that waits for a run has
+``missing_run`` (the experiment and the instance). A manual check that is
+open has the ``statement`` for the person.
 
 The tool study.py
 -----------------
@@ -257,7 +263,9 @@ lab space, a campaign makes the instances and adds each run (see
    # the aggregates, and a check that they come again from the same inputs
    scripts/benchmarks/study.py analysis build <results>/kernel-latency
    scripts/benchmarks/study.py analysis check <results>/kernel-latency
-   scripts/benchmarks/study.py analysis show <results>/kernel-latency --brief
+   scripts/benchmarks/study.py analysis show <folder>             # one line for each instance
+   scripts/benchmarks/study.py analysis show <folder> --details   # each check and central result
+   scripts/benchmarks/study.py analysis missing [<folder>]        # the runs that checks wait for
    scripts/benchmarks/study.py analysis html <results>/kernel-latency   # one HTML page: index.html
    # how each central result is made: definition, rows, sentences
    scripts/benchmarks/study.py analysis show <results>/kernel-latency --explain [ID ...]
@@ -265,7 +273,24 @@ lab space, a campaign makes the instances and adds each run (see
    scripts/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check h \
        --verdict wrong --by "<name>" --text "<why>"
 
+``analysis show`` and ``analysis missing`` read the instances at and below
+the folder that you give (any folder of a results tree). They name each
+instance by its folder below the results folder. The one line of an
+instance gives the hypotheses in numbers (confirmed, wrong, open, and the
+``draft`` checks), the central results with a sentence, the acceptance
+checks that are not confirmed, the notes, the failed runs (a
+``<UTC>.failed.json`` in the instance) and ``PROVISIONAL``. ``--details``
+gives each check with its measured text, each central result with its
+sentences or the reason why it has none, the failed runs, and for an open
+manual check its statement and the ``instance verdict`` command that
+closes it. ``analysis missing`` lists each experiment without an evidence
+run in an instance, with the checks and central results that wait for it:
+the runs to make next.
+
 Other commands: ``instance add --role excluded --reason <text>``,
+``instance exclude ROOT --campaign ID --reason TEXT`` (the role
+``excluded`` for all runs of a campaign, for example a test of the tools;
+the entry keeps the earlier role in ``role_before``),
 ``instance reference`` (a run of another instance that a check reads),
 ``instance seal``, ``instance verify``, and ``instance merge OTHER ROOT``: it adds the runs
 of another results tree that ROOT does not have, with their roles, after

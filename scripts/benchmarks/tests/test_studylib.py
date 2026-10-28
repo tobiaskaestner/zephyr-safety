@@ -600,3 +600,26 @@ def test_a_check_with_a_todo_text_is_a_draft(tmp_path, monkeypatch):
     hj = json.loads((inst / "study.json").read_text())["hypotheses"][0]
     assert hj["checks"][0]["verdict"] == "draft"        # the order holds, but nobody wrote the basis
     assert hj["verdict"] == "open" and "draft" in hj["open"]
+
+
+def test_missing_runs_and_the_summary(tmp_path, monkeypatch):
+    import study
+    design = make_design(tmp_path)
+    res = tmp_path / "results"
+    monkeypatch.setattr(build, "Design", lambda: design)
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    build.build(res / "top", log=lambda *a: None)
+    root, results = study.load_results(res / "top")
+    m = study.missing(results)
+    assert {k: set(v) for k, v in m.items()} == {("top/st-sub@nucleo_g474re", "exp1"): {"H1 a", "[c1]"}}
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    assert study.summary_line(results[inst], inst) == (
+        "top/st-sub@nucleo_g474re: H 0 confirmed, 0 wrong, 1 open; central 0 of 1")
+    assert set(study.load_results(inst)[1]) == {inst}          # a folder shows only its own instances
+
+
+def test_a_long_measured_text_is_short():
+    pts = [obs(f"p{i}", 100 + i) for i in range(6)]
+    out = ev({"experiment": "e", "metric": "irq", "stat": "p50", "expect": {"range": [0, 102]}}, pts)
+    assert out["measured"].startswith("6 values, min 100, max 105; 3 outside the limit: FAIL ")
+    assert len(out["measured_lines"]) == 6

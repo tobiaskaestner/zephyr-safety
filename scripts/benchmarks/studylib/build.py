@@ -27,7 +27,7 @@ from pathlib import Path
 
 from . import central, checks, instance, jsonout, layout, runfiles, seal, stats
 from .design import Design, repo_rel, repo_rev
-from .stats import NoValue
+from .stats import MissingRun, NoValue
 
 STATS = ["n", "invalid", "min", "p50", "p90", "p99", "p99.9", "p99.99", "max", "mean"]
 # Errors of the tools (not of the data): the check gets the verdict "tool error".
@@ -285,7 +285,8 @@ class Tree:
                     if m:
                         entry.update(verdict=m["verdict"], by=m.get("by"), measured=m.get("text", ""), limit="manual")
                     else:
-                        entry.update(verdict="open (manual)", by=None, measured="", limit="manual")
+                        entry.update(verdict="open (manual)", by=None, measured="", limit="manual",
+                                     statement=" ".join(str(c.get("statement", "")).split()))
                 else:
                     try:
                         out = checks.evaluate(c, src)
@@ -293,6 +294,8 @@ class Tree:
                                      limit=out["limit"], values=out["values"])
                     except NoValue as e:
                         entry.update(verdict="not evaluated", by="auto", measured=str(e), limit=safe_limit(c))
+                        if isinstance(e, MissingRun):
+                            entry["missing_run"] = {"experiment": e.experiment, "in": e.where}
                     except TOOL_ERRORS as e:
                         entry.update(verdict="tool error", by="auto", measured=f"{type(e).__name__}: {e}",
                                      limit=safe_limit(c))
@@ -313,7 +316,9 @@ class Tree:
                 results.append(central.evaluate(cr, src, ctx))
             except NoValue as e:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [],
-                                "by": "auto", "not_evaluated": str(e)})
+                                "by": "auto", "not_evaluated": str(e),
+                                **({"missing_run": {"experiment": e.experiment, "in": e.where}}
+                                   if isinstance(e, MissingRun) else {})})
             except TOOL_ERRORS as e:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [], "by": "auto",
                                 "not_evaluated": f"tool error: {type(e).__name__}: {e}"})
@@ -478,11 +483,11 @@ class Source:
             imp = next((i for i in study.imports if i["experiment"] == exp), None)
             if imp is None or imp.get("mode") == "rerun":
                 # a re-run study reads its own runs only, never those of the owner
-                raise NoValue(f"no evidence run of {exp} in {layout.ipath_display(t.ipath[self.folder])}")
+                raise MissingRun(exp, layout.ipath_display(t.ipath[self.folder]))
             folder = t.find_instance(imp["study"], t.board(self.folder))
             runs = t.own_runs(folder, exp)
             if not runs:
-                raise NoValue(f"no evidence run of {exp} in {layout.ipath_display(t.ipath[folder])}")
+                raise MissingRun(exp, layout.ipath_display(t.ipath[folder]))
         return [o for r in runs for o in t.obs[(folder, r["id"])]]
 
     def run_obs(self, ref):
@@ -517,12 +522,18 @@ class Context:
         return next((m for m in self.data.get("manual_verdicts", []) if m.get("central_result") == cr_id), None)
 
     def substudy_result(self, name, cr_id):
+        """The central result cr_id of the instance of the sub-study name below this instance; NoValue
+        if this results tree has no such instance (often: no run of it on this board yet)."""
         for c in self.tree.folders:
             if c.parent == self.folder and layout.strip_board(self.tree.ipath[c]).rsplit("/", 1)[-1] == name:
                 sj = self.tree.results.get(c)
                 if sj:
-                    return next((r for r in sj["central_results"] if r["id"] == cr_id), None)
-        return None
+                    r = next((r for r in sj["central_results"] if r["id"] == cr_id), None)
+                    if r is None:
+                        raise NoValue(f"the sub-study {name} has no central result {cr_id}")
+                    return r
+        raise NoValue(f"no instance of the sub-study {name} below {layout.ipath_display(self.tree.ipath[self.folder])} "
+                      "in this results tree (no run of it here yet)")
 
     def axis_number(self, o, axis):
         exp = self.tree.design.run_experiment(o.run)

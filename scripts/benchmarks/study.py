@@ -55,6 +55,8 @@ Instances (the run lists in a results tree):
     study.py instance add INSTANCE RUN [--role R --reason TEXT] [--copy]
                                           add a run to the run list of an instance;
                                           --copy copies a run from another place
+    study.py instance exclude ROOT --campaign ID --reason TEXT
+                                          give all runs of a campaign the role excluded
     study.py instance reference INSTANCE OTHER RUN_ID --reason TEXT
                                           add a run of another instance as a reference
     study.py instance verdict INSTANCE --verdict V --by NAME [--text T]
@@ -72,7 +74,11 @@ Analysis (ROOT is any folder of a results tree):
     study.py analysis build ROOT          write run.json, the app data,
                                           experiment.json and study.json
     study.py analysis check ROOT          check all seals, build again and compare
-    study.py analysis show ROOT [--brief] the verdicts and central results
+    study.py analysis show FOLDER [--details]
+                                          the verdicts of the instances at and below
+                                          FOLDER: one line each, or each check
+    study.py analysis missing [FOLDER]    the experiments without an evidence run, and
+                                          the checks and central results that wait
     study.py analysis show ROOT --explain [ID ...]
                                           how each central result is made: its
                                           definition, the rows and the sentences
@@ -85,6 +91,7 @@ study.py starts the study.py of that repo with the same arguments.
 """
 
 import argparse
+import json
 import os
 import sys
 from pathlib import Path
@@ -312,7 +319,7 @@ def cmd_campaign_status(args):
                 f = lab.results / e["instance"]
                 if (f / "study.json").is_file():
                     res[f] = build.load_json(f / "study.json")
-        show(res, root, brief=True)
+        show(res, root)
     return 0
 
 
@@ -333,6 +340,14 @@ def cmd_instance_add(args):
     d = Design()
     rid = instance.add(d, args.instance, args.run, args.role, args.reason, args.copy)
     print(f"added {rid} to {args.instance}")
+
+
+def cmd_instance_exclude(args):
+    changed = instance.exclude_campaign(layout.find_root(args.root), args.campaign, args.reason)
+    for folder, rid in changed:
+        print(f"excluded {rid} in {folder}")
+    print(f"{len(changed)} runs of the campaign {args.campaign} excluded")
+    return 0 if changed else 1
 
 
 def cmd_instance_reference(args):
@@ -383,7 +398,7 @@ def cmd_build(args):
     print(f"built {len(t.results)} instances, {len(t.loaded)} runs; {w.written} files written")
     if t.made_by.get("dirty"):
         print("WARNING: the safety repo has changes that are not committed: the aggregates are not reproducible")
-    show(t.results, root, brief=True)
+    show(t.results, root)
 
 
 def cmd_check(args):
@@ -398,15 +413,57 @@ def cmd_check(args):
     return 0
 
 
-def show(results, root, brief=False):
+def failed_runs(folder):
+    """[(run id, step, error)] of the runs of an instance that stopped before their seal."""
+    out = []
+    for f in sorted(Path(folder).glob(f"{layout.EXPERIMENT_PREFIX}*/*.failed.json")):
+        try:
+            d = json.loads(f.read_text())
+        except (OSError, ValueError):
+            continue
+        out.append((f"{f.parent.name[len(layout.EXPERIMENT_PREFIX):]}/{f.name.split('.')[0]}", d.get("step"),
+                    d.get("error")))
+    return out
+
+
+def summary_line(sj, folder):
+    """One line of an instance: the verdicts in numbers."""
+    hv = [h["verdict"].split(" ")[0] for h in sj["hypotheses"]]
+    checks = [c["verdict"] for h in sj["hypotheses"] for c in h["checks"]]
+    crs = sj["central_results"]
+    parts = []
+    if hv:
+        parts.append(f"H {hv.count('confirmed')} confirmed, {hv.count('wrong')} wrong, "
+                     f"{len(hv) - hv.count('confirmed') - hv.count('wrong')} open"
+                     + (f" ({checks.count(build.DRAFT)} draft checks)" if build.DRAFT in checks else ""))
+    if crs:
+        parts.append(f"central {sum(1 for c in crs if not c.get('not_evaluated'))} of {len(crs)}")
+    bad_acc = sum(1 for a in sj.get("acceptance", []) for c in a["checks"] if c["verdict"] != "confirmed")
+    if bad_acc:
+        parts.append(f"{bad_acc} acceptance checks not confirmed")
+    if sj.get("notes"):
+        parts.append(f"{len(sj['notes'])} notes")
+    nf = len(failed_runs(folder))
+    if nf:
+        parts.append(f"{nf} failed runs")
+    if not sj.get("state", {}).get("final", True):
+        parts.append("PROVISIONAL")
+    return f"{layout.display(sj['instance'])}: " + ("; ".join(parts) if parts else "no hypotheses, no central results")
+
+
+def show(results, root, details=False):
+    """The verdicts of the instances: one line each, or (details) each check and central result."""
     for folder, sj in sorted(results.items(), key=lambda x: str(x[0])):
+        if not details:
+            print(summary_line(sj, folder))
+            continue
         hyps = sj["hypotheses"]
         crs = sj["central_results"]
-        if brief and not hyps and not any(c.get("texts") for c in crs):
-            continue
         print(f"\n== {layout.display(sj['instance'])}")
         for n in sj.get("notes", []):
             print(f"   NOTE {n}")
+        for rid, step, error in failed_runs(folder):
+            print(f"   FAILED RUN {rid} at '{step}': {error} (not in the run list)")
         for a in sj.get("acceptance", []):
             bad = [c for c in a["checks"] if c["verdict"] != "confirmed"]
             if bad:
@@ -416,14 +473,39 @@ def show(results, root, brief=False):
         for h in hyps:
             print(f"   {h['id']} {h['verdict']}{' (provisional)' if h.get('provisional') else ''} ({h['checks_confirmed']})")
             for c in h["checks"]:
-                if not brief or c["verdict"] in ("tool error", "not evaluated", build.DRAFT):
-                    print(f"      {c['id']} {c['verdict']}: {c.get('measured', '')[:140]}")
+                if c["verdict"] == "open (manual)":
+                    print(f"      {c['id']} open (manual): {c.get('statement') or '(no statement)'}")
+                    print(f"         give the verdict: study.py instance verdict {folder} --hypothesis {h['id']} "
+                          f"--check {c['id']} --verdict confirmed|wrong --by NAME --text WHY")
+                else:
+                    print(f"      {c['id']} {c['verdict']}: {c.get('measured', '')[:160]}")
         for c in crs:
             if c.get("not_evaluated"):
-                print(f"   [{c['id']}] not evaluated: {c['not_evaluated'][:120]}")
-            elif not brief or c.get("stat") == "conclusion":
-                for t in c.get("texts", [])[: (3 if brief else 50)]:
+                print(f"   [{c['id']}] not evaluated: {c['not_evaluated'][:160]}")
+            else:
+                for t in c.get("texts", [])[:50]:
                     print(f"   [{c['id']}] {t}")
+
+
+def missing(results):
+    """{(instance display, experiment): [waiting items]} of the checks and central results that wait
+    for an evidence run (the lowest level only: a parent that takes a result over is not counted)."""
+    out = {}
+    for folder, sj in sorted(results.items(), key=lambda x: str(x[0])):
+        top = layout.display(sj["instance"]).split("/", 1)[0]
+        for h in sj["hypotheses"]:
+            for c in h["checks"]:
+                m = c.get("missing_run")
+                if m:
+                    key = (f"{top}/{m['in']}" if m["in"] != "(top)" else top, m["experiment"])
+                    out.setdefault(key, []).append(f"{h['id']} {c['id']}")
+        for c in sj["central_results"]:
+            m = c.get("missing_run")
+            if m:
+                key = (f"{top}/{m['in']}" if m["in"] != "(top)" else top, m["experiment"])
+                out.setdefault(key, []).append(f"[{c['id']}]")
+    # a parent that takes a central result over has the same entry: count it once
+    return {k: list(dict.fromkeys(v)) for k, v in out.items()}
 
 
 def explain(results, design, only=None):
@@ -456,17 +538,40 @@ def explain(results, design, only=None):
                 print(f"   unfilled placeholders: {c['unfilled']} (no such value in the rows)")
 
 
-def cmd_show(args):
-    root = layout.find_root(args.root)
+def load_results(folder):
+    """{instance folder: study.json} of the instances at and below folder (a folder of a results tree)."""
+    root = layout.find_root(folder)
+    below = Path(folder).resolve()
     res = {}
     for f in layout.instance_folders(root):
         p = f / "study.json"
-        if p.is_file():
+        if p.is_file() and f.resolve().is_relative_to(below):
             res[f] = build.load_json(p)
+    return root, res
+
+
+def cmd_show(args):
+    root, res = load_results(args.root)
     if args.explain is not None:
         explain(res, Design(), args.explain)
         return
-    show(res, root, brief=args.brief)
+    show(res, root, details=args.details)
+
+
+def cmd_missing(args):
+    root, res = load_results(args.root)
+    m = missing(res)
+    if not m:
+        print("no check and no central result waits for a run")
+        return 0
+    for (where, exp), items in sorted(m.items()):
+        checks_ = [i for i in items if not i.startswith("[")]
+        crs = [i for i in items if i.startswith("[")]
+        print(f"{where}: {exp}: no evidence run; waits: "
+              + ", ".join(x for x in (f"{len(checks_)} checks ({', '.join(checks_)})" if checks_ else "",
+                                      f"{len(crs)} central results ({', '.join(crs)})" if crs else "") if x))
+    print(f"{len({e for _, e in m})} experiments to run; 'study.py campaign check <folder> --only EXP ...'")
+    return 0
 
 
 def cmd_html(args):
@@ -577,6 +682,11 @@ def parser():
     s.add_argument("--reason")
     s.add_argument("--copy", action="store_true")
     s.set_defaults(func=cmd_instance_add)
+    s = inst.add_parser("exclude", help="give all runs of a campaign the role excluded")
+    s.add_argument("root", help="a folder of the results tree")
+    s.add_argument("--campaign", required=True)
+    s.add_argument("--reason", required=True)
+    s.set_defaults(func=cmd_instance_exclude)
     s = inst.add_parser("reference")
     s.add_argument("instance")
     s.add_argument("other")
@@ -613,12 +723,15 @@ def parser():
     s = ana.add_parser("check", help="check all seals, build again and compare")
     s.add_argument("root")
     s.set_defaults(func=cmd_check)
-    s = ana.add_parser("show", help="the verdicts and central results")
+    s = ana.add_parser("show", help="the verdicts: one line for each instance at and below ROOT")
     s.add_argument("root")
-    s.add_argument("--brief", action="store_true")
+    s.add_argument("--details", action="store_true", help="each check and central result")
     s.add_argument("--explain", nargs="*", metavar="ID",
                    help="for each central result (or these ids): its definition, the rows and the sentences")
     s.set_defaults(func=cmd_show)
+    s = ana.add_parser("missing", help="the experiments without an evidence run that checks wait for")
+    s.add_argument("root", nargs="?", default=".")
+    s.set_defaults(func=cmd_missing)
     s = ana.add_parser("html", help="one HTML page with all study.json files")
     s.add_argument("root")
     s.add_argument("--out")

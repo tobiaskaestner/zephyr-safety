@@ -182,6 +182,10 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     assert (runs[0]["role"], runs[0]["reason"], runs[0]["campaign"]) == ("adjustment", "a test of the tools", rec.id)
     assert "board did not answer" in (lab.folder / data["experiments"][0]["log"]).read_text()
     assert "failed at 'flash': no answer" in data["experiments"][0]["note"]
+    # all runs of a campaign out at once
+    assert instance.exclude_campaign(lab.results, rec.id, "the tools changed") == [(folder, runs[0]["id"])]
+    r = instance.load(folder)["runs"][0]
+    assert (r["role"], r["reason"], r["role_before"]) == ("excluded", "the tools changed", "adjustment")
     # resume: only the failed experiment runs again; a changed repo stops the campaign
     monkeypatch.setattr(trees, "repo_state", lambda path: ("r" * 40, " M x"))
     with pytest.raises(campaign.CampaignError):

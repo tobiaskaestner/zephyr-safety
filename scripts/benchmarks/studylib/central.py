@@ -120,13 +120,16 @@ def group_row(g, metric, group_by):
 
 def from_obs(cr, src):
     f = cr.get("from") or {}
-    obs, missing = [], []
+    obs, missing, errs = [], [], []
     for e in checks.as_list(f.get("experiment")):
         try:
             obs += src.observations(e)
         except NoValue as err:
             missing.append(str(err))
+            errs.append(err)
     if not obs and missing:
+        if len(errs) == 1:
+            raise errs[0]                 # a MissingRun stays one (analysis missing lists it)
         raise NoValue("; ".join(missing))
     if missing:
         src.notes.extend(missing)
@@ -151,9 +154,7 @@ def evaluate(cr, src, ctx):
     rows = []
 
     if "substudy" in f:
-        sub = ctx.substudy_result(f["substudy"], cr["id"])
-        if sub is None:
-            raise NoValue(f"sub-study {f['substudy']} has no central result {cr['id']}")
+        sub = ctx.substudy_result(f["substudy"], cr["id"])     # NoValue with the reason
         return {**sub, "from": {"substudy": f["substudy"]}}
 
     if st == "conclusion" or (st is None and "hypotheses" in f):

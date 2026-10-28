@@ -36,6 +36,14 @@ class NoValue(Exception):
     """The data do not give the value (the metric is absent, a form has no tool)."""
 
 
+class MissingRun(NoValue):
+    """No evidence run of an experiment in an instance: the run is to be made (analysis missing)."""
+
+    def __init__(self, experiment, where):
+        super().__init__(f"no evidence run of {experiment} in {where}")
+        self.experiment, self.where = experiment, where
+
+
 HIST_STATS = {"n", "min", "max", "mean", "invalid"}
 _Q = re.compile(r"^p(\d+(?:\.\d+)?)$")
 _COUNT = re.compile(r"^count_ge\((\d+)\)$")

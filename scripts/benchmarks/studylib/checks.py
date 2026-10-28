@@ -466,6 +466,29 @@ def limit_text(expect):
     return "the same histogram, bin for bin"
 
 
+# Up to this number of lines, "measured" has them all; with more, it has a short form (the
+# number of values, min and max, the lines outside the limit) and "measured_lines" has them all.
+MEASURED_LINES = 4
+
+
+def short_measured(res):
+    if len(res.lines) <= MEASURED_LINES:
+        return "; ".join(res.lines)
+    fails = [ln for ln in res.lines if ln.startswith("FAIL ")]
+    nums = [v["value"] for v in res.values if isinstance(v.get("value"), (int, float)) and not isinstance(v.get("value"), bool)]
+    text = f"{len(res.lines)} values"
+    if nums:
+        text += f", min {fmt(min(nums))}, max {fmt(max(nums))}"
+    if fails:
+        text += f"; {len(fails)} outside the limit: " + "; ".join(fails[:3]) + ("; ..." if len(fails) > 3 else "")
+    else:
+        text += "; all in the limit"
+    return text
+
+
 def finish(res, limit):
-    return {"verdict": "confirmed" if res.ok else "wrong", "measured": "; ".join(res.lines),
-            "limit": limit, "values": res.values}
+    out = {"verdict": "confirmed" if res.ok else "wrong", "measured": short_measured(res),
+           "limit": limit, "values": res.values}
+    if len(res.lines) > MEASURED_LINES:
+        out["measured_lines"] = list(res.lines)
+    return out
