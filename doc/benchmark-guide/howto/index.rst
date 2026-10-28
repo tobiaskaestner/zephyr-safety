@@ -9,4 +9,7 @@ the tools work as they do.
    :maxdepth: 1
 
    wire-the-nucleo-g474re
+   make-a-hardware-map
+   add-a-tree
    add-a-board
+   reproduce-a-data-point

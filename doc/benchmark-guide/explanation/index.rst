@@ -11,5 +11,6 @@ work in this way.
    method
    timing-diagrams
    apps
+   reproducibility
    code-placement
    documentation-guidelines

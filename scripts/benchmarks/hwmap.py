@@ -48,7 +48,7 @@ def load(path, schema_file=None):
     if not path.is_file():
         raise HwMapError(
             f"no hardware map {path}; make it with 'west twister --generate-hardware-map {path.name}"
-            " --persistent-hardware-map' (see the benchmark guide, host tools)"
+            " --persistent-hardware-map' (see the benchmark guide, howto/make-a-hardware-map)"
         )
     entries = yaml.safe_load(path.read_text())
     if not isinstance(entries, list):

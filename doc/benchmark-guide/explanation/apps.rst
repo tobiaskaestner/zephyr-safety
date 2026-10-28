@@ -44,7 +44,7 @@ The three measurement apps have the same frame:
 
 Each ``testcase.yaml`` of a measurement app is a build check only
 (``build_only: true``). A data point comes only from
-``scripts/benchmarks/run.py`` (see :doc:`../host-tools`).
+``scripts/benchmarks/run.py`` (see :doc:`../reference/cli/run-py`).
 
 ``irq_latency`` (M1)
 --------------------

@@ -219,7 +219,7 @@ Pinned trees (``study.py trees``)
    # all three: [--trees-root DIR]
 
 The pins are the west manifests ``validation/trees/<tree>.yml`` (see
-:doc:`host-tools`). The paths come from the lab space. ``setup`` makes the
+:doc:`reference/files/trees-yaml`). The paths come from the lab space. ``setup`` makes the
 west workspace ``<trees root>/<tree>/`` of each tree, with a copy of its
 manifest, and runs ``west update`` with the cache ``<[trees]
 source>/<tree>`` of the lab space if it exists. A project that is not in
@@ -394,7 +394,7 @@ Failure rules:
 
 - A failed experiment does not stop the campaign. The next experiment
   starts. The record gives the reason in ``note``: the step and the error
-  of ``<UTC>.failed.json`` (see :doc:`host-tools`), or a part of a run
+  of ``<UTC>.failed.json`` (see :doc:`reference/cli/run-py`), or a part of a run
   folder that ``run.py`` left. Such a run is not in the run list.
 - A change of the design repository (a new commit, or changes that are
   not committed) stops the campaign before the next experiment.

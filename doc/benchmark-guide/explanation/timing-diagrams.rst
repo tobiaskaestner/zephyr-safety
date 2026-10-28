@@ -30,7 +30,7 @@ durations, see the histograms of a run.
   does at that step, and which lock it holds.
 
 The masked sections are those of the code of the pinned trees (see
-:doc:`../host-tools`): the spinlocks of the kernel objects, ``stim_arm()``,
+:doc:`../reference/files/trees-yaml`): the spinlocks of the kernel objects, ``stim_arm()``,
 the middle part of PendSV, and the idle loop. ``_isr_wrapper``, the
 STM32 EXTI and GPIO drivers and the ISR exit do not lock interrupts (with
 ``CONFIG_PM=n``, the default of the apps).

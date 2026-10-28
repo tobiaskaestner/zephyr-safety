@@ -39,7 +39,7 @@ This guide uses these terms with one meaning each:
       names an app, one or more trees, and a list of points.
 
       A folder ``ex-<name>/`` with ``experiment.yaml`` (the input of
-      ``run.py``, see :doc:`../host-tools`) and ``experiment.md`` (question,
+      ``run.py``, see :doc:`files/experiment-yaml`) and ``experiment.md`` (question,
       method, references). The study that holds the folder owns the
       experiment. Another study can import it (``imports:``).
 

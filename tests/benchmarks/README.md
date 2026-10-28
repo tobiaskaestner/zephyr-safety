@@ -13,7 +13,7 @@ boards; their ports build, but nobody ran them yet.
 - NUCLEO-G474RE, connected through its ST-LINK (console at 115200
   baud). The probe and the console of each board are in the hardware
   map of the host, `hw-map.yml` (twister format, not checked in; see
-  the guide, host tools).
+  the guide page "Make a hardware map").
 - One wire from D2 (PA10) to A3 (PB0) on the Arduino header.
   - PA10 is also TIM2 channel 4. TIM2 makes the stimulus edge.
   - PB0 is on EXTI line 0, which has its own interrupt vector.
