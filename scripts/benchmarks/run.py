@@ -297,6 +297,9 @@ def run_build(args, env, bdir, log, name, cwd=None):
         f.flush()
         if args[0] == "west":
             trees.west_topdir(cwd)
+            extra = trees.west_config_problems(cwd)
+            if extra:
+                fail(f"{cwd}/.west/config has {', '.join(extra)}: it would change the build of {name}")
             env = {**env, "WEST_CONFIG_GLOBAL": os.devnull, "WEST_CONFIG_SYSTEM": os.devnull}
             env.pop("WEST_CONFIG_LOCAL", None)
             cmds = [[sys.executable, "-m", "west", *args[1:]]]
@@ -322,7 +325,7 @@ def build_point(tree_cfg, tree, point, src_bench, app, src_rev, board, board_cfg
     modules = [str(trees.repo_dir(tree_cfg, tree, name)) for name in board_cfg["modules"]]
     modules.append(str(src_bench.parents[1]))
     if builder == "west":
-        head = ["west", "build", "-d", str(bdir), "-b", board, str(app_dir), "--"]
+        head = ["west", "build", "--no-sysbuild", "-d", str(bdir), "-b", board, str(app_dir), "--"]
     else:
         head = ["cmake", "-GNinja", "-S", str(app_dir), "-B", str(bdir), f"-DBOARD={board}"]
     args = [
@@ -431,10 +434,13 @@ class Builder:
             log.unlink()
             if pdir is not None:
                 self.cache.copy_to(key, pdir, rename)
-            self.cache.note_use(key, self.use(tree, pt, "build"))
-            # another process may have stored the key in the meantime: its entry stays
-            out["build"] = {"key": key, "from": "build" if entry.get("built_by") == by else "cache",
-                            **({} if entry.get("built_by") == by else {"built_by": entry.get("built_by")})}
+            mine = entry.get("built_by") == by
+            # another process may have stored the key in the meantime: its entry stays, and the run
+            # gets its image (and its ELF digest)
+            self.cache.note_use(key, self.use(tree, pt, "build" if mine else "cache"))
+            out["elf_sha256"] = entry["elf_sha256"]
+            out["build"] = {"key": key, "from": "build" if mine else "cache",
+                            **({} if mine else {"built_by": entry.get("built_by")})}
         elif pdir is not None:
             for f in (elf, bdir / "zephyr" / "zephyr.hex", bdir / "zephyr" / ".config", bdir / "zephyr" / "zephyr.dts"):
                 if f.exists():
@@ -562,6 +568,9 @@ def west_topdir(path):
     return None
 
 
+NO_WEST_TOPDIR = "/latbench-no-west-topdir"
+
+
 def old_west_topdir(cmake, old_root, root):
     """Return [-DWEST_TOPDIR=...] for a build of a run before run.py set WEST_TOPDIR.
 
@@ -573,7 +582,9 @@ def old_west_topdir(cmake, old_root, root):
         return []
     top = west_topdir(old_root)
     if top is None:
-        return []
+        # The old build found no workspace (no prefix map). The trees are west workspaces now, so
+        # Zephyr would find one and map __FILE__: a folder that does not exist keeps the old strings.
+        return [f"-DWEST_TOPDIR={NO_WEST_TOPDIR}"]
     rel = Path(old_root).relative_to(top)
     if Path(root).parts[-len(rel.parts):] != rel.parts:
         print(f"warning: the old trees root {old_root} was in the west workspace {top}; the trees root {root}"
@@ -877,6 +888,8 @@ def main():
         "tools": {
             "cmake": tool_version(["cmake", "--version"]),
             "builder": builder.builder_id,
+            # the cmake builder runs the Zephyr scripts with the Python of PATH (west build: its own)
+            **({"cmake_python": shutil.which("python3")} if builder.builder == "cmake" else {}),
             "ninja": tool_version(["ninja", "--version"]),
             # The tools that flash this board (first word of each flash command).
             **{cmd[0]: tool_version([cmd[0], "--version"]) for cmd in board_cfg["flash"]},

@@ -146,4 +146,5 @@ def test_old_west_topdir(tmp_path):
     assert run.old_west_topdir(["cmake"], str(old_root), "/x/lab/latency-trees") == ["-DWEST_TOPDIR=/x/lab"]
     assert run.old_west_topdir(["cmake", "-DWEST_TOPDIR=/y"], str(old_root), "/x/lab/latency-trees") == []
     assert run.old_west_topdir(["cmake"], str(old_root), "/x/lab/trees") == []
-    assert run.old_west_topdir(["cmake"], str(tmp_path / "no-ws" / "latency-trees"), "/x/lab/latency-trees") == []
+    assert run.old_west_topdir(["cmake"], str(tmp_path / "no-ws" / "latency-trees"), "/x/lab/latency-trees") == [
+        f"-DWEST_TOPDIR={run.NO_WEST_TOPDIR}"]      # no workspace then: no prefix map now either

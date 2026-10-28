@@ -97,21 +97,19 @@ class Cache:
         (tmp / "entry.json").write_text(json.dumps(entry, indent=2) + "\n")
         final = self.entry_dir(key)
         final.parent.mkdir(parents=True, exist_ok=True)
-        have = self.get(key)
-        if have is not None:
-            shutil.rmtree(tmp)
-            return have
-        if final.exists():
-            # an incomplete entry (a crash during an old put): move it away first
-            final.rename(final.with_name(f"{key}.broken.{os.getpid()}"))
-        try:
-            tmp.rename(final)
-        except OSError:
-            shutil.rmtree(tmp, ignore_errors=True)
+        # one put of a key at a time: else a second process could take a complete entry that
+        # came in after its get() for a broken one and move it away
+        import fcntl
+        with open(final.parent / f"{key}.lock", "a") as lk:
+            fcntl.flock(lk, fcntl.LOCK_EX)
             have = self.get(key)
-            if have is None:
-                raise
-            return have
+            if have is not None:
+                shutil.rmtree(tmp)
+                return have
+            if final.exists():
+                # an incomplete entry (a crash during an old put): move it away first
+                final.rename(final.with_name(f"{key}.broken.{os.getpid()}"))
+            tmp.rename(final)
         return entry
 
     def copy_to(self, key, pdir, rename=None):

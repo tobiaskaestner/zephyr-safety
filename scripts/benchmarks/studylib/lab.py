@@ -28,8 +28,8 @@ lab folder:
     venv = .venv                    the virtual environment that study.py runs in
 
 The setup order: make the lab folder, clone the safety repo into it, make
-a virtual environment with scripts/benchmarks/requirements.txt of that
-repo, then run "study.py lab init --repo <clone>" with the Python of that
+a virtual environment with scripts/benchmarks/requirements.lock of that
+repo (the exact versions; requirements.txt has the ranges), then run "study.py lab init --repo <clone>" with the Python of that
 environment, in the lab folder. lab init records the environment; every
 study.py of the lab space then runs with its Python (see study.py).
 """
@@ -180,10 +180,10 @@ def in_venv():
     return sys.prefix != getattr(sys, "base_prefix", sys.prefix)
 
 
-def requirements(repo):
-    """[(name, specifier text)] of scripts/benchmarks/requirements.txt of a repo (no comments)."""
+def requirements(repo, name="requirements.txt"):
+    """[(name, specifier text)] of scripts/benchmarks/<name> of a repo (no comments)."""
     import re
-    f = Path(repo) / "scripts" / "benchmarks" / "requirements.txt"
+    f = Path(repo) / "scripts" / "benchmarks" / name
     out = []
     for ln in f.read_text().splitlines() if f.is_file() else []:
         ln = ln.split("#", 1)[0].strip()
@@ -194,32 +194,37 @@ def requirements(repo):
 
 
 def packages(repo):
-    """{name: installed version or None} of the requirements of the repo, in this Python."""
+    """{name: installed version or None} of the packages of requirements.txt and requirements.lock
+    (also the build packages of Zephyr), in this Python."""
     from importlib import metadata
     out = {}
-    for name, _ in requirements(repo):
+    for name, _ in requirements(repo) + requirements(repo, "requirements.lock"):
+        if name in out:
+            continue
         try:
             out[name] = metadata.version(name)
         except metadata.PackageNotFoundError:
             out[name] = None
-    return out
+    return dict(sorted(out.items()))
 
 
 def package_problems(repo):
-    """The requirements of the repo that this Python does not meet, as text."""
+    """The packages of this Python that are missing, out of the range of requirements.txt, or not
+    at the version of requirements.lock, as text."""
     have = packages(repo)
     out = []
     try:
         from packaging.specifiers import SpecifierSet
     except ImportError:
         SpecifierSet = None
-    for name, spec in requirements(repo):
-        v = have.get(name)
-        if v is None:
-            out.append(f"{name}: not installed (requirements: {name}{spec})")
-        elif spec and SpecifierSet is not None and v not in SpecifierSet(spec):
-            out.append(f"{name}: {v} does not meet {spec}")
-    return out
+    for fname in ("requirements.txt", "requirements.lock"):
+        for name, spec in requirements(repo, fname):
+            v = have.get(name)
+            if v is None:
+                out.append(f"{name}: not installed ({fname}: {name}{spec})")
+            elif spec and SpecifierSet is not None and v not in SpecifierSet(spec):
+                out.append(f"{name}: {v} does not meet {spec} ({fname})")
+    return list(dict.fromkeys(out))
 
 
 def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, results=None, hw_map=None):

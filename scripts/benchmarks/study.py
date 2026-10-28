@@ -173,7 +173,7 @@ def cmd_lab_init(args):
         print(f"  python       {lab.venv} (the Python of lab init)")
     else:
         print(f"  python       WARNING: lab init runs without a virtual environment ({sys.executable}); "
-              f"make one with {lab.repo}/scripts/benchmarks/requirements.txt and run lab init with its Python")
+              f"make one with {lab.repo}/scripts/benchmarks/requirements.lock and run lab init with its Python")
     for p in labmod.package_problems(lab.repo):
         print(f"  WARNING      {p}")
     print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
@@ -219,10 +219,12 @@ def cmd_lab_status(args):
 def cmd_lab_hwcheck(args):
     from studylib import hwcheck
     lab = labmod.require()
+    import hwmap
     try:
         ok, lines = hwcheck.check(lab, args.board, tree=args.tree)
-    except hwcheck.HwCheckError as e:
-        print(f"error: {e}")
+    except (hwcheck.HwCheckError, trees.TreeError, hwmap.HwMapError, OSError) as e:
+        # the check cannot run (build, flash, board, hardware map, tree, SDK, console)
+        print(f"error: {type(e).__name__}: {e}")
         return 2
     for ln in lines:
         print("  " + ln)

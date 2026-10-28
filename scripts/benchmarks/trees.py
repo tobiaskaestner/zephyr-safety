@@ -188,6 +188,23 @@ def copy_differs(copy, repo_file):
     return None
 
 
+# The keys that "west init -l" writes into <tree>/.west/config. Any other key (for example
+# build.cmake-args or build.sysbuild) would change each west build of the tree without a change
+# of the pins or the cache key, so the check of a tree refuses it.
+WEST_CONFIG_KEYS = {("manifest", "path"), ("manifest", "file"), ("zephyr", "base")}
+
+
+def west_config_problems(tdir):
+    """The keys of <tdir>/.west/config that west init does not write."""
+    import configparser
+    f = Path(tdir) / ".west" / "config"
+    if not f.is_file():
+        return []
+    cfg = configparser.ConfigParser()
+    cfg.read(f)
+    return sorted(f"{sec}.{key}" for sec in cfg.sections() for key in cfg[sec] if (sec, key) not in WEST_CONFIG_KEYS)
+
+
 class NotSetUp(TreeError):
     """A repo of the tree has no checkout yet (study.py trees setup makes it)."""
 
@@ -202,9 +219,16 @@ def check_tree(cfg, tree, repos=None):
         raise TreeError(f"unknown tree '{tree}'")
     spec_t = cfg["trees"][tree]
     if spec_t.get("manifest") and cfg.get("root") is not None:
-        why = copy_differs(cfg["root"] / tree / "manifest" / "west.yml", REPO_DIR / spec_t["manifest"])
+        tdir = cfg["root"] / tree
+        if not (tdir / ".west").is_dir():
+            raise NotSetUp(f"{tree}: {tdir} is not a west workspace yet, run 'study.py trees setup {tree}'")
+        why = copy_differs(tdir / "manifest" / "west.yml", REPO_DIR / spec_t["manifest"])
         if why:
             raise TreeError(f"{tree}: {why}")
+        extra = west_config_problems(tdir)
+        if extra:
+            raise TreeError(f"{tree}: {tdir}/.west/config has {', '.join(extra)}; such a key changes each west "
+                            "build of the tree: remove it (west config -d)")
     for name, spec in spec_t["repos"].items():
         if repos is not None and name not in repos:
             continue
