@@ -35,11 +35,13 @@ class HwCheckError(Exception):
 
 
 def tree_for(cfg, repos):
-    """The first tree of validation/trees/ (by name) that pins all repos (zephyr and the board modules)."""
-    for name, t in cfg["trees"].items():
-        if all(r in t["repos"] for r in repos):
-            return name
-    raise HwCheckError(f"no tree pins {repos}")
+    """The first tree (by name) that pins all repos (zephyr and the board modules) and that this lab
+    space set up; else the first that pins them (its check then says "not set up")."""
+    pinning = [name for name, t in cfg["trees"].items() if all(r in t["repos"] for r in repos)]
+    if not pinning:
+        raise HwCheckError(f"no tree pins {repos}")
+    ready = [t for t in pinning if trees.tree_state(cfg, t, repos)[0] == "ok"]
+    return (ready or pinning)[0]
 
 
 def board_tag(board):

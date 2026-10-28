@@ -179,7 +179,8 @@ The command makes sure that the loopback wire of a board works. It builds
 the app ``tests/benchmarks/loopback_check`` for the board from a pinned
 tree, through the build cache like a point of a run, and copies the
 image to ``.lab/hwcheck/<board>/``. The default tree is the first tree (by
-name) that pins ``zephyr`` and the modules of the board. Then it flashes
+name) that pins ``zephyr`` and the modules of the board and that the lab
+space set up (``ok``). Then it flashes
 the board with the ``flash`` commands of ``boards.yaml`` and reads the
 console until ``RESULT: OK`` or ``RESULT: FAIL``, for 60 s or less. The
 exit code is 0 for ``OK``, 1 for ``FAIL``, and 2 if the check cannot run
