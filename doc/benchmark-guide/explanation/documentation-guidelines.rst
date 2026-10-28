@@ -45,7 +45,9 @@ Facts
   page links only to pages and functions that exist.
 - The guide gives no measurement results, because the results change
   with each tree and each experiment. The results of a run are in its
-  result folder (see :ref:`benchguide-result-folder`).
+  result folder (see :ref:`benchguide-result-folder`). The only numbers
+  are the example output of the tutorials, and the tutorials say that
+  they are examples.
 
 Tutorials
 ---------
@@ -56,7 +58,11 @@ Tutorials
 - If a tutorial does not work yet, its first content is a
   ``.. warning::`` with the text "This tutorial does not work yet."
 - The console output in a tutorial is real output. It is a copy of the
-  output of a run, without changes.
+  output of a run, without changes. A long output can be shorter: the
+  line ``[...]`` marks each place where lines are left out.
+- A tutorial is run again from the start in a new lab space when a tool
+  that it uses changes its output. The tutorials index names the host and
+  the date of the run.
 
 Terms
 -----
