@@ -34,13 +34,15 @@ Make a branch and the files
    warning: validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.md: 3 TODO texts of a template
    warning: validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.yaml: 1 TODO texts of a template
    warning: validation/empirical/latencies/st-tutorial/hypotheses.yaml: 4 TODO texts of a template
+   warning: validation/empirical/latencies/st-tutorial/hypotheses.yaml: H1 has no checks: it stays open
    warning: validation/empirical/latencies/st-tutorial/study.md: 3 TODO texts of a template
    warning: validation/empirical/latencies/st-tutorial/study.yaml: 1 TODO texts of a template
-   0 errors, 5 warnings
+   0 errors, 6 warnings
 
 ``scaffold study`` also added ``use: tutorial`` to the top
 ``study.yaml``. The templates pass the lint without errors. Each
-``TODO`` text is a warning until you replace it.
+``TODO`` text is a warning until you replace it. The hypothesis of the
+template has no checks yet, so the lint also warns that it stays open.
 
 Write the design
 ----------------
@@ -133,8 +135,8 @@ Lint and commit
 
    $ safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
    0 errors, 0 warnings
-   $ git -C safety add -A && git -C safety commit -q -m "tutorial: a study of the optimization level" && git -C safety log --oneline -1
-   c8b5d8e tutorial: a study of the optimization level
+   $ git -C safety add -A && git -C safety commit -q -m 'tutorial: a study of the optimization level' && git -C safety log --oneline -1
+   53f6397 tutorial: a study of the optimization level
 
 The commit is necessary: ``run.py`` refuses a repository with changes
 that are not committed, because a run must name the exact source of its
@@ -147,11 +149,12 @@ Run it
 
    $ safety/scripts/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-tutorial
      planned  irq-opt (tutorial, nucleo_g474re) -> kernel-latency/st-tutorial@nucleo_g474re (will be made)
-     ok   design repo: /wrk/z/lab-tutorial/safety at c8b5d8eef2c5
+     ok   design repo: /wrk/z/lab-tutorial/safety at 53f63972cdfb
      [...]
    pre-flight check: ok
    $ safety/scripts/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-tutorial --detach
-   runs in the background (pid 936218); log /wrk/z/lab-tutorial/.lab/campaigns/20261028T012256Z/campaign.log; 'study.py campaign status 20261028T012256Z'
+   campaign 20261028T015945Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261028T015945Z.json
+   runs in the background (pid 962301); log /wrk/z/lab-tutorial/.lab/campaigns/20261028T015945Z/campaign.log; 'study.py campaign status 20261028T015945Z'
 
 After about three minutes:
 
@@ -183,9 +186,9 @@ result:
       statement: With {opt} optimizations, the direct path has a p50 of {p50:.0f} cycles.
       from: {'experiment': 'irq-opt', 'metric': 'irq'}
       stat: p50
-      row: run=irq-opt/20261028T012302Z, tree=ws-safety, point=speed, opt=speed, metric=irq, p50=56
+      row: run=irq-opt/20261028T015950Z, tree=ws-safety, point=speed, opt=speed, metric=irq, p50=56
         -> With speed optimizations, the direct path has a p50 of 56 cycles.
-      row: run=irq-opt/20261028T012302Z, tree=ws-safety, point=size, opt=size, metric=irq, p50=55
+      row: run=irq-opt/20261028T015950Z, tree=ws-safety, point=size, opt=size, metric=irq, p50=55
         -> With size optimizations, the direct path has a p50 of 55 cycles.
 
 Next: :doc:`audit-a-result`.

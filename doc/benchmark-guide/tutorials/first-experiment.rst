@@ -20,7 +20,7 @@ It builds nothing:
 .. code-block:: console
 
    $ safety/scripts/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --dry-run
-   safety 7004a897b2cc  trees ws-safety  5 points x 1
+   safety 8ac1023c3228  trees ws-safety  5 points x 1
      stock-idle: {'LATBENCH_IRQ_PATH_STOCK': 'y'} [] []
      wrapped-idle: {'LATBENCH_IRQ_PATH_WRAPPED': 'y'} [] []
      direct-idle: {'LATBENCH_IRQ_PATH_DIRECT': 'y'} [] []
@@ -40,10 +40,10 @@ builds each point, flashes the board and reads 100000 samples:
 .. code-block:: console
 
    $ safety/scripts/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --out tryout
-   safety 7004a897b2cc  trees ws-safety  5 points x 1
+   safety 8ac1023c3228  trees ws-safety  5 points x 1
    [...]
    board nucleo_g474re: probe 0042003F3433510A37363934 (STLINK-V3), console /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
-   run folder /wrk/z/lab-tutorial/tryout/irq-smoke/20261028T010550Z
+   run folder /wrk/z/lab-tutorial/tryout/irq-smoke/20261028T014803Z
    [ws-safety/stock-idle] build
    [ws-safety/stock-idle] rep 1
    [...]
@@ -57,7 +57,7 @@ builds each point, flashes the board and reads 100000 samples:
     ws-safety/direct-busy/rep1.log   direct        busy   irq  100000   38   50   54   56     58    1543  2045   51.94  28.73    0    0
 
    images: 0 of 5 from the build cache
-   results in /wrk/z/lab-tutorial/tryout/irq-smoke/20261028T010550Z  (sha256:3f21928bcd47d0b4a5f5e81341e6d10b81649e6d68dce67c07be947c7b926509)
+   results in /wrk/z/lab-tutorial/tryout/irq-smoke/20261028T014803Z  (sha256:7908e78a317f29d97773c31380e3e013cd04fd5efa5a4b49b12fd0fce04fe152)
 
 The table has one row for each point: the axes (``path``,
 ``background``) and the percentiles of the IRQ entry latency in core
@@ -68,18 +68,18 @@ Look at the run folder
 
 .. code-block:: console
 
-   $ find tryout/irq-smoke/20261028T010550Z -maxdepth 3 | sort
-   tryout/irq-smoke/20261028T010550Z
-   tryout/irq-smoke/20261028T010550Z/manifest.json
-   tryout/irq-smoke/20261028T010550Z/summary.txt
-   tryout/irq-smoke/20261028T010550Z/ws-safety
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/.config
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/build.log
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/irq_latency-ws-safety-direct-busy.elf
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/irq_latency-ws-safety-direct-busy.hex
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/rep1.log
-   tryout/irq-smoke/20261028T010550Z/ws-safety/direct-busy/zephyr.dts
+   $ find tryout/irq-smoke/20261028T014803Z -maxdepth 3 | sort
+   tryout/irq-smoke/20261028T014803Z
+   tryout/irq-smoke/20261028T014803Z/manifest.json
+   tryout/irq-smoke/20261028T014803Z/summary.txt
+   tryout/irq-smoke/20261028T014803Z/ws-safety
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/.config
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/build.log
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/irq_latency-ws-safety-direct-busy.elf
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/irq_latency-ws-safety-direct-busy.hex
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/rep1.log
+   tryout/irq-smoke/20261028T014803Z/ws-safety/direct-busy/zephyr.dts
    [...]
 
 Each point folder has the image (named after the app, the tree and the
@@ -88,15 +88,15 @@ of each repetition. ``manifest.json`` records where everything came from:
 
 .. code-block:: console
 
-   $ python3 -m json.tool tryout/irq-smoke/20261028T010550Z/manifest.json | head -20
+   $ python3 -m json.tool tryout/irq-smoke/20261028T014803Z/manifest.json | head -20
    {
        "experiment": "irq-smoke",
        "experiment_file": "validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml",
        [...]
        "safety": {
            "path": "/wrk/z/lab-tutorial/safety",
-           "rev": "7004a897b2cc030c541077e8efea32ec97399854",
-           "ref": "refs/latbench/run/irq-smoke/20261028T010550Z",
+           "rev": "8ac1023c322879ef031500a14b8d9d3359b5368e",
+           "ref": "refs/latbench/run/irq-smoke/20261028T014803Z",
            "bench_tree": "07bc9f50bbfcebb8bbac55714bcbe867296d34de",
            "bench_tree_kind": "firmware/1",
            "module_tree": "0f8dd9da43bb60aba06c67e2183156b4ffcd7e17"
@@ -112,9 +112,8 @@ Plot the distributions
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/plot.py ccdf --out irq-smoke-ccdf.svg --title "irq-smoke: IRQ entry latency" tryout/irq-smoke/20261028T010550Z/ws-safety/*/rep1.log && echo plotted
+   $ safety/scripts/benchmarks/plot.py ccdf --out irq-smoke-ccdf.svg --title 'irq-smoke: IRQ entry latency' tryout/irq-smoke/20261028T014803Z/ws-safety/*/rep1.log
    saved irq-smoke-ccdf.svg
-   plotted
 
 .. figure:: irq-smoke-ccdf.svg
    :width: 100%

@@ -19,7 +19,10 @@ In the first lab folder:
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py lab export -o ../lab-tutorial-runs.tar.gz
-   2 runs of 2 instances to /wrk/z/lab-tutorial-runs.tar.gz (sha256 1cba77683628)
+   2 runs of 2 instances to /wrk/z/lab-tutorial-runs.tar.gz (sha256 627673d9cf80)
+   $ /bin/ls -l ../lab-tutorial-runs.tar.gz*
+   -rw-r--r-- 1 tobias tobias 5283803 Oct 28 03:02 ../lab-tutorial-runs.tar.gz
+   -rw-r--r-- 1 tobias tobias      91 Oct 28 03:02 ../lab-tutorial-runs.tar.gz.sha256
 
 The export has the runs of this lab space with their seals, the campaign
 records, the design files, and a git bundle of the commits of the runs.
@@ -42,7 +45,7 @@ Make the second lab space there:
 .. code-block:: console
 
    $ mkdir lab-tutorial-b && cd lab-tutorial-b && git clone -q <safety repository> safety && python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/benchmarks/requirements.lock && .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety
-   lab space lab-tutorial-b-b84e23dd in /wrk/z/lab-tutorial-b
+   lab space lab-tutorial-b-59610c88 in /wrk/z/lab-tutorial-b
      design repo  /wrk/z/lab-tutorial-b/safety
      python       /wrk/z/lab-tutorial-b/.venv (the Python of lab init)
      trees        /wrk/z/lab-tutorial-b/trees
@@ -61,8 +64,8 @@ Import
 
    $ safety/scripts/benchmarks/study.py lab import ../lab-tutorial-runs.tar.gz --dry-run
    warning: kernel-latency/tutorial@nucleo_g474re: the study is not in the design here
-   refused: irq-opt/20261028T012302Z: the experiment is not in the design here
-   1 runs to add, 0 already here, 1 refused (from lab lab-tutorial-703113d7 on cos-workstation)
+   refused: irq-opt/20261028T015950Z: the experiment is not in the design here
+   1 runs to add, 0 already here, 1 refused (from lab lab-tutorial-df946ffd on cos-workstation)
 
 The import refuses the run of ``irq-opt``: the experiment is not in the
 design of this lab space. Two lab spaces can share only the runs of
@@ -72,10 +75,10 @@ rename do not count). The run of ``irq-smoke`` is good:
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py lab import ../lab-tutorial-runs.tar.gz
-   2 commits of the runs in refs/latbench/import/lab-tutorial-703113d7/ of /wrk/z/lab-tutorial-b/safety
+   2 commits of the runs in refs/latbench/import/lab-tutorial-df946ffd/ of /wrk/z/lab-tutorial-b/safety
    warning: kernel-latency/tutorial@nucleo_g474re: the study is not in the design here
-   refused: irq-opt/20261028T012302Z: the experiment is not in the design here
-   1 runs added, 0 already here, 1 refused (from lab lab-tutorial-703113d7 on cos-workstation)
+   refused: irq-opt/20261028T015950Z: the experiment is not in the design here
+   1 runs added, 0 already here, 1 refused (from lab lab-tutorial-df946ffd on cos-workstation)
    next: study.py analysis build /wrk/z/lab-tutorial-b/results/kernel-latency
 
 The commits of the runs are in the clone of this lab space now, so a

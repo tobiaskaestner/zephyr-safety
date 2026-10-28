@@ -27,7 +27,7 @@ Make the folder and clone the safety repository
 .. code-block:: console
 
    $ mkdir lab-tutorial && cd lab-tutorial && git clone -q <safety repository> safety && git -C safety log --oneline -1
-   7004a89 scripts: benchmarks: the command-line tools are executable
+   8ac1023 validation: latencies: the yaml comments name the new guide pages
 
 The clone is the :term:`design repository` of the lab space. It has the
 study designs and the tools. The tools of the lab space always come from
@@ -52,7 +52,8 @@ Find the console of the board in the list of the serial devices:
 
 .. code-block:: console
 
-   $ /bin/ls -l /dev/serial/by-id/
+   $ /bin/ls -l /dev/serial/by-id/ | grep STLINK
+   lrwxrwxrwx 1 root root 13 Oct 26 11:31 usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02 -> ../../ttyACM1
 
 The console of the ST-LINK has a name of the form
 ``usb-STMicroelectronics_STLINK-V3_<serial>-if02``. The long hex
@@ -88,7 +89,7 @@ Run ``lab init`` in the lab folder with the Python of the environment:
 .. code-block:: console
 
    $ .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety --trees-source /wrk/z/lab-benchmarks/latency-trees
-   lab space lab-tutorial-703113d7 in /wrk/z/lab-tutorial
+   lab space lab-tutorial-df946ffd in /wrk/z/lab-tutorial
      design repo  /wrk/z/lab-tutorial/safety
      python       /wrk/z/lab-tutorial/.venv (the Python of lab init)
      trees        /wrk/z/lab-tutorial/trees (clone from /wrk/z/lab-benchmarks/latency-trees)
@@ -126,8 +127,8 @@ Look at the lab space
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py lab status
-   lab space lab-tutorial-703113d7 in /wrk/z/lab-tutorial
-     design repo  /wrk/z/lab-tutorial/safety at 7004a897b2cc
+   lab space lab-tutorial-df946ffd in /wrk/z/lab-tutorial
+     design repo  /wrk/z/lab-tutorial/safety at 8ac1023c3228
      python       /wrk/z/lab-tutorial/.venv/bin/python (/wrk/z/lab-tutorial/.venv)
      zephyr sdk   /home/tobias/zephyr-sdk-1.0.1 (1.0.1)
      tree ws-safety            ok
@@ -156,7 +157,7 @@ the wire:
      static: drive 1, read 1 OK
      irq: n=1000 missed=0 min=336 avg=336 max=336 cycles
      RESULT: OK
-   nucleo_g474re: loopback wire ok; record /wrk/z/lab-tutorial/.lab/hwcheck/history/nucleo_g474re/20261028T010525Z.json
+   nucleo_g474re: loopback wire ok; record /wrk/z/lab-tutorial/.lab/hwcheck/history/nucleo_g474re/20261028T014748Z.json
 
 If you see ``RESULT: FAIL``, look at the wire D2 to A3 (see
 :doc:`../howto/troubleshoot-a-run`). The record keeps all lines of the
