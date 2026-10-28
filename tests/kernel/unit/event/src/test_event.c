@@ -106,6 +106,8 @@
  * - System call checks: K_SYSCALL_OBJ(), K_SYSCALL_OBJ_NEVER_INIT(),
  *   K_OOPS().
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change events.c
  * - @kconfig{CONFIG_WAITQ_SCALABLE}: the wake in two steps (see above).
  * - @kconfig{CONFIG_USERSPACE}: the verification functions
@@ -598,16 +600,16 @@ static void spy_on_lock(struct k_event *event)
 	kernel_unit_spy_on_lock(observe_lock, observe_release);
 }
 
-/*
- * Fake z_pend_curr() for a wait with a fixed result: the scheduler wakes
- * the thread with pend_result, and the waker wrote pend_events into the
- * thread. The spy records the wait request of the thread at the call.
- */
 static int pend_result;
 static uint32_t pend_events;
 static uint32_t events_at_pend;
 static uint32_t options_at_pend;
 
+/*
+ * Fake z_pend_curr() for a wait with a fixed result: the scheduler wakes
+ * the thread with pend_result, and the waker wrote pend_events into the
+ * thread. The spy records the wait request of the thread at the call.
+ */
 static int pend_model(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wait_q,
 		      k_timeout_t timeout)
 {

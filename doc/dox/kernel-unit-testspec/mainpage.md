@@ -78,7 +78,7 @@ operator name links to its definition on the page "Formal Design Model" of
 the architecture document. The link is relative: it works when both
 documents are in one deployed folder.
 
-Today the units `sem` and `mutex` have these sections.
+Each unit of this document has these sections.
 
 ## Scope
 

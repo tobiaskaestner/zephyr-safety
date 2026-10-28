@@ -100,6 +100,8 @@
  * - System call checks: K_SYSCALL_OBJ(), K_SYSCALL_OBJ_NEVER_INIT(),
  *   K_SYSCALL_MEMORY_READ(), K_SYSCALL_MEMORY_WRITE(), K_OOPS().
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change msg_q.c
  * - @kconfig{CONFIG_POLL}: the poll events of the message queue.
  * - @kconfig{CONFIG_USERSPACE}: the verification functions
@@ -631,6 +633,13 @@ static uint32_t spied_used(void)
 	return (spied_msgq != NULL) ? spied_msgq->used_msgs : 0U;
 }
 
+/*
+ * Fake unit_arch_irq_lock() with the lock model: increment the lock depth.
+ * The outer lock records the number of messages (used_at_lock) and returns
+ * KERNEL_UNIT_IRQ_KEY. A lock inside it returns NESTED_IRQ_KEY. Assumption:
+ * the outer lock is the lock of the message queue, and a nested lock is the
+ * scheduler spinlock.
+ */
 static unsigned int lock_model(void)
 {
 	lock_depth++;
@@ -643,6 +652,14 @@ static unsigned int lock_model(void)
 	return NESTED_IRQ_KEY;
 }
 
+/*
+ * Fake unit_arch_irq_unlock() with the lock model: decrement the lock depth,
+ * but not below 0. The key KERNEL_UNIT_IRQ_KEY releases the outer lock: the
+ * fake counts it and records the number of messages (used_at_release). Each
+ * other key is a nested release. Assumption: the key identifies the lock
+ * (the keys of lock_model()). The fake does not examine the order of the
+ * releases.
+ */
 static void unlock_model(unsigned int key)
 {
 	if (key == KERNEL_UNIT_IRQ_KEY) {
@@ -656,6 +673,12 @@ static void unlock_model(unsigned int key)
 	}
 }
 
+/*
+ * Fake z_unpend_first_thread_locked(): record the lock depth
+ * (depth_at_unpend), and return waiting_thread once, then NULL. Assumption:
+ * one thread at most waits on the message queue. The fake ignores the wait
+ * queue argument.
+ */
 static struct k_thread *unpend_model(_wait_q_t *wait_q)
 {
 	struct k_thread *thread = waiting_thread;
@@ -668,6 +691,12 @@ static struct k_thread *unpend_model(_wait_q_t *wait_q)
 	return thread;
 }
 
+/*
+ * Spy z_sched_ready_locked(): record the lock depth, the number of messages
+ * and the message in the swap data of the thread at the call. Assumption: the
+ * swap data of the thread points to a struct msg (reader_buf or writer_msg of
+ * the test). The fake does not change the thread.
+ */
 static void ready_spy(struct k_thread *thread)
 {
 	depth_at_ready = lock_depth;
@@ -675,6 +704,10 @@ static void ready_spy(struct k_thread *thread)
 	memcpy(&data_at_ready, thread->base.swap_data, sizeof(data_at_ready));
 }
 
+/*
+ * Spy z_handle_obj_poll_events(): record the lock depth and the number of
+ * messages at the call, and return poll_result.
+ */
 static __maybe_unused bool poll_spy(sys_dlist_t *events, uint32_t state)
 {
 	ARG_UNUSED(events);
@@ -686,6 +719,10 @@ static __maybe_unused bool poll_spy(sys_dlist_t *events, uint32_t state)
 	return poll_result;
 }
 
+/*
+ * Spy k_free(): record the lock depth at the call. The fake does not free
+ * memory.
+ */
 static void free_spy(void *ptr)
 {
 	ARG_UNUSED(ptr);
@@ -693,6 +730,13 @@ static void free_spy(void *ptr)
 	depth_at_free = lock_depth;
 }
 
+/*
+ * Fake z_pend_curr() for a wait with a fixed result: record the swap data of
+ * the current thread and the number of messages at the release of the lock,
+ * and return pend_result. Assumption: the waker did its work before the wait
+ * ends. No other thread runs in the fake, and the lock model does not see
+ * the release (lock_depth does not change).
+ */
 static int pend_model(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wait_q,
 		      k_timeout_t timeout)
 {
@@ -707,6 +751,11 @@ static int pend_model(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *
 	return pend_result;
 }
 
+/*
+ * Spy z_reschedule(): record the number of messages at the release of the
+ * lock (used_at_release). The fake does not switch threads, and the lock
+ * model does not see the release (lock_depth does not change).
+ */
 static void reschedule_spy(struct k_spinlock *lock, k_spinlock_key_t key)
 {
 	ARG_UNUSED(lock);
@@ -3630,6 +3679,8 @@ ZTEST(msgq_unit, test_lock_cleanup_busy_unlocks)
  * queries do not lock the message queue.
  *
  * @details
+ * - Setup: z_thread_malloc() gives the ring buffer of the test
+ *   (malloc_ring()).
  * - Action: k_msgq_init(), k_msgq_alloc_init(), k_msgq_get_attrs(),
  *   k_msgq_num_free_get(), k_msgq_num_used_get().
  * - Expected: no call of arch_irq_lock().
@@ -4877,6 +4928,9 @@ ZTEST(msgq_unit, test_obj_core_init_links_msgq)
  * @brief k_msgq_alloc_init() links the message queue only if the allocation succeeds.
  *
  * @details
+ * - Setup: z_thread_malloc() returns NULL (the default of the fake) for the
+ *   first call of k_msgq_alloc_init(). Then it gives the ring buffer of the
+ *   test (malloc_ring()).
  * - Action: k_msgq_alloc_init() with a failed allocation, then with a
  *   successful allocation.
  * - Expected: no call of k_obj_core_init_and_link() after the first call. One

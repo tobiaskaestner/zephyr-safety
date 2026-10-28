@@ -39,7 +39,9 @@ free number, and an id is never used again or changed.
   ``kernel_unit_fakes_ifdef()`` in ``<unit>/CMakeLists.txt``.
 - The use in a test: the statements of the test body, of the local functions
   that it calls or gives as an argument, and of the shared functions that it
-  calls. A statement ``<fake>_fake.return_val = x``, ``SET_RETURN_SEQ()``,
+  calls. A function-like macro gets the arguments of the call. A local
+  function that the test gives to a check (``zassert*()``, ``assert*()``,
+  ``kernel_unit_assert*()``) is a part of the check, not a double. A statement ``<fake>_fake.return_val = x``, ``SET_RETURN_SEQ()``,
   ``<fake>_fake.custom_fake = f`` or ``SET_CUSTOM_FAKE_SEQ()`` configures a
   fake. A read of ``call_count``, ``argN_val`` or ``argN_history``, and the
   history helpers (``zassert_call_history()``, ``zassert_called_before()``,
@@ -180,6 +182,7 @@ class Function:
     comment: str = ""  # the comment directly before the definition
     test: bool = False
     suite: str = ""
+    params: tuple = None  # a function-like macro: the names of its parameters
 
 
 ZTEST_SIG = re.compile(r"\bZTEST\s*\(\s*(\w+)\s*,\s*(\w+)\s*\)\s*$")
@@ -243,9 +246,75 @@ def functions_of(path):
                 break
             end = nl + 1
         line = text.count("\n", 0, m.start()) + 1
+        params = tuple(x.strip() for x in m.group(2).split(",") if x.strip())
         found.append(Function(m.group(1), code[m.end():end], path, line,
-                              comment=comment_before(text, comments, m.start())))
+                              comment=comment_before(text, comments, m.start()), params=params))
     return found
+
+
+def split_args(text):
+    """The arguments of a call (the text between its parentheses), split at the top-level commas."""
+    out, depth, start = [], 0, 0
+    for k, ch in enumerate(text):
+        if ch in "([{":
+            depth += 1
+        elif ch in ")]}":
+            depth -= 1
+        elif ch == "," and depth == 0:
+            out.append(text[start:k].strip())
+            start = k + 1
+    last = text[start:].strip()
+    if last or out:
+        out.append(last)
+    return out
+
+
+def expand(f, body, open_at):
+    """The body of the function f for the call whose parenthesis is at body[open_at].
+
+    For a function-like macro, each parameter in the text of the macro becomes
+    the argument of the call, so that a statement of the macro names the fake
+    of the call (``zassert_oops_before(unit_arch_irq_lock)``). For a function,
+    the body does not change."""
+    if not f.params:
+        return f.body
+    args = split_args(body[open_at + 1:match_paren(body, open_at) - 1])
+    names = list(f.params)
+    value = {}
+    if names[-1] == "...":
+        names.pop()
+        value["__VA_ARGS__"] = ", ".join(args[len(names):])
+        args = args[:len(names)]
+    if len(args) != len(names):
+        return f.body
+    value.update(zip(names, args))
+    return re.sub(r"\b(" + "|".join(re.escape(n) for n in value) + r")\b",
+                  lambda m: value[m.group(1)], f.body)
+
+
+def enclosing_call(body, pos):
+    """The name of the call whose argument list contains offset pos, or "".
+
+    The search goes back from pos over closed parentheses and braces, and over
+    the open brace of an initializer. It stops at the start of the statement."""
+    depth = 0
+    k = pos - 1
+    while k >= 0:
+        ch = body[k]
+        if ch in ")]}":
+            depth += 1
+        elif ch in "([{":
+            if depth:
+                depth -= 1
+            elif ch == "(":
+                m = re.search(r"([A-Za-z_]\w*)\s*$", body[:k])
+                return m.group(1) if m else ""
+            elif ch == "{" and not re.search(r"[)=,]\s*$", body[:k]):
+                return ""
+        elif ch == ";" and depth == 0:
+            return ""
+        k -= 1
+    return ""
 
 
 DOX_REF = re.compile(r"[@\\]ref\s+\S+\s+\"([^\"]*)\"|[@\\]ref\s+(\S+)")
@@ -254,19 +323,29 @@ DOX_BRACE = re.compile(r"[@\\]\w+\{([^}]*)\}")
 DOX_OTHER = re.compile(r"[@\\](?!\\)[A-Za-z_]+\b\s*")
 
 
-def plain(text):
+CODE_START, CODE_END = "\x00", "\x01"
+
+
+def plain(text, mark_code=False):
     """Text of a comment without Doxygen commands.
 
     ``@ref x "text"`` gives text, ``@ref x``, ``@p x``, ``@c x`` and ``@a x``
-    give x, ``@kconfig{X}`` gives X. Each other command is removed."""
+    give x, ``@kconfig{X}`` gives X. Each other command is removed. With
+    mark_code, the word of ``@p``, ``@c`` and ``@a`` is between CODE_START
+    and CODE_END (see code_marks())."""
     text = DOX_REF.sub(lambda m: m.group(1) if m.group(1) is not None else m.group(2), text)
-    text = DOX_WORD.sub(r"\1", text)
+    text = DOX_WORD.sub(CODE_START + r"\1" + CODE_END if mark_code else r"\1", text)
     text = DOX_BRACE.sub(r"\1", text)
     text = DOX_OTHER.sub("", text)
     return " ".join(text.split())
 
 
-def first_sentence(comment):
+def code_marks(text):
+    """Escaped text (esc()) with the marks of plain(mark_code=True) as code."""
+    return text.replace(CODE_START, "<code>").replace(CODE_END, "</code>")
+
+
+def first_sentence(comment, mark_code=False):
     """The first sentence of a comment, without the comment markers and commands."""
     lines = []
     for line in comment.splitlines():
@@ -279,7 +358,7 @@ def first_sentence(comment):
                 break
             continue
         lines.append(line)
-    text = plain(" ".join(lines))
+    text = plain(" ".join(lines), mark_code)
     m = re.match(r"(.+?[.:])(\s|$)", text)
     return (m.group(1) if m else text).rstrip(":") + ("" if not m or m.group(1).endswith(".") else ".")
 
@@ -685,6 +764,10 @@ NOT_LISTED = {"KERNEL_UNIT_FN", "KERNEL_UNIT_IF_ENABLED", "zassert_call_history"
               "zassert_called_before"}
 # Shared functions that check: the test lists them as checks.
 CHECKS = ("kernel_unit_assert", "zassert_stopped", "kernel_unit_sched_ref_assert_ok")
+# A local function that the test gives as an argument to a check (a name of a
+# node for the message, a filter of the calls before the lock) is a part of
+# the check, not an action of another thread: the names of these checks.
+CHECK_ARG = ("zassert", "assert", "kernel_unit_assert")
 # The history helpers of kernel_unit.h. A call of one of them by the test
 # checks the call history of all fakes. kernel_unit_history_index() is not
 # here: KERNEL_UNIT_FN() in its argument names the fake.
@@ -813,24 +896,33 @@ class Unit:
             if name in seen or name in NOT_LISTED or (
                     name not in self.local and name not in self.h.shared):
                 continue
-            called = body[m.end():m.end() + 1] == "(" or re.match(r"\s*\(", body[m.end():])
+            before = body[max(0, m.start() - 40):m.start()]
+            # The tag of a structure, not the function of the same name.
+            if re.search(r"\b(?:struct|union|enum)\s+$", before):
+                continue
+            paren = re.match(r"\s*\(", body[m.end():])
+            called = bool(paren)
             if name in self.local:
                 f = self.local[name]
                 # A custom fake is not an action: the assignment names it.
-                before = body[max(0, m.start() - 40):m.start()]
                 if not called and re.search(r"custom_fake\s*=\s*$|SET_CUSTOM_FAKE_SEQ\s*\([^,]*,\s*$",
                                             before):
+                    continue
+                # A function that the test gives to a check is a part of the check.
+                if not called and enclosing_call(body, m.start()).startswith(CHECK_ARG):
                     continue
                 kind = "call" if called else "action"
                 events.append((m.start(), Use(kind, "", "", name, via, origin)))
                 sub = []
-                self._scan(f.body, via + (name,), origin, seen | {name}, sub)
+                text = expand(f, body, m.end() + paren.end() - 1) if called else f.body
+                self._scan(text, via + (name,), origin, seen | {name}, sub)
                 events += [(m.start(), u) for u in sub]
             elif called:
                 f = self.h.shared[name]
                 events.append((m.start(), Use("shared", "", "", name, via, origin)))
                 sub = []
-                self._scan(f.body, via + (name,), origin, seen | {name}, sub)
+                self._scan(expand(f, body, m.end() + paren.end() - 1), via + (name,), origin,
+                           seen | {name}, sub)
                 # From a shared function, take only its configurations: a
                 # shared check is listed by its name.
                 # A shared function that it calls is not listed: the test does
@@ -864,6 +956,18 @@ class Unit:
                 self._scan(self.local[fn].body, (fn,), "suite", {fn}, out)
         self._suite_uses[suite] = out
         return out
+
+    def limit_uses(self, test):
+        """The uses of the test itself that can add a known limit.
+
+        A configuration that repeats the configuration of the suite setup
+        (the same fake, kind and value or custom fake, for example after a
+        reset of the fakes in a test) does not add a limit: the line "Limits
+        of the suite setup" has the limits of this double."""
+        suite = {(u.fake, u.how, u.detail)
+                 for u in effective(self.h, self, self.suite_uses(test.suite))}
+        return [u for u in self.uses(test) if u.origin == "test" and not (
+            u.what == "config" and (u.fake, u.how, u.detail) in suite)]
 
     def uses_reference(self, uses):
         return any(u.what == "shared" and u.detail == "kernel_unit_sched_ref_install"
@@ -929,19 +1033,26 @@ def limit_ref(lid):
     return f'@ref {limit_anchor(lid)} "{lid}"'
 
 
-SELECTOR_KEYS = {"fake", "how", "custom", "uses", "checks", "unit", "reference"}
+SELECTOR_KEYS = {"fake", "how", "custom", "uses", "checks", "unit", "reference", "test"}
 
 
-def selector_matches(sel, unit, uses):
+def selector_matches(sel, unit, uses, test=None):
     """True if the uses of a test match one selector of a limit.
 
     ``fake``, ``how`` and ``custom`` must match the same configuration.
     ``uses`` is a local or shared function that the test calls or gives as an
     argument. ``checks`` is a fake whose calls the test checks. ``unit``
     restricts the selector to one unit. ``reference: false`` (or true) needs a
-    test without (or with) the reference fake."""
+    test without (or with) the reference fake. ``test`` is the name of a test
+    (or a list of names), for a use that the other keys cannot see, for
+    example a read of a variable of a local model. A selector with ``test``
+    never matches the setup of a suite."""
     if "unit" in sel and sel["unit"] != unit.name:
         return False
+    if "test" in sel:
+        names = [sel["test"]] if isinstance(sel["test"], str) else sel["test"]
+        if test is None or test.name not in names:
+            return False
     if "reference" in sel and bool(sel["reference"]) != unit.uses_reference(uses):
         return False
     if {"fake", "how", "custom"} & sel.keys():
@@ -972,8 +1083,9 @@ def selector_matches(sel, unit, uses):
     return True
 
 
-def limits_of(limits, unit, uses):
-    return [lim for lim in limits if any(selector_matches(s, unit, uses) for s in lim.applies)]
+def limits_of(limits, unit, uses, test=None):
+    return [lim for lim in limits
+            if any(selector_matches(s, unit, uses, test) for s in lim.applies)]
 
 
 # --------------------------------------------------------------------------
@@ -1040,7 +1152,8 @@ def effective(h, unit, uses):
                 and prev.origin == u.origin and out[-1] is prev):
             out.pop()
             u = Use(u.what, u.fake, u.how, u.detail, u.via, u.origin)
-            u.replaces = describe_config(h, unit, prev)
+            if (prev.how, prev.detail) != (u.how, u.detail):
+                u.replaces = describe_config(h, unit, prev)
         out.append(u)
     return out
 
@@ -1123,7 +1236,7 @@ def render_test(h, unit, test, limits):
                         f"{len(h.ref)} fakes{via_text(inst)}{setup}{opt}</li>")
     actions = list(dict.fromkeys(u.detail for u in own if u.what == "action"))
     if actions:
-        items.append("<li>Actions of other threads or of an observer: "
+        items.append("<li>Actions of other threads, observers and callbacks: "
                      + ", ".join(code(a + "()") for a in actions) + "</li>")
     models = list(dict.fromkeys(u.detail for u in own if u.what == "shared"
                                 and u.detail in h.model_of and not u.detail.startswith(CHECKS)))
@@ -1132,9 +1245,12 @@ def render_test(h, unit, test, limits):
     if used_models:
         items.append("<li>Shared helpers: " + ", ".join(
             f'@ref {PAGE}_model_{h.model_of[m].slug} "{m}()"' for m in used_models) + "</li>")
-    if not items:
-        items.append("<li>None: each fake has its default after the reset.</li>")
+    # A helper that a test calls twice gives the same item twice.
+    items = list(dict.fromkeys(items))
     suite = [u for u in uses if u.origin == "suite" and u.what == "config"]
+    if not items:
+        items.append("<li>None: the test itself configures no fake.</li>" if suite else
+                     "<li>None: each fake has its default after the reset.</li>")
     if suite:
         fn = suite[0].via[0]
         n = len({u.fake for u in suite})
@@ -1164,7 +1280,8 @@ def render_test(h, unit, test, limits):
         citems.append(f"<li>{fake_ref(fake, unit)}: {kinds}{where}</li>")
     for s in shared_checks:
         f = h.shared.get(s)
-        brief = esc(first_sentence(f.comment)) if f is not None and f.comment else ""
+        brief = (code_marks(esc(first_sentence(f.comment, True)))
+                 if f is not None and f.comment else "")
         citems.append(f"<li>{code(s + '()')}" + (f": {brief}" if brief else "") + "</li>")
     if not citems:
         citems.append("<li>None: the test checks only the state of the object and the "
@@ -1172,7 +1289,7 @@ def render_test(h, unit, test, limits):
     checked = "@kunit_checks <ul>" + "".join(citems) + "</ul>"
 
     litems = [f"<li>{limit_ref(lim.id)} ({esc(lim.severity)}): {esc(lim.title)}</li>"
-              for lim in limits_of(limits, unit, own)]
+              for lim in limits_of(limits, unit, unit.limit_uses(test), test)]
     suite_lims = limits_of(limits, unit, unit.suite_uses(test.suite))
     if suite_lims:
         litems.append("<li>Limits of the suite setup: "
@@ -1527,7 +1644,9 @@ def render_catalog(h, limits):
                     "the scheduler contract.", ""]
         sels = []
         for s in lim.applies:
-            sels.append(", ".join(f"{k} = {code(str(v))}" for k, v in s.items()))
+            sels.append(", ".join(
+                f"{k} = " + (", ".join(code(str(x)) for x in v) if isinstance(v, list)
+                             else code(str(v))) for k, v in s.items()))
         out += ["Applies to:", ""] + ([f"- {x}" for x in sels] if sels else ["- no selector yet"]) \
             + [""]
         hits = []
@@ -1535,8 +1654,7 @@ def render_catalog(h, limits):
         for uname in shown:
             unit = units[uname]
             utests = [t for t in unit.tests
-                      if lim in limits_of(limits, unit, [u for u in unit.uses(t)
-                                                         if u.origin == "test"])]
+                      if lim in limits_of(limits, unit, unit.limit_uses(t), t)]
             group = f'@ref kernel_unit_{uname} "{esc(unit.kernel_source or uname)}"'
             if utests:
                 hits.append(f"<li>{group} ({len(utests)}): " + ", ".join(
@@ -1701,7 +1819,7 @@ def check(h, limits, deploy=None, doxyfile=DOXYFILE, rst=MODEL_RST):
             hit = False
             for unit in units.values():
                 for t in unit.tests:
-                    if selector_matches(s, unit, unit.uses(t)):
+                    if selector_matches(s, unit, unit.uses(t), t):
                         hit = True
                         break
                 if hit:
@@ -1783,7 +1901,7 @@ def main(argv=None):
             for x in unit.uses(t):
                 print(f"  {x.origin:5} {x.what:6} {x.fake or '-':32} {x.how:14} "
                       f"{x.detail} {'/'.join(x.via)}")
-            for lim in limits_of(limits, unit, [x for x in unit.uses(t) if x.origin == "test"]):
+            for lim in limits_of(limits, unit, unit.limit_uses(t), t):
                 print(f"  limit {lim.id}")
             for lim in limits_of(limits, unit, unit.suite_uses(t.suite)):
                 print(f"  limit {lim.id} (suite setup)")

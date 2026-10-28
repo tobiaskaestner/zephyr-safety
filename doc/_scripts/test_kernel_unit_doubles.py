@@ -347,7 +347,9 @@ def test_annotate_keeps_lines(harness):
     assert "@kunit_doubles" in seq and "@kunit_limits <ul>" in seq and "SET_RETURN_SEQ" in seq
     assert "@kunit_limit{" not in seq and "xrefitem" not in out
     nothing = next(x for x in out.splitlines() if "kunit_doubles_test_obj_test_nothing" in x)
-    assert "None: each fake has its default" in nothing
+    # The suite setup configures a fake: the test itself configures none.
+    assert "None: the test itself configures no fake." in nothing
+    assert "None: each fake has its default" not in nothing
 
 
 def test_annotate_without_marker_is_unchanged(harness):
@@ -436,9 +438,9 @@ def test_operator_of_is_the_first_paragraph():
 
 
 def test_limit_ids_of_the_repository():
-    """The ids are TDL-1 to TDL-16. The review finding is history."""
+    """The ids are TDL-1 to TDL-17. The review finding is history."""
     limits = kud.read_limits(kud.Harness())
-    assert [lim.id for lim in limits] == [f"TDL-{n}" for n in range(1, 17)]
+    assert [lim.id for lim in limits] == [f"TDL-{n}" for n in range(1, 18)]
     review = {lim.id: lim.review for lim in limits}
     assert review["TDL-1"] == "R1" and review["TDL-13"] == "R13"
     assert review["TDL-14"].startswith("R14") and review["TDL-15"].startswith("R14")
@@ -667,3 +669,171 @@ def test_obj_core_usage_group_and_callbacks():
     assert set(unit.local_fakes) == {f"unit_stats_{x}" for x in
                                      ("raw", "query", "reset", "disable", "enable")}
     assert all(f.descriptor == "unit_stats_desc" for f in unit.local_fakes.values())
+
+
+# --------------------------------------------------------------------------
+# Roll-out to all units (2026-10-28): fixes found in the review of the pages
+# of the 7 other units.
+
+
+def test_split_args_and_enclosing_call():
+    assert kud.split_args("a, f(b, c), {d, e}, ") == ["a", "f(b, c)", "{d, e}", ""]
+    assert kud.split_args("") == []
+    body = ("{\n\tx = 1;\n\tcheck(&(const struct rule){.lock = &l, .before = filt});\n"
+            "\trun(act, 2);\n\tw = act2;\n\tif (y) {\n\t\tz(other);\n\t}\n}")
+    assert kud.enclosing_call(body, body.index("filt")) == "check"
+    assert kud.enclosing_call(body, body.index("act,")) == "run"
+    assert kud.enclosing_call(body, body.index("act2")) == ""
+    assert kud.enclosing_call(body, body.index("other")) == "z"
+
+
+def add_tests(harness, text):
+    path = harness.root / "obj/src/test_obj.c"
+    path.write_text(path.read_text() + src(text))
+    unit = kud.Unit(harness, "obj")
+    return unit, {x.name: x for x in unit.tests}
+
+
+def test_macro_gets_the_arguments_of_the_call(harness):
+    """zassert_oops_before(fn) of the units: the order check names the fake of the call."""
+    unit, t = add_tests(harness, """
+        #define zassert_pend_before(fn)                                        \\
+                do {                                                           \\
+                        zassert_equal(z_pend_curr_fake.call_count, 1);         \\
+                        zassert_called_before(z_pend_curr, fn);                \\
+                } while (false)
+
+        /**
+         * @brief A test with a local macro.
+         */
+        ZTEST(obj_unit, test_macro)
+        {
+                zassert_pend_before(z_reschedule);
+        }
+        """)
+    checks = {(u.fake, u.how, u.via) for u in unit.uses(t["test_macro"]) if u.what == "check"}
+    assert checks == {("z_pend_curr", "calls", ("zassert_pend_before",)),
+                      ("z_pend_curr", "order", ("zassert_pend_before",)),
+                      ("z_reschedule", "order", ("zassert_pend_before",))}
+    assert unit.local["zassert_pend_before"].params == ("fn",)
+
+
+def test_struct_tag_and_check_arguments_are_not_actions(harness):
+    """A tag with the name of a function, and a function that a check gets."""
+    unit, t = add_tests(harness, """
+        struct state {
+                int a;
+        };
+
+        static struct state state(void)
+        {
+                return (struct state){1};
+        }
+
+        /* Return true for a call that can come before the lock. */
+        static bool early(fff_function_t fn)
+        {
+                return fn == KERNEL_UNIT_FN(z_valid);
+        }
+
+        /**
+         * @brief A test with a tag, a filter of a check and an action.
+         */
+        ZTEST(obj_unit, test_tag_and_filter)
+        {
+                struct state s = (struct state){0};
+
+                kernel_unit_assert_rule(&(const struct rule){.before_lock = early});
+                zassert_list(&s, early);
+                run(other);
+        }
+        """)
+    uses = unit.uses(t["test_tag_and_filter"])
+    assert [u.detail for u in uses if u.what in ("action", "call")] == ["other"]
+    assert not any(u.fake == "z_valid" for u in uses)
+    text = kud.render_test(harness, unit, t["test_tag_and_filter"], [])
+    assert "<li>Actions of other threads, observers and callbacks: <code>other()</code></li>" in text
+
+
+def test_same_configuration_once(harness):
+    """A helper that the test calls twice, and a second statement with the same value."""
+    unit, t = add_tests(harness, """
+        static void two_waiters(void)
+        {
+                z_pend_curr_fake.return_val = 0;
+                kernel_unit_set_waiting_threads(2);
+        }
+
+        /**
+         * @brief A test that calls a helper twice.
+         */
+        ZTEST(obj_unit, test_twice)
+        {
+                two_waiters();
+                two_waiters();
+        }
+        """)
+    text = kud.render_test(harness, unit, t["test_twice"], [])
+    assert text.count("kernel_unit_wake_waiting_thread()") == 1
+    a = kud.Use("config", "z_valid", "value", "true", ("setup",))
+    b = kud.Use("config", "z_valid", "value", "true", ("setup",))
+    out = kud.effective(harness, unit, [a, b])
+    assert len(out) == 1 and not hasattr(out[0], "replaces")
+
+
+def test_repeat_of_the_suite_setup_adds_no_limit(harness):
+    """The suite setup has TDL-5: a test that sets the same value again shows it once."""
+    unit, t = add_tests(harness, """
+        /**
+         * @brief A test that resets the fakes and sets the value of the suite again.
+         */
+        ZTEST(obj_unit, test_again)
+        {
+                z_sched_wake_fake.return_val = true;
+        }
+
+        /**
+         * @brief A test with another value.
+         */
+        ZTEST(obj_unit, test_other_value)
+        {
+                z_sched_wake_fake.return_val = false;
+        }
+        """)
+    limits = kud.read_limits(harness)
+    assert [lim.id for lim in kud.limits_of(limits, unit, unit.limit_uses(t["test_again"]))] == []
+    assert [lim.id for lim in kud.limits_of(
+        limits, unit, unit.limit_uses(t["test_other_value"]))] == ["TDL-5"]
+    text = kud.render_test(harness, unit, t["test_again"], limits)
+    section = text[text.index("@kunit_limits"):]
+    assert section.count("<li>") == 1 and "Limits of the suite setup" in section
+
+
+def test_selector_with_a_test_name(harness):
+    unit = kud.Unit(harness, "obj")
+    t = {x.name: x for x in unit.tests}
+    lim = kud.Limit("TDL-9", "low", "t", "", [{"test": ["test_nothing"], "unit": "obj"}])
+    assert kud.limits_of([lim], unit, unit.limit_uses(t["test_nothing"]), t["test_nothing"])
+    assert not kud.limits_of([lim], unit, unit.limit_uses(t["test_sequence"]),
+                             t["test_sequence"])
+    assert not kud.limits_of([lim], unit, unit.suite_uses("obj_unit"))
+    errors, _, _ = kud.check(harness, [lim])
+    assert errors == []
+    stale = kud.Limit("TDL-9", "low", "t", "", [{"test": "test_gone"}])
+    errors, _, _ = kud.check(harness, [stale])
+    assert any("stale" in e for e in errors)
+
+
+def test_catalog_shows_a_list_of_a_selector_as_names(harness):
+    lim = kud.Limit("TDL-9", "low", "t", "",
+                    [{"test": ["test_nothing", "test_sequence"], "unit": "obj"}])
+    text = "\n".join(kud.render_catalog(harness, [lim]))
+    assert ("- test = <code>test_nothing</code>, <code>test_sequence</code>, "
+            "unit = <code>obj</code>") in text
+
+
+def test_brief_of_a_shared_check_shows_parameters_as_code():
+    comment = "/**\n * @brief Call @p call and assert that a panic stops it.\n */"
+    assert kud.first_sentence(comment) == "Call call and assert that a panic stops it."
+    text = kud.code_marks(kud.esc(kud.first_sentence(comment, True)))
+    assert text == "Call <code>call</code> and assert that a panic stops it."

@@ -94,6 +94,8 @@
  *   are static inline. They are not fakes: the tests examine the real
  *   list.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change queue.c
  * - @kconfig{CONFIG_POLL}: the poll events of the queue.
  * - @kconfig{CONFIG_USERSPACE}: the verification functions
@@ -559,6 +561,12 @@ int32_t k_queue_alloc_prepend(struct k_queue *queue, void *data)
 	return z_impl_k_queue_alloc_prepend(queue, data);
 }
 
+/*
+ * Fake z_thread_malloc(): give the next free node of node_pool, or NULL if
+ * all N_NODES nodes are used. The test fails if the size is not the size of
+ * struct alloc_node. Assumption: a node does not go back to the pool, thus
+ * k_free() of a node does not make it free again.
+ */
 static void *malloc_from_pool(size_t size)
 {
 	zassert_equal(size, sizeof(struct alloc_node), "z_thread_malloc() size %zu", size);
@@ -652,6 +660,10 @@ static void observe_release(void)
 	len_at_release = queue_len(spied_queue);
 }
 
+/*
+ * Spy z_handle_obj_poll_events(): record the number of items of the spied
+ * queue at the call (len_at_poll), and return false (no poll event changed).
+ */
 static __maybe_unused bool poll_spy(sys_dlist_t *events, uint32_t state)
 {
 	ARG_UNUSED(events);

@@ -82,6 +82,8 @@
  *   k_spin_lock() and k_spin_unlock().
  * - Tracing: the SYS_PORT_TRACING_OBJ_* hooks. They are empty in the test.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change condvar.c
  * - @kconfig{CONFIG_USERSPACE}: the verification functions
  *   z_vrfy_k_condvar_*() and the kernel object of the condition variable.
@@ -325,6 +327,14 @@ static void observe(struct observation *obs)
 	obs->waiting_threads = waiting_threads;
 }
 
+/*
+ * Fake z_sched_wake() with the wait queue model: record what the models see
+ * (at_wake). If no thread waits, return false. Else the first thread of the
+ * wait queue wakes with swap_retval, and the fake returns true. If this thread
+ * is the current thread, swap_retval becomes the result of its wait.
+ * Assumption: the wait queue is in FIFO order (all waiting threads have the
+ * same priority), and the waiting threads are the threads of the model only.
+ */
 static bool wake_model(_wait_q_t *wait_q, int swap_retval, void *swap_data)
 {
 	ARG_UNUSED(wait_q);
@@ -382,6 +392,13 @@ static int pend_model(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *
 	return -EAGAIN;
 }
 
+/*
+ * Fake k_mutex_unlock() with the mutex model: record what the models see
+ * (at_mutex_unlock), and set the mutex to free. If an action of another thread
+ * waits for the mutex (mutex_waiter), it runs when the lock model is free.
+ * Return k_mutex_unlock_fake.return_val. Assumption: the current thread holds
+ * the mutex. The fake does not examine the owner and does not switch threads.
+ */
 static int mutex_unlock_model(struct k_mutex *m)
 {
 	ARG_UNUSED(m);
@@ -399,6 +416,13 @@ static int mutex_unlock_model(struct k_mutex *m)
 	return k_mutex_unlock_fake.return_val;
 }
 
+/*
+ * Fake k_mutex_lock() with the mutex model: record what the models see
+ * (at_mutex_lock), and set the mutex to held by the current thread. Return
+ * k_mutex_lock_fake.return_val. Assumption: the mutex is free, thus the call
+ * does not wait. The fake sets the mutex to held also for a return value
+ * that is not 0.
+ */
 static int mutex_lock_model(struct k_mutex *m, k_timeout_t timeout)
 {
 	ARG_UNUSED(m);
@@ -1587,8 +1611,9 @@ ZTEST(condvar_unit, test_syscall_wait_checks_condvar_and_mutex)
  * before it checks the mutex, locks condvar_lock or releases the mutex.
  *
  * @details
- * - Setup: the check of the condition variable fails, the check of the
- *   mutex passes.
+ * - Setup: k_object_find() returns an object. The custom fake
+ *   fail_condvar_check() of k_object_validation_check() returns -EBADF for
+ *   the condition variable and 0 for the mutex.
  * - Action: z_vrfy_k_condvar_wait() with TEST_TIMEOUT.
  * - Expected: one oops, after the first object check and before the
  *   second object check, arch_irq_lock() and k_mutex_unlock().
@@ -1615,8 +1640,9 @@ ZTEST(condvar_unit, test_syscall_wait_oops_on_bad_condvar)
  * condvar_lock or releases the mutex.
  *
  * @details
- * - Setup: the check of the condition variable passes, the check of the
- *   mutex fails.
+ * - Setup: k_object_find() returns an object. The custom fake
+ *   fail_mutex_check() of k_object_validation_check() returns 0 for the
+ *   condition variable and -EBADF for the mutex.
  * - Action: z_vrfy_k_condvar_wait() with TEST_TIMEOUT.
  * - Expected: one oops, after the second object check and before
  *   arch_irq_lock() and k_mutex_unlock().

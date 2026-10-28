@@ -983,7 +983,8 @@ ZTEST(sem_unit, test_take_in_isr_without_wait)
  *   - An ISR calls z_impl_k_sem_take() with K_FOREVER: one failed
  *     assertion of k_sem_take(). The assertion comes before the lock of
  *     @c sem_lock.
- * - Setup of each call: count 0, limit 1.
+ * - Setup of each call: count 0, limit 1. arch_is_in_isr() returns false
+ *   for the call of a thread and true for the calls of an ISR.
  *
  * In the test, the assertion hook assert_post_action() returns
  * (CONFIG_ASSERT_TEST). Then k_sem_take() continues and calls

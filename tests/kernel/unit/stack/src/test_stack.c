@@ -80,6 +80,8 @@
  * - size_mul_overflow() (@c zephyr/sys/math_extras.h): static inline, not a
  *   fake.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change stack.c
  * - @kconfig{CONFIG_USERSPACE}: the verification functions
  *   z_vrfy_k_stack_*() and the kernel object of the stack.
@@ -367,6 +369,11 @@ static struct k_thread current_thread;
 /* A thread that waits, for the wait queue fakes z_waitq_head() and z_waitq_head_locked(). */
 static struct k_thread waiting_thread;
 
+/*
+ * Fake z_thread_malloc(): give heap_buffer once, then NULL. The test fails if
+ * the size is not heap_expected_size. Assumption: the heap has one buffer
+ * only, and k_free() does not give it back.
+ */
 static void *malloc_from_heap(size_t size)
 {
 	zassert_equal(size, heap_expected_size, "z_thread_malloc() size %zu", size);

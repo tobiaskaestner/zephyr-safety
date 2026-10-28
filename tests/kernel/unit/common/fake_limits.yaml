@@ -35,6 +35,14 @@
 #   unit:      only the tests of this unit
 #   reference: true for a test with the reference fake, false for a test
 #              without it
+#   test:      the name of a test (or a list of names), for a use that the
+#              other keys cannot see. It never matches the suite setup.
+#
+# A selector of a model that the "before" function of a suite installs
+# (custom, with unit) gives the line "Limits of the suite setup" at each
+# test of the suite. A statement of a test that sets the same double again
+# does not add the limit to the test. A limit that matters only in some
+# tests also has a selector for these tests (uses, checks or test).
 
 limits:
   - id: TDL-1
@@ -53,6 +61,14 @@ limits:
       - uses: kernel_unit_set_wait_result
       - fake: z_pend_curr
         custom: pend_spy
+      # The local z_pend_curr() fakes of event and msgq return a result that
+      # the test gives (pend_result). msgq installs its fake before each test.
+      - custom: pend_model
+        unit: event
+      - custom: pend_model
+        unit: msgq
+      - uses: set_wait_result
+        unit: msgq
 
   - id: TDL-2
     review: R2
@@ -66,6 +82,10 @@ limits:
       - uses: kernel_unit_set_other_thread
       - uses: set_other_thread
         unit: mutex
+      # The local z_pend_curr() model of condvar (before each test) returns
+      # -EAGAIN if no action of another thread wakes the current thread.
+      - custom: pend_model
+        unit: condvar
 
   - id: TDL-3
     review: R3
@@ -80,6 +100,12 @@ limits:
       - uses: kernel_unit_set_waiting_threads
       - fake: z_sched_wake
         how: [value, sequence]
+      # The local z_sched_wake() model of condvar (before each test) counts
+      # the waiting threads. set_waiting_threads() sets the count.
+      - custom: wake_model
+        unit: condvar
+      - uses: set_waiting_threads
+        unit: condvar
 
   - id: TDL-4
     review: R4
@@ -151,8 +177,11 @@ limits:
     severity: medium
     title: The event walk model keeps the order of the test, not the wait queue order.
     applies:
-      - fake: z_sched_waitq_walk
-        how: custom
+      # The suite installs walk_model(). The order matters only in the tests
+      # that let threads wait (add_waiter()).
+      - custom: walk_model
+        unit: event
+      - uses: add_waiter
         unit: event
 
   - id: TDL-10
@@ -163,7 +192,19 @@ limits:
       A model on the contract cannot express the hand-over of msgq, in which the
       waiting thread writes the swap data before the wait.
     applies:
-      - fake: z_pend_curr
+      # The suite installs pend_model(), which reads the swap data of the
+      # waiting thread. The hand-over tests: a waiting reader or writer
+      # (waker side), the result of a wait, and the two tests that read the
+      # swap data at the wait (swap_data_at_pend, waiter side).
+      - custom: pend_model
+        unit: msgq
+      - uses: set_waiting_reader
+        unit: msgq
+      - uses: set_waiting_writer
+        unit: msgq
+      - uses: set_wait_result
+        unit: msgq
+      - test: [test_put_full_waits_with_message, test_get_empty_waits_with_buffer]
         unit: msgq
 
   - id: TDL-11
@@ -238,3 +279,17 @@ limits:
     applies:
       - custom: prio_set_model
         unit: mutex
+
+  - id: TDL-17
+    severity: low
+    title: The msgq lock model does not see the release in z_pend_curr() and z_reschedule().
+    text: >-
+      The local lock model of msgq counts the locks and the unlocks by key. In
+      the real code, z_pend_curr() and z_reschedule() release the lock. The
+      local fakes of these two functions do not decrement the lock depth, so
+      the model counts the lock as held after such a call. A call after the
+      release does not show in the depth. The tests find it with the call
+      history (assert_lock_released_once()).
+    applies:
+      - custom: lock_model
+        unit: msgq

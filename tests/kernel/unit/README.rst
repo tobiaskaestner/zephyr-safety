@@ -1045,8 +1045,9 @@ the sources in ``common``. Thus the text changes together with the tests.
 
 - Each unit has the marker ``@kunit_interfaces`` in the file group of one
   of its test sources. The marker stays there permanently: it also sets the
-  position of the table of the unit. Today ``sem`` and ``mutex`` have the
-  marker. Put the marker after the paragraph "Interfaces below <file>". The
+  position of the table of the unit. Each of the 9 units has the marker
+  (``obj_core``: in ``test_obj_core.c``, for its two test sources). Put the
+  marker after the paragraph "Interfaces below <file>". The
   filter adds a table there: each fake of the unit, its fake group, and the
   number of tests that configure or check it.
 - Each test of each test source of a unit with the marker gets the sections
@@ -1075,7 +1076,19 @@ the sources in ``common``. Thus the text changes together with the tests.
 - The known limits are in ``common/fake_limits.yaml``. This file is the only
   source of the limits, and the only part that is written by hand. Each
   limit has selectors: the doubles that it applies to. A test that uses such
-  a double in its own statements shows the limit.
+  a double in its own statements shows the limit. A statement of a test that
+  sets the same double as the suite setup again (for example after a reset
+  of the fakes) does not add the limit: the line "Limits of the suite setup"
+  has it.
+
+The selectors follow one rule. A limit of a model that the ``before``
+function installs has a selector for this model (``custom``, with
+``unit``): each test of the suite shows it in the line "Limits of the suite
+setup". A limit that matters only in some tests (a hand-over, waiting
+threads) also has a selector for these tests: the helper that sets up the
+state (``uses``) or the checked fake (``checks``). If no other key can see
+the use, for example a read of a variable of a local model, a selector can
+name the tests (``test``). The check reports a selector that matches no test.
 
 Each known limit has a stable id ``TDL-<n>`` ("test double limit"). The
 number is not a rank: the field ``severity`` gives the severity. A new limit
@@ -1084,7 +1097,8 @@ number of a limit, also when you remove a limit. The field ``review`` is
 history: the finding of the review that found the limit.
 
 Give each local custom fake a comment directly before the function. The
-page "Test doubles" shows the comment as the description of the fake.
+comment says what the fake does and what it assumes. The page "Test
+doubles" shows the comment as the description of the fake.
 
 The script reads the C text. It does not evaluate ``#if`` or ``if``, so the
 result is the set of doubles that a test can use. Run the check after a

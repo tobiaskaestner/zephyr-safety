@@ -103,6 +103,8 @@
  * - Overflow checks (@c zephyr/sys/math_extras.h): size_mul_overflow() and
  *   size_add_overflow(). These are static inline. They are not fakes.
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change mem_slab.c
  * - @kconfig{CONFIG_MEM_SLAB_POINTER_VALIDATE}: the address check of
  *   slab_ptr_is_good().

@@ -55,6 +55,8 @@
  * - With @kconfig{CONFIG_OBJ_CORE_STATS_SYSTEM}: z_kernel_stats_raw() and
  *   z_kernel_stats_query() (@c kernel/usage.c, fake group @c usage).
  *
+ * @kunit_interfaces
+ *
  * @par Kconfig options that change obj_core.c
  * - @kconfig{CONFIG_OBJ_CORE}: the unit itself. Each scenario enables it.
  * - @kconfig{CONFIG_OBJ_CORE_SYSTEM}: the kernel object type. It has no
