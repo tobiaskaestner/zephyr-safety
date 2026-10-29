@@ -15,11 +15,16 @@ from the arm of its stimulus to the end of the sample. labels() gives the
 witnesses that the counters show:
 
     systick    SysTick VAL did not count down by the window (the counter
-               wrapped, or the driver reprogrammed it), and the system
-               timer was active at the sample: the last reload was during
-               the sample (ld - st1 <= lat + ADD_DELAY), or the edge came
-               less than NEAR_PHASE cycles after a tick boundary, or the
-               sample reached the next boundary
+               wrapped, or the driver reprogrammed it), the system timer
+               was active at the sample, and the window has extra
+               exception cycles (the SysTick ISR). Active at the sample:
+               the last reload was during the sample (ld - st1 <= lat +
+               ADD_DELAY), or the edge came less than NEAR_PHASE cycles
+               after a tick boundary, or the sample reached the next
+               boundary
+    systick-reprogram  the same, but without extra exception cycles: a
+               reprogram of SysTick by the code of the sample (for example
+               the slice reset in the wake path), no SysTick interrupt
     systick-earlier  the same jump, but the last reload was before the
                sample: the system timer ran in the window, not during
                the sample
@@ -40,6 +45,7 @@ cause() gives one name per row, the first that fits:
     exception        extra exception cycles in the window, but no SysTick
                      reload during the sample. A weak witness: the window
                      starts at the arm, before the sample
+    reprogram        systick-reprogram
     none             no witness: the cause is not in the counters (for
                      example a section with masked interrupts in the code
                      at pc)
@@ -65,7 +71,7 @@ ICSR_PENDSVSET = 1 << 28
 
 FIELDS = ["seq", "lat", "aux", "phase", "win", "exc", "st0", "st1", "ld", "tmr", "wake", "pc", "icsr"]
 
-CAUSES = ["systick+timers", "systick", "nested", "exception", "none"]
+CAUSES = ["systick+timers", "systick", "nested", "exception", "reprogram", "none"]
 
 # Functions of the idle loop: an interrupt there met the CPU in WFI.
 IDLE_FUNCTIONS = {"arch_cpu_idle", "k_cpu_idle", "idle", "z_arm_cpu_idle"}
@@ -125,13 +131,19 @@ def labels(row, table, meta=None):
     """The witnesses of one row (a list, in the order of the module text)."""
     row = norm(row)
     out = []
+    extra = row["exc"] - table.get("exc_min", row["exc"])
     if systick_jump(row, meta):
-        out.append("systick" if systick_near(row, meta) else "systick-earlier")
+        if not systick_near(row, meta):
+            out.append("systick-earlier")
+        elif extra >= EXC_STEP or "ld" not in row:
+            out.append("systick")
+        else:
+            out.append("systick-reprogram")
     if row.get("tmr", 0) > 0:
         out.append("timers")
     if row.get("wake", 0) > 0:
         out.append("wakes")
-    if row["exc"] - table.get("exc_min", row["exc"]) >= EXC_STEP:
+    if extra >= EXC_STEP:
         out.append("exception")
     if row.get("icsr", 0) and not row["icsr"] & ICSR_RETTOBASE:
         out.append("nested")
@@ -149,6 +161,8 @@ def cause(row, table, meta=None):
     for c in ("nested", "exception"):
         if c in found:
             return c
+    if "systick-reprogram" in found:
+        return "reprogram"
     return "none"
 
 

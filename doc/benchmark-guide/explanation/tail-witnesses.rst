@@ -71,18 +71,24 @@ that the counters show) and one cause. The module text has the exact
 rules. In short:
 
 ``systick``
-   SysTick reloaded in the window, and the last reload was during the
-   sample (``systick_age`` is at most ``lat`` plus the time of the add), or
-   the stimulus came less than 4000 cycles after a tick boundary. The
-   SysTick ISR has the same priority as the response IRQ, so it delays the
-   sample. ``systick+timers``: the same, and load timers expired in the
-   window (their expiry functions run in the SysTick ISR).
+   SysTick reloaded in the window, the last reload was during the sample
+   (``systick_age`` is at most ``lat`` plus the time of the add) or the
+   stimulus came less than 4000 cycles after a tick boundary, and the
+   window has extra exception cycles. The SysTick ISR has the same
+   priority as the response IRQ, so it delays the sample.
+   ``systick+timers``: the same, and load timers expired in the window
+   (their expiry functions run in the SysTick ISR).
 ``nested``
    The ISR of the sample preempted another exception.
 ``exception``
    More exception cycles than ``exc_min``, but no SysTick reload during
    the sample. This is a weak witness: the extra exception can be in the
    gap before the stimulus.
+``reprogram``
+   SysTick reloaded during the sample, but the window has no extra
+   exception cycles: the code of the sample reprogrammed SysTick, and no
+   SysTick interrupt came. In ``wake_latency`` the slice reset of the
+   scheduler does this in the slow mode (label ``systick-reprogram``).
 ``none``
    No counter shows a cause. The cause is then not an exception, for
    example a section with masked interrupts. In ``irq_latency``, ``pc``

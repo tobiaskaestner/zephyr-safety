@@ -260,3 +260,12 @@ def test_two_tables_in_one_log(tmp_path):
     run = latbench.parse_log(write_log(tmp_path, two))
     assert sorted(run["tails"]) == ["irq", "irq2thr_sw"]
     assert len(run["tails"]["irq"]["rows"]) == 4 and run["tails"]["irq2thr_sw"]["rows"][0]["aux"] == 78
+
+
+def test_a_reprogram_without_an_interrupt(tmp_path):
+    # a slow-mode wake: the slice reset reprograms SysTick during the sample, no extra exception
+    t = table(tmp_path)
+    r = dict(t["rows"][0], exc=18)
+    assert tails.labels(r, t, META) == ["systick-reprogram", "switch"]
+    assert tails.cause(r, t, META) == "reprogram"
+    assert tails.cause(dict(r, nested=1, icsr=0x0000e016), t, META) == "nested"
