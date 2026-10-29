@@ -11,7 +11,7 @@ starts where the one before it stops. Together they take about one hour,
 most of it board time.
 
 The console output in the tutorials is real: it comes from a run on the
-host cos-workstation on 2026-10-28, with the tools of commit 8ac1023. Your numbers, folder names, ids and
+host cos-workstation on 2026-10-29, with the tools of commit df1a5d8. Your numbers, folder names, ids and
 times are different. The numbers are examples of what the tools print,
 not results of the study.
 

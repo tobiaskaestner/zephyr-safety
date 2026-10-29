@@ -27,7 +27,7 @@ Make the folder and clone the safety repository
 .. code-block:: console
 
    $ mkdir lab-tutorial && cd lab-tutorial && git clone -q <safety repository> safety && git -C safety log --oneline -1
-   8ac1023 validation: latencies: the yaml comments name the new guide pages
+   df1a5d8 validation: trees: ws-safety removed; lab init names the how-to
 
 The clone is the :term:`design repository` of the lab space. It has the
 study designs and the tools. The tools of the lab space always come from
@@ -88,11 +88,11 @@ Run ``lab init`` in the lab folder with the Python of the environment:
 
 .. code-block:: console
 
-   $ .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety --trees-source /wrk/z/lab-benchmarks/latency-trees
-   lab space lab-tutorial-df946ffd in /wrk/z/lab-tutorial
+   $ .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety --trees-source /wrk/z/latency-trees-src
+   lab space lab-tutorial-332eb106 in /wrk/z/lab-tutorial
      design repo  /wrk/z/lab-tutorial/safety
      python       /wrk/z/lab-tutorial/.venv (the Python of lab init)
-     trees        /wrk/z/lab-tutorial/trees (clone from /wrk/z/lab-benchmarks/latency-trees)
+     trees        /wrk/z/lab-tutorial/trees (clone from /wrk/z/latency-trees-src)
      results      /wrk/z/lab-tutorial/results
      hardware map /wrk/z/lab-tutorial/hw-map.yml
    next: cd /wrk/z/lab-tutorial && /wrk/z/lab-tutorial/safety/scripts/benchmarks/study.py trees setup <tree>
@@ -106,20 +106,20 @@ Set up the pinned tree
 ----------------------
 
 A :term:`tree` is a pinned set of repositories: Zephyr and its modules.
-The experiments of this tutorial use the tree ``ws-safety``:
+The experiments of this tutorial use the tree ``ws-up``:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py trees setup ws-safety
-   ws-safety: west workspace /wrk/z/lab-tutorial/trees/ws-safety
-   ws-safety/zephyr: 770fdef15673 (from /wrk/z/lab-benchmarks/latency-trees/ws-safety)
-   ws-safety/cmsis_6: b2dfbe1a20bb (from /wrk/z/lab-benchmarks/latency-trees/ws-safety)
-   ws-safety/hal_stm32: 02baa06ccea3 (from /wrk/z/lab-benchmarks/latency-trees/ws-safety)
-   ws-safety/hal_nordic: 4387c79cebd3 (from /wrk/z/lab-benchmarks/latency-trees/ws-safety)
-   ws-safety/hal_nxp: c2d68e4b9526 (from /wrk/z/lab-benchmarks/latency-trees/ws-safety)
+   $ safety/scripts/benchmarks/study.py trees setup ws-up
+   ws-up: west workspace /wrk/z/lab-tutorial/trees/ws-up
+   ws-up/zephyr: ec98918869ca (from /wrk/z/latency-trees-src/ws-up)
+   ws-up/cmsis_6: 1c1840af7a7e (from https://github.com/zephyrproject-rtos/CMSIS_6)
+   ws-up/hal_stm32: c95501991862 (from https://github.com/zephyrproject-rtos/hal_stm32)
+   ws-up/hal_nordic: c708b9fe1b7a (from https://github.com/zephyrproject-rtos/hal_nordic)
+   ws-up/hal_nxp: a8b437ef366f (from https://github.com/zephyrproject-rtos/hal_nxp)
 
 Each tree is a west workspace of its own, with exactly the pinned
-revisions of ``validation/trees/ws-safety.yml``.
+revisions of ``validation/trees/ws-up.yml``.
 
 Look at the lab space
 ---------------------
@@ -127,13 +127,12 @@ Look at the lab space
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py lab status
-   lab space lab-tutorial-df946ffd in /wrk/z/lab-tutorial
-     design repo  /wrk/z/lab-tutorial/safety at 8ac1023c3228
+   lab space lab-tutorial-332eb106 in /wrk/z/lab-tutorial
+     design repo  /wrk/z/lab-tutorial/safety at df1a5d8c69ad
      python       /wrk/z/lab-tutorial/.venv/bin/python (/wrk/z/lab-tutorial/.venv)
      zephyr sdk   /home/tobias/zephyr-sdk-1.0.1 (1.0.1)
-     tree ws-safety            ok
-     tree ws-safety-driftfix   not set up
-     tree ws-up                not set up
+     tree ws-up                ok
+     tree ws-up-driftfix       not set up
      tree ws-up-irqoff         not set up
      results      /wrk/z/lab-tutorial/results
      board        nucleo_g474re: connected, fixtures latbench_loopback
@@ -149,15 +148,15 @@ the wire:
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py lab hwcheck nucleo_g474re
-   nucleo_g474re: build loopback_check (ws-safety)
+   nucleo_g474re: build loopback_check (ws-up)
    nucleo_g474re: flash, probe 0042003F3433510A37363934, console /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
-     *** Booting Zephyr OS build v4.4.0-13511-g770fdef15673 ***
+     *** Booting Zephyr OS build v4.5.0-rc3-40-gec98918869ca ***
      loopback_check: 170000000 Hz core, timing 170 MHz
      static: drive 0, read 0 OK
      static: drive 1, read 1 OK
-     irq: n=1000 missed=0 min=336 avg=336 max=336 cycles
+     irq: n=1000 missed=0 min=344 avg=344 max=344 cycles
      RESULT: OK
-   nucleo_g474re: loopback wire ok; record /wrk/z/lab-tutorial/.lab/hwcheck/history/nucleo_g474re/20261028T014748Z.json
+   nucleo_g474re: loopback wire ok; record /wrk/z/lab-tutorial/.lab/hwcheck/history/nucleo_g474re/20261029T131311Z.json
 
 If you see ``RESULT: FAIL``, look at the wire D2 to A3 (see
 :doc:`../howto/troubleshoot-a-run`). The record keeps all lines of the

@@ -56,7 +56,7 @@ one axis, ``opt``, with two values. All points use the direct IRQ path
 
    name: irq-opt
    app: irq_latency
-   trees: [ws-safety]
+   trees: [ws-up]
    repeat: 1
    timeout: 400
    common:
@@ -136,7 +136,7 @@ Lint and commit
    $ safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
    0 errors, 0 warnings
    $ git -C safety add -A && git -C safety commit -q -m 'tutorial: a study of the optimization level' && git -C safety log --oneline -1
-   53f6397 tutorial: a study of the optimization level
+   637f52f tutorial: a study of the optimization level
 
 The commit is necessary: ``run.py`` refuses a repository with changes
 that are not committed, because a run must name the exact source of its
@@ -149,12 +149,12 @@ Run it
 
    $ safety/scripts/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-tutorial
      planned  irq-opt (tutorial, nucleo_g474re) -> kernel-latency/st-tutorial@nucleo_g474re (will be made)
-     ok   design repo: /wrk/z/lab-tutorial/safety at 53f63972cdfb
+     ok   design repo: /wrk/z/lab-tutorial/safety at 637f52f18ee0
      [...]
    pre-flight check: ok
    $ safety/scripts/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-tutorial --detach
-   campaign 20261028T015945Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261028T015945Z.json
-   runs in the background (pid 962301); log /wrk/z/lab-tutorial/.lab/campaigns/20261028T015945Z/campaign.log; 'study.py campaign status 20261028T015945Z'
+   campaign 20261029T132506Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261029T132506Z.json
+   runs in the background (pid 1912267); log /wrk/z/lab-tutorial/.lab/campaigns/20261029T132506Z/campaign.log; 'study.py campaign status 20261029T132506Z'
 
 After about three minutes:
 
@@ -164,7 +164,7 @@ After about three minutes:
 
    == kernel-latency/st-tutorial@nucleo_g474re
       H1 wrong (0 of 1)
-         a wrong: FAIL ws-safety irq p50 speed: 56 - 55 (size) = 1
+         a wrong: FAIL ws-up irq p50 speed: 56 - 55 (size) = 1
       [opt-p50] With speed optimizations, the direct path has a p50 of 56 cycles.
       [opt-p50] With size optimizations, the direct path has a p50 of 55 cycles.
 
@@ -186,9 +186,9 @@ result:
       statement: With {opt} optimizations, the direct path has a p50 of {p50:.0f} cycles.
       from: {'experiment': 'irq-opt', 'metric': 'irq'}
       stat: p50
-      row: run=irq-opt/20261028T015950Z, tree=ws-safety, point=speed, opt=speed, metric=irq, p50=56
+      row: run=irq-opt/20261029T132512Z, tree=ws-up, point=speed, opt=speed, metric=irq, p50=56
         -> With speed optimizations, the direct path has a p50 of 56 cycles.
-      row: run=irq-opt/20261028T015950Z, tree=ws-safety, point=size, opt=size, metric=irq, p50=55
+      row: run=irq-opt/20261029T132512Z, tree=ws-up, point=size, opt=size, metric=irq, p50=55
         -> With size optimizations, the direct path has a p50 of 55 cycles.
 
 Next: :doc:`audit-a-result`.

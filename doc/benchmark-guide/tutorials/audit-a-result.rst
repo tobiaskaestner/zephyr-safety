@@ -15,13 +15,13 @@ The run list
 
 .. code-block:: console
 
-   $ python3 -m json.tool results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/instance.json | sed -n "/\"runs\"/,/]/p"
+   $ python3 -m json.tool results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/instance.json | sed -n '/"runs"/,/]/p'
        "runs": [
            {
-               "id": "irq-smoke/20261028T015416Z",
-               "digest": "sha256:17aa3ddb5f5d66404bff0f7cca8914a1d23dd17c0582916f29b11c9d605590a5",
+               "id": "irq-smoke/20261029T131938Z",
+               "digest": "sha256:a219a528a03a43489deec81a62d511811d49800c2b030a38d2108210729352c7",
                "role": "evidence",
-               "campaign": "20261028T015411Z"
+               "campaign": "20261029T131933Z"
            }
        ],
 
@@ -33,12 +33,12 @@ The seal
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py instance verify results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z
-   sha256:17aa3ddb5f5d66404bff0f7cca8914a1d23dd17c0582916f29b11c9d605590a5 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z
-   $ head -3 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z.sha256
-   060d3d5056e62a3544d6cd5146597c7320513b2c479132f362324fd3087805b2  manifest.json
-   aa1dd3a5365e6c5cb08d827d156b55760cc9a77fdc6138a48ba8165e8d1daf0e  summary.txt
-   a2844fe0b792dffa4b90d5207d2a70802385a3bdb7781e2ae9e4b352ee84c9f3  ws-safety/direct-busy/.config
+   $ safety/scripts/benchmarks/study.py instance verify results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
+   sha256:a219a528a03a43489deec81a62d511811d49800c2b030a38d2108210729352c7 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
+   $ head -3 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z.sha256
+   cd52e47c5e9feb387e2184149d79a6d32a882c5b2f083d70198f7c0621b0501b  manifest.json
+   c3ac24a96e54e39f4a50d4ec371bae972e95ad3bdc988d7a95843ea7c1843417  summary.txt
+   3e676427c8e0c4661b1577cf54d316b37a3d8e00883b8b0fa454bb3e646e4470  ws-up/direct-busy/.config
 
 ``instance verify`` computes the SHA-256 of each file of the run folder
 again and compares it with the :term:`seal`. A changed file, a changed
@@ -54,8 +54,8 @@ The manifest names the commit of the run, and a local ref keeps it:
 
 .. code-block:: console
 
-   $ git -C safety log --oneline -1 refs/latbench/run/irq-smoke/20261028T015416Z
-   8ac1023 validation: latencies: the yaml comments name the new guide pages
+   $ git -C safety log --oneline -1 refs/latbench/run/irq-smoke/20261029T131938Z
+   df1a5d8 validation: trees: ws-safety removed; lab init names the how-to
 
 ``run.py --rebuild`` builds each point again from that commit (in a
 temporary folder; the run folder does not change) and compares the
@@ -63,15 +63,15 @@ images:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/run.py --rebuild results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z
-   rebuild /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z  5 points
-   [ws-safety/stock-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
-   [ws-safety/wrapped-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
-   [ws-safety/direct-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
-   [ws-safety/zli-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
-   [ws-safety/direct-busy] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
+   $ safety/scripts/benchmarks/run.py --rebuild results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
+   rebuild /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z  5 points
+   [ws-up/stock-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
+   [ws-up/wrapped-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
+   [ws-up/direct-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
+   [ws-up/zli-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
+   [ws-up/direct-busy] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
    5 of 5 points give the same image and .config
-   record: /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z.rebuild-20261028T020310Z.json
+   record: /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z.rebuild-20261029T132753Z.json
 
 The flashed image (the ``.hex`` file and the loadable parts of the ELF),
 the ``.config`` and the devicetree are the same (see
@@ -91,7 +91,7 @@ now:
    $ safety/scripts/benchmarks/study.py analysis check results/kernel-latency
    FAIL: 1 files differ from a new build:
       /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/study.json
-   note: 1 inputs are newer than the last build (for example st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261028T015416Z.rebuild-20261028T020310Z.json); after 'study.py analysis build' the check compares again
+   note: 1 inputs are newer than the last build (for example st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z.rebuild-20261029T132753Z.json); after 'study.py analysis build' the check compares again
 
 The check fails because the last build did not have the rebuild record.
 The note names the new input. Build the results, then check again:

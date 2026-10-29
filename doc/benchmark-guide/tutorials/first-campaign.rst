@@ -19,15 +19,15 @@ Check before you run
 
    $ safety/scripts/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-default-latencies --only irq-smoke
      planned  irq-smoke (default-latencies/irq-entry, nucleo_g474re) -> kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry (will be made)
-     ok   design repo: /wrk/z/lab-tutorial/safety at 8ac1023c3228
+     ok   design repo: /wrk/z/lab-tutorial/safety at df1a5d8c69ad
      ok   lint
      ok   zephyr sdk: /home/tobias/zephyr-sdk-1.0.1
-     ok   tree ws-safety
+     ok   tree ws-up
      ok   images: 5 of 5 in the build cache
      ok   board nucleo_g474re: probe 0042003F3433510A37363934, console /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
      ok   console of nucleo_g474re: free
-     ok   loopback wire of nucleo_g474re: RESULT: OK (record .lab/hwcheck/history/nucleo_g474re/20261028T015407Z.json)
-     ok   disk: 892 GiB free, the runs need about 0 MiB
+     ok   loopback wire of nucleo_g474re: RESULT: OK (record .lab/hwcheck/history/nucleo_g474re/20261029T131929Z.json)
+     ok   disk: 883 GiB free, the runs need about 0 MiB
      ok   duration: unknown (no earlier run of irq-smoke)
    pre-flight check: ok
 
@@ -42,25 +42,25 @@ Run it in the background
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-default-latencies --only irq-smoke --detach
-   campaign 20261028T015411Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261028T015411Z.json
-   runs in the background (pid 959898); log /wrk/z/lab-tutorial/.lab/campaigns/20261028T015411Z/campaign.log; 'study.py campaign status 20261028T015411Z'
+   campaign 20261029T131933Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261029T131933Z.json
+   runs in the background (pid 1910104); log /wrk/z/lab-tutorial/.lab/campaigns/20261029T131933Z/campaign.log; 'study.py campaign status 20261029T131933Z'
    $ safety/scripts/benchmarks/study.py campaign status
-   campaign 20261028T015411Z: running
-     lab lab-tutorial-df946ffd on cos-workstation, repo 8ac1023c3228, folder /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-default-latencies
+   campaign 20261029T131933Z: running
+     lab lab-tutorial-332eb106 on cos-workstation, repo df1a5d8c69ad, folder /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-default-latencies
      running  irq-smoke                    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry
 
 You can close the terminal. After about five minutes:
 
 .. code-block:: console
 
-   $ cat .lab/campaigns/20261028T015411Z/campaign.log
-   campaign 20261028T015411Z: pre-flight check
+   $ cat .lab/campaigns/20261029T131933Z/campaign.log
+   campaign 20261029T131933Z: pre-flight check
    [...]
    made the instances of default-latencies for nucleo_g474re
    === irq-smoke (kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry)
-       done (rc 0) in 5 min, 5/5 images from the build cache, run irq-smoke/20261028T015416Z
+       done (rc 0) in 5 min, 5/5 images from the build cache, run irq-smoke/20261029T131938Z
    waiting for the last build of the results (it makes the verdicts final)
-   campaign 20261028T015411Z: done, 0 experiments failed; results /wrk/z/lab-tutorial/results/kernel-latency/index.html
+   campaign 20261029T131933Z: done, 0 experiments failed; results /wrk/z/lab-tutorial/results/kernel-latency/index.html
 
 The campaign is done. It held the board lock the whole time. A second
 campaign on this board stops at once.
@@ -87,14 +87,14 @@ The details of one instance:
 
    == kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry
       H1 confirmed (1 of 1)
-         a confirmed: ws-safety irq mode_share(2) direct-busy: 0
+         a confirmed: ws-up irq mode_share(2) direct-busy: 0
       H2 open (0 of 2)
          a not evaluated: no evidence run of irq-checks-1m in st-default-latencies@nucleo_g474re/st-irq-entry
          b not evaluated: no evidence run of irq-checks-1m in st-default-latencies@nucleo_g474re/st-irq-entry
       H3 open (0 of 1)
          a open (manual): The tail of busy-noslice is at the idle level. The tail of busy is larger.
             give the verdict: study.py instance verdict /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry --hypothesis H3 --check a --verdict confirmed|wrong --by NAME --text WHY
-      [irq-entry-p99-direct] not evaluated: no evidence run of irq-baseline-1m in st-default-latencies@nucleo_g474re/st-irq-entry
+      [irq-entry-p99-direct] not evaluated: instance of study zephyr-versions for board nucleo_g474re: 0 found
 
 The :term:`hypothesis` H1 of ``irq-entry`` is confirmed by the run of
 ``irq-smoke``. H2 and the :term:`central result` wait for runs of other
@@ -107,10 +107,9 @@ What is missing
 .. code-block:: console
 
    $ safety/scripts/benchmarks/study.py analysis missing results/kernel-latency
-   kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry: irq-baseline-1m: no evidence run; waits: 1 central result ([irq-entry-p99-direct])
    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry: irq-checks-1m: no evidence run; waits: 2 checks (H2 a, H2 b)
-   [...]
-   5 experiments to run; 'study.py campaign check <folder> --only EXP ...'
+   kernel-latency/st-default-latencies@nucleo_g474re/st-isr-to-thread: wake-isr-1m: no evidence run; waits: 1 central result ([isr2thr-p99-sem])
+   2 experiments to run; 'study.py campaign check <folder> --only EXP ...'
 
 This is the list of the runs to make next.
 :doc:`../explanation/campaigns` tells how a campaign works, and
