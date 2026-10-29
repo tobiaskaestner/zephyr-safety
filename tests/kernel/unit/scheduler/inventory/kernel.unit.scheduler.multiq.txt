@@ -1,0 +1,18 @@
+# Expected test inventory of the twister scenario kernel.unit.scheduler.multiq.
+# Each line is "<state> <suite>.<test>". The state is "run" or "skip".
+# To regenerate, see "Test inventory" in tests/kernel/unit/README.rst.
+run scheduler_unit.test_current_thread_query_returns_current
+run scheduler_unit.test_init_gives_empty_usable_run_queue
+skip scheduler_unit.test_lock_and_unlock_in_isr_assert
+run scheduler_unit.test_lock_nesting_wraps_after_255_levels
+run scheduler_unit.test_lock_nests_and_stops_preemption
+run scheduler_unit.test_reschedule_gives_its_key_to_sched_lock_reschedule
+run scheduler_unit.test_unlock_reschedules_with_the_held_lock
+run scheduler_unit.test_unlock_without_lock_leaves_thread_not_preemptible
+run scheduler_unit.test_wait_forwards_arguments_and_reads_data_after_wait
+run scheduler_unit.test_wait_with_null_data_returns_value
+run scheduler_unit.test_walk_of_empty_queue_calls_post_func_with_zero
+run scheduler_unit.test_walk_stops_at_nonzero_return
+run scheduler_unit.test_walk_visits_waiters_in_order_then_post_under_lock
+run scheduler_unit.test_walk_with_list_backend_permits_removal
+run scheduler_unit.test_walk_without_post_func_returns_walk_value

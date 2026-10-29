@@ -26,7 +26,9 @@ file. It is the self-test of the reference fake of the scheduler (see
 
 The application ``sched`` is the other exception: its kernel-internal headers
 are real, and the arch layer below the unit has a model of the platform (see
-`The real scheduler on the platform model`_).
+`The real scheduler on the platform model`_). It also includes
+``kernel/scheduler.c``, the second source file of the scheduler contract (see
+`Contract tests of the scheduler`_).
 
 Test applications
 *****************
@@ -68,8 +70,12 @@ Test applications
      - the fake group ``sched_ref`` (no kernel source file)
      - 2
    * - ``sched``
-     - ``kernel/sched.c`` with its real headers
-     - 8
+     - ``kernel/sched.c`` with its real headers (and ``kernel/scheduler.c``
+       for the contract tests)
+     - 12
+   * - ``scheduler``
+     - ``kernel/scheduler.c``
+     - 5
 
 `Configurations`_ gives the configuration options of each unit.
 
@@ -399,8 +405,11 @@ gives the definition ``KERNEL_UNIT_REAL_HEADER_<name>``.
 
 Do not link a fake group that fakes a function of a real header. For
 example, the group ``sched`` fakes ``z_sched_wake()``, which is inline code
-of the real ``ksched.h``. Today only the application ``sched`` has real
-headers.
+of the real ``ksched.h``. Today the applications ``sched`` and ``scheduler``
+have real headers. ``scheduler`` makes ``kthread.h``, ``run_q.h``,
+``priority_q.h``, ``kspinlock.h`` and ``ipi.h`` real and links the group
+``sched``. The real ``kthread.h`` calls ``z_add_thread_timeout()``, so the
+shadow ``timeout_q.h`` has a fake of it.
 
 Pure helpers stay real
 ======================
@@ -432,6 +441,9 @@ The real helpers are:
 - ``timeout_q.h``: ``z_is_inactive_timeout()``, one copy for each timeout
   backend and the macro without ``CONFIG_SYS_CLOCK_EXISTS``. It only reads
   the timeout structure.
+- ``wait_q.h``: the walk macros ``_WAIT_Q_FOR_EACH()`` (one copy for each
+  wait queue backend) and ``_WAIT_Q_FOR_EACH_SAFE()``. They only read the
+  list or the tree of a wait queue.
 
 A function with a side effect stays a fake, for example
 ``z_thread_prio_set()``, the scheduler functions and the wait queue
@@ -495,22 +507,23 @@ it must not link. The groups are:
   the real ``kernel_internal.h`` defines ``arch_thread_return_value_set()``,
   and the group has no fake of it.
 - ``sched``: the kernel-internal scheduler interface. These are the fakes
-  of the shadows ``ksched.h``, ``scheduler.h``, ``wait_q.h`` and
-  ``timeout_q.h``, for example ``z_thread_prio_set()``. The real functions
-  are in ``kernel/sched.c``, or they are static inline in
-  ``kernel/include``. One exception is
-  ``z_sched_waitq_walk()``, which ``kernel/scheduler.c`` defines. The group
-  also defines the data ``_sched_spinlock``. The fake ``z_pend_curr()``
-  refuses a call from an ISR with a panic, as the real function does (see
-  `Scheduler refusal in an ISR`_). Thus the group needs the groups ``arch``
-  and ``fatal``, and the group ``assert`` with ``CONFIG_ASSERT``.
-- ``scheduler``: only ``k_sched_current_thread_query()``
-  (``kernel/scheduler.c``, header ``fakes/scheduler.h``). This is a public
-  system call of ``zephyr/kernel.h``, not a kernel-internal function. After
-  the reset, it returns NULL. A test that needs a current thread sets
-  ``return_val``. A unit test of ``kernel/scheduler.c`` must link neither
-  ``scheduler`` nor ``sched``, because ``sched`` fakes
-  ``z_sched_waitq_walk()``.
+  of the shadows ``ksched.h``, ``scheduler.h`` (the list
+  ``SCHEDULER_FFF_FAKES_LIST``), ``wait_q.h`` and ``timeout_q.h``, for
+  example ``z_thread_prio_set()`` and ``z_sched_lock_reschedule()``. The real
+  functions are in ``kernel/sched.c``, or they are static inline in
+  ``kernel/include``. The group also defines the data ``_sched_spinlock``.
+  The fake ``z_pend_curr()`` refuses a call from an ISR with a panic, as the
+  real function does (see `Scheduler refusal in an ISR`_). Thus the group
+  needs the groups ``arch`` and ``fatal``, and the group ``assert`` with
+  ``CONFIG_ASSERT``.
+- ``scheduler``: the functions of ``kernel/scheduler.c``.
+  ``k_sched_current_thread_query()`` (header ``fakes/scheduler.h``) is a
+  public system call of ``zephyr/kernel.h``, not a kernel-internal function.
+  After the reset, it returns NULL. A test that needs a current thread sets
+  ``return_val``. ``z_sched_waitq_walk()`` and ``z_sched_wait()`` are the
+  fakes of the shadow ``scheduler.h`` (the list
+  ``SCHEDULER_C_FFF_FAKES_LIST``). The unit test of ``kernel/scheduler.c``
+  (application ``scheduler``) links ``sched`` and not ``scheduler``.
 - ``kernel_internal``: ``z_handle_obj_poll_events()`` (``kernel/poll.c``).
 - ``mempool``: ``z_thread_malloc()`` and ``k_free()``
   (``kernel/mempool.c``). After the reset, ``z_thread_malloc()`` returns
@@ -646,7 +659,19 @@ of each unit are:
   ``metairq``) and ``CONFIG_ASSERT`` (with ``CONFIG_SPIN_VALIDATE``). The
   option ``CONFIG_KERNEL_UNIT_CORTEX_M_SWITCH`` of the application (default
   y) selects ``CONFIG_SWAP_NONATOMIC`` and ``CONFIG_USE_SWITCH_SUPPORTED``, as
-  the Cortex-M port does.
+  the Cortex-M port does. The kinds of priorities, each with both switch
+  variants: ``CONFIG_NUM_PREEMPT_PRIORITIES=0`` (scenarios ``coop_only`` and
+  ``coop_only_switch``, ``CONFIG_PREEMPT_ENABLED`` is n) and
+  ``CONFIG_NUM_COOP_PRIORITIES=0`` (scenarios ``preempt_only`` and
+  ``preempt_only_switch``, ``CONFIG_COOP_ENABLED`` is n). A test that needs a
+  kind of thread that the scenario does not have skips with
+  ``CONFIG_PREEMPT_ENABLED`` or ``CONFIG_COOP_ENABLED``.
+- ``scheduler.c``: the wait queue backend (``CONFIG_WAITQ_SCALABLE``, the
+  walk), the run queue backend (``CONFIG_SCHED_SCALABLE``,
+  ``CONFIG_SCHED_MULTIQ``, the init in ``z_sched_init()``) and
+  ``CONFIG_ASSERT`` (the assertions of ``k_sched_lock()`` and
+  ``k_sched_unlock()``). No scenario with ``CONFIG_USE_SWITCH``:
+  ``scheduler.c`` and its real headers do not read it.
 - ``obj_core.c``: ``CONFIG_OBJ_CORE`` (all scenarios,
   ``CONFIG_OBJ_CORE_SYSTEM`` has no prompt), ``CONFIG_OBJ_CORE_STATS``,
   ``CONFIG_OBJ_CORE_STATS_SYSTEM`` (scenario ``stats_no_system`` disables
@@ -1016,6 +1041,13 @@ names its operator or its ``@assumption``:
   set ``_current``. No gap.
 - The exit of an ISR is a reschedule point: ``z_arm_int_exit()`` without
   ``CONFIG_USE_SWITCH``, the real ``z_sched_next_handle()`` with it.
+- Without ``CONFIG_PREEMPT_ENABLED`` (``CONFIG_NUM_PREEMPT_PRIORITIES=0``),
+  ``z_arm_int_exit()`` does not set PendSV pending (``exc_exit.c:57``). Then
+  the idle loop switches itself (``idle.c:90-105``): after an ISR that
+  returns to the idle thread, the model sets PendSV pending if the cache is
+  not the idle thread (the switch has the place ``idle``). A cooperative
+  thread keeps the CPU at the exit. With ``CONFIG_USE_SWITCH`` the exit has
+  no such condition.
 
 One host thread runs all threads of a test. The test code always runs as
 ``_current``. A switch of a thread that cannot run (it waits or is dead) runs
@@ -1050,12 +1082,42 @@ difference between the reference fake and the real code is a failing test. A
 known difference of the reference fake has ``ZTEST_EXPECT_FAIL()`` only in the
 ``sched_ref`` build, with its id in a comment.
 
+The contract has two source files: ``kernel/sched.c`` and
+``kernel/scheduler.c`` (``z_sched_waitq_walk()``, ``z_sched_wait()``). The
+contract tests of the walk (operator ``WakeWalk``) and of the wait need the
+real code of both files, so the test source of ``sched`` also includes
+``kernel/scheduler.c``. In ``sched_ref``, the group ``scheduler`` has the
+fakes of these functions, and the reference fake sets their custom fakes.
+The walk callbacks of the tests do what ``kernel/events.c`` and
+``kernel/mailbox.c`` do.
+
+The scenarios of ``sched`` with one kind of priority run the same tests. A
+test whose result is the same for cooperative threads writes its priorities
+with ``KERNEL_UNIT_CONTRACT_PRIO(n)``: with only cooperative priorities, these
+become cooperative priorities in the same order. A test that needs a kind of
+thread that the scenario does not have is skipped (see `Tests for some
+configurations`_).
+
 The tests of the design findings of the scheduler (suite ``sched_unit`` of
 ``sched``) assert the behavior that the requirement asks for, and have
 ``ZTEST_EXPECT_FAIL()``. The id of the finding is in a comment. After the
 action, such a test asserts only the requirement, so a fix of the code makes
 the test pass, and ztest reports the unexpected pass as a failure. Then
 remove the ``ZTEST_EXPECT_FAIL()`` line, and regenerate the expected sets.
+
+The unit test of kernel/scheduler.c
+-----------------------------------
+
+The application ``scheduler`` builds the real ``kernel/scheduler.c`` on the
+fakes of ``kernel/sched.c`` (group ``sched``). Its tests show what the code
+of ``scheduler.c`` does with the layer below: the arguments of
+``z_pend_curr()`` and ``z_sched_lock_reschedule()``, the order of the calls,
+and the scheduler lock around the walk and its callbacks. The shadow
+``wait_q.h`` has a real copy of the walk macros (``_WAIT_Q_FOR_EACH()`` and
+``_WAIT_Q_FOR_EACH_SAFE()``), and a test builds a wait queue with the real
+``_priq_wait_add()`` of ``priority_q.h``. With ``CONFIG_WAITQ_SCALABLE`` or
+``CONFIG_SCHED_SCALABLE``, the test source also includes
+``kernel/priority_queues.c`` and ``lib/utils/rb.c``, as ``sched`` does.
 
 Real object core code
 =====================

@@ -142,6 +142,17 @@ int kernel_unit_contract_ret(struct k_thread *thread)
 	return t->ret;
 }
 
+/*
+ * The plain arch fakes of this application have no interrupt lock state
+ * (RF-2). The adapter counts the calls: the CPU is locked if arch_irq_lock()
+ * has more calls than arch_irq_unlock(). The fake z_reschedule() does not
+ * unlock, so the count is only correct without a reschedule.
+ */
+bool kernel_unit_contract_irq_locked(void)
+{
+	return unit_arch_irq_lock_fake.call_count > unit_arch_irq_unlock_fake.call_count;
+}
+
 size_t kernel_unit_contract_waiters(_wait_q_t *wait_q, struct k_thread **out, size_t max)
 {
 	return kernel_unit_sched_ref_waiters(wait_q, out, max);

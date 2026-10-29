@@ -138,11 +138,12 @@ DEFINE_FAKE_VOID_FUNC(z_sched_ready_locked, struct k_thread *);
 DEFINE_FAKE_VALUE_FUNC(struct k_thread *, z_unpend_first_thread_locked, _wait_q_t *);
 DEFINE_FAKE_VALUE_FUNC(bool, z_thread_prio_set, struct k_thread *, int);
 
-DEFINE_FAKE_VALUE_FUNC(int, z_sched_waitq_walk, _wait_q_t *, _waitq_walk_cb_t,
-		       _waitq_post_walk_cb_t, void *);
+/* z_sched_waitq_walk() and z_sched_wait() are in kernel/scheduler.c: fake group scheduler. */
 DEFINE_FAKE_VOID_FUNC(z_sched_wake_thread_locked, struct k_thread *);
+DEFINE_FAKE_VOID_FUNC(z_sched_lock_reschedule, k_spinlock_key_t);
 
 DEFINE_FAKE_VALUE_FUNC(int, z_try_abort_thread_timeout, struct k_thread *);
+DEFINE_FAKE_VALUE_FUNC(k_ticks_t, z_add_thread_timeout, struct k_thread *, k_timeout_t);
 
 DEFINE_FAKE_VOID_FUNC(z_waitq_init, _wait_q_t *);
 DEFINE_FAKE_VALUE_FUNC(struct k_thread *, z_waitq_head, _wait_q_t *);

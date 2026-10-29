@@ -1,0 +1,41 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The real kernel/scheduler.c on the fakes of kernel/sched.c. One scenario
+# for each Kconfig option that changes the code of scheduler.c or of its real
+# headers:
+#
+# - the wait queue backend: CONFIG_WAITQ_SIMPLE (default) and
+#   CONFIG_WAITQ_SCALABLE. z_sched_waitq_walk() uses _WAIT_Q_FOR_EACH_SAFE()
+#   or _WAIT_Q_FOR_EACH().
+# - the run queue backend: CONFIG_SCHED_SIMPLE (default),
+#   CONFIG_SCHED_SCALABLE and CONFIG_SCHED_MULTIQ. z_sched_init() calls
+#   _priq_run_init() of the backend.
+# - the assertions of k_sched_lock() and k_sched_unlock() (CONFIG_ASSERT,
+#   with CONFIG_ASSERT_TEST, see the README, "Assertions").
+#
+# No scenario with CONFIG_USE_SWITCH: scheduler.c and its real headers do
+# not read this option. The switch is in kernel/sched.c, here a fake. The
+# application sched runs the contract tests of scheduler.c with both switch
+# variants.
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.scheduler: {}
+  kernel.unit.scheduler.waitq_scalable:
+    extra_configs:
+      - CONFIG_WAITQ_SCALABLE=y
+  kernel.unit.scheduler.sched_scalable:
+    extra_configs:
+      - CONFIG_SCHED_SCALABLE=y
+  kernel.unit.scheduler.multiq:
+    extra_configs:
+      - CONFIG_SCHED_MULTIQ=y
+  kernel.unit.scheduler.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y

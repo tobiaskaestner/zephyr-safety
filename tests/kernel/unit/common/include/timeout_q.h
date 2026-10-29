@@ -32,9 +32,18 @@
 extern "C" {
 #endif
 
-#define TIMEOUT_Q_FFF_FAKES_LIST(FAKE) FAKE(z_try_abort_thread_timeout)
+#define TIMEOUT_Q_FFF_FAKES_LIST(FAKE)                                                             \
+	FAKE(z_try_abort_thread_timeout)                                                           \
+	FAKE(z_add_thread_timeout)
 
 DECLARE_FAKE_VALUE_FUNC(int, z_try_abort_thread_timeout, struct k_thread *);
+
+/*
+ * z_add_thread_timeout(): the inline function of the real header arms the
+ * timeout of a thread. The real kthread.h calls it (thread_schedule_new()),
+ * so an application with the real kthread.h needs it.
+ */
+DECLARE_FAKE_VALUE_FUNC(k_ticks_t, z_add_thread_timeout, struct k_thread *, k_timeout_t);
 
 #ifdef CONFIG_SYS_CLOCK_EXISTS
 #if defined(CONFIG_TIMEOUT_BACKEND_MINHEAP)

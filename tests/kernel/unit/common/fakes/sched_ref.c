@@ -852,6 +852,7 @@ static int ref_try_abort_thread_timeout(struct k_thread *thread)
 	return 0;
 }
 
+#ifdef KERNEL_UNIT_FAKE_GROUP_scheduler
 /*
  * z_sched_waitq_walk(): WakeWalk(o, P, Stop, D) and WaitQueue!Walked. As
  * kernel/scheduler.c: walk_func for each waiter in wait queue order until it
@@ -883,6 +884,25 @@ static int ref_sched_waitq_walk(_wait_q_t *wait_q, _waitq_walk_cb_t walk_func,
 
 	return status;
 }
+
+/*
+ * z_sched_wait(): PendCurr(a, o, to), then Resume(a). The return value is
+ * swapRet of a, and *data is swapData of a (scheduler.c:130-139). The wait is
+ * the fake z_pend_curr() with this fake, so the ISR refusal of the group
+ * sched also applies.
+ */
+static int ref_sched_wait(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wait_q,
+			  k_timeout_t timeout, void **data)
+{
+	int ret = z_pend_curr(lock, key, wait_q, timeout);
+
+	if (data != NULL) {
+		*data = _current->base.swap_data;
+	}
+
+	return ret;
+}
+#endif
 
 /*
  * z_thread_prio_set(): PrioSet(t, p). A waiter goes to the end of the waiters
@@ -962,7 +982,6 @@ void kernel_unit_sched_ref_install(void)
 	z_sched_ready_locked_fake.custom_fake = ref_sched_ready_locked;
 	z_unpend_first_thread_locked_fake.custom_fake = ref_unpend_first_thread_locked;
 	z_thread_prio_set_fake.custom_fake = ref_thread_prio_set;
-	z_sched_waitq_walk_fake.custom_fake = ref_sched_waitq_walk;
 	z_sched_wake_thread_locked_fake.custom_fake = ref_sched_wake_thread_locked;
 	z_try_abort_thread_timeout_fake.custom_fake = ref_try_abort_thread_timeout;
 	z_waitq_init_fake.custom_fake = ref_waitq_init;
@@ -971,6 +990,8 @@ void kernel_unit_sched_ref_install(void)
 	arch_thread_return_value_set_fake.custom_fake = ref_thread_return_value_set;
 #ifdef KERNEL_UNIT_FAKE_GROUP_scheduler
 	k_sched_current_thread_query_fake.custom_fake = ref_current_thread_query;
+	z_sched_waitq_walk_fake.custom_fake = ref_sched_waitq_walk;
+	z_sched_wait_fake.custom_fake = ref_sched_wait;
 #endif
 }
 

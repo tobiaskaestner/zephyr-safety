@@ -15,12 +15,13 @@
  *
  * - the reference fake (application @c sched_ref, adapter
  *   @c sched_ref/src/contract_ref.c),
- * - the real @c kernel/sched.c on the platform model (application @c sched,
- *   adapter in @c sched/src/test_sched.c).
+ * - the real @c kernel/sched.c and @c kernel/scheduler.c on the platform
+ *   model (application @c sched, adapter in @c sched/src/test_sched.c).
  *
  * The actions of the tests call the C functions of layer A directly
  * (z_pend_curr(), z_sched_wake(), z_reschedule(), z_thread_prio_set(),
- * z_waitq_head(), z_waitq_init()). This adapter does only what the two
+ * z_waitq_head(), z_waitq_init(), and z_sched_waitq_walk() and
+ * z_sched_wait() of @c kernel/scheduler.c). This adapter does only what the two
  * schedulers do in a different way: the setup of a state, the environment of a
  * wait, the calls of @c kernel/thread.c (abort, priority change) and the
  * queries of the state. A difference between the two schedulers is a failing
@@ -67,6 +68,16 @@ enum kernel_unit_contract_check {
 	/** A waiting thread never runs again. */
 	KERNEL_UNIT_CONTRACT_NO_RETURN = BIT(7),
 };
+
+/**
+ * The Zephyr priority of the rank @p n (0 or more) in a test whose result is
+ * the same for preemptible and for cooperative threads: @p n if the scenario
+ * has preemptible priorities, else the cooperative priority
+ * K_PRIO_COOP(@p n) (@c CONFIG_NUM_PREEMPT_PRIORITIES = 0). Both keep the
+ * order of the ranks. @p n must be less than the number of priorities of
+ * each kind.
+ */
+#define KERNEL_UNIT_CONTRACT_PRIO(n) (IS_ENABLED(CONFIG_PREEMPT_ENABLED) ? (n) : K_PRIO_COOP(n))
 
 /** An action of the environment. */
 typedef void (*kernel_unit_contract_action_t)(void);
@@ -152,6 +163,14 @@ struct k_thread *kernel_unit_contract_next(void);
 
 /** @brief Return the swap return value of @p thread (swapRet). */
 int kernel_unit_contract_ret(struct k_thread *thread);
+
+/**
+ * @brief Return true if the CPU is locked now (Platform!Locked).
+ *
+ * The scheduler lock and irq_lock() lock the CPU. The reference fake has no
+ * interrupt lock state: its adapter counts the calls of the arch fakes.
+ */
+bool kernel_unit_contract_irq_locked(void);
 
 /** @brief Copy the waiters of @p wait_q, head first. Return their number. */
 size_t kernel_unit_contract_waiters(_wait_q_t *wait_q, struct k_thread **out, size_t max);

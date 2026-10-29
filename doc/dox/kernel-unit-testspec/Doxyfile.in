@@ -36,6 +36,7 @@ INPUT                  = @DOXY_SRC_DIR@/mainpage.md \
                          @SAFETY_BASE@/tests/kernel/unit/obj_core/src/test_obj_core_sem.c \
                          @SAFETY_BASE@/tests/kernel/unit/queue/src/test_queue.c \
                          @SAFETY_BASE@/tests/kernel/unit/sched/src/test_sched.c \
+                         @SAFETY_BASE@/tests/kernel/unit/scheduler/src/test_scheduler.c \
                          @SAFETY_BASE@/tests/kernel/unit/common/src/test_sched_contract.c \
                          @SAFETY_BASE@/tests/kernel/unit/sem/src/test_sem.c \
                          @SAFETY_BASE@/tests/kernel/unit/stack/src/test_stack.c
