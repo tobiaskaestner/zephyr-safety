@@ -16,10 +16,13 @@ environment
     LATBENCH_REPO       the safety repo (the design and scripts/benchmarks/data.py)
 
 and the safety repo as the current folder, and writes
-<instance>/notebooks/<name>.html (nbconvert) and notebooks.json: for each
+<instance>/notebooks/<name>.html (nbconvert), the executed notebook
+<instance>/notebooks/<name>.ipynb (with its outputs; JupyterLab opens it
+there and can run it again, as the notebook finds its instance and the
+lab space from its folder) and notebooks.json: for each
 notebook the digest of its inputs (the notebook file, the study.json of
-the instance and the helper modules data.py and nbfig.py). With the same digest, the notebook does not run again
-(--force runs it). The output of a notebook is not byte-stable (time
+the instance and the helper modules data.py and nbfig.py). With the same
+digest, the notebook does not run again (--force runs it). The output of a notebook is not byte-stable (time
 stamps, ids), so "analysis check" does not compare it. The packages are
 in scripts/benchmarks/requirements-notebooks.lock (not needed for the other
 commands).
@@ -62,7 +65,7 @@ def inputs_digest(nb, study_json, repo=None):
 
 
 def execute(nb_file, instance_folder, repo):
-    """Run a notebook; return its HTML (nbclient, nbconvert)."""
+    """Run a notebook; return (its HTML, the executed notebook as text) (nbclient, nbconvert)."""
     try:
         import nbclient
         import nbformat
@@ -87,7 +90,7 @@ def execute(nb_file, instance_folder, repo):
             else:
                 os.environ[k] = v
     body, _ = HTMLExporter().from_notebook_node(nb)
-    return body
+    return body, nbformat.writes(nb)
 
 
 def run(folder, force=False, log=print, executor=execute):
@@ -111,11 +114,13 @@ def run(folder, force=False, log=print, executor=execute):
             name = nb.stem
             digest = inputs_digest(nb, sj)
             have = index["notebooks"].get(name, {})
-            if not force and have.get("inputs") == digest and (odir / f"{name}.html").is_file():
+            done = [have.get("html"), have.get("ipynb")]
+            if not force and have.get("inputs") == digest and all((odir / f).is_file() for f in done if f) and done[0]:
                 out.append((inst, name, "the same inputs"))
                 continue
             try:
                 html = executor(nb, inst, trees.REPO_DIR)
+                html, ipynb = html if isinstance(html, tuple) else (html, None)
             except NotebookError as e:
                 index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(trees.REPO_DIR)),
                                             "error": str(e)}
@@ -125,6 +130,11 @@ def run(folder, force=False, log=print, executor=execute):
             (odir / f"{name}.html").write_text(html)
             index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(trees.REPO_DIR)),
                                         "html": f"{name}.html"}
+            if ipynb is not None:
+                # the executed notebook beside its HTML: JupyterLab opens it in the results tree, and it
+                # finds its instance from its folder
+                (odir / f"{name}.ipynb").write_text(ipynb)
+                index["notebooks"][name]["ipynb"] = f"{name}.ipynb"
             out.append((inst, name, "ran"))
             log(f"{layout.instance_path_of(inst, root) or '(top)'}: {name}: notebooks/{name}.html")
         index_f.write_text(json.dumps(index, indent=1, sort_keys=True) + "\n")

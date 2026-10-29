@@ -543,7 +543,9 @@ notebook runs (nbclient) in the safety repository, with the environment
 variables ``LATBENCH_INSTANCE`` (the instance folder) and
 ``LATBENCH_REPO`` (the safety repository). ``scripts/benchmarks/data.py``
 loads the instance. The output goes to
-``<instance>/notebooks/<name>.html``. ``notebooks.json`` has the digest
+``<instance>/notebooks/<name>.html``, and the executed notebook (with its
+outputs) to ``<instance>/notebooks/<name>.ipynb``: JupyterLab can open it
+there and run it again. ``notebooks.json`` has the digest
 of the inputs (the notebook, ``study.json``, ``data.py`` and
 ``nbfig.py``). With the same digest,
 the notebook does not run again. The instance page links to the

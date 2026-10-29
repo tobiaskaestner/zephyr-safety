@@ -92,19 +92,19 @@ runs the notebooks (see :doc:`../cli/study-py`). The HTML of a report
 loads plotly.js from its CDN (``cdn.plot.ly``), so it shows the figures
 only with network access.
 
-To open and change a report in a browser, install JupyterLab into the
-venv of the lab space (``scripts/benchmarks/requirements-jupyter.lock``).
-Open copies of the notebooks, so that the clone of the safety repository
-stays clean: JupyterLab saves the outputs into the file. In the lab
-folder:
+``study.py analysis notebooks`` also writes the executed notebook
+beside its HTML: ``<instance>/notebooks/report.ipynb``, with its outputs.
+To open the reports in a browser, install JupyterLab into the venv of the
+lab space (``scripts/benchmarks/requirements-jupyter.lock``) and start it
+at the results root:
 
 .. code-block:: console
 
-   mkdir -p work
-   cp safety/validation/empirical/latencies/st-zephyr-versions/report.ipynb work/zephyr-versions.ipynb
-   LATBENCH_RESULTS=$PWD/results/kernel-latency LATBENCH_REPO=$PWD/safety .venv/bin/jupyter lab work
+   .venv/bin/jupyter lab results/kernel-latency
 
-``LATBENCH_RESULTS`` is the results root. Each notebook finds the
-instance of its study in it. ``LATBENCH_INSTANCE`` gives one instance
-folder instead. To change a report for all, change the notebook in the
-safety repository and commit it without outputs.
+The file browser shows the results tree: open the ``notebooks`` folder of
+an instance. An executed notebook finds its instance from its folder and
+the safety repository from the lab space, so it can run again and you
+can change it there. To change a report for all, change the notebook in
+the safety repository and commit it without outputs. The next ``analysis
+notebooks`` writes a new copy over yours.

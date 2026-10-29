@@ -873,6 +873,15 @@ def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
     assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["ran"]
     assert len(calls) == 2
 
+    def with_copy(nb_file, folder, repo):          # the executed notebook goes beside its HTML
+        calls.append((nb_file.name, folder))
+        return "<html>ok</html>", '{"cells": []}'
+    assert [x[2] for x in notebooks.run(res / "top", force=True, log=lambda *a: None, executor=with_copy)] == ["ran"]
+    assert (inst / "notebooks" / "report.ipynb").read_text() == '{"cells": []}'
+    assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=with_copy)] == ["the same inputs"]
+    (inst / "notebooks" / "report.ipynb").unlink()                  # a missing copy runs it again
+    assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=with_copy)] == ["ran"]
+
     def broken(nb_file, folder, repo):
         raise notebooks.NotebookError("cell 3: KeyError")
     out = notebooks.run(res / "top", force=True, log=lambda *a: None, executor=broken)
