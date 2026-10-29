@@ -17,7 +17,11 @@ and by example tests (``mc/WaitQueueTest``, ``mc/TimeoutTest``,
 ``mc/PlatformTest``, ``mc/SchedulerTest``). ``Platform`` is at level 1
 since 2026-10-29: the interrupt lock and the two variants of the context
 switch. Level 2 adds the IPIs and the lock owners (roadmap step 5).
-``Waitable`` does not exist yet. The k_sem proof of concept is still in
+Round B (2026-10-29) added the swap data in both directions, the wait
+queue head, ``z_unpend_all()``, the ordered walk with a stop, the wake of
+one thread with its precondition, the join queue, the fault-model step
+``WaitqInit``, the ``@kconfig`` tags and the coverage check (see
+`Kconfig`_). ``Waitable`` does not exist yet. The k_sem proof of concept is still in
 the workspace notes (``claude/kernel-unit/tla/``). It moves here when it is expressed on the
 library.
 
@@ -277,7 +281,11 @@ an ISR), ``o`` an object.
      - ``z_pend_curr()``: panic if ``a`` is an ISR. Else add ``a`` to the
        wait queue of ``o``, preset ``swapRet[a]`` to ``-EAGAIN``, add a
        timeout entry if ``to`` is finite (panic on a full heap), and
-       switch (``Release(a, "swap")``).
+       switch (``Release(a, "swap")``). The swap data does not change.
+   * - ``SetSwapData(a, d)``
+     - The thread ``a`` writes ``d`` to its swap data before a wait (msgq
+       and mailbox). No step resets the swap data: the code never does.
+       The swap data belongs to a later contract ``ThreadState``.
    * - ``WakeFirst(o, ret, data)``
      - ``z_sched_wake()``: the best waiter leaves the wait queue, its
        timeout is cancelled, it gets ``ret`` and ``data``, it is ready.
@@ -290,12 +298,35 @@ an ISR), ``o`` an object.
    * - ``WakeAll(o, ret, data)``
      - The loop ``while (z_sched_wake(...))``. One wake of all waiters,
        also enabled on an empty wait queue (no change).
-   * - ``WakeWalk(o, P, D)``
-     - ``z_sched_waitq_walk()``: wake each waiter ``t`` with ``P(t)``,
-       with the return value 0 and the data ``D(t)``.
+   * - ``UnpendAll(o)``
+     - ``z_unpend_all()`` (``k_heap_free()``): each waiter leaves the wait
+       queue with its timeout cancelled, and keeps the ``-EAGAIN`` preset
+       and its old swap data. ``HasWaiters(o)`` before the step is the
+       return value.
+   * - ``WakeWalk(o, P, Stop, D)``
+     - ``z_sched_waitq_walk()`` with ``walk_func`` and ``post_func`` in
+       one critical section: the walk visits the waiters in wait queue
+       order and stops after the first waiter with ``Stop(t)``
+       (``WaitQueue!Walked``, ``WaitQueue!WalkStop``). Each visited waiter
+       with ``P(t)`` is woken with the return value 0 and the data
+       ``D(t)``. Events: ``Stop`` is false. Mailbox send: ``P`` and
+       ``Stop`` are the match.
+   * - ``WakeLocked(S, ret, dat)``, ``WakeThreadLocked(t, ret, d)``
+     - ``z_sched_wake_thread_locked()``: a dead (or aborting) thread is
+       ignored, each other thread leaves its wait queue and is ready. The
+       precondition ``WakePre(S)``: the caller has cancelled the timeouts.
+       The operator does not change the timeout queue.
    * - ``WakeSet(S, ret, dat)``
-     - The common part of the wakes: ``z_sched_wake_thread_locked()`` with
-       the cancellation of the timeout that its callers do first.
+     - The common part of the wakes: the cancellation of the timeouts,
+       then ``WakeLocked``.
+   * - ``WaitqInit(o)``
+     - ``z_waitq_init()`` from the init function of an object. On a wait
+       queue with waiters the code has undefined behavior: ``panic``
+       becomes ``"undefined"`` and the model stops (fault model, Kconfig
+       kind 5, invariant ``NoUndefined``, finding P6-u).
+   * - ``WaitQueue!Head(o)``
+     - The query ``z_waitq_head()`` and ``z_waitq_head_locked()``: the
+       best waiter, or ``None``.
    * - ``PrioSet(t, p)``
      - ``z_thread_prio_set()``: a waiter goes to the end of the waiters
        with its new priority. A ready thread (on one CPU also the current
@@ -309,13 +340,14 @@ an ISR), ``o`` an object.
        rule ``resched()``: the key of the critical section is unlocked and
        the actor is not an ISR). ``"swap"``: ``z_swap()``. For an ISR each
        kind is the exit of the ISR, which is a reschedule point.
-   * - ``ThreadTimeout(c)``, ``Abort(a, t)``, ``SetPrio(a, t, p)``,
-       ``Resume(t)``, ``Preempt(c)``, ``PendSV(c)``, ``IrqLockCall(a)``,
-       ``IrqUnlockCall(a)``
+   * - ``ThreadTimeout(c)``, ``Abort(a, t)``, ``Join(a, t, to)``,
+       ``SetPrio(a, t, p)``, ``Resume(t)``, ``Preempt(c)``, ``PendSV(c)``,
+       ``IrqLockCall(a)``, ``IrqUnlockCall(a)``
      - Environment actions: the expiry of the first timeout on CPU ``c``,
-       ``k_thread_abort()``, ``k_thread_priority_set()``, the return from
-       the swap, an interrupt or IPI that selects a thread on ``c``, the
-       PendSV handler (``arch_swap()`` only), ``irq_lock()`` and
+       ``k_thread_abort()`` (with the static ``unpend_all()`` of the join
+       queue), ``k_thread_join()``, ``k_thread_priority_set()``, the return
+       from the swap, an interrupt or IPI that selects a thread on ``c``,
+       the PendSV handler (``arch_swap()`` only), ``irq_lock()`` and
        ``irq_unlock()`` of a thread outside a kernel call.
 
 **The selection rule.** At each reschedule point, CPU ``c`` selects a
@@ -354,9 +386,21 @@ fails until the IPI arrives (configuration ``smp_rule``, expected). The
 liveness property ``SelectionHappens`` holds with the fairness of
 ``Preempt``.
 
-**Abort.** At level 1 ``Abort`` has no join queue (an object, later), no
-essential threads, and no abort of a thread that runs on another CPU
-(level 2: the target halts itself in an IPI).
+**Abort.** The constant ``JoinQ`` gives each thread its join queue (an
+object of ``Objs``, or ``None``). ``Abort`` wakes the joiners with the
+return value 0 and calls ``update_cache(1)``. An abort of another thread
+does not reschedule, so a joiner with a higher priority does not run until
+the next reschedule point: ``PreemptibleRunsHighest`` fails
+(configurations ``f14_join*``, finding F14). At level 1 ``Abort`` has no
+essential threads, no ``k_thread_suspend()`` and no abort of a thread that
+runs on another CPU (level 2: the target halts itself in an IPI).
+
+**Swap data in the models.** No step resets the swap data, so in a model
+each thread keeps a value. The wakers of ``mc/MCScheduler`` give no data
+(``NoD``): no guard of the scheduler reads the swap data, and with data
+from the wakers the run ``small`` has more than three times the states.
+The data ``d1`` comes only from ``SetSwapData`` (``MCExtra``: ``small_b``,
+``reach_b``), and the msgq and mailbox wakes of these runs keep it.
 
 Layer B: the ``Waitable`` template
 ==================================
@@ -491,9 +535,13 @@ The model keeps the rule, not the data structure:
 
 ``Before`` reads like the requirement text: higher priority first, then
 FIFO. ``pendedOn`` is a function, so a thread waits on at most one object by
-construction. The walk order of ``z_sched_waitq_walk()`` is a separate
-operator, because ``CONFIG_WAITQ_SCALABLE`` changes the walk, not the
-order.
+construction. The walk of ``z_sched_waitq_walk()`` is a separate
+operator (``Walked``, ``WalkStop``): it follows the wait queue order with
+both backends and stops at the first waiter for which ``walk_func``
+returns non-zero. ``CONFIG_WAITQ_SCALABLE`` changes only what a callback
+can do in the walk (no removal before the last step), not the order.
+``Head(o)`` is the query ``z_waitq_head()``. ``WaitQueue`` does not extend
+``Sequences``, so that the name ``Head`` is free.
 
 **Normalization.** Stamps grow without a limit, and TLC needs a finite
 state space. After each step, the stamps are renumbered to their rank
@@ -800,20 +848,34 @@ The rules:
 - A property that applies only under an option has a guard
   (``Prop == Kconfig => P``), so that the document shows the condition,
   and the tag ``@kconfig`` with the option.
-- Each constant of kind 2 or 4 has the tag ``@kconfig CONFIG_X``. Round A
-  (2026-10-29) tagged ``Platform!UseSwitch``. The other constants get their
-  tags in round B.
+- Each constant of kind 2, 3 or 4 has the tag ``@kconfig CONFIG_X``. A tagged
+  constant has its own ``CONSTANT`` statement with a doc comment at column
+  0, so that the doc extension and the coverage check read the tag. Round A
+  (2026-10-29) tagged ``Platform!UseSwitch``, round B the other constants
+  (``CPUS``, ``Backend``, ``HeapCapacity``) and the guarded properties
+  (``RqStampsNormal``, ``HeapWithinCapacity``, ``NoPendSVWithSwitch``).
+  An option of kind 1 has no tag, only a comment (``WaitQueue``: the wait
+  queue backends; ``Scheduler!RqBefore``: the run queue backends).
 - TLC checks product by product: one run for each twister scenario. SANY
   accepts only a constant expression for a ``CONSTANT`` of a module with
   variables, so a ``.cfg`` cannot give a family. Apalache can check a
   family with ``--cinit`` (mostly integer ranges).
-- The coverage check (to do, a script that reads the tags): each option
-  that a spec names in a ``@kconfig`` tag has a ``.cfg`` for each relevant
-  value, or a stated reason. ``CONFIG_USE_SWITCH``: the configurations of
-  ``mc/MCScheduler`` without a suffix have ``y``, those with the suffix
-  ``_pendsv`` have ``n``. The large runs (``default``, ``coop``,
-  ``p7_rules*``, ``smp*``) have only ``y``. ``n`` has the small run
-  ``small_pendsv`` and the P7 runs.
+- The coverage check: each option that a spec names in a ``@kconfig`` tag
+  has a ``.cfg`` for each relevant value, or a stated reason.
+  ``mc/kconfig.txt`` gives the relevant values of each symbol: the value of
+  the library constant for each one (``CONFIG_USE_SWITCH y UseSwitch
+  TRUE``), or a reason (``CONFIG_TIMEOUT_BACKEND_WHEEL y - not in the
+  model yet ...``). ``tools/kconfig_coverage.py`` reads the tags, this file,
+  ``mc/expected.txt`` and the ``.cfg`` files, and reports each value with
+  the model runs that check it, and each tagged property with its runs. A
+  gap (a value without a run and without a reason, a symbol without lines,
+  a property that no run checks) gives the exit status 1. The script finds
+  a library constant by its name in the ``INSTANCE ... WITH`` substitutions
+  of the model. It needs the Python of the doc build (``pygments``).
+  ``CONFIG_USE_SWITCH``: the configurations of ``mc/MCScheduler`` without a
+  suffix have ``y``, those with the suffix ``_pendsv`` have ``n``. The
+  large runs (``default``, ``coop``, ``p7_rules*``, ``smp*``) have only
+  ``y``. ``n`` has the small run ``small_pendsv`` and the P7 runs.
 - An option that the architecture always selects is not a constant: the
   spec states it as an ``@assumption`` (``CONFIG_SWAP_NONATOMIC`` is ``y``
   on each Cortex-M).
@@ -829,7 +891,8 @@ Layout
      objects/          one module for each kernel object
      mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
-     tools/            run_tlc.sh, tla2tools.sha256, apalache.sha256
+     tools/            run_tlc.sh, kconfig_coverage.py, tla2tools.sha256,
+                       apalache.sha256
 
 Running
 *******
@@ -857,6 +920,7 @@ stops the lookup.
    export TLA2TOOLS=/path/to/tla2tools.jar
    spec/tla/tools/run_tlc.sh              # all models in mc/expected.txt
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
+   python3 spec/tla/tools/kconfig_coverage.py  # Kconfig coverage (doc Python)
 
 Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
 no run script yet. The library modules type-check (``WaitQueue``,

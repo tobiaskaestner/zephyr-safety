@@ -37,7 +37,56 @@
 (* conversion.                                                             *)
 (*                                                                         *)
 (* A panic stops the system. panic gives the cause. Each action of this    *)
-(* module and of the modules that use it requires panic = "none".          *)
+(* module and of the modules that use it requires panic = "none". The      *)
+(* value "undefined" also stops the model: the code has undefined behavior *)
+(* (the fault model, see WaitqInit).                                       *)
+(*                                                                         *)
+(* Reading map. For each group of operators: the C code, the layer (D:     *)
+(* descriptive, the operators follow the code; N: normative, the           *)
+(* properties come from the requirements) and the configurations that      *)
+(* check it (ST: mc/SchedulerTest; the other names are configurations of   *)
+(* mc/MCScheduler).                                                        *)
+(*                                                                         *)
+(* - Priorities and queries (ToZephyr, Cooperative, Running, Executes,     *)
+(*   CanCall, CpuOf, TimedWait). ksched.h: z_is_prio_higher(); kthread.h:  *)
+(*   thread_is_preemptible(). D. ST.                                       *)
+(* - Run queue and cache (RqBefore, RunqBest, CacheOf, QueueReady,         *)
+(*   Requeue, Unqueue, HaltRq). sched.c: update_cache(), next_up(),        *)
+(*   ready_thread(), queue_thread(), dequeue_thread(); kthread.h:          *)
+(*   should_preempt(); run_q.h, priority_q.h. D. ST, all.                  *)
+(* - Selection (Candidates, Top, SmpChoices, Choices, Select, ReschedOk,   *)
+(*   Release). sched.c: z_reschedule(), resched(), need_swap(); kswap.h:   *)
+(*   z_swap(). D. ST, default, coop, smp, smp_rule, missed_resched, p2_*.  *)
+(* - Wait and wakes (PendCurr, SetSwapData, WakePre, WakeLocked,           *)
+(*   WakeThreadLocked, WakeSet, WakeFirst, WakeFirstWith, WakeAll,         *)
+(*   UnpendAll, WakeWalk, WaitqInit). sched.c: z_pend_curr(),              *)
+(*   z_sched_wake_thread_locked(), z_unpend_all(); ksched.h:               *)
+(*   z_sched_wake(), z_unpend_first_thread_locked(); scheduler.c:          *)
+(*   z_sched_waitq_walk(); wait_q.h: z_waitq_init(). D. default, coop,     *)
+(*   small, small_b, reach_b, isr_pend, wake_no_cancel, p6_init.           *)
+(* - Priority change (PrioSet, SetPrio). sched.c: z_thread_prio_set();     *)
+(*   thread.c: z_impl_k_thread_priority_set(). D. default, p7_tie,         *)
+(*   p7_coop.                                                              *)
+(* - Environment (ThreadTimeout, Abort, Join, Resume, Preempt, PendSV,     *)
+(*   IrqLockCall, IrqUnlockCall, InitState, Fairness). sched.c:            *)
+(*   z_thread_timeout(), halt_thread(), unpend_all(); thread.c:            *)
+(*   z_thread_abort(), z_impl_k_thread_join(); the switch and the          *)
+(*   interrupt lock of Platform. D. default, p7_abort, join, f14_join,     *)
+(*   gap_*, p2_*, reach*.                                                  *)
+(* - Consistency (TypeOK, CurUnique, CurIsReady, PendingIsQueued,          *)
+(*   ArmedArePending, DeadIsInert, RqStampsNormal, RunRuleHolds,           *)
+(*   TimedWaitEnds, SelectionHappens) and conditions of use                *)
+(*   (NoSwitchWhileLocked, NoPanic, NoUndefined). D. default, coop, smp,   *)
+(*   small*, join, the mutants, p6_init.                                   *)
+(* - Requirements (PreemptibleRunsHighest, UnlockPreempts,                 *)
+(*   SwitchSelectsHighest, BlockedLosesCpu, TieGoesToLongestReady,         *)
+(*   CoopKeepsCpu). ZEP-SRS-2-9, 2-12, 2-13, 2-14. N. p7_rules*, p7_*,     *)
+(*   coop_rule*, p2_window*, gap_coop*, f14_join.                          *)
+(*                                                                         *)
+(* Size: 400 code lines (without comments), the limit of the design note.  *)
+(* The next addition splits the run queue and the cache into a module      *)
+(* RunQueue (an INSTANCE module with rqStamp, preemptOk and readySince):   *)
+(* the proposal is in the workspace notes (tla/scheduler-round-b.md).      *)
 (***************************************************************************)
 EXTENDS Integers, Sequences, FiniteSets
 
@@ -49,34 +98,54 @@ CONSTANTS
     \* The value of pendedOn for a thread that does not wait.
     \* @type: OBJ;
     None,
-    \* The parameters of Platform: the CPUs, the ISR actors of the objects
-    \* (not the timer ISR of the expiry) and the CPU of each ISR.
-    \* @type: Set(CPU);
-    CPUS,
+    \* The parameters of Platform: the ISR actors of the objects (not the
+    \* timer ISR of the expiry) and the CPU of each ISR.
     \* @type: Set(THREAD);
     Isrs,
     \* @type: THREAD -> CPU;
     IsrCpu,
-    \* The parameters of Platform: the bound of the nested irq_lock() calls
-    \* and the variant of the context switch (CONFIG_USE_SWITCH).
+    \* The parameter of Platform: the bound of the nested irq_lock() calls.
+    \* A bound of the model, not a Kconfig option.
     \* @type: Int;
     MaxIrqNest,
-    \* @type: Bool;
-    UseSwitch,
     \* cur[c] = Idle: the idle thread of CPU c runs.
     \* @type: THREAD;
     Idle,
-    \* The values that a waker gives to a woken thread (swap data).
+    \* The values that a waker or the waiter writes to the swap data.
     \* @type: Set(DATA);
     Data,
     \* The swap data of a thread that has none.
     \* @type: DATA;
     NoData,
-    \* The backend of the timeout queue (see Timeout).
-    \* @type: Str;
-    Backend,
-    \* @type: Int;
-    HeapCapacity
+    \* The join queue of each thread (thread->join_queue, an object of
+    \* Objs), or None if the model has no join queue for the thread. The
+    \* objects do not call the scheduler on a join queue: only Join and
+    \* Abort use it.
+    \* @type: THREAD -> OBJ;
+    JoinQ
+
+\* The parameter of Platform: the CPUs (Kconfig kind 2, see Platform).
+\* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
+\* @type: Set(CPU);
+CONSTANT CPUS
+
+\* The parameter of Platform: the variant of the context switch (Kconfig
+\* kind 2, see Platform).
+\* @kconfig CONFIG_USE_SWITCH
+\* @type: Bool;
+CONSTANT UseSwitch
+
+\* The parameter of Timeout: the backend of the timeout queue (Kconfig
+\* kind 2, see Timeout).
+\* @kconfig CONFIG_TIMEOUT_BACKEND_DLIST CONFIG_TIMEOUT_BACKEND_MINHEAP CONFIG_TIMEOUT_BACKEND_WHEEL
+\* @type: Str;
+CONSTANT Backend
+
+\* The parameter of Timeout: the size of the heap of the MINHEAP backend
+\* (Kconfig kind 3, see Timeout).
+\* @kconfig CONFIG_TIMEOUT_HEAP_MAX_ENTRIES
+\* @type: Int;
+CONSTANT HeapCapacity
 
 VARIABLES
     \* The state of each thread: "ready", "pending" or "dead". A running
@@ -93,10 +162,16 @@ VARIABLES
     \* the thread does not wait and has no wait to return from.
     \* @type: THREAD -> Int;
     swapRet,
-    \* The data that the waker gives (thread->base.swap_data).
+    \* thread->base.swap_data. It carries data in both directions: a waker
+    \* writes it for the woken thread (WakeSet), and a thread writes it
+    \* before its wait for the later waker (SetSwapData, msgq and mailbox).
+    \* No step of this module resets it: the code never does. It belongs
+    \* to the state of a thread, a later contract ThreadState.
     \* @type: THREAD -> DATA;
     swapData,
-    \* "none", or the cause of the panic.
+    \* "none", or the cause of the stop: a panic (PanicCauses), or
+    \* "undefined" (the fault model: the code has undefined behavior, see
+    \* WaitqInit). Each action requires "none".
     \* @type: Str;
     panic,
     \* The position of each ready thread in the run queue, among the threads
@@ -138,6 +213,8 @@ VARIABLES
 ASSUME None \notin Objs
 ASSUME Idle \notin Threads \cup Isrs
 ASSUME NoData \notin Data
+ASSUME \A t \in Threads : JoinQ[t] \in Objs \cup {None}
+ASSUME \A a, b \in Threads : a # b /\ JoinQ[a] # None => JoinQ[a] # JoinQ[b]
 
 \* The world below sched.c: CPUs, actors, interrupt lock, switch.
 PF == INSTANCE Platform
@@ -158,6 +235,10 @@ OK     == 0
 EAGAIN == -11
 \* "no return value": the thread has no wait to return from.
 NoRet  == 1
+
+\* The values of panic for a panic (k_panic()). The value "undefined" is
+\* not a panic: the model stops because the code has no defined behavior.
+PanicCauses == {"pend_in_isr", "timeout_heap_full"}
 
 \* The timeouts of a wait. "TICKS" is any finite timeout. K_NO_WAIT never
 \* pends: the object returns without a call of PendCurr.
@@ -218,7 +299,10 @@ Ready == {t \in Threads : tstate[t] = "ready"}
 
 \* The run queue order: a comes before b. A higher priority first, then
 \* the position. z_priq_simple_add() inserts a thread after each thread with
-\* the same priority, z_priq_rb_add() and z_priq_mq_add() do the same.
+\* the same priority, z_priq_rb_add() and z_priq_mq_add() do the same. Thus
+\* the backends of the run queue (CONFIG_SCHED_SIMPLE, CONFIG_SCHED_SCALABLE,
+\* CONFIG_SCHED_MULTIQ) are a Kconfig option of kind 1: the module covers
+\* all values, and the unit tests check each backend.
 \* @type: (THREAD -> Int, THREAD -> Int, THREAD, THREAD) => Bool;
 RqBefore(pr, rs, a, b) ==
     \/ pr[a] > pr[b]
@@ -401,8 +485,10 @@ Release(a, kind) ==
 
 \* z_pend_curr(): the current thread a waits on o with the timeout to. It
 \* leaves the CPU, its return value is -EAGAIN until a waker sets another
-\* one. From an ISR (Platform!InIsr): panic, and no other change (the
-\* check is the first statement of z_pend_curr()). A finite timeout on a full heap: panic in
+\* one. The swap data does not change: an object that gives data to the
+\* waker writes it first (SetSwapData). From an ISR (Platform!InIsr):
+\* panic, and no other change (the check is the first statement of
+\* z_pend_curr()). A finite timeout on a full heap: panic in
 \* z_add_timeout(). The model then stops; the state of the wait queue at
 \* the panic is not modeled. unready_thread() of the current thread calls
 \* update_cache(1).
@@ -421,27 +507,74 @@ PendCurr(a, o, to) ==
          /\ IF to = "TICKS" THEN TO!InsertAny(a) ELSE UNCHANGED <<tq, tqCost>>
          /\ tstate' = [tstate EXCEPT ![a] = "pending"]
          /\ swapRet' = [swapRet EXCEPT ![a] = EAGAIN]
-         /\ swapData' = [swapData EXCEPT ![a] = NoData]
-         /\ UNCHANGED <<prio, panic>>
+         /\ UNCHANGED <<prio, panic, swapData>>
          /\ Unqueue(a)
          /\ Release(a, "swap")
 
-\* The threads in S stop to wait: they leave the wait queue, their
-\* timeouts are cancelled, each one gets its return value ret[t] and its
-\* data dat[t], and each one is ready (QueueReady). This is
-\* z_sched_wake_thread_locked() with the cancellation of the timeout that
-\* its callers do first (z_unpend_first_thread_locked(), event_walk_op()).
+\* The thread a writes d to its swap data before a wait: the buffer of
+\* k_msgq_put() and k_msgq_get() (msg_q.c:248, 387), the message of a
+\* mailbox send and of k_mbox_get() (mailbox.c:265, 503). The waker reads
+\* it (msg_q.c:198, 366; mailbox.c:215, 441). The code writes it in the
+\* critical section of the wait. A separate step is the same at level 1:
+\* only a waker of a pending thread writes the swap data of another thread.
+\* @kind action
+SetSwapData(a, d) ==
+    /\ panic = "none"
+    /\ a \in Threads
+    /\ CanCall(a)
+    /\ swapData' = [swapData EXCEPT ![a] = d]
+    /\ UNCHANGED <<tstate, prio, cur, swapRet, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED <<rqVars, irqNest, pendsv>>
+
+\* The precondition of z_sched_wake_thread_locked() for the threads S: no
+\* thread of S has an armed timeout. The caller cancels it first
+\* (event_walk_op(), events.c:160; the mailbox walks, mailbox.c:225, 452).
+\* "This routine assumes that the given thread is not on the timeout
+\* queue" (scheduler.h:89-90). A caller that breaks it leaves an armed
+\* timeout on a ready thread, and the invariant ArmedArePending fails
+\* (mutant wake_no_cancel of mc/MCScheduler).
+WakePre(S) == S \cap TO!Armed = {}
+
+\* z_sched_wake_thread_locked() for each thread of S, in one critical
+\* section, with the value ret[t] and the data dat[t] that the caller
+\* writes first (arch_thread_return_value_set(), swap_data). The function
+\* ignores a dead or aborting thread (sched.c:479-482): such a thread keeps
+\* its state (at level 1 "aborting" is not a state: only SMP has it). Each
+\* other thread of S leaves its wait queue and is ready (QueueReady). The
+\* operator does not change the timeouts (tq, tqCost): the caller cancels
+\* them (see WakePre) and sets tq' and tqCost'. Thus each thread of S
+\* that is not dead must wait (WaitQueue!RemoveSet).
 \* @kind action
 \* @c-function z_sched_wake_thread_locked
 \* @type: (Set(THREAD), THREAD -> Int, THREAD -> DATA) => Bool;
+WakeLocked(S, ret, dat) ==
+    LET K == {t \in S : tstate[t] # "dead"}
+    IN  /\ WQ!RemoveSet(K)
+        /\ tstate' = [t \in Threads |-> IF t \in K THEN "ready" ELSE tstate[t]]
+        /\ swapRet' = [t \in Threads |-> IF t \in K THEN ret[t] ELSE swapRet[t]]
+        /\ swapData' = [t \in Threads |-> IF t \in K THEN dat[t] ELSE swapData[t]]
+        /\ UNCHANGED <<prio, panic>>
+        /\ QueueReady(K)
+
+\* z_sched_wake_thread_locked() for one thread t, with the return value
+\* ret and the data d of the caller. The precondition is WakePre({t}); the
+\* caller sets tq' and tqCost' (see WakeLocked).
+\* @kind action
+\* @c-function z_sched_wake_thread_locked
+WakeThreadLocked(t, ret, d) == WakeLocked({t}, Const({t}, ret), Const({t}, d))
+
+\* The threads in S stop to wait: their timeouts are cancelled, and then
+\* each one is woken as by z_sched_wake_thread_locked() with its return
+\* value ret[t] and its data dat[t]. This is the common form of all wakes
+\* of an object: z_unpend_first_thread_locked() and z_sched_wake() cancel
+\* the timeout (ksched.h:262), event_walk_op() and the mailbox walks call
+\* z_try_abort_thread_timeout() first.
+\* @kind action
+\* @c-function z_try_abort_thread_timeout
+\* @type: (Set(THREAD), THREAD -> Int, THREAD -> DATA) => Bool;
 WakeSet(S, ret, dat) ==
-    /\ WQ!RemoveSet(S)
     /\ TO!CancelSet(S)
-    /\ tstate' = [t \in Threads |-> IF t \in S THEN "ready" ELSE tstate[t]]
-    /\ swapRet' = [t \in Threads |-> IF t \in S THEN ret[t] ELSE swapRet[t]]
-    /\ swapData' = [t \in Threads |-> IF t \in S THEN dat[t] ELSE swapData[t]]
-    /\ UNCHANGED <<prio, panic>>
-    /\ QueueReady(S)
+    /\ WakeLocked(S, ret, dat)
 
 \* The wait queue of o is not empty: z_sched_wake() returns true.
 HasWaiters(o) == WQ!W(o) # {}
@@ -475,15 +608,71 @@ WakeFirstWith(o, F(_)) ==
 WakeAll(o, ret, data) ==
     LET S == WQ!W(o) IN WakeSet(S, Const(S, ret), Const(S, data))
 
-\* z_sched_waitq_walk(): each waiter t of o with P(t) stops to wait, with
-\* the return value 0 and the data D(t). The walk order changes only the
-\* order of the wakes, not the result of the critical section.
+\* z_unpend_all() (sched.c:804-822, caller k_heap_free(), kheap.c:188):
+\* all waiters of o stop to wait, head first, each with its timeout
+\* cancelled. The function sets no return value and no data: each waiter
+\* keeps the preset -EAGAIN of its wait and its old swap data. Also
+\* enabled on an empty wait queue (no change). The return value of the C
+\* function is HasWaiters(o) before the step: the caller reschedules only
+\* then.
+\* @kind action
+\* @c-function z_unpend_all
+UnpendAll(o) ==
+    LET S == WQ!W(o)
+    IN  WakeSet(S, [t \in S |-> swapRet[t]], [t \in S |-> swapData[t]])
+
+\* z_sched_waitq_walk() (scheduler.c:84-118) with walk_func and post_func
+\* in one critical section (post_func also runs under the scheduler lock).
+\* The walk visits the waiters of o in wait queue order and stops after
+\* the first waiter t with Stop(t): walk_func returns a value other than 0
+\* (WaitQueue!Walked). Each visited waiter t with P(t) stops to wait with
+\* the return value 0 and the data D(t), as by z_sched_wake_thread_locked()
+\* after the cancellation of its timeout. The return value of the C
+\* function is 0 if WaitQueue!WalkStop(o, Stop) = None, else the value of
+\* walk_func. Users:
+\*
+\* - k_event_post() and k_event_set() (events.c:211): P is the wait
+\*   condition, Stop is always FALSE (event_walk_op() returns 0). With
+\*   CONFIG_WAITQ_SCALABLE the wakes are in post_func, in the reverse walk
+\*   order (QueueReady accepts each order).
+\* - mailbox send (mailbox.c:280): P and Stop are both "the receiver
+\*   matches": the first matching receiver in wait queue order is woken,
+\*   with z_sched_ready_locked() (the same effect for a waiter).
+\* - k_mbox_get() (mailbox.c:479): Stop is "the sender matches", P is
+\*   FALSE. The walk only unpends the sender, which stays not ready until
+\*   the message is disposed of. A model of the mailbox uses
+\*   WaitQueue!WalkStop for this walk, not this operator.
+\*
+\* With CONFIG_WAITQ_SCALABLE, walk_func can remove a waiter only on the
+\* last step of the walk (scheduler.h:71-74). events.c obeys the rule
+\* with post_func, mailbox.c with the stop.
 \* @kind action
 \* @c-function z_sched_waitq_walk
-\* @type: (OBJ, THREAD => Bool, THREAD => DATA) => Bool;
-WakeWalk(o, P(_), D(_)) ==
-    LET S == {t \in WQ!W(o) : P(t)}
+\* @type: (OBJ, THREAD => Bool, THREAD => Bool, THREAD => DATA) => Bool;
+WakeWalk(o, P(_), Stop(_), D(_)) ==
+    LET S == {t \in WQ!Walked(o, Stop) : P(t)}
     IN  WakeSet(S, Const(S, OK), [t \in S |-> D(t)])
+
+\* z_waitq_init() of the wait queue of o, from the init function of an
+\* object (k_sem_init(), k_msgq_init(), k_thread_create() for the join
+\* queue, and more). The function sets the list or the tree to empty
+\* (wait_q.h:41-47, 88-91), without a look at the waiters. On an empty wait
+\* queue this changes nothing. On a wait queue with waiters the code has
+\* undefined behavior: the waiters stay pending with pended_on set, no
+\* wake of o finds them, and a later removal (a timeout, an abort) unlinks
+\* a node from a list or a tree that does not contain it. The model then
+\* stops (fault model, finding P6-u). No Kconfig option adds a check here:
+\* the code has no assert and no CHECKIF, so the fault model has only the
+\* value "undefined".
+\* @kind action
+\* @c-function z_waitq_init
+WaitqInit(o) ==
+    /\ panic = "none"
+    /\ IF HasWaiters(o)
+         THEN panic' = "undefined"
+         ELSE UNCHANGED panic
+    /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED <<rqVars, irqNest, pendsv>>
 
 \* z_thread_prio_set(): the priority of t becomes p, also if p is the old
 \* priority. A ready thread leaves the run queue and comes back at the end
@@ -511,11 +700,13 @@ PrioSet(t, p) ==
 (* object adds them to its next-state relation.                           *)
 
 \* z_thread_timeout() from sys_clock_announce() on CPU c: the first entry of
-\* the timeout queue expires. Its thread stops to wait and keeps the return
-\* value -EAGAIN. It becomes ready (ready_thread(), update_cache(0)). The
-\* exit of the timer ISR is a reschedule point of c. The timer interrupt
-\* runs only while c has interrupts unlocked (Platform!ClockCanFire). Only
-\* thread waits use this atomic form (see Timeout).
+\* the timeout queue expires, and its thread is woken with
+\* z_sched_wake_thread_locked() (sched.c:494-510). It keeps the return
+\* value -EAGAIN and its swap data. It becomes ready (ready_thread(),
+\* update_cache(0)). The exit of the timer ISR is a reschedule point of c.
+\* The timer interrupt runs only while c has interrupts unlocked
+\* (Platform!ClockCanFire). Only thread waits use this atomic form (see
+\* Timeout).
 \* @kind action
 \* @c-function z_thread_timeout
 ThreadTimeout(c) ==
@@ -524,38 +715,82 @@ ThreadTimeout(c) ==
     /\ tq # <<>>
     /\ LET t == TO!First IN
        /\ TO!Expire
-       /\ WQ!Remove(t)
-       /\ tstate' = [tstate EXCEPT ![t] = "ready"]
-       /\ UNCHANGED <<prio, swapRet, swapData, panic>>
-       /\ QueueReady({t})
+       /\ WakeLocked({t}, [u \in {t} |-> swapRet[u]], [u \in {t} |-> swapData[u]])
        /\ Select(c)
 
+\* The threads that wait on the join queue of t (k_thread_join(t)).
+JoinWaiters(t) == IF JoinQ[t] = None THEN {} ELSE WQ!W(JoinQ[t])
+
+\* The run queue part of halt_thread() (sched.c:869-914): t leaves the run
+\* queue (dequeue_thread()), the threads J of the join queue become ready
+\* (ready_thread() in unpend_all(), in the order of the wait queue, which
+\* the model leaves free as QueueReady does), then update_cache(1).
+\* @type: (THREAD, Set(THREAD)) => Bool;
+HaltRq(t, J) ==
+    IF J = {}
+      THEN Unqueue(t)
+      ELSE \E k \in RqOrders :
+             LET R == (Ready \ {t}) \cup J
+             IN  RqStep(RqNormal([u \in Threads |->
+                                    IF u \in J THEN NextRq + k[u] ELSE rqStamp[u]], R),
+                        TRUE,
+                        RqNormal([u \in Threads |-> IF u \in J THEN NextRq ELSE readySince[u]], R))
+
 \* k_thread_abort(t) by actor a. t is dead: it leaves the CPU, its wait
-\* queue and the timeout queue. halt_thread() calls update_cache(1) for
-\* each target, also for a target that is not ready. If a aborts itself,
-\* its CPU selects a thread (z_swap()). An ISR selects a thread at its
-\* exit. A thread that aborts another thread does not reschedule: the
-\* cache can then differ from the current thread until the next
-\* reschedule point (finding P7-c).
-\* Not in the model: the join queue (an object, later), essential threads
-\* (panic), and the abort of a thread that runs on another CPU (level 2:
-\* the target halts itself in an IPI, roadmap step 5).
+\* queue and the timeout queue. Its swap data does not change. The static
+\* unpend_all() of sched.c (sched.c:828-843) wakes each waiter of the join
+\* queue of t: the timeout is cancelled, the return value is 0, the swap
+\* data does not change. halt_thread() then calls update_cache(1), also for
+\* a target that is not ready. If a aborts itself, its CPU selects a thread
+\* (z_swap()). An ISR selects a thread at its exit. A thread that aborts
+\* another thread does not reschedule: the cache can then differ from the
+\* current thread until the next reschedule point (finding P7-c), also
+\* when a joiner with a higher priority is ready (finding F14).
+\* Not in the model: essential threads (panic), k_thread_suspend() (the
+\* same path without the join queue), and the abort of a thread that runs
+\* on another CPU (level 2: the target halts itself in an IPI, roadmap
+\* step 5).
 \* @kind action
 \* @c-function z_thread_abort
 \* @c-function halt_thread
+\* @c-function unpend_all
 Abort(a, t) ==
+    LET J  == JoinWaiters(t)
+        Wt == IF t \in WQ!Waiting THEN {t} ELSE {}
+    IN
     /\ panic = "none"
     /\ CanCall(a)
     /\ tstate[t] # "dead"
     /\ \A c \in CPUS : cur[c] = t => (a = t \/ (a \in Isrs /\ IsrCpu[a] = c))
-    /\ IF t \in WQ!Waiting THEN WQ!Remove(t) ELSE UNCHANGED <<pendedOn, stamp>>
-    /\ TO!Cancel(t)
-    /\ tstate' = [tstate EXCEPT ![t] = "dead"]
-    /\ swapRet' = [swapRet EXCEPT ![t] = NoRet]
-    /\ swapData' = [swapData EXCEPT ![t] = NoData]
-    /\ UNCHANGED <<prio, panic>>
-    /\ Unqueue(t)
+    /\ IF J = {}
+         THEN /\ IF Wt # {} THEN WQ!Remove(t) ELSE UNCHANGED <<pendedOn, stamp>>
+              /\ TO!Cancel(t)
+         ELSE /\ WQ!RemoveSet(Wt \cup J)
+              /\ TO!CancelSet(J \cup {t})
+    /\ tstate' = [u \in Threads |-> IF u = t THEN "dead"
+                                    ELSE IF u \in J THEN "ready" ELSE tstate[u]]
+    /\ swapRet' = [u \in Threads |-> IF u = t THEN NoRet
+                                     ELSE IF u \in J THEN OK ELSE swapRet[u]]
+    /\ UNCHANGED <<prio, panic, swapData>>
+    /\ HaltRq(t, J)
     /\ Release(a, IF a = t THEN "swap" ELSE "unlock")
+
+\* k_thread_join(t, timeout) by thread a (thread.c:1782-1812): a waits on
+\* the join queue of t. The cases that return at once are not steps of the
+\* model: t is dead (0), K_NO_WAIT (-EBUSY), a = t or t waits on the join
+\* queue of a (-EDEADLK). The function does not call z_pend_curr(); its
+\* own code (z_sched_add_to_waitq_locked(), z_add_thread_timeout(),
+\* z_swap_locked()) has the same effect for a thread, without the ISR
+\* check (finding F4: an __ASSERT only).
+\* @kind action
+\* @c-function z_impl_k_thread_join
+Join(a, t, to) ==
+    /\ a \in Threads
+    /\ JoinQ[t] # None
+    /\ a # t
+    /\ tstate[t] # "dead"
+    /\ JoinQ[a] = None \/ pendedOn[t] # JoinQ[a]
+    /\ PendCurr(a, JoinQ[t], to)
 
 \* k_thread_priority_set(t, p) by actor a. It reschedules only if t is
 \* ready (the return value of z_thread_prio_set()):
@@ -568,16 +803,16 @@ SetPrio(a, t, p) ==
     /\ PrioSet(t, p)
     /\ Release(a, IF tstate[t] = "ready" THEN "resched" ELSE "unlock")
 
-\* Thread t runs again after a wait: z_swap() returns swapRet[t] with
-\* swapData[t]. The object reads both in the same step (Waitable).
+\* Thread t runs again after a wait: z_swap() returns swapRet[t]. The
+\* object reads the return value and the swap data in the same step
+\* (Waitable). The swap data does not change: the code never resets it.
 \* @kind action
 Resume(t) ==
     /\ panic = "none"
     /\ Executes(t)
     /\ swapRet[t] # NoRet
     /\ swapRet' = [swapRet EXCEPT ![t] = NoRet]
-    /\ swapData' = [swapData EXCEPT ![t] = NoData]
-    /\ UNCHANGED <<tstate, prio, cur, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED <<tstate, prio, cur, swapData, panic, pendedOn, stamp, tq, tqCost>>
     /\ UNCHANGED <<rqVars, irqNest, pendsv>>
 
 \* An interrupt on CPU c without a kernel call (a tick, an IPI). Its exit
@@ -675,7 +910,7 @@ TypeOK ==
     /\ cur \in [CPUS -> Threads \cup {Idle}]
     /\ DOMAIN swapRet = Threads
     /\ swapData \in [Threads -> Data \cup {NoData}]
-    /\ panic \in {"none", "pend_in_isr", "timeout_heap_full"}
+    /\ panic \in {"none", "undefined"} \cup PanicCauses
     /\ rqStamp \in [Threads -> 0..Cardinality(Threads)]
     /\ preemptOk \in BOOLEAN
     /\ readySince \in [Threads -> 0..Cardinality(Threads)]
@@ -718,6 +953,7 @@ DeadIsInert ==
 \* a thread that is not ready has 0. Thus RunqBest has one witness. The
 \* history has the values 1..N (with equal values), 0 if not ready.
 \* @kind invariant
+\* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
 RqStampsNormal ==
     UP =>
         /\ \A t \in Ready : 1 <= rqStamp[t] /\ rqStamp[t] <= Cardinality(Ready)
@@ -756,7 +992,15 @@ NoSwitchWhileLocked ==
 \* No panic. This is an environment assumption: no ISR calls a wait, and
 \* the heap of the timeouts is large enough.
 \* @kind invariant
-NoPanic == panic = "none"
+NoPanic == panic \notin PanicCauses
+
+\* No undefined behavior of the code. This is a condition of use: no
+\* object is initialized while threads wait on it (WaitqInit). The
+\* configuration p6_init of mc/MCScheduler shows the path to a violation
+\* (finding P6-u).
+\* @kind invariant
+\* @expected violation
+NoUndefined == panic # "undefined"
 
 \* The position of the timeout of t in the timeout queue. Defined only if
 \* TimedWait(t). An entry is armed at most once (Timeout!ArmedOnce), so
@@ -796,10 +1040,14 @@ SelectionHappens ==
 \* selection waits for the end of the lock (irq_lock() prevents the
 \* interrupts, and with them the preemption). G1, while a switch is pending
 \* (arch_swap(), before PendSV) no thread executes, so the CPU has no
-\* current thread in the sense of the requirement.
+\* current thread in the sense of the requirement. TLC finds a violation
+\* with the join queue (finding F14, configuration f14_join): a thread
+\* aborts another thread, the abort makes a joiner with a higher priority
+\* ready, and halt_thread() does not reschedule.
 \* @kind invariant
 \* @source ZEP-SRS-2-9
 \* @source ZEP-SRS-2-12
+\* @expected violation
 PreemptibleRunsHighest ==
     \A c \in CPUS :
         (~PF!Locked(c) /\ ~PF!SwitchPending(c)) =>

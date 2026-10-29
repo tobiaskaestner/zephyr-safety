@@ -196,9 +196,10 @@ struct kernel_unit_sched_ref {
 	/** The fake clock in ticks. It advances only at an expiry. */
 	int64_t clock;
 	/**
-	 * True after z_thread_prio_set() of a ready thread, until the next
-	 * selection. Then the rule is runq_best() of the code: no tie win and no
-	 * cooperative rule for the current thread (update_cache(1) in sched.c).
+	 * True after z_thread_prio_set() of a ready thread and after an abort,
+	 * until the next selection. Then the rule is runq_best() of the code: no
+	 * tie win and no cooperative rule for the current thread (update_cache(1)
+	 * in sched.c: z_thread_prio_set() and halt_thread()).
 	 */
 	bool preempt_ok;
 	/** True while an environment action runs. */
@@ -293,7 +294,11 @@ void kernel_unit_sched_ref_timeout(void);
 /**
  * @brief Let the current thread abort @p thread now (Abort).
  *
- * If the CPU runs the idle thread, an ISR aborts the thread.
+ * If the CPU runs the idle thread, an ISR aborts the thread. As
+ * halt_thread() of the code, the abort permits a switch at the next
+ * selection without the cooperative rule (@c preempt_ok). A thread that
+ * aborts another thread does not select: the check RUN_RULE_HOLDS can fail
+ * (finding P7-c).
  */
 void kernel_unit_sched_ref_abort(struct k_thread *thread);
 

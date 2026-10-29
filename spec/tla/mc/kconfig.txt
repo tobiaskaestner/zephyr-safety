@@ -1,0 +1,35 @@
+# The Kconfig values of the model configurations. tools/kconfig_coverage.py
+# reads this file. Each Kconfig symbol of a @kconfig tag in lib/*.tla must
+# have lines here. One line for each relevant value of the symbol:
+#
+#   <symbol> <value> <constant> <TLA+ value>
+#   <symbol> <value> <constant> <TLA+ value> if <constant 2> <TLA+ value 2>
+#   <symbol> <value> - <reason>
+#
+# The first form: a model configuration in which the library constant
+# <constant> has the value <TLA+ value> checks the symbol with <value>.
+# The condition "if" also requires a value of a second constant.
+# The second form: no configuration checks this value, for the reason.
+# <value> is a label: y, n, a number, or a short name.
+
+# Platform, Scheduler: the variant of the context switch (kind 2).
+CONFIG_USE_SWITCH y UseSwitch TRUE
+CONFIG_USE_SWITCH n UseSwitch FALSE
+
+# Platform, Scheduler: the CPUs (kind 2). The level-1 claim is for one CPU;
+# two CPUs are design exploration.
+CONFIG_SMP n CPUS {c1}
+CONFIG_SMP y CPUS {c1, c2}
+CONFIG_SMP y_one_cpu - not in the model: with one CPU the model follows the code of CONFIG_SMP=n (the cache); CONFIG_SMP=y uses next_up() without the cache, level 2 (roadmap step 5)
+CONFIG_MP_MAX_NUM_CPUS 1 CPUS {c1}
+CONFIG_MP_MAX_NUM_CPUS 2 CPUS {c1, c2}
+
+# Timeout, Scheduler: the backend of the timeout queue (kind 2, a choice).
+CONFIG_TIMEOUT_BACKEND_DLIST y Backend "DLIST"
+CONFIG_TIMEOUT_BACKEND_MINHEAP y Backend "MINHEAP"
+CONFIG_TIMEOUT_BACKEND_WHEEL y - not in the model yet: in scope (decision Q3 of the unit map, kind 2: the firing order of the timeouts of one tick differs), to do
+
+# Timeout, Scheduler: the size of the heap (kind 3, a condition of use).
+# enough: the heap holds all entries of the model; too_small: it does not.
+CONFIG_TIMEOUT_HEAP_MAX_ENTRIES enough HeapCapacity 3 if Backend "MINHEAP"
+CONFIG_TIMEOUT_HEAP_MAX_ENTRIES too_small HeapCapacity 2 if Backend "MINHEAP"

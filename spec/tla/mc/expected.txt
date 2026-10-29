@@ -85,3 +85,16 @@ MCScheduler reach_lock       probes
 # Mutants: a thread waits under an outer interrupt lock.
 MCScheduler pend_locked        fail:Sched!NoSwitchWhileLocked
 MCScheduler pend_locked_pendsv fail:Inv_P_PendingIsUnlocked
+# Round B (2026-10-29): proposals P1, P3-P6 of the review of the reference
+# fake, and the join queue. small_b and reach_b: the swap data in both
+# directions (P1), z_unpend_all() (P4), the walk with a stop (P5).
+MCScheduler small_b          pass
+MCScheduler reach_b          probes
+MCScheduler join             pass
+MCScheduler reach_join       probes
+# F14: k_thread_abort() of another thread makes a joiner with a higher
+# priority ready, and halt_thread() does not reschedule (ZEP-SRS-2-9).
+MCScheduler f14_join         fail:Inv_PreemptibleRunsHighest
+MCScheduler f14_join_pendsv  fail:Inv_PreemptibleRunsHighest
+# P6-u: z_waitq_init() of an object with waiters (fault model).
+MCScheduler p6_init          fail:Inv_NoUndefined

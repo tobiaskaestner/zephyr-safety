@@ -72,6 +72,38 @@ TestTwoObjects ==
     /\ Check("two: Waiting",   At(Two, S12, Equal)!Waiting, {"t1", "t2"})
     /\ Check("two: NextStamp", At(Two, S12, Equal)!NextStamp, 3)
 
+\* Head: z_waitq_head() and z_waitq_head_locked(). None on an empty
+\* queue, else the best waiter.
+TestHead ==
+    /\ Check("head: empty",      At(Wait({}), NoStamps, Equal)!Head("o1"), NoObj)
+    /\ Check("head: fifo",       At(Wait(Threads), S123, Equal)!Head("o1"), "t1")
+    /\ Check("head: prio",       At(Wait(Threads), S123, P1)!Head("o1"), "t2")
+    /\ Check("head: other obj",  At(Two, S12, Equal)!Head("o2"), "t2")
+
+\* The walk of z_sched_waitq_walk(): wait queue order, stop after the
+\* first waiter for which walk_func returns non-zero. The order with P1 is
+\* t2, t1, t3.
+StopT1(t)   == t = "t1"
+StopT3(t)   == t = "t3"
+StopNone(t) == FALSE
+StopAll(t)  == TRUE
+NotT2(t)    == t # "t2"
+Walked(st, pr, Stop(_)) == At(Wait(Threads), st, pr)!Walked("o1", Stop)
+WalkStop(st, pr, Stop(_)) == At(Wait(Threads), st, pr)!WalkStop("o1", Stop)
+TestWalk ==
+    /\ Check("walk: no stop visits all",  Walked(S123, P1, StopNone), Threads)
+    /\ Check("walk: no stop, no thread",  WalkStop(S123, P1, StopNone), NoObj)
+    /\ Check("walk: stop at the head",    Walked(S123, P1, StopAll), {"t2"})
+    /\ Check("walk: stop at the second",  Walked(S123, P1, StopT1), {"t2", "t1"})
+    /\ Check("walk: stopper",             WalkStop(S123, P1, StopT1), "t1")
+    \* Without the priority, t1 is the head: the walk stops at once.
+    /\ Check("walk: fifo stop at t1",     Walked(S123, Equal, StopT1), {"t1"})
+    \* The first match in wait queue order, not the first in the set.
+    /\ Check("walk: first of two",        WalkStop(S123, P1, NotT2), "t1")
+    /\ Check("walk: stop at the tail",    Walked(S123, P1, StopT3), Threads)
+    /\ Check("walk: empty queue",
+             At(Wait({}), NoStamps, Equal)!Walked("o1", StopAll), {})
+
 \* Renumber: the stamps that Add, Remove and Restamp compute.
 TestRenumber ==
     \* Add t3 to t1 and t2: t3 gets NextStamp = 3.
