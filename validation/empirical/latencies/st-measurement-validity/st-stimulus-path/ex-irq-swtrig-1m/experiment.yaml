@@ -1,0 +1,45 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml (H1, H2).
+
+name: irq-swtrig-1m
+app: irq_latency
+trees: [ws-up]
+repeat: 1
+# Each sample has an edge and a software trigger: 1M samples take about
+# 2 x 300 s.
+timeout: 1500
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    LATBENCH_SWTRIG: y
+    # Hot code in the CCM SRAM: the comparison of the paths is free of the
+    # code placement effect (st-code-placement H2).
+    LATBENCH_CODE_RAM: y
+
+axes:
+  path:
+    wrapped:
+      kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
+    direct:
+      kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
+  background:
+    idle: {}
+    busy:
+      kconfig: {LATBENCH_BG_BUSY: y}
+
+# Checks of each run. A run that fails one gets the role "excluded".
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: [irq, irq_sw], stat: invalid, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
+  - id: A4
+    metric: meta.sw_triggers
+    stat: value
+    expect: {range: [1000000, 1000100]}
+    basis: One software trigger after each edge sample, warm-up included.

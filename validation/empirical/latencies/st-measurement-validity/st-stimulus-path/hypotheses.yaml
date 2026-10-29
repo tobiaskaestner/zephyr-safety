@@ -1,0 +1,177 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study stimulus-path. A hypothesis is wrong if one of
+# its checks is wrong. The statements and the limits were written on
+# 2026-10-30, before the first runs of irq-swtrig-1m and
+# wake-swtrig-250k. The numbers of the bases come from manual quick checks
+# on the board (not data: flash, 20000 samples, logs in the run-log of
+# 2026-10-29 and 2026-10-30) and from the exploratory runs of Zephyr PR
+# 117170 on the same board ("PR runs", pr-117170/README.md of the agent
+# notes). The check forms are in doc/benchmark-guide/reference/check-forms.rst.
+
+hypotheses:
+  - id: H1
+    type: method
+    statement: >
+      The hardware path of the stimulus (compare match, pin, wire, input
+      synchronizer, EXTI) adds less than 10 cycles to the entry latency:
+      with a busy CPU, the irq p50 is at most 10 cycles above the irq_sw
+      p50 of the same image.
+    basis: >
+      Quick check (direct path, busy, flash, 20000 samples, 2026-10-29):
+      irq p50 49, irq_sw p50 50, sw_read_cyc 3. The software sample
+      includes the rest of the t0 read and the STIR store, so the
+      hardware path is irq - irq_sw plus 0 to about sw_read_cyc + 2
+      cycles (method page, software trigger). The PR runs give a direct
+      entry p50 of 50..72 cycles from STIR on the same board, the same
+      size as our edge path.
+    wrong_if: >
+      The edge path is much longer than the software path. Then the
+      absolute entry numbers of the study contain a hardware part that
+      a comparison with a software-triggered benchmark must subtract.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-swtrig-1m
+        experiment: irq-swtrig-1m
+        select: {background: busy}
+        metric: irq
+        stat: p50
+        expect: {diff_to: {metric: irq_sw, stat: p50, range: [-5, 10]}}
+        basis: Quick check d = -1 (flash, direct). The range allows the offset bound of the method page.
+
+  - id: H2
+    type: method
+    statement: >
+      The software trigger shows the floor of the entry path, but not its
+      tail: irq_sw has a p99.99 at most 5 cycles above its p50, while
+      the edge samples of the same image have a tail.
+    basis: >
+      The trigger thread writes STIR at a time that the software selects.
+      Thus the interrupt meets no kernel lock, no SysTick ISR and no WFI,
+      except in the few cycles between t0 and the store (method page).
+      Quick check (direct, busy, flash, 20000 samples): irq_sw min 50,
+      max 50; irq max 1906.
+    wrong_if: >
+      The software samples have a tail. Then a software-triggered
+      benchmark can see the tail, and the edge is not necessary for it.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-swtrig-1m
+        experiment: irq-swtrig-1m
+        metric: irq_sw
+        stat: p99.99
+        expect: {diff_to: {metric: irq_sw, stat: p50, range: [0, 5]}}
+        basis: Quick check p99.99 = p50 = 50.
+      - id: b
+        written: 2026-10-30, before the first run of irq-swtrig-1m
+        experiment: irq-swtrig-1m
+        metric: irq
+        stat: p99.99
+        expect: {diff_to: {metric: irq, stat: p50, range: [100, null]}}
+        basis: >
+          irq-baseline-1m direct-idle p99.99 is about 770 against a p50
+          of 55 (comparison note, section 5.4).
+
+  - id: H3
+    type: model
+    statement: >
+      A wake that preempts a time-sliced thread costs one SysTick
+      reprogram more than a wake from the idle thread. The scheduler
+      aborts the slice timeout of the preempted thread, which is the
+      first timeout, so SysTick is reprogrammed; then it adds the slice
+      timeout of the woken thread and reprograms SysTick again. Without
+      time slicing the extra cost is not there.
+    basis: >
+      Code of the tree ws-up: k_sem_give() in the ISR calls update_cache(),
+      which calls z_time_slice_reset() for the woken thread
+      (kernel/sched.c:175). slice_reset() calls z_try_abort_timeout() on
+      the slice timeout of the CPU; if it was the first timeout, this
+      calls reprogram_next() (kernel/timeout.c:245-250). Then
+      z_add_timeout() of the new slice reprograms SysTick if it is first
+      (the slow mode). The idle thread has no slice
+      (z_time_slice_size()). Quick checks (wrapped sem, flash, 20000
+      samples): isr2thr fast 1417 and slow 1753 (idle edge); isr2thr_sw
+      fast 1461 and slow 2218 (+44 and +465); without slicing 737
+      against 771 (+34); edge from a busy sliced thread: fast 1385, slow
+      2090 (+337 against idle). The upstream benchmark does not see this
+      cost: its spinning ztest thread is cooperative
+      (CONFIG_ZTEST_THREAD_PRIORITY=-1 in the PR build) and has no slice.
+    wrong_if: >
+      The extra cost of the preempted thread does not depend on time
+      slicing. Then another part of the switch from a running thread
+      (for example the context save) costs these cycles.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: default, background: idle}
+        metric: isr2thr_sw
+        stat: p50
+        expect: {diff_to: {metric: isr2thr, stat: p50, range: [300, 600]}}
+        basis: Quick check +465 in the slow mode (p50 is in the slow mode, 80 % of the samples).
+      - id: b
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: default, background: idle}
+        metric: isr2thr_sw
+        stat: p10
+        expect: {diff_to: {metric: isr2thr, stat: p10, range: [-20, 100]}}
+        basis: >
+          Quick check +44 in the fast mode (p10 is in the fast mode, 20 %
+          of the samples). In the fast mode the slice timeout is not the
+          first timeout, so neither the abort nor the add reprograms.
+      - id: c
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: noslice, background: idle}
+        metric: isr2thr_sw
+        stat: p50
+        expect: {diff_to: {metric: isr2thr, stat: p50, range: [-20, 100]}}
+        basis: Quick check +34 without time slicing.
+      - id: d
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: default, background: busy}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {axes: {background: idle}, range: [250, 600]}}
+        basis: >
+          The edge from a busy thread at the lowest priority (preemptible,
+          sliced): quick check +337 against the idle edge. The busy thread
+          also saves the WFI exit, so the difference is smaller than in a.
+      - id: e
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: noslice, background: busy}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {axes: {background: idle}, range: [-60, 40]}}
+        basis: Estimate. Without slicing the busy thread has no slice timeout. The WFI exit of the idle edge is a few cycles.
+
+  - id: H4
+    type: model
+    statement: >
+      With the configuration of the upstream benchmark (no time slicing,
+      no stack guard), the software-triggered irq2thr_sw is near the
+      irq_to_thread of the upstream benchmark on the same board.
+    basis: >
+      PR runs: irq_to_thread p50 567..599 cycles over 9 builds without
+      slicing and guard (size optimisation, flash). Quick check
+      irq2thr_sw p50 862 without slicing but with the stack guard; the
+      guard costs about 190 cycles in isr2thr (st-stack-guard), so about
+      670 is expected. The rest differs by the app: our ISR and the woken
+      thread are preemptible, the PR threads are cooperative.
+    wrong_if: >
+      The two benchmarks give different numbers for the same span and
+      configuration. Then one of the two methods has an error that the
+      study must find.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of wake-swtrig-250k
+        experiment: wake-swtrig-250k
+        select: {config: pr-config, background: idle}
+        metric: irq2thr_sw
+        stat: p50
+        expect: {range: [550, 760]}
+        basis: Estimate 670 (see the basis of the hypothesis); the range covers the PR builds and the guard estimate.

@@ -12,6 +12,8 @@ substudies:
   - use: code-placement
   - use: mask-instrumentation
   - use: reproducibility
+  - use: stimulus-path
+  - use: tail-witnesses
 
 # The answer of this study: the central results of its sub-studies.
 central_results:

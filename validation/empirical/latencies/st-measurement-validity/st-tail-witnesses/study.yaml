@@ -1,0 +1,43 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The study tail-witnesses. study.md has the background and why each
+# experiment is there; hypotheses.yaml has the claims and their checks.
+
+name: tail-witnesses
+question: >
+  Do the witness tables (LATBENCH_TAIL) name the cause of the tail
+  samples, at a small cost and without a change of the latency path that
+  they describe?
+
+experiments:
+  - irq-witness-1m
+  - wake-witness-250k
+
+central_results:
+  - id: witness-cost
+    statement: >
+      A witness mark costs {tail_cost_mark_cyc:.0f} cycles, an add that
+      the table rejects {tail_cost_reject_cyc:.0f} cycles and an add that
+      stores a row {tail_cost_store_cyc:.0f} cycles (point {point}).
+    from:
+      experiment: irq-witness-1m
+      axes: {witness: with}
+      metric: [meta.tail_cost_mark_cyc, meta.tail_cost_reject_cyc, meta.tail_cost_store_cyc]
+    stat: value
+    unit: CPU cycles (170 MHz), with the interrupts locked
+
+  - id: idle-tail-cause
+    statement: >
+      The largest IRQ entry samples of an idle system have one cause: the
+      SysTick ISR (with the expiry functions of the load timers, if there
+      is load). The witness tables name it for each sample.
+    from: {hypotheses: [H3]}
+    stat: conclusion
+
+  - id: witness-no-change
+    statement: >
+      With the hot code in RAM, the witness code does not change the
+      latency path that it describes.
+    from: {hypotheses: [H1]}
+    stat: conclusion

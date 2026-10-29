@@ -1,0 +1,65 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml.
+
+name: irq-scenarios-1m
+app: irq_latency
+trees: [ws-up]
+repeat: 1
+# The entry points have an edge and a software sample per sample: about
+# 2 x 300 s for 1M samples.
+timeout: 1500
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    # Hot code in the CCM SRAM: the scenarios are different images, and
+    # their comparison must be free of the code placement effect.
+    LATBENCH_CODE_RAM: y
+    # Witnesses of the main histogram of each scenario.
+    LATBENCH_TAIL: y
+    LATBENCH_TAIL_N: 64
+    LATBENCH_TAIL_MIN_CYC: 100
+
+axes:
+  path:
+    wrapped:
+      kconfig: {LATBENCH_IRQ_PATH_WRAPPED: y}
+    direct:
+      kconfig: {LATBENCH_IRQ_PATH_DIRECT: y}
+  scenario:
+    # The reference: the entry from a busy thread (edge: irq), and from
+    # the STIR store of the trigger thread (irq_sw).
+    entry:
+      kconfig: {LATBENCH_BG_BUSY: y, LATBENCH_SWTRIG: y}
+    unlock:
+      kconfig: {LATBENCH_IRQ_SCEN_UNLOCK: y}
+    nested:
+      kconfig: {LATBENCH_IRQ_SCEN_NESTED: y}
+    exit:
+      kconfig: {LATBENCH_IRQ_SCEN_EXIT: y}
+    burst:
+      kconfig: {LATBENCH_IRQ_SCEN_BURST: y}
+
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A2, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
+  - id: A3
+    select: {scenario: [unlock, nested, exit, burst]}
+    metric: meta.scen_timeouts
+    stat: value
+    expect: {equals: 0}
+    basis: A wait of more than 20 ms is a lost interrupt.
+  - id: A4
+    select: {scenario: [unlock, nested]}
+    metric: meta.scen_missed
+    stat: value
+    expect: {range: [0, 100]}
+    basis: >
+      A sample that does not fit the scenario (the edge before the lock,
+      or not in the lower-priority ISR) is not recorded. It needs a delay
+      of more than 20 us in the lead time; quick checks had none.

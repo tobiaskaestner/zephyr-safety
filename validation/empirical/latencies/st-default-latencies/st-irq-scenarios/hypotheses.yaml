@@ -1,0 +1,177 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study irq-scenarios. A hypothesis is wrong if one of
+# its checks is wrong. The statements and the limits were written on
+# 2026-10-30, before the first run of irq-scenarios-1m. The numbers of the
+# bases come from manual quick checks on the board (not data: direct
+# path, code in flash, 20000 samples, run-log of the agent notes,
+# 2026-10-30) and from the exploratory runs of Zephyr PR 117170 on the
+# same board ("PR runs", pr-117170/README.md of the agent notes; regular
+# ISR path, flash, 10000 samples). The check forms are in
+# doc/benchmark-guide/reference/check-forms.rst.
+
+hypotheses:
+  - id: H1
+    type: model
+    statement: >
+      irq_unlock() of a pending interrupt costs about the same as a
+      software pend: the irq_unlock p50 is within -20..+15 cycles of the
+      irq_sw p50 of the entry (same path).
+    basis: >
+      Both spans start with a read of TIM2 (t0). On Cortex-M Mainline
+      irq_unlock() writes BASEPRI and runs ISB; the pending IRQ is taken
+      after the ISB. The software pend is one store to STIR. Quick check
+      (direct): irq_unlock p50 51; irq_sw p50 50 (direct, busy, flash,
+      2026-10-29). PR runs: locked_unlock_to_isr p50 87..112,
+      entry_trigger_to_isr 107..128 in the same builds (the unlock is
+      faster by about 15).
+    wrong_if: >
+      The unlock is much slower than a pend. Then the end of a critical
+      section adds a cost that the mask time of st-mask-time does not
+      contain.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: unlock}
+        metric: irq_unlock
+        stat: p50
+        expect: {diff_to: {axes: {scenario: entry}, metric: irq_sw, stat: p50, range: [-20, 15]}}
+        basis: Quick check +1 (direct); PR runs about -15.
+
+  - id: H2
+    type: model
+    statement: >
+      The tail of irq_unlock is the SysTick ISR. If SysTick becomes
+      pending during the lock, both are pending at the unlock, with the
+      same priority, and SysTick (exception 15) runs first because it has
+      the lower exception number. Thus at least 90 % of the table rows of
+      1000 cycles or more have the cause systick, and the max is one
+      SysTick ISR (1500..2400 cycles).
+    basis: >
+      Cortex-M takes the pending exception with the lowest number among
+      those of the same priority (ARMv7-M ARM, B1.5.4). EXTI0 (IRQ 6) is
+      exception 22. Quick check: all 29 samples of 100 cycles or more
+      were 1899 cycles with a SysTick reload and extra exception cycles in
+      the window.
+    wrong_if: >
+      The unlock tail has another cause. Then a critical section can delay
+      a pending interrupt by more than the SysTick ISR.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: unlock}
+        metric: tail.irq_unlock
+        stat: cause_share(systick, 1000)
+        expect: {range: [0.9, 1]}
+        basis: Quick check 29 of 29.
+      - id: b
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: unlock}
+        metric: irq_unlock
+        stat: max
+        expect: {range: [1500, 2400]}
+        basis: Quick check 1899 (flash). The SysTick ISR in RAM is a little faster.
+
+  - id: H3
+    type: model
+    statement: >
+      The entry of an ISR that preempts a lower-priority ISR is not slower
+      than the entry from a thread: irq_nested p50 is within -15..+5
+      cycles of the irq p50 of the entry from a busy thread, and
+      irq_nested_sw p50 within -15..+5 cycles of the irq_sw p50.
+    basis: >
+      The core stacks the same frame in both cases; from handler mode it
+      uses MSP and does not switch the stack pointer. Quick check
+      (direct, flash): irq_nested p50 47 against the entry p50 49..51;
+      irq_nested_sw 42 against irq_sw 50. PR runs: nested_preempt p50 77
+      (one build).
+    wrong_if: >
+      A nested entry is slower. Then the entry latency of a high-priority
+      IRQ depends on the work of the lower-priority ISRs.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: nested}
+        metric: irq_nested
+        stat: p50
+        expect: {diff_to: {axes: {scenario: entry}, metric: irq, stat: p50, range: [-15, 5]}}
+        basis: Quick check -2..-4 (direct).
+      - id: b
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: nested}
+        metric: irq_nested_sw
+        stat: p50
+        expect: {diff_to: {axes: {scenario: entry}, metric: irq_sw, stat: p50, range: [-15, 5]}}
+        basis: Quick check -8 (direct).
+
+  - id: H4
+    type: model
+    statement: >
+      The exception return is short. The exit to the interrupted thread
+      takes 15..45 cycles at p50 in the direct path, longer in the
+      wrapped path (z_arm_int_exit), and has a p99.99 at most 20 cycles
+      above the p50. Back-to-back ISRs tail-chain: one ISR of a burst
+      takes 40..80 cycles at p50 from entry to entry in the direct path,
+      and longer in the wrapped path.
+    basis: >
+      The direct ISR returns 0, so its footer does not check for a
+      reschedule; the exception return unstacks the frame. The wrapped
+      path returns through _isr_wrapper and z_arm_int_exit. Quick check
+      (direct): p50 28, max 38. PR runs: exit_resume_interrupted p50
+      56..69 (regular path, more function levels). In a burst the ISR
+      pends its own IRQ again just after the time stamp, so the IRQ is
+      pending at the exception return, and the core tail-chains without
+      a full unstack and stack. Quick check (direct): irq_b2b p50 57, p90
+      68. PR runs: throughput_round_trip p50 102..142 (regular path).
+    wrong_if: >
+      The exit is long or has a tail, or a burst ISR costs as much as a
+      separate entry and exit. Then the end of an ISR delays the
+      interrupted thread more than its code, or the maximum interrupt
+      rate is lower than the tail-chain predicts.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: exit, path: direct}
+        metric: irq_exit
+        stat: p50
+        expect: {range: [15, 45]}
+        basis: Quick check 28.
+      - id: b
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: exit}
+        metric: irq_exit
+        stat: p50
+        expect: {order: {path: [direct, wrapped]}}
+        basis: The wrapped path has more code after the time stamp.
+      - id: c
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: exit}
+        metric: irq_exit
+        stat: p99.99
+        expect: {diff_to: {metric: irq_exit, stat: p50, range: [0, 20]}}
+        basis: Quick check max 38 against p50 28. The window of 30 cycles rarely meets a SysTick interrupt.
+      - id: d
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: burst, path: direct}
+        metric: irq_b2b
+        stat: p50
+        expect: {range: [40, 80]}
+        basis: Quick check 57.
+      - id: e
+        written: 2026-10-30, before the first run of irq-scenarios-1m
+        experiment: irq-scenarios-1m
+        select: {scenario: burst}
+        metric: irq_b2b
+        stat: p50
+        expect: {order: {path: [direct, wrapped]}}
+        basis: The wrapped path runs _isr_wrapper for each ISR.

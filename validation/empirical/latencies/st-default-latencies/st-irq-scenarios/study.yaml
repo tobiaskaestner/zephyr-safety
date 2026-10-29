@@ -1,0 +1,49 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The study irq-scenarios. study.md has the background and why each
+# experiment is there; hypotheses.yaml has the claims and their checks.
+
+name: irq-scenarios
+question: >
+  How long are the IRQ latencies of the scenarios of the upstream
+  interrupt benchmark that the study did not have (irq_unlock() to the
+  ISR, nested entry, exit to the interrupted thread, back to back), and
+  what makes their tails?
+
+experiments:
+  - irq-scenarios-1m
+
+central_results:
+  - id: unlock-to-isr
+    statement: >
+      irq_unlock() to the ISR of a pending interrupt takes {p50:.0f}
+      cycles at p50 and {max:.0f} cycles at max (path {path}).
+    from: {experiment: irq-scenarios-1m, axes: {scenario: unlock}, metric: irq_unlock}
+    stat: [p50, max]
+    unit: CPU cycles (170 MHz)
+
+  - id: nested-entry
+    statement: >
+      The {metric} p50 is {p50:.0f} cycles (path {path}): the entry of an
+      ISR that preempts a lower-priority ISR.
+    from: {experiment: irq-scenarios-1m, axes: {scenario: nested}, metric: [irq_nested, irq_nested_sw]}
+    stat: [p50]
+    unit: CPU cycles (170 MHz)
+
+  - id: exit-to-thread
+    statement: >
+      The end of the ISR to the interrupted thread takes {p50:.0f} cycles
+      at p50 and {p99.99:.0f} cycles at p99.99 (path {path}).
+    from: {experiment: irq-scenarios-1m, axes: {scenario: exit}, metric: irq_exit}
+    stat: [p50, p99.99]
+    unit: CPU cycles (170 MHz)
+
+  - id: back-to-back
+    statement: >
+      In a burst, one ISR takes {p50:.0f} cycles at p50 and {p99:.0f}
+      cycles at p99 from entry to entry (path {path}). At 170 MHz, 100
+      cycles are 1.7 M ISRs per second.
+    from: {experiment: irq-scenarios-1m, axes: {scenario: burst}, metric: irq_b2b}
+    stat: [p50, p99]
+    unit: CPU cycles (170 MHz)

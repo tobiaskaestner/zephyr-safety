@@ -1,0 +1,44 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The study stimulus-path. study.md has the background and why each experiment
+# is there; hypotheses.yaml has the claims and their checks.
+
+name: stimulus-path
+question: >
+  How many cycles of a measured latency come from the hardware path of
+  the stimulus (compare match, pin, wire, input synchronizer, EXTI), and
+  what does a software trigger with NVIC STIR, as in the upstream
+  interrupt benchmark, show and not show?
+
+experiments:
+  - irq-swtrig-1m
+  - wake-swtrig-250k
+
+# The results that answer the question: measured values (characterisation).
+central_results:
+  - id: hw-path-p50
+    statement: >
+      The {metric} p50 is {p50:.0f} cycles and the p99.99 {p99.99:.0f}
+      cycles (path {path}, background {background}). irq starts at the
+      edge, irq_sw at the STIR store, in the same image.
+    from: {experiment: irq-swtrig-1m, metric: [irq, irq_sw]}
+    stat: [p50, p99.99]
+    unit: CPU cycles (170 MHz)
+
+  - id: preempted-thread-cost
+    statement: >
+      A software-triggered wake that preempts a spinning thread has an
+      isr2thr p50 of {p50:.0f} cycles and a p10 of {p10:.0f} cycles
+      (configuration {config}, background {background}).
+    from: {experiment: wake-swtrig-250k, metric: isr2thr_sw}
+    stat: [p10, p50]
+    unit: CPU cycles (170 MHz)
+
+  - id: slice-double-reprogram
+    statement: >
+      A wake that preempts a time-sliced thread reprograms SysTick twice
+      (the abort of its slice timeout and the add of the new one). This
+      costs about one SysTick reprogram more than a wake from idle.
+    from: {hypotheses: [H3]}
+    stat: conclusion

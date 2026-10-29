@@ -10,6 +10,7 @@ substudies:
   - use: irq-entry
   - use: isr-to-thread
   - use: thread-to-thread
+  - use: irq-scenarios
 
 # The answer of this study: the central results of its sub-studies.
 central_results:

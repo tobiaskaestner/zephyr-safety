@@ -1,0 +1,45 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml (H3, H4).
+
+name: wake-swtrig-250k
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 250000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_SWTRIG: y
+    # Code in flash: with the six histograms of LATBENCH_SWTRIG the app
+    # does not fit into the RAM that LATBENCH_CODE_RAM leaves (the build
+    # overflows by about 22 KB). The checks of H3 a..c compare the edge
+    # and the software samples of one image, so they are free of the code
+    # placement effect. The checks across points (H3 d, e; H4) have limits
+    # wider than the placement effect (up to about 30 cycles).
+    # Witnesses: the rows show a SysTick reprogram without an interrupt
+    # (label systick-reprogram) in the slow mode.
+    LATBENCH_TAIL: y
+    LATBENCH_TAIL_N: 64
+
+axes:
+  config:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+    # The configuration of the upstream benchmark: no slicing, no stack guard.
+    pr-config:
+      kconfig: {TIMESLICING: n, HW_STACK_PROTECTION: n, MPU_STACK_GUARD: n}
+  background:
+    idle: {}
+    busy:
+      kconfig: {LATBENCH_BG_BUSY: y}
+
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: [irq, isr2thr, irq2thr, irq_sw, isr2thr_sw, irq2thr_sw], stat: invalid, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}

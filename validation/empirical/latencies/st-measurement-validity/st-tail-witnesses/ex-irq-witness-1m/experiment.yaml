@@ -1,0 +1,37 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml (H1 a, b; H2; H3).
+
+name: irq-witness-1m
+app: irq_latency
+trees: [ws-up]
+repeat: 1
+timeout: 900
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 1000000
+    LATBENCH_STIM_MIN_US: 100
+    LATBENCH_STIM_MAX_US: 500
+    LATBENCH_IRQ_PATH_DIRECT: y
+    # Hot code in the CCM SRAM: the witness code moves the other code, and
+    # in RAM a move does not change the latency (st-code-placement H2).
+    LATBENCH_CODE_RAM: y
+
+axes:
+  witness:
+    without: {}
+    with:
+      kconfig: {LATBENCH_TAIL: y, LATBENCH_TAIL_N: 64, LATBENCH_TAIL_MIN_CYC: 100}
+  load:
+    none: {}
+    t16:
+      value: 16
+      kconfig: {LATBENCH_LOAD_TIMERS: 16}
+
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: irq, stat: invalid, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
