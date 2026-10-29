@@ -843,6 +843,35 @@ def test_a_long_measured_text_is_short():
     assert len(out["measured_lines"]) == 6
 
 
+def test_the_executed_copy_has_the_study_text(tmp_path, monkeypatch):
+    """The copy in the results tree: the place in the study tree, study.md, the experiment.md files."""
+    from studylib import notebooks
+    design = make_design(tmp_path)
+    nb = '{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}\n'
+    (tmp_path / "design" / "report.ipynb").write_text(nb)
+    (tmp_path / "design" / "st-sub" / "report.ipynb").write_text(nb)
+    (tmp_path / "design" / "st-sub" / "study.md").write_text("# sub\n\n## Background\n\nThe text.\n")
+    (tmp_path / "design" / "st-sub" / "ex-exp1" / "experiment.md").write_text("# exp1\n\n## What it measures\n\nM.\n")
+    res = tmp_path / "results"
+    monkeypatch.setattr(build, "Design", lambda: design)
+    instance.new(design, res, "top", "sub", "nucleo_g474re")
+    inst = res / "top" / "st-sub@nucleo_g474re"
+    instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}), copy=True)
+    build.build(res / "top", log=lambda *a: None)
+    monkeypatch.setattr(notebooks.trees, "REPO_DIR", tmp_path)
+    for folder, d in ((inst, "design/st-sub"), (res / "top", "design")):
+        sj = json.loads((folder / "study.json").read_text())
+        sj["design"]["folder"] = d
+        (folder / "study.json").write_text(json.dumps(sj))
+    head, tail, files = notebooks.study_cells(inst, res / "top")
+    assert head[0].startswith("## The study in the tree") and "Part of **top** ([report](../../notebooks/report.ipynb)" in head[0]
+    assert "### Background\n\nThe text." in head[1] and "# sub" not in head[1]
+    assert tail[0] == "## The experiments (experiment.md)\n\n### exp1\n\n#### What it measures\n\nM."
+    assert tmp_path / "design" / "st-sub" / "study.md" in files
+    top_head, _, _ = notebooks.study_cells(res / "top", res / "top")
+    assert "- **sub** ([report](../st-sub@nucleo_g474re/notebooks/report.ipynb)" in top_head[0]
+
+
 def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
     from studylib import notebooks
     design = make_design(tmp_path)

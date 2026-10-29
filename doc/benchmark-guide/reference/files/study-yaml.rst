@@ -94,6 +94,14 @@ only with network access.
 
 ``study.py analysis notebooks`` also writes the executed notebook
 beside its HTML: ``<instance>/notebooks/report.ipynb``, with its outputs.
+The copy reads like the study. After the title, it gets the place of
+the study in the tree (a link to the report of the parent study, and to
+the report of each sub-study with its question and verdicts) and the
+text of ``study.md``. At the end, it gets the ``experiment.md`` of each
+experiment of the study, and a link to the report of the study that
+owns each imported experiment. These cells have the metadata
+``latbench: from the design``. A study without hypotheses, for example
+a study that has only sub-studies, also has a report.
 To open the reports in a browser, install JupyterLab into the venv of the
 lab space (``scripts/benchmarks/requirements-jupyter.lock``) and start it
 at the results root:
