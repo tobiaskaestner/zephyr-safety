@@ -26,9 +26,12 @@ Modes:
 Workers (``--workers``):
 
 - auto (default): the worker rule. Lines with the expected result "pass"
-  run with AUTO_WORKERS workers. All other lines (fail:<Name>, probes) run
-  with 1 worker, so that TLC reports the shortest trace and the state
-  counts stay comparable.
+  run with AUTO_WORKERS workers: they give the same distinct states as
+  with 1 worker. All other lines (fail:<Name>, probes) run with 1 worker:
+  with more workers, the state count and the trace change from run to
+  run. The pinned jar does not have the fix of tlaplus issue #1445, so
+  confirm a changed count of a pass line with --workers 1 (README.rst,
+  "Running on the lab host").
 - <n>: all selected lines run with n workers (1 to MAX_WORKERS).
 
 On the lab host, each job runs under the lock <lab-root>/.lock (flock),
@@ -245,7 +248,8 @@ def submit(a, lab):
 
     run_id = time.strftime("%Y%m%d-%H%M%S-") + commit[:9] + ("-u" if diff is not None else "")
     run = f"{lab.root}/runs/{run_id}"
-    lab.sh(f"mkdir -p {run} {lab.root}/bundles {lab.root}/snapshots")
+    # mkdir without -p for the run: two runs with the same id stop here.
+    lab.sh(f"mkdir -p {lab.root}/runs {lab.root}/bundles {lab.root}/snapshots && mkdir {run}")
 
     bundle = ""
     if mode == "pinned":

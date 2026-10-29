@@ -891,8 +891,8 @@ Layout
      objects/          one module for each kernel object
      mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
-     tools/            run_tlc.sh, kconfig_coverage.py, tla2tools.sha256,
-                       apalache.sha256
+     tools/            run_tlc.sh, run_tlc_remote.py, kconfig_coverage.py,
+                       tla2tools.sha256, apalache.sha256
 
 Running
 *******
@@ -933,6 +933,61 @@ notes):
 .. code-block:: console
 
    cd spec/tla/lib && apalache-mc typecheck WaitQueue.tla
+
+Running on the lab host
+=======================
+
+``tools/run_tlc_remote.py`` runs ``tools/run_tlc.sh`` on the lab host
+(default ``tobias@cos-workstation``, directory ``/wrk/z/lab-tla``) and
+copies the results back. The lab host has the pinned jar and a JDK. The
+script takes the same arguments as ``run_tlc.sh``:
+
+.. code-block:: console
+
+   spec/tla/tools/run_tlc_remote.py                        # all lines, pinned
+   spec/tla/tools/run_tlc_remote.py MCScheduler:default    # one line
+   spec/tla/tools/run_tlc_remote.py --unpinned MCTimeout   # working tree
+   spec/tla/tools/run_tlc_remote.py --detach MCScheduler   # start only
+   spec/tla/tools/run_tlc_remote.py --collect <run-id>     # get results
+
+The two modes:
+
+- **pinned** (default): the worktree must be clean. The script sends the
+  current commit in a git bundle. The clone on the lab host takes it with
+  ``git merge --ff-only``, so the commit has the same hash on both hosts.
+- **unpinned** (``--unpinned``): the script copies the working tree of
+  ``spec/tla/`` to the lab host. The record has the mark ``unpinned``, the
+  base commit and the SHA-256 of the diff. The output has the diff.
+
+The output goes to ``build/lab/<run-id>/`` (option ``--out``): the logs,
+``summary.md`` with a column for the workers, ``results.txt`` and
+``record.json``. The record has the revision, the mode, the jar hash, the
+Java version, the workers, the heap, the host, the times and the results.
+
+The rules of the lab host apply to each job. A job holds the lock
+``/wrk/z/lab-tla/.lock``, so only one job runs at a time, and the next job
+waits. TLC runs with ``nice -n 10`` and at most 8 workers. The job deletes
+the TLC state directories at the end. The job continues if the connection
+stops. Then ``--collect <run-id>`` gets the results.
+
+The worker rule (``--workers auto``, the default):
+
+- A line with the expected result ``pass`` runs with 8 workers. With 4 and
+  8 workers, each pass line gave the same distinct states and depth as
+  with 1 worker (2026-10-29). ``MCScheduler default`` took 1727 s with 1
+  worker and 306 s with 8 workers.
+- All other lines (``fail:<Name>``, ``probes``) run with 1 worker. With
+  more workers, the verdict and the trace length stayed the same, but the
+  state count changed from run to run, and so did the trace for some
+  lines. With 1 worker, the count and the trace are the same in each run.
+- The pinned jar does not have the fix of tlaplus issue #1445: TLC with
+  more than one worker can miss states. If the state count of a pass line
+  changes, run this line again with ``--workers 1`` before you record the
+  new count.
+
+``--workers <n>`` sets the same number for all lines. ``--mem`` sets the
+Java heap (default ``4g``). ``run_tlc.sh`` takes the number of workers
+from ``TLC_WORKERS`` (default 1).
 
 Open points
 ***********
