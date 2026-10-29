@@ -566,6 +566,11 @@ def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     assert list(d.meta("exp1")["point"]) == ["a", "b"]
     assert d.axis_values("exp1") == {"variant": {}}  # an axis without "value:"
     assert "value.variant" not in d.rows("exp1")
+    assert list(d.rows("exp1")["core_hz"]) == [170000000, 170000000]  # LAT META core_hz of each point
+    dr = d.drift(["exp1"])
+    assert list(dr["point"]) == ["a", "b"] and list(dr["drift_per_sample"]) == [8, 8]
+    assert dr["drift_ppm"].iloc[0] == pytest.approx(800)
+    assert d.sites("exp1").empty and list(d.sites("exp1").columns) == data.SITE_COLUMNS  # no M4 data
 
 
 def test_notebook_figures(monkeypatch):
@@ -586,6 +591,163 @@ def test_notebook_figures(monkeypatch):
     assert len(nbfig.dots(df, "t").data) == 2 * 3
     assert len(nbfig.sweep(df, "value.timers", "t").data) == 2 * 3
     assert nbfig.pivot(df, "p50").loc["t16", "irq"] == 161
+    # the microseconds use the clock of each point: column core_hz, hz of ccdf and hist, else CORE_HZ
+    slow = df.assign(core_hz=[nbfig.CORE_HZ, nbfig.CORE_HZ, 16_000_000, 16_000_000])
+    us = nbfig.dots(slow, "t", stats=("p50",)).data[0].customdata
+    assert us[0] == pytest.approx(1 * 1e6 / nbfig.CORE_HZ) and us[1] == pytest.approx(161 / 16)
+    assert nbfig.dots(df, "t", stats=("p50",)).data[0].customdata[1] == pytest.approx(161 * 1e6 / nbfig.CORE_HZ)
+    fig = nbfig.ccdf(series, "t", hz={"b": 16_000_000})
+    assert fig.data[0].customdata[0] == pytest.approx(700 * 1e6 / nbfig.CORE_HZ)  # isr2thr is the first metric
+    assert fig.data[1].customdata[0] == pytest.approx(700 / 16)
+    assert fig.layout.xaxis.title.text == "latency (cycles of the core clock of each series)"
+    assert nbfig.ccdf(series, "t").layout.xaxis.title.text == "latency (cycles, 170 MHz)"
+    assert nbfig.hist(series, "t", hz=16_000_000).data[0].customdata[0] == pytest.approx(700 / 16)
+    # the outline of hist: an edge down to the floor at each end of a run of bins, a gap over the empty bins
+    fig = nbfig.hist({"a": {"irq": hist([(10, 4), (11, 2), (20, 1)], coarse=[(32, 64, 32)])}}, "t")
+    assert list(fig.data[0].x) == [10, 10, 11, 11, 12, 12, None, 20, 20, 21, 21, None, 32, 32, 64, 64, None]
+    assert list(fig.data[0].y) == [0.5, 4, 4, 2, 2, 0.5, None, 0.5, 1, 1, 0.5, None, 0.5, 2, 2, 0.5, None]
+    assert fig.data[0].text[0] == "empty" and fig.layout.xaxis.title.text == "irq latency (cycles)"
+
+
+class FakeInst:
+    """The part of data.Instance that the notebook helpers read: rows, points and the checks of the design."""
+
+    def __init__(self, df=None, reps=(), hypotheses=None, runs=None):
+        self.df, self.reps = df, list(reps)
+        self.design_hypotheses = hypotheses or {}
+        self.runs = runs or [{"id": "e/1", "role": "evidence"}]
+
+    def rows(self, experiment):
+        return self.df.copy()
+
+    def experiment_json(self, experiment):
+        return {"runs": self.runs}
+
+    def points(self, experiment):
+        return [("e/1", "ws-up", p, r) for p, r in self.reps]
+
+
+def kconfig_rows(pd):
+    """Two variants x two loads x two metrics in one run; v1 is 10 cycles slower than the baseline, 20 with t64."""
+    rows = []
+    for var, load, extra in (("baseline", "none", 0), ("v1", "none", 10), ("baseline", "t64", 0), ("v1", "t64", 20)):
+        for m, base in (("irq", 50), ("isr2thr", 700)):
+            v = base + extra + (100 if load == "t64" else 0)
+            rows.append({"run": "e/1", "role": "evidence", "tree": "ws-up", "rep": 1,
+                         "point": var if load == "none" else f"{var}-{load}", "axis.variant": var, "axis.load": load,
+                         "metric": m, "p50": v, "p99": v + 5, "max": v + 50, "core_hz": 170_000_000})
+    return pd.DataFrame(rows)
+
+
+def test_notebook_diffs_and_check_limits():
+    """nbfig.diffs: each point minus the reference of the same load; check_limits: the checks as differences."""
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("plotly")
+    import nbfig
+    hyp = {"H1": {"id": "H1", "checks": [
+        {"id": "a", "experiment": "e", "metric": "isr2thr", "stat": "p50", "select": {"point": "v1"},
+         "expect": {"range": [705, 720]}},
+        {"id": "b", "experiment": "e", "metric": "isr2thr", "stat": "p50", "select": {"point": "v1-t64"},
+         "expect": {"diff_to": {"point": "v1", "range": [0, None]}}},
+        {"id": "c", "experiment": "e", "metric": "irq", "stat": "p50", "expect": {"order": ["baseline", "v1"]}},
+        {"id": "d", "experiment": "e", "metric": "isr2thr", "stat": "p50", "select": {"point": "v1"},
+         "expect": {"ratio_to": {"point": "baseline"}, "range": [1.0, 1.1]}},
+        {"id": "e", "manual": True, "statement": "x"}]}}
+    inst = FakeInst(kconfig_rows(pd), hypotheses=hyp,
+                    runs=[{"id": "e/1", "role": "evidence"}, {"id": "e/2", "role": "evidence",
+                                                               "excluded_by_acceptance": True}])
+    d = nbfig.diffs(inst, "e", names={"none": "no load"})
+    v1 = d[(d.point == "v1") & (d.metric == "isr2thr")].iloc[0]
+    assert (v1.v_p50, v1.b_p50, v1.d_p50, v1.variant, v1.load) == (710, 700, 10, "v1", "no load")
+    assert d[(d.point == "v1-t64") & (d.metric == "isr2thr")].d_max.iloc[0] == 20
+    assert list(d.reference) == [True] * 2 + [False] * 2 + [True] * 2 + [False] * 2
+    lim = nbfig.check_limits(inst, "e", d).set_index("check")
+    assert (lim.loc["H1 a", "lo"], lim.loc["H1 a", "hi"]) == (5, 20)  # 705..720 minus the baseline 700
+    # diff_to: value - v1 in 0..INF, as a difference to the baseline of t64 (800): 0 + 710 - 800 = -90
+    assert (lim.loc["H1 b", "point"], lim.loc["H1 b", "lo"], lim.loc["H1 b", "hi"]) == ("v1-t64", -90, nbfig.INF)
+    assert (lim.loc["H1 c", "point"], lim.loc["H1 c", "lo"], lim.loc["H1 c", "hi"]) == ("v1", 0, nbfig.INF)
+    assert (lim.loc["H1 d", "lo"], lim.loc["H1 d", "hi"]) == pytest.approx((0, 70))  # 1.0..1.1 x 700 - 700
+    assert "H1 e" not in lim.index
+    t = nbfig.diff_table(d)
+    assert list(t.index) == ["v1", "v1-t64"] and t.loc["v1-t64", ("isr2thr", "p50")] == 20
+    assert list(t.columns.get_level_values(0)) == ["isr2thr"] * 3 + ["irq"] * 3  # the order of the menus
+
+
+def test_notebook_diff_fig_legend_and_menu():
+    """diff_fig: the reference points are left out; a legend entry per group and metric; the menu shows one metric."""
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("plotly")
+    import nbfig
+    d = nbfig.diffs(FakeInst(kconfig_rows(pd)), "e")
+    lim = pd.DataFrame([{"check": "H1 a", "point": "v1", "metric": "isr2thr", "stat": "p50", "lo": 0, "hi": nbfig.INF,
+                         "expect": "x"}])
+    fig = nbfig.diff_fig(d, "t", limits=lim)
+    bars = [t for t in fig.data if t.type == "bar"]
+    assert {y for t in bars for y in t.y} == {"v1", "v1-t64"}
+    assert len(bars) == 2 * 3 * 2  # metrics x panels x loads
+    # 0 is in each limit band; the open end has no end mark
+    band = [t for t in fig.data if t.name == "limit of a check"]
+    assert len(band) == 1 and band[0].x[0] == 0 and list(band[0].marker.size) == [16, 0]
+    assert band[0].x[1] == pytest.approx(20 * 1.08)  # the open end stops at the span of the panel
+    visible = [b.args[0]["visible"] for b in fig.layout.updatemenus[0].buttons]
+    for i, vis in enumerate(visible):
+        shown = [t for t, v in zip(fig.data, vis) if v]
+        hidden = [t for t, v in zip(fig.data, vis) if not v]
+        # after a menu change the legend shows each group of the visible metric once
+        assert sorted(t.name for t in shown if t.showlegend is not False) == \
+            (["limit of a check", "none", "t64"] if i == 0 else ["none", "t64"])
+        # a legend group never has a trace of another metric
+        assert not {t.legendgroup for t in shown if t.legendgroup} & {t.legendgroup for t in hidden if t.legendgroup}
+    assert visible[0] == [t.visible for t in fig.data]
+    assert bars[0].customdata[0][2] == pytest.approx(10 * 1e6 / 170e6)  # the difference in µs
+
+
+def test_notebook_modes_and_tables():
+    """nbfig.modes counts the modes as the checks do (fine bins); coarse=True adds the coarse bins."""
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("plotly")
+    import nbfig
+    h = hist([(100, 200), (101, 100), (103, 50), (110, 1), (300, 300)], coarse=[(2048, 349, 32)], n=2000)
+    assert nbfig.modes(h) == [(a, b, c / 2000) for a, b, c in stats.modes(h)] == [(100, 103, 0.175), (300, 300, 0.15)]
+    assert nbfig.modes(h, coarse=True)[-1] == (2048, 2079, 0.1745)
+    inst = FakeInst(reps=[("p1", rep({"t2t": h})), ("p2", rep({"t2t": hist([(500, 10)])}))])
+    t = nbfig.mode_table(inst, ["e"], "t2t", coarse=True)
+    assert list(t.index) == [("e", "p1"), ("e", "p2")]
+    row = t.loc[("e", "p1")]
+    assert (row["modes"], row["mode 1"], row["share 1"]) == (2, "100..103", 0.175)
+    assert row["first to last mode (cycles)"] == 200
+    assert (row["modes with coarse bins"], row["mode 3 with coarse bins"]) == (3, "2048..2079")
+    assert t.loc[("e", "p2"), "mode 1"] == "500" and pd.isna(t.loc[("e", "p2"), "mode 2"])
+    assert list(nbfig.mode_table(inst, ["e"], "t2t", points=["p2"]).index) == [("e", "p2")]
+    assert "modes with coarse bins" not in nbfig.mode_table(inst, ["e"], "t2t")
+    assert nbfig.mode_range({"a": {"t2t": h}}, "t2t", pad=10) == (90, 310)
+    assert nbfig.mode_range({"a": {"t2t": h}}, "t2t", pad=10, coarse=True) == (90, 2089)
+
+
+def test_notebook_limits_distinct_and_sites():
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("plotly")
+    import data
+    import nbfig
+    df = pd.DataFrame([{"check": "H1 a", "series": "s1", "value": 5, "lo": 0, "hi": 10},
+                       {"check": "H1 a", "series": "s2", "value": 5, "lo": 0, "hi": 10},
+                       {"check": "H1 b", "series": "s1", "value": 30, "lo": 0, "hi": 20}])
+    fig = nbfig.limits(df, "t", "cycles")
+    assert [t.type for t in fig.data] == ["bar", "scatter", "scatter"]
+    assert list(fig.data[0].base) == [0, 0] and list(fig.data[0].y) == [10, 20]
+    fig = nbfig.distinct(nbfig.sweep(pd.DataFrame([{"tree": "w", "point": p, "metric": "irq", "value.x": x, "g": g,
+                                                    "p50": 7} for p, x in (("a", 1), ("b", 2)) for g in "uv"]),
+                                     "value.x", "t", stats=("p50",), group="g"))
+    assert [t.marker.symbol for t in fig.data] == nbfig.SYMBOLS[:2]
+    assert fig.data[0].marker.size > fig.data[1].marker.size
+    sites = [{"name": "m4.mask.t.1", "kind": "mask", "ctx": "thread", "n": 3, "min": 30, "max": 500,
+              "function": "f"}, {"name": "m4.isr.e15.2", "kind": "isr", "ctx": "SysTick", "n": 5, "min": 100,
+                                 "max": 3000, "function": "g"},
+             {"name": "m4.mask.e22.3", "kind": "mask", "ctx": "EXTI0", "n": 0, "min": 0, "max": 0, "function": "h"}]
+    fake = FakeInst(reps=[("p1", rep(meta={"m4_floor_cyc": 30, "m4_isr_floor_cyc": 20},
+                                     m4={"table": {}, "symbols": True, "sites": sites}))])
+    st = data.Instance.sites(fake, "e")
+    assert list(st.exc) == ["t", "e15", "e22"] and list(st.max_net[:2]) == [470, 2980] and pd.isna(st.max_net[2])
 
 
 def test_merge_takes_the_new_runs_of_another_tree(tmp_path, monkeypatch):

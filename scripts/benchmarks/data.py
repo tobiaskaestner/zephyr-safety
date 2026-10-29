@@ -9,10 +9,13 @@
     inst.checks()                one row per check, with the basis from the design
     inst.central()               one row per sentence of a central result
     inst.rows("wake-stim-seed-1m")    the rows of experiment.json (percentiles per run, tree, point, metric),
-                                      with a column value.<axis> for each axis that has numbers
+                                      with a column value.<axis> for each axis that has numbers and
+                                      the core clock core_hz of each point
     inst.axis_values("wake-timers-1m")   {axis: {label: value}} from the design of the experiment
     inst.points("wake-stim-seed-1m")  the points of the evidence runs: app data of rep 1
     inst.meta("wake-clock-drift")     one row per point with its LAT META values
+    inst.drift(["wake-clock-drift"])  one row per point: the clock drift in ppm and in cycles per sample
+    inst.sites("wake-m4-validate")    one row per M4 site of each point, with max_net
     inst.hist(point, "irq", "wake-stim-seed-1m")
     data.ccdf(hist)              (x, share of samples >= x)
 
@@ -29,7 +32,11 @@ import yaml
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
 import trees  # noqa: E402
-from studylib import layout  # noqa: E402
+from studylib import layout, stats  # noqa: E402
+
+
+# The columns of Instance.sites.
+SITE_COLUMNS = ["tree", "point", "kind", "exc", "ctx", "function", "place", "via", "n", "min", "max", "max_net"]
 
 
 def _load(path):
@@ -58,6 +65,7 @@ class Instance:
         self.design_folder = trees.REPO_DIR / self.study["design"]["folder"]
         h = self.design_folder / "hypotheses.yaml"
         self.design_hypotheses = {x["id"]: x for x in yaml.safe_load(h.read_text())["hypotheses"]} if h.is_file() else {}
+        self._app_data = {}
 
     # ------------------------------------------------------------ tables
     def hypotheses(self):
@@ -95,7 +103,25 @@ class Instance:
         for axis, values in self.axis_values(experiment).items():
             if f"axis.{axis}" in df and values:
                 df[f"value.{axis}"] = df[f"axis.{axis}"].map(values)
+        clock = self._core_hz(df.run.unique() if "run" in df else [])
+        default = ej.get("core_hz")
+        df["core_hz"] = [clock.get(k, default) for k in zip(df.get("run", []), df.get("tree", []), df.get("point", []),
+                                                           df.get("rep", []))]
         return df
+
+    def _core_hz(self, run_ids):
+        """{(run, tree, point, rep): LAT META core_hz} of the runs (a run without app data gives nothing)."""
+        out = {}
+        for rid in run_ids:
+            try:
+                app = self.app_data(rid)
+            except FileNotFoundError:
+                continue
+            for p in app["points"]:
+                for i, rep in enumerate(p["reps"], 1):
+                    if isinstance(rep["meta"].get("core_hz"), (int, float)):
+                        out[(rid, p["tree"], p["point"], i)] = rep["meta"]["core_hz"]
+        return out
 
     def axis_values(self, experiment):
         """{axis: {label: value}}: the "value:" of each axis label in the design of the experiment."""
@@ -126,14 +152,17 @@ class Instance:
         return self.study.get("board")
 
     def app_data(self, run_id):
-        """The app data of a run of the results tree, by run id <experiment>/<UTC>."""
+        """The app data of a run of the results tree, by run id <experiment>/<UTC> (read once, then kept)."""
+        if run_id in self._app_data:
+            return self._app_data[run_id]
         exp, utc = run_id.split("/")
         for f in layout.instance_folders(self.root):
             folder = f / f"{layout.EXPERIMENT_PREFIX}{exp}"
             if (folder / utc).is_dir():
                 app = [p for p in folder.glob(f"{utc}.*.json") if not p.name.endswith(".run.json")]
                 if app:
-                    return _load(app[0])
+                    self._app_data[run_id] = _load(app[0])
+                    return self._app_data[run_id]
         raise FileNotFoundError(f"no app data of {run_id} (build the instance of the run)")
 
     def points(self, experiment, roles=("evidence",)):
@@ -152,6 +181,42 @@ class Instance:
         """One row per evidence point: run, tree, point and the LAT META values of rep 1."""
         import pandas as pd
         return pd.DataFrame([{"run": r, "tree": t, "point": p, **rep["meta"]} for r, t, p, rep in self.points(experiment)])
+
+    def drift(self, experiments):
+        """One row per evidence point of the experiments: experiment, the LAT META values, drift_ppm and
+        drift_per_sample (stats.value: clock_drift_cyc / clock_elapsed_cyc x 1e6 and clock_drift_cyc / samples,
+        the values that the checks read). A value that the data do not give is NaN."""
+        import pandas as pd
+
+        def value(rep, stat):
+            try:
+                return stats.value(rep, None, stat)
+            except stats.NoValue:
+                return float("nan")
+
+        rows = [{"experiment": e, "run": r, "tree": t, "point": p, **rep["meta"],
+                 "drift_ppm": value(rep, "drift_ppm"), "drift_per_sample": value(rep, "drift_per_wake")}
+                for e in experiments for r, t, p, rep in self.points(e)]
+        return pd.DataFrame(rows, columns=None if rows else ["experiment", "run", "tree", "point", "samples",
+                                                             "clock_drift_cyc", "clock_elapsed_cyc", "drift_ppm",
+                                                             "drift_per_sample"])
+
+    def sites(self, experiment):
+        """One row per M4 site of each evidence point. exc: the exception number at the start (t: a thread).
+        max_net: the max minus the floor of the calibration of the same log, read with stats.value as the checks
+        read it (None for a site without a section)."""
+        import pandas as pd
+        out = []
+        for _, tree, point, rep in self.points(experiment):
+            m4 = rep.get("m4") or {}
+            for s in m4.get("sites", []):
+                # stats.value of a set with this one site gives the value of the site
+                one = {**rep, "m4": {**m4, "sites": [s]}}
+                out.append({"tree": tree, "point": point, "kind": s["kind"], "exc": s["name"].split(".")[2],
+                            "ctx": s["ctx"], "function": s.get("function"), "place": s.get("place"),
+                            "via": s.get("via"), "n": s["n"], "min": s["min"], "max": s["max"],
+                            "max_net": stats.value(one, f"m4.{s['kind']}", "max_net") if s["n"] else None})
+        return pd.DataFrame(out, columns=SITE_COLUMNS)
 
     def hist(self, point, metric, experiment, tree=None, run_id=None):
         for rid, t, p, rep in (self.points(experiment) if run_id is None else
