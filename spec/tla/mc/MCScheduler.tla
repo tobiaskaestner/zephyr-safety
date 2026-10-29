@@ -193,7 +193,7 @@ MissedReschedStep ==
         /\ Sched!Release(a, "unlock")
 
 \* Mutant: z_sched_wake_thread_locked() on the best waiter, without
-\* z_abort_timeout() first.
+\* z_try_abort_timeout() first.
 WakeNoCancelStep ==
     /\ MCMutant = "wake_no_cancel"
     /\ \E a \in Actors, o \in ObjQs :
