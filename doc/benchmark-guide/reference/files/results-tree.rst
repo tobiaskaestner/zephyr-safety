@@ -107,7 +107,7 @@ instance (it has ``instance.json``), the folder is
        ├── <app>-<tree>-<point>.hex   the binary as Intel HEX, if the build makes it
        └── build/           only with --keep-build
 
-The image names, for example ``irq_latency-ws-safety-stock-idle.elf``,
+The image names, for example ``irq_latency-ws-up-stock-idle.elf``,
 say what the image is also outside its folder. The runs before
 2026-10-28 have ``zephyr.elf`` and ``zephyr.hex``. Their :term:`seals <Seal>` cover the
 names, so they keep them. The tools find the image by either name.

@@ -98,7 +98,7 @@ Trees can have different debug defaults
 ---------------------------------------
 
 Two trees can have different defaults for ``CONFIG_ASSERT`` and
-``CONFIG_SPIN_VALIDATE`` (for example ``ws-safety`` and ``ws-up``). Both
+``CONFIG_SPIN_VALIDATE`` (for example a Zephyr fork and upstream Zephyr). Both
 options add code to the kernel paths that the suite measures. Each
 measurement app sets both to ``n`` in its ``prj.conf``, so that all
 trees build the same set of debug code. The

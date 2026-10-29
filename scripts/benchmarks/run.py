@@ -48,7 +48,7 @@ Experiment file:
     name: irq-smoke
     app: irq_latency                    # folder in tests/benchmarks
     board: nucleo_g474re                # optional, a key of boards.yaml
-    trees: [ws-safety]
+    trees: [ws-up]
     repeat: 1
     timeout: 600                        # s per repetition
     common:                             # added to every point

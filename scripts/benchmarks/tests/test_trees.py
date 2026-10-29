@@ -118,7 +118,7 @@ def test_west_env_has_no_zephyr_variables(monkeypatch):
 
 def test_the_pins_of_the_repo_load():
     cfg = trees.load(find_lab=False)
-    assert next(iter(cfg["trees"])) == "ws-safety"
+    assert next(iter(cfg["trees"])) == "ws-up"
     assert cfg["toolchain"]["zephyr_sdk"]["version"] == "1.0.1"
     assert all("zephyr" in t["repos"] for t in cfg["trees"].values())
 

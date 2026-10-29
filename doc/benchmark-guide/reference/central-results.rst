@@ -253,8 +253,8 @@ An aggregate stat with ``group_by``. The entry is in
       from: {'experiment': 'wake-threads-1m', 'metric': 'isr2thr'}
       stat: {'slope': {'stat': 'p99', 'axis': 'threads'}}
       group_by: ['kind']
-      row: run=wake-threads-1m/<UTC>, tree=ws-safety, metric=isr2thr, kind=blocked, slope=0.6791, intercept=1667, points=4
-        -> With blocked load threads, the isr2thr p99 grows by 0.7 cycles per thread (ws-safety).
+      row: run=wake-threads-1m/<UTC>, tree=ws-up, metric=isr2thr, kind=blocked, slope=0.6791, intercept=1667, points=4
+        -> With blocked load threads, the isr2thr p99 grows by 0.7 cycles per thread (ws-up).
       [...]
 
 There is one row for each value of ``kind`` and each tree. The statement

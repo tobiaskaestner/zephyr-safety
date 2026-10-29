@@ -150,7 +150,7 @@ these runs get the image from the cache:
 An entry counts only if its ELF has the SHA-256 of ``entry.json``. The
 manifest of the run records ``build: {key, from, built_by}`` for each
 point, and the log of the run has one line for each image from the cache,
-for example ``[ws-safety/stock-idle] image from the build cache
+for example ``[ws-up/stock-idle] image from the build cache
 (c5c5146c5eef, built by irq-smoke/20261027T172644Z)``. Each
 build has a folder of its own process, and an entry that another process
 stored first stays. Before an image goes into the run or the cache,

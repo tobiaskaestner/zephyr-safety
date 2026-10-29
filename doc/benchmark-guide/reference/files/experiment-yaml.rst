@@ -107,7 +107,7 @@ Example: four interrupt paths times two anchors give eight points
 
    name: irq-example
    app: irq_latency
-   trees: [ws-safety]
+   trees: [ws-up]
    repeat: 1
    timeout: 900
 

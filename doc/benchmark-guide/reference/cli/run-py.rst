@@ -129,7 +129,7 @@ Steps of a run
 repetition. Thus a run that stops still has a manifest for the completed
 repetitions. A run that stops before its seal (an error, Ctrl-C or
 SIGTERM) writes ``<UTC time>.failed.json`` beside its folder. This file
-has the step (for example ``flash and capture ws-safety/stock-idle rep
+has the step (for example ``flash and capture ws-up/stock-idle rep
 1``), the error and the last 20 lines of the log of that step. Such a run is not in a run
 list, so the results build and the export do not see it.
 

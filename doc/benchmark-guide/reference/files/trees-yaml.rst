@@ -30,10 +30,7 @@ A tree manifest has these keys (the west manifest format):
    Zephyr: the tree has only the projects of the file.
 
 The design lint checks each tree manifest with the parser of west. There
-are four trees today:
-
-``ws-safety``
-   The Zephyr of the safety workspace. No experiment uses this tree now.
+are three trees today:
 
 ``ws-up``
    An upstream Zephyr ``main`` (v4.5.0-rc3-40). The study measures this
