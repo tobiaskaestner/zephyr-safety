@@ -142,6 +142,7 @@ def test_the_property_needs(app):
         "PROP-KSem-TimedWaitEnds",
         "PROP-Extra-StepIncrements",
         "PROP-Extra-XIsNat",
+        "PROP-Extra-XAtMostN",
     }
     nwa = props["PROP-KSem-NoWaitWhileAvailable"]
     assert nwa["expresses"] == ["TEST-REQ-2", "TEST-REQ-3"]
@@ -175,6 +176,33 @@ def test_the_property_needs(app):
         "PROP-Extra-XIsNat",
         "PROP-KSem-CountLeLimit",
     ]
+
+
+@TLA
+def test_the_kconfig_and_assumption_tags(app):
+    app.build()
+    # @kconfig: a field of the need, one value for each symbol. A property
+    # without the tag has no field.
+    props = {k: v for k, v in needs(app).items() if v["type"] == "prop"}
+    guarded = props["PROP-Extra-XAtMostN"]
+    assert guarded["tla_kconfig"] == "CONFIG_EXTRA_SWITCH; CONFIG_EXTRA_OTHER"
+    assert not props["PROP-Extra-XIsNat"].get("tla_kconfig")
+    # The need shows its fields (the definition in it has no tag list).
+    page = html(app, "extra")
+    start = page.index('id="PROP-Extra-XAtMostN"')
+    need = page[start : page.index("</table>", start)]
+    assert "CONFIG_EXTRA_OTHER" in need
+    # The tag of a constant: the extractor keeps it for the scripts.
+    units = parse_file(str(Path(app.srcdir) / "spec" / "Extra.tla")).units
+    switch = next(u for u in units if u.kind == "constants" and "Switch" in u.text)
+    assert switch.tags["kconfig"] == ["CONFIG_EXTRA_SWITCH"]
+    # The tags of an ASSUME show with its code. The assumption is plain
+    # text: "key_" is not an RST reference.
+    assert "Assumption" in page and "arch/x/include/x.h:12 (a key_ is 0 if unlocked)" in page
+    # A definition shows both tags in its tag list.
+    with_tags = definition_html(page, "tla-Extra-SwitchStep")
+    assert "Kconfig" in with_tags and "CONFIG_EXTRA_SWITCH" in with_tags
+    assert "Assumption" in with_tags and "doc:x (a step is atomic)" in with_tags
 
 
 @TLA

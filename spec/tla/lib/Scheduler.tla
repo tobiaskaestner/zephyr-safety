@@ -23,10 +23,13 @@
 (* initial values. The model has no time slices, no k_yield(), no          *)
 (* scheduler lock (k_sched_lock()), no meta-IRQ threads and no CPU masks.  *)
 (*                                                                         *)
-(* ISRs: an ISR is an actor that runs on one CPU (IsrCpu). At level 1 an   *)
-(* ISR is one step, and the exit of the ISR is a reschedule point. The     *)
-(* constants CPUS, Isrs and IsrCpu move to the module Platform at level 2  *)
-(* (roadmap step 5), together with the lock owners and the IPIs.           *)
+(* The world below sched.c is the module Platform (PF): the CPUs, the ISRs *)
+(* and their CPUs (the constants CPUS, Isrs and IsrCpu are parameters of   *)
+(* Platform), the outer interrupt lock (irqNest), the in-ISR state and the *)
+(* two variants of the context switch (UseSwitch, pendsv). At level 1 an   *)
+(* ISR is one step, and the exit of the ISR is a reschedule point. With    *)
+(* arch_swap() (UseSwitch FALSE) a reschedule point only sets PendSV       *)
+(* pending, and the step PendSV selects the thread later.                  *)
 (*                                                                         *)
 (* Priorities: prio[t] is the model priority, a greater value is a higher  *)
 (* priority (as in WaitQueue). Zephyr uses the reverse, and a negative     *)
@@ -46,15 +49,20 @@ CONSTANTS
     \* The value of pendedOn for a thread that does not wait.
     \* @type: OBJ;
     None,
-    \* The CPUs. A set with one CPU is a uniprocessor.
+    \* The parameters of Platform: the CPUs, the ISR actors of the objects
+    \* (not the timer ISR of the expiry) and the CPU of each ISR.
     \* @type: Set(CPU);
     CPUS,
-    \* The ISR actors of the objects (not the timer ISR of the expiry).
     \* @type: Set(THREAD);
     Isrs,
-    \* The CPU of each ISR.
     \* @type: THREAD -> CPU;
     IsrCpu,
+    \* The parameters of Platform: the bound of the nested irq_lock() calls
+    \* and the variant of the context switch (CONFIG_USE_SWITCH).
+    \* @type: Int;
+    MaxIrqNest,
+    \* @type: Bool;
+    UseSwitch,
     \* cur[c] = Idle: the idle thread of CPU c runs.
     \* @type: THREAD;
     Idle,
@@ -119,14 +127,20 @@ VARIABLES
     \* @type: Seq(THREAD);
     tq,
     \* @type: { op: Str, n: Int, cost: Int };
-    tqCost
+    tqCost,
+    \* The variables of Platform: the outer interrupt lock of each CPU and
+    \* the pending PendSV of each CPU.
+    \* @type: CPU -> Int;
+    irqNest,
+    \* @type: CPU -> Bool;
+    pendsv
 
 ASSUME None \notin Objs
 ASSUME Idle \notin Threads \cup Isrs
-ASSUME Isrs \cap Threads = {}
-ASSUME CPUS # {}
-ASSUME \A i \in Isrs : IsrCpu[i] \in CPUS
 ASSUME NoData \notin Data
+
+\* The world below sched.c: CPUs, actors, interrupt lock, switch.
+PF == INSTANCE Platform
 
 \* The waiters and their order.
 WQ == INSTANCE WaitQueue
@@ -137,7 +151,7 @@ TO == INSTANCE Timeout WITH Entries <- Threads
 rqVars == <<rqStamp, preemptOk, readySince>>
 
 schedVars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
-               pendedOn, stamp, tq, tqCost>>
+               pendedOn, stamp, tq, tqCost, irqNest, pendsv>>
 
 \* Return values, with the values of the C error codes.
 OK     == 0
@@ -168,12 +182,18 @@ Cooperative(p) == ToZephyr(p) < 0
 -----------------------------------------------------------------------------
 (* Queries *)
 
-\* Thread t runs on a CPU.
+\* Thread t runs on a CPU: it is _current of that CPU.
 Running(t) == \E c \in CPUS : cur[c] = t
 
-\* Actor a can call the kernel API now: an ISR, or a running thread that
-\* does not return from a wait now (see Resume).
-CanCall(a) == IF a \in Isrs THEN TRUE ELSE Running(a) /\ swapRet[a] = NoRet
+\* Thread t executes its code on a CPU: it is _current, and no switch is
+\* pending on that CPU (see Platform!SwitchPending).
+Executes(t) == \E c \in CPUS : cur[c] = t /\ ~PF!SwitchPending(c)
+
+\* Actor a can call the kernel API now: an ISR while its CPU has
+\* interrupts unlocked, or a thread that executes and does not return from
+\* a wait now (see Resume).
+CanCall(a) ==
+    IF a \in Isrs THEN PF!IrqCanRun(IsrCpu[a]) ELSE Executes(a) /\ swapRet[a] = NoRet
 
 \* The CPU of actor a. Defined only if a is an ISR or a running thread. A
 \* thread runs on at most one CPU (invariant CurUnique), so the CHOOSE has
@@ -333,23 +353,47 @@ SmpChoices(c, ts, pr, cu) ==
 Choices(c, ts, pr, cu, rs, po) ==
     IF UP THEN {CacheOf(c, ts, pr, cu, rs, po)} ELSE SmpChoices(c, ts, pr, cu)
 
-\* CPU c selects a thread. The caller sets tstate', prio', rqStamp' and
-\* preemptOk' first.
+\* CPU c is at a reschedule point: z_swap(), or the exit of an interrupt.
+\* The caller sets tstate', prio', rqStamp' and preemptOk' first. With
+\* CONFIG_USE_SWITCH (and on SMP) the CPU selects a thread in this step.
+\* With arch_swap() the step sets PendSV pending if the cache differs from
+\* the current thread, and the step PendSV selects later
+\* (Platform!RequestPendSV).
 \* @kind action
 Select(c) ==
-    \E t \in Choices(c, tstate', prio', cur, rqStamp', preemptOk') : cur' = [cur EXCEPT ![c] = t]
+    IF PF!SwitchAtOnce
+      THEN /\ \E t \in Choices(c, tstate', prio', cur, rqStamp', preemptOk') :
+                cur' = [cur EXCEPT ![c] = t]
+           /\ UNCHANGED <<irqNest, pendsv>>
+      ELSE /\ PF!RequestPendSV(c, CacheOf(c, tstate', prio', cur, rqStamp', preemptOk') # cur[c])
+           /\ UNCHANGED cur
+
+\* resched(key) of z_reschedule(): a thread can switch only if the key of
+\* the critical section is unlocked (no outer irq_lock()) and the actor is
+\* not an ISR. Else z_reschedule() ends with k_spin_unlock() and the CPU
+\* keeps its thread.
+\* @kind definition
+\* @c-function resched
+ReschedOk(a, c) == PF!KeyUnlocked(c) /\ ~PF!InIsr(a)
 
 \* The end of the critical section of actor a. kind:
-\* "unlock"  k_spin_unlock(): a thread keeps its CPU.
-\* "resched" z_reschedule(): the CPU of a selects a thread.
-\* "swap"    z_swap(): the CPU of a selects a thread (a has stopped).
-\* For an ISR each kind is the same: the exit of the ISR selects a thread.
+\*
+\* - "unlock": k_spin_unlock(), a thread keeps its CPU.
+\* - "resched": z_reschedule(). If ReschedOk, the CPU of a is at a
+\*   reschedule point (need_swap() and z_swap()). Else as "unlock": the
+\*   selection waits for the next reschedule point (finding P2-w).
+\* - "swap": z_swap(), the CPU of a is at a reschedule point (a stopped).
+\*
+\* For an ISR each kind is the same: z_reschedule() does not switch in an
+\* ISR, and the exit of the ISR is a reschedule point.
 \* @kind action
 \* @c-function z_reschedule
 \* @c-function k_spin_unlock
 Release(a, kind) ==
-    IF kind = "unlock" /\ a \notin Isrs
-      THEN UNCHANGED cur
+    IF a \in Isrs THEN Select(IsrCpu[a])
+    ELSE IF \/ kind = "unlock"
+            \/ kind = "resched" /\ ~ReschedOk(a, CpuOf(a))
+      THEN UNCHANGED <<cur, irqNest, pendsv>>
       ELSE Select(CpuOf(a))
 
 -----------------------------------------------------------------------------
@@ -357,8 +401,8 @@ Release(a, kind) ==
 
 \* z_pend_curr(): the current thread a waits on o with the timeout to. It
 \* leaves the CPU, its return value is -EAGAIN until a waker sets another
-\* one. From an ISR: panic, and no other change (the check is the first
-\* statement of z_pend_curr()). A finite timeout on a full heap: panic in
+\* one. From an ISR (Platform!InIsr): panic, and no other change (the
+\* check is the first statement of z_pend_curr()). A finite timeout on a full heap: panic in
 \* z_add_timeout(). The model then stops; the state of the wait queue at
 \* the panic is not modeled. unready_thread() of the current thread calls
 \* update_cache(1).
@@ -368,11 +412,11 @@ PendCurr(a, o, to) ==
     IF a \in Isrs
       THEN /\ panic' = "pend_in_isr"
            /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, pendedOn, stamp, tq, tqCost>>
-           /\ UNCHANGED rqVars
+           /\ UNCHANGED <<rqVars, irqNest, pendsv>>
     ELSE IF to = "TICKS" /\ TO!Full
       THEN /\ panic' = "timeout_heap_full"
            /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, pendedOn, stamp, tq, tqCost>>
-           /\ UNCHANGED rqVars
+           /\ UNCHANGED <<rqVars, irqNest, pendsv>>
     ELSE /\ WQ!Add(a, o)
          /\ IF to = "TICKS" THEN TO!InsertAny(a) ELSE UNCHANGED <<tq, tqCost>>
          /\ tstate' = [tstate EXCEPT ![a] = "pending"]
@@ -469,12 +513,14 @@ PrioSet(t, p) ==
 \* z_thread_timeout() from sys_clock_announce() on CPU c: the first entry of
 \* the timeout queue expires. Its thread stops to wait and keeps the return
 \* value -EAGAIN. It becomes ready (ready_thread(), update_cache(0)). The
-\* exit of the timer ISR selects a thread for c. Only thread waits use this
-\* atomic form (see Timeout).
+\* exit of the timer ISR is a reschedule point of c. The timer interrupt
+\* runs only while c has interrupts unlocked (Platform!ClockCanFire). Only
+\* thread waits use this atomic form (see Timeout).
 \* @kind action
 \* @c-function z_thread_timeout
 ThreadTimeout(c) ==
     /\ panic = "none"
+    /\ PF!ClockCanFire(c)
     /\ tq # <<>>
     /\ LET t == TO!First IN
        /\ TO!Expire
@@ -512,7 +558,8 @@ Abort(a, t) ==
     /\ Release(a, IF a = t THEN "swap" ELSE "unlock")
 
 \* k_thread_priority_set(t, p) by actor a. It reschedules only if t is
-\* ready (the return value of z_thread_prio_set()).
+\* ready (the return value of z_thread_prio_set()):
+\* z_reschedule_unlocked() takes a new lock, so ReschedOk applies.
 \* @kind action
 \* @c-function k_thread_priority_set
 SetPrio(a, t, p) ==
@@ -526,26 +573,68 @@ SetPrio(a, t, p) ==
 \* @kind action
 Resume(t) ==
     /\ panic = "none"
-    /\ Running(t)
+    /\ Executes(t)
     /\ swapRet[t] # NoRet
     /\ swapRet' = [swapRet EXCEPT ![t] = NoRet]
     /\ swapData' = [swapData EXCEPT ![t] = NoData]
     /\ UNCHANGED <<tstate, prio, cur, panic, pendedOn, stamp, tq, tqCost>>
-    /\ UNCHANGED rqVars
+    /\ UNCHANGED <<rqVars, irqNest, pendsv>>
 
 \* An interrupt on CPU c without a kernel call (a tick, an IPI). Its exit
-\* selects a thread: on one CPU the cache, without a new update_cache().
-\* Enabled only if the selection changes cur[c]. On SMP this is the IPI
-\* that a wake on another CPU sends (flag_ipi()).
+\* is a reschedule point (Select): on one CPU the cache, without a new
+\* update_cache(). Enabled only if the selection changes cur[c], c has
+\* interrupts unlocked and no switch is pending on c. On SMP this is the
+\* IPI that a wake on another CPU sends (flag_ipi()).
 \* @kind action
 Preempt(c) ==
     /\ panic = "none"
+    /\ PF!IrqCanRun(c)
+    /\ ~PF!SwitchPending(c)
     /\ cur[c] \notin Choices(c, tstate, prio, cur, rqStamp, preemptOk)
-    /\ \E t \in Choices(c, tstate, prio, cur, rqStamp, preemptOk) : cur' = [cur EXCEPT ![c] = t]
+    /\ UNCHANGED <<tstate, prio, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED rqVars
+    /\ Select(c)
+
+\* The PendSV handler runs on CPU c (arch_swap() only, one CPU). It switches
+\* to the cache as it is when the handler runs. The cache can differ from
+\* the cache at the reschedule point that set PendSV pending: an ISR can
+\* run in the gap and change it.
+\* @kind action
+\* @c-function z_arm_pendsv
+PendSV(c) ==
+    /\ panic = "none"
+    /\ PF!PendSVRuns(c)
+    /\ cur' = [cur EXCEPT ![c] = CacheOf(c, tstate, prio, cur, rqStamp, preemptOk)]
     /\ UNCHANGED <<tstate, prio, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
     /\ UNCHANGED rqVars
 
-\* The initial state: all threads ready with the priorities p0, no waiter.
+\* irq_lock() by thread a, outside a kernel call (an outer lock). No other
+\* change.
+\* @kind action
+\* @c-function irq_lock
+IrqLockCall(a) ==
+    /\ panic = "none"
+    /\ a \in Threads
+    /\ CanCall(a)
+    /\ PF!IrqLock(CpuOf(a))
+    /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED rqVars
+
+\* irq_unlock(key) by thread a with the key of its last irq_lock(). This is
+\* not a reschedule point: the cache can differ from the current thread
+\* after the step (finding P2-w).
+\* @kind action
+\* @c-function irq_unlock
+IrqUnlockCall(a) ==
+    /\ panic = "none"
+    /\ a \in Threads
+    /\ CanCall(a)
+    /\ PF!IrqUnlock(CpuOf(a))
+    /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
+    /\ UNCHANGED rqVars
+
+\* The initial state: all threads ready with the priorities p0, no waiter,
+\* no outer interrupt lock, no pending PendSV.
 \* On one CPU: any run queue order, the history is the run queue order,
 \* and the CPU runs the head of the run queue (the state after a switch).
 \* On SMP: the run queue variables are 0, and on each CPU a thread that the
@@ -567,11 +656,14 @@ InitState(p0) ==
     /\ cur \in [CPUS -> Threads \cup {Idle}]
     /\ \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur, rqStamp, TRUE)
     /\ \A c, d \in CPUS : c # d /\ cur[c] # Idle => cur[c] # cur[d]
+    /\ PF!InitPlatform
 
-\* Fairness of the environment: an armed timeout expires, an IPI arrives.
+\* Fairness of the environment: an armed timeout expires, an IPI arrives,
+\* a pending PendSV runs.
 Fairness ==
     /\ WF_schedVars(\E c \in CPUS : ThreadTimeout(c))
     /\ \A c \in CPUS : WF_schedVars(Preempt(c))
+    /\ \A c \in CPUS : WF_schedVars(PendSV(c))
 
 -----------------------------------------------------------------------------
 (* Properties of the descriptive layer: the consistency of the model.     *)
@@ -587,14 +679,18 @@ TypeOK ==
     /\ rqStamp \in [Threads -> 0..Cardinality(Threads)]
     /\ preemptOk \in BOOLEAN
     /\ readySince \in [Threads -> 0..Cardinality(Threads)]
+    /\ PF!TypeOK
 
 \* A thread runs on at most one CPU.
 \* @kind invariant
 CurUnique == \A c, d \in CPUS : c # d /\ cur[c] # Idle => cur[c] # cur[d]
 
-\* A running thread is ready: a pending or dead thread never runs.
+\* A thread that executes is ready: a pending or dead thread never runs its
+\* code. With arch_swap() a thread that waits or ends stays _current until
+\* PendSV runs, but it executes no code in this gap.
 \* @kind invariant
-CurIsReady == \A c \in CPUS : cur[c] # Idle => tstate[cur[c]] = "ready"
+CurIsReady ==
+    \A c \in CPUS : cur[c] # Idle /\ ~PF!SwitchPending(c) => tstate[cur[c]] = "ready"
 
 \* A thread is pending if and only if it is in a wait queue, and its
 \* return value is -EAGAIN until a waker sets another one.
@@ -616,7 +712,7 @@ DeadIsInert ==
     \A t \in Threads : tstate[t] = "dead" =>
         /\ pendedOn[t] = None
         /\ swapRet[t] = NoRet
-        /\ ~Running(t)
+        /\ ~Executes(t)
 
 \* On one CPU the positions of the ready threads are 1..N and different,
 \* a thread that is not ready has 0. Thus RunqBest has one witness. The
@@ -630,12 +726,32 @@ RqStampsNormal ==
         /\ \A t \in Ready : 1 <= readySince[t] /\ readySince[t] <= Cardinality(Ready)
 
 \* Each CPU runs a thread that the rule can select: on one CPU the cache.
-\* This holds after each step if each critical section that changes the
-\* cache ends with a reschedule point. k_thread_abort() of another thread
-\* does not (finding P7-c): the configuration coop_rule shows it. On SMP
-\* it can fail until the IPI arrives (see SelectionHappens).
+\* The premise: the CPU has no outer interrupt lock (the selection waits
+\* for the end of the lock) and no switch is pending (arch_swap(): the
+\* selection waits for PendSV). This holds after each step if each
+\* critical section that changes the cache ends with a reschedule point.
+\* k_thread_abort() of another thread does not (finding P7-c): the
+\* configuration coop_rule shows it. irq_unlock() is not a reschedule
+\* point (finding P2-w): the configuration p2_rule shows it. On SMP it can
+\* fail until the IPI arrives (see SelectionHappens).
 \* @kind invariant
-RunRuleHolds == \A c \in CPUS : cur[c] \in Choices(c, tstate, prio, cur, rqStamp, preemptOk)
+RunRuleHolds ==
+    \A c \in CPUS :
+        (~PF!Locked(c) /\ ~PF!SwitchPending(c)) =>
+            cur[c] \in Choices(c, tstate, prio, cur, rqStamp, preemptOk)
+
+\* A thread does not switch while it holds an outer interrupt lock: a step
+\* that changes the current thread of a CPU, or sets PendSV pending on it,
+\* starts without an outer lock. This is a condition of use of the
+\* kernel: the model keeps the lock state for each CPU and is not correct
+\* without it (the code keeps it for each thread). The mutant pend_locked
+\* of mc/MCScheduler violates it.
+\* @kind action-property
+\* @source doc:api#irq_lock
+NoSwitchWhileLocked ==
+    [][\A c \in CPUS :
+         (\/ cur'[c] # cur[c]
+          \/ PF!SwitchPending(c)' /\ ~PF!SwitchPending(c)) => ~PF!Locked(c)]_schedVars
 
 \* No panic. This is an environment assumption: no ISR calls a wait, and
 \* the heap of the timeouts is large enough.
@@ -675,16 +791,43 @@ SelectionHappens ==
 \* While the current thread is preemptible, no ready thread has a higher
 \* priority: a thread with a higher priority that becomes ready (also by a
 \* priority change) is the current thread at the end of the step. The idle
-\* thread runs only if no thread is ready.
+\* thread runs only if no thread is ready. Two readings (p7-pilot.md and
+\* finding P2-w): L1, while the thread holds an outer interrupt lock the
+\* selection waits for the end of the lock (irq_lock() prevents the
+\* interrupts, and with them the preemption). G1, while a switch is pending
+\* (arch_swap(), before PendSV) no thread executes, so the CPU has no
+\* current thread in the sense of the requirement.
 \* @kind invariant
 \* @source ZEP-SRS-2-9
 \* @source ZEP-SRS-2-12
 PreemptibleRunsHighest ==
     \A c \in CPUS :
+        (~PF!Locked(c) /\ ~PF!SwitchPending(c)) =>
         LET S == Candidates(c, tstate, cur)
         IN  /\ cur[c] = Idle => S = {}
             /\ (cur[c] # Idle /\ ~Cooperative(prio[cur[c]])) =>
                    \A t \in S : prio[t] <= prio[cur[c]]
+
+\* The end of an outer interrupt lock is the end of the wait of reading L1:
+\* a step that unlocks CPU c (irq_unlock() with the last key) ends with a
+\* preemptible current thread only if no ready thread has a higher
+\* priority, or a switch is pending on c. TLC finds a violation (finding
+\* P2-w): z_reschedule() in the lock does not switch (resched() sees the
+\* locked key), and irq_unlock() is not a reschedule point. The thread
+\* keeps the CPU until the next reschedule point, for example the exit of
+\* the next interrupt.
+\* @kind action-property
+\* @source ZEP-SRS-2-9
+\* @source doc:kernel/services/interrupts
+\* @expected violation
+UnlockPreempts ==
+    [][\A c \in CPUS :
+         (/\ PF!Locked(c)
+          /\ ~PF!Locked(c)'
+          /\ ~PF!SwitchPending(c)'
+          /\ cur'[c] # Idle
+          /\ ~Cooperative(prio'[cur'[c]])) =>
+             \A t \in Candidates(c, tstate', cur') : prio'[t] <= prio'[cur'[c]]]_schedVars
 
 \* A step that selects a new current thread selects a ready thread with
 \* the highest priority among the threads that the CPU can run, or the
@@ -699,6 +842,31 @@ SwitchSelectsHighest ==
              IN  IF S = {} THEN cur'[c] = Idle
                  ELSE /\ cur'[c] \in S
                       /\ \A u \in S : prio'[u] <= prio'[cur'[c]]]_schedVars
+
+\* A thread that waits loses the protection of the cooperative rule: the
+\* selection after the wait selects a ready thread with the highest
+\* priority (ZEP-SRS-2-14: "until they yield or block", with ZEP-SRS-2-12).
+\* With CONFIG_USE_SWITCH the selection is in the step of the wait, and
+\* SwitchSelectsHighest checks it. With arch_swap() the selection is the
+\* step PendSV. If an ISR in the gap before PendSV makes the waiter ready
+\* again, the waiter is still _current at PendSV, and it has not returned
+\* from its wait (swapRet # NoRet). TLC finds a violation (candidate
+\* finding SW-1): the wake calls update_cache(0), and should_preempt() keeps
+\* the cache at _current, because _current is ready and cooperative again.
+\* @kind action-property
+\* @source ZEP-SRS-2-12
+\* @source ZEP-SRS-2-14
+\* @expected violation
+BlockedLosesCpu ==
+    [][\A c \in CPUS :
+         LET a == cur[c]
+         IN  (/\ PF!SwitchPending(c)
+              /\ ~PF!SwitchPending(c)'
+              /\ a # Idle
+              /\ tstate[a] = "ready"
+              /\ swapRet[a] # NoRet
+              /\ cur'[c] # Idle) =>
+                 \A u \in Candidates(c, tstate', cur') : prio'[u] <= prio'[cur'[c]]]_schedVars
 
 \* A step that selects a new current thread t selects, among the ready
 \* threads with the priority of t, a thread that has been ready the

@@ -19,6 +19,7 @@
 
 WaitQueueTest default pass
 TimeoutTest   default pass
+PlatformTest  default pass
 SchedulerTest default pass
 MCWaitQueue default pass
 MCWaitQueue reach   probes
@@ -54,3 +55,33 @@ MCScheduler p7_coop        fail:Sched!CoopKeepsCpu
 # thread until the next reschedule point (RunRuleHolds).
 MCScheduler p7_abort       fail:Sched!CoopKeepsCpu
 MCScheduler coop_rule      fail:Inv_RunRuleHolds
+# Platform (round A, 2026-10-29): the variant arch_swap() with PendSV
+# (CONFIG_USE_SWITCH=n). The configurations above without a suffix have
+# CONFIG_USE_SWITCH=y. The findings P7-a, P7-b and P7-c occur with both
+# variants.
+MCScheduler p7_tie_pendsv    fail:Sched!TieGoesToLongestReady
+MCScheduler p7_coop_pendsv   fail:Sched!CoopKeepsCpu
+MCScheduler p7_abort_pendsv  fail:Sched!CoopKeepsCpu
+MCScheduler coop_rule_pendsv fail:Inv_RunRuleHolds
+# small and small_pendsv: one object, no priority change; small_pendsv
+# also without the abort (see the comment of its .cfg file).
+MCScheduler small            pass
+MCScheduler small_pendsv     pass
+MCScheduler reach_pendsv     probes
+# Candidate finding SW-1: with arch_swap() an ISR in the gap before PendSV
+# wakes a cooperative waiter, and PendSV gives the CPU back to it while a
+# thread with a higher priority is ready (ZEP-SRS-2-12, 2-14). gap_coop is
+# the control with CONFIG_USE_SWITCH=y.
+MCScheduler gap_coop_pendsv  fail:Sched!BlockedLosesCpu
+MCScheduler gap_coop         pass
+# P2-w: an outer irq_lock() defers the reschedule of z_reschedule(), and
+# irq_unlock() is not a reschedule point (ZEP-SRS-2-9). Both variants.
+MCScheduler p2_window        fail:Sched!UnlockPreempts
+MCScheduler p2_window_pendsv fail:Sched!UnlockPreempts
+MCScheduler p2_rule          fail:Inv_RunRuleHolds
+MCScheduler p2_lock          pass
+MCScheduler p2_lock_pendsv   pass
+MCScheduler reach_lock       probes
+# Mutants: a thread waits under an outer interrupt lock.
+MCScheduler pend_locked        fail:Sched!NoSwitchWhileLocked
+MCScheduler pend_locked_pendsv fail:Inv_P_PendingIsUnlocked

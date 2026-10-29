@@ -33,5 +33,6 @@ needs_fields = {
         "source_line": "Line of the need in its source file",
         "c_function": "C functions that a TLA+ action models, joined with '; '",
         "tla_source": "The @source values of a model property, joined with '; '",
+        "tla_kconfig": "The @kconfig values of a model property, joined with '; '",
     }.items()
 }
