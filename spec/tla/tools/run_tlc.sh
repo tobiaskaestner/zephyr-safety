@@ -14,6 +14,8 @@
 #              in tools/tla2tools.sha256.
 #   TLC_OUT    output directory (default: <spec>/build). For each run:
 #              <module>_<config>.log, and summary.md for all runs.
+#   TLC_WORKERS  number of TLC workers (default: 1). See the comment at
+#              the TLC command line before you set more than 1.
 #
 # Exit status: 0 if each result is as expected, 1 if not, 2 on a setup
 # error.
@@ -23,6 +25,7 @@ set -u
 spec=$(cd "$(dirname "$0")/.." && pwd)
 : "${TLA2TOOLS:?set TLA2TOOLS to the path of tla2tools.jar}"
 out=${TLC_OUT:-$spec/build}
+workers=${TLC_WORKERS:-1}
 
 want=$(cut -d' ' -f1 "$spec/tools/tla2tools.sha256")
 have=$(sha256sum "$TLA2TOOLS" | cut -d' ' -f1)
@@ -61,13 +64,13 @@ while read -r module config expected rest; do
 	cfg=$spec/mc/${module}_${config}.cfg
 	log=$out/${module}_${config}.log
 
-	# One worker: TLC with more than one worker can miss states and
-	# violations (tlaplus issue #1445, open at the pinned revision).
+	# One worker by default: TLC with more than one worker can miss states
+	# and violations (tlaplus issue #1445, fixed after the pinned revision).
 	# -fp 0: a fixed fingerprint function. Without it, TLC selects one at
 	# random, and a reported trace can differ from run to run.
 	tlc() { # <config file> <log file>
 		(cd "$spec/mc" && java -XX:+UseParallelGC -DTLA-Library="$spec/lib:$spec/objects:$spec/trace" \
-			-cp "$TLA2TOOLS" tlc2.TLC -workers 1 -fp 0 -cleanup -noGenerateSpecTE \
+			-cp "$TLA2TOOLS" tlc2.TLC -workers "$workers" -fp 0 -cleanup -noGenerateSpecTE \
 			-metadir "$out/states/${module}_${config}" -config "$1" "$module.tla") > "$2" 2>&1
 	}
 
