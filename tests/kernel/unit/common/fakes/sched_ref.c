@@ -528,6 +528,13 @@ static bool expire_first(void)
  * Abort(a, t). The actor is the thread that runs, or an ISR if the CPU runs
  * the idle thread. A thread that aborts itself, and an ISR, select a thread.
  * A thread that aborts another thread does not reschedule.
+ *
+ * As halt_thread() of the code (sched.c:914), the abort calls update_cache(1)
+ * for each target: the next selection has no tie rule and no cooperative
+ * rule (REF.preempt_ok). After an abort of another thread by a thread, the
+ * check RUN_RULE_HOLDS can fail until the next selection (finding P7-c).
+ * The swap data of the target does not change (the code does not write it).
+ * The fake has no join queue and no k_thread_suspend() (the same path).
  */
 static void abort_thread(struct k_thread *thread)
 {
@@ -544,7 +551,7 @@ static void abort_thread(struct k_thread *thread)
 	cancel_timeout(t);
 	set_state(t, KERNEL_UNIT_SCHED_REF_DEAD);
 	t->has_ret = false;
-	t->thread->base.swap_data = NULL;
+	REF.preempt_ok = true;
 	trace("Abort", "z_thread_abort", NULL, thread, 0);
 	if ((a == NULL) || (a == t)) {
 		select_thread();
@@ -617,9 +624,9 @@ static int no_return(struct kernel_unit_sched_ref_thread *w, const char *what)
  * environment, then Resume(a). The ISR refusal of the fake group sched comes
  * before this function: in an ISR, the fake does not call it.
  *
- * Difference from the contract: PendCurr of the contract sets swapData to
- * NoData. The C code does not change base.swap_data (msgq writes it before
- * the wait). The fake follows the C code.
+ * As the contract (proposal P1 of the review) and the C code, the wait does
+ * not change base.swap_data: msgq and mailbox write it before the wait
+ * (Scheduler!SetSwapData), and Resume does not reset it.
  */
 static int ref_pend_curr(struct k_spinlock *lock, k_spinlock_key_t key, _wait_q_t *wait_q,
 			 k_timeout_t timeout)
@@ -705,7 +712,9 @@ static bool ref_sched_wake(_wait_q_t *wait_q, int swap_retval, void *swap_data)
 /*
  * z_reschedule(): Release(a, "resched"). A thread selects now. In an ISR,
  * the C code does not swap (resched() is false), and the exit of the ISR
- * selects. The fake does not read the key (finding R8 of the review).
+ * selects. The fake does not read the key (finding R8 of the review). The
+ * contract does (Scheduler!ReschedOk: no outer irq_lock(), finding P2-w):
+ * here the fake would select only if arch_irq_unlocked(key.key) (RF-2, open).
  */
 static void ref_reschedule(struct k_spinlock *lock, k_spinlock_key_t key)
 {
@@ -830,10 +839,11 @@ static int ref_try_abort_thread_timeout(struct k_thread *thread)
 }
 
 /*
- * z_sched_waitq_walk(): WakeWalk(o, P, D). As kernel/scheduler.c: walk_func
- * for each waiter in wait queue order until it returns a value other than 0,
- * then post_func. The walk uses a copy of the order, so that a callback can
- * wake the thread. The wakes are the calls of the callbacks.
+ * z_sched_waitq_walk(): WakeWalk(o, P, Stop, D) and WaitQueue!Walked. As
+ * kernel/scheduler.c: walk_func for each waiter in wait queue order until it
+ * returns a value other than 0 (Stop), then post_func. The walk uses a copy
+ * of the order, so that a callback can wake the thread. The wakes are the
+ * calls of the callbacks.
  */
 static int ref_sched_waitq_walk(_wait_q_t *wait_q, _waitq_walk_cb_t walk_func,
 				_waitq_post_walk_cb_t post_func, void *data)
@@ -899,7 +909,7 @@ static bool ref_thread_prio_set(struct k_thread *thread, int prio)
 	return z_is_thread_ready(thread);
 }
 
-/* z_waitq_head() and z_waitq_head_locked(): the query Head(o) (proposal P3 of the review). */
+/* z_waitq_head() and z_waitq_head_locked(): the query WaitQueue!Head(o). */
 static struct k_thread *ref_waitq_head(_wait_q_t *wait_q)
 {
 	struct kernel_unit_sched_ref_thread *t = best(wait_q);
@@ -909,7 +919,10 @@ static struct k_thread *ref_waitq_head(_wait_q_t *wait_q)
 	return (t != NULL) ? t->thread : NULL;
 }
 
-/* z_waitq_init(): an init of a wait queue with waiters loses them in the code. */
+/*
+ * z_waitq_init(): Scheduler!WaitqInit(o). An init of a wait queue with waiters
+ * is undefined behavior in the code (finding P6-u): the fake reports MISUSE.
+ */
 static void ref_waitq_init(_wait_q_t *wait_q)
 {
 	if (best(wait_q) != NULL) {

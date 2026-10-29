@@ -23,6 +23,7 @@ At(cs, ts, zp, cu, sr, rs, po) ==
     INSTANCE Scheduler WITH Threads <- Th, Objs <- {"o1"}, None <- "none",
         CPUS <- cs, Isrs <- {"i1"}, IsrCpu <- [i \in {"i1"} |-> "c1"], Idle <- "idle",
         Data <- {"d"}, NoData <- "nod", Backend <- "DLIST", HeapCapacity <- 0,
+        JoinQ <- [t \in Th |-> "none"],
         MaxIrqNest <- 2, UseSwitch <- TRUE,
         tstate <- ts, prio <- [t \in Th |-> -zp[t]], cur <- cu,
         swapRet <- sr, swapData <- [t \in Th |-> "nod"], panic <- "none",
@@ -38,6 +39,7 @@ AtP(n, pv) ==
     INSTANCE Scheduler WITH Threads <- Th, Objs <- {"o1"}, None <- "none",
         CPUS <- {"c1"}, Isrs <- {"i1"}, IsrCpu <- [i \in {"i1"} |-> "c1"], Idle <- "idle",
         Data <- {"d"}, NoData <- "nod", Backend <- "DLIST", HeapCapacity <- 0,
+        JoinQ <- [t \in Th |-> "none"],
         MaxIrqNest <- 2, UseSwitch <- FALSE,
         tstate <- [t \in Th |-> "ready"], prio <- [t \in Th |-> 0], cur <- [c1 |-> "t1"],
         swapRet <- [t \in Th |-> 1], swapData <- [t \in Th |-> "nod"], panic <- "none",
@@ -46,6 +48,24 @@ AtP(n, pv) ==
         pendedOn <- [t \in Th |-> "none"], stamp <- [t \in Th |-> 0],
         tq <- <<>>, tqCost <- [op |-> "none", n |-> 0, cost |-> 0],
         irqNest <- [c1 |-> n], pendsv <- [c1 |-> pv]
+
+\* The scheduler on one CPU: t1 runs, t2 waits on "o1" with an armed
+\* timeout, and "o1" is the join queue of t1 (t2 joins t1).
+AtJ ==
+    INSTANCE Scheduler WITH Threads <- Th, Objs <- {"o1"}, None <- "none",
+        CPUS <- {"c1"}, Isrs <- {"i1"}, IsrCpu <- [i \in {"i1"} |-> "c1"], Idle <- "idle",
+        Data <- {"d"}, NoData <- "nod", Backend <- "DLIST", HeapCapacity <- 0,
+        JoinQ <- [t \in Th |-> IF t = "t1" THEN "o1" ELSE "none"],
+        MaxIrqNest <- 2, UseSwitch <- TRUE,
+        tstate <- [t \in Th |-> IF t = "t2" THEN "pending" ELSE "ready"], prio <- [t \in Th |-> 0],
+        cur <- [c1 |-> "t1"], swapRet <- [t \in Th |-> IF t = "t2" THEN -11 ELSE 1],
+        swapData <- [t \in Th |-> "nod"], panic <- "none",
+        rqStamp <- [t1 |-> 1, t2 |-> 0, t3 |-> 2], preemptOk <- FALSE,
+        readySince <- [t1 |-> 1, t2 |-> 0, t3 |-> 2],
+        pendedOn <- [t \in Th |-> IF t = "t2" THEN "o1" ELSE "none"],
+        stamp <- [t \in Th |-> IF t = "t2" THEN 1 ELSE 0],
+        tq <- <<"t2">>, tqCost <- [op |-> "none", n |-> 0, cost |-> 0],
+        irqNest <- [c1 |-> 0], pendsv <- [c1 |-> FALSE]
 
 \* A test: the value got must be the value want.
 Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
@@ -201,6 +221,19 @@ TestPlatformState ==
     /\ Check("no pendsv: thread can call",       AtP(0, FALSE)!CanCall("t1"), TRUE)
     /\ Check("outer lock: isr cannot call",      AtP(1, FALSE)!CanCall("i1"), FALSE)
     /\ Check("outer lock: thread can call",      AtP(1, FALSE)!CanCall("t1"), TRUE)
+
+\* The queries of round B: the precondition of z_sched_wake_thread_locked()
+\* (no armed timeout), the waiters of a join queue, the wait queue head
+\* and the causes of a panic.
+TestRoundB ==
+    /\ Check("wake pre: armed waiter",    AtJ!WakePre({"t2"}), FALSE)
+    /\ Check("wake pre: no timeout",      AtJ!WakePre({"t3"}), TRUE)
+    /\ Check("wake pre: empty",           AtJ!WakePre({}), TRUE)
+    /\ Check("join: waiters of t1",       AtJ!JoinWaiters("t1"), {"t2"})
+    /\ Check("join: no join queue",       AtJ!JoinWaiters("t3"), {})
+    /\ Check("has waiters",               AtJ!HasWaiters("o1"), TRUE)
+    /\ Check("head",                      AtJ!WQ!Head("o1"), "t2")
+    /\ Check("undefined is not a panic",  "undefined" \in AtJ!PanicCauses, FALSE)
 
 \* The queries of the actors.
 TestActors ==

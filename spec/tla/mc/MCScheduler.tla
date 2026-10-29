@@ -40,12 +40,25 @@
 (* mutant "pend_locked" breaks this rule: a thread waits under the lock.   *)
 (*                                                                         *)
 (* MCObjs is the set of objects ({o1, o2}, or {o1} for the small runs).    *)
+(*                                                                         *)
+(* Round B (2026-10-29):                                                   *)
+(*                                                                         *)
+(* - MCExtra adds the calls of proposal P1, P4 and P5 of the review of the *)
+(*   reference fake: a thread writes its swap data before a wait (d1, the  *)
+(*   buffer of msgq and mailbox), z_unpend_all() (k_heap_free()), the walk *)
+(*   of a mailbox send (stop at the first receiver that wrote d1) and a    *)
+(*   msgq wake that keeps the buffer pointer of the waiter. The wakers of  *)
+(*   the other calls give no swap data (NoD, see WD).                      *)
+(* - MCJoin gives each thread a join queue (the objects j1, j2, j3) and    *)
+(*   adds k_thread_join(). An abort then wakes the joiners (finding F14).  *)
+(* - MCInit adds z_waitq_init() of an object by a thread: on a wait queue  *)
+(*   with waiters, undefined behavior (finding P6-u).                      *)
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
 
-CONSTANTS t1, t2, t3, o1, o2, i1, c1, c2, NoObj, IdleT, d1, NoD,
+CONSTANTS t1, t2, t3, o1, o2, j1, j2, j3, i1, c1, c2, NoObj, IdleT, d1, NoD,
           MCCPUS, MCZPrios, MCMutant, MCIsrPends, MCSetPrioBy, MCAbort,
-          MCUseSwitch, MCOuterLock, MCMaxNest, MCObjs
+          MCUseSwitch, MCOuterLock, MCMaxNest, MCObjs, MCExtra, MCJoin, MCInit
 
 VARIABLES tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
           pendedOn, stamp, tq, tqCost, irqNest, pendsv
@@ -54,14 +67,19 @@ vars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, ready
           pendedOn, stamp, tq, tqCost, irqNest, pendsv>>
 
 Threads == {t1, t2, t3}
-Objs    == MCObjs
+\* The objects of the kernel calls (not the join queues).
+ObjQs   == MCObjs
+\* The join queue of each thread, if MCJoin.
+MCJoinQ == IF MCJoin THEN [t \in Threads |-> CASE t = t1 -> j1 [] t = t2 -> j2 [] OTHER -> j3]
+           ELSE [t \in Threads |-> NoObj]
+Objs    == MCObjs \cup (IF MCJoin THEN {j1, j2, j3} ELSE {})
 Isrs    == {i1}
 Actors  == Threads \cup Isrs
 
 MCIsrCpu == [i \in Isrs |-> c1]
 
 Sched == INSTANCE Scheduler WITH None <- NoObj, CPUS <- MCCPUS, IsrCpu <- MCIsrCpu,
-            Idle <- IdleT, Data <- {d1}, NoData <- NoD,
+            Idle <- IdleT, Data <- {d1}, NoData <- NoD, JoinQ <- MCJoinQ,
             Backend <- "DLIST", HeapCapacity <- 0,
             MaxIrqNest <- MCMaxNest, UseSwitch <- MCUseSwitch
 
@@ -77,11 +95,31 @@ ZPriosCoop == {-2, -1, 0}
 \* The model priorities of the Zephyr priorities of the configuration.
 Prios == {Sched!FromZephyr(z) : z \in MCZPrios}
 
+\* The swap data that the wakers of WakeStep give: none (NoD). No guard of
+\* the scheduler reads the swap data, so it cannot change the result of a
+\* property of the scheduler. Since no step resets it (P1), each thread
+\* keeps a value, and data from the wakers multiplies the states: the run
+\* small grew from 104141 to more than 358000 states with d1 from the
+\* wakers. A waker still overwrites the swap data of the woken thread
+\* (with NoD). The data d1 comes only from the waiter (SetSwapData, with
+\* MCExtra: small_b, reach_b).
+WD == NoD
+
 \* The walk wakes each waiter except t1, the data depends on the thread.
+\* The walk of k_event_post() does not stop.
 InWalk(t)   == t # t1
-WalkData(t) == d1
-\* The object code gives t1 the data d1, the other threads no data.
-WithRet(t)  == <<Sched!OK, IF t = t1 THEN d1 ELSE NoD>>
+NoStop(t)   == FALSE
+WalkData(t) == WD
+\* A mailbox send: the receiver matches if it wrote d1 (its message) to its
+\* swap data. The walk stops at the first match and wakes it. The data of
+\* the waiter does not change.
+MbxMatch(t) == swapData[t] = d1
+KeepData(t) == swapData[t]
+\* A msgq put that hands over to a waiting get: the waiter keeps its
+\* buffer pointer, the waker copies into the buffer.
+CopyTo(t)   == <<Sched!OK, swapData[t]>>
+\* The object code gives t1 the data WD, the other threads no data.
+WithRet(t)  == <<Sched!OK, IF t = t1 THEN WD ELSE NoD>>
 
 Init == \E p0 \in [Threads -> Prios] : Sched!InitState(p0)
 
@@ -94,7 +132,7 @@ NoOuterLock(a) == a \in Isrs \/ \A c \in MCCPUS : cur[c] = a => irqNest[c] = 0
 
 \* A running thread waits on o.
 PendStep ==
-    \E a \in Threads, o \in Objs, to \in Sched!WaitTimeouts :
+    \E a \in Threads, o \in ObjQs, to \in Sched!WaitTimeouts :
         /\ Sched!CanCall(a)
         /\ NoOuterLock(a) \/ MCMutant = "pend_locked"
         /\ Sched!PendCurr(a, o, to)
@@ -102,39 +140,68 @@ PendStep ==
 \* The ISR calls a wait: panic.
 IsrPendStep ==
     /\ MCIsrPends
-    /\ \E a \in Isrs, o \in Objs, to \in Sched!WaitTimeouts : Sched!PendCurr(a, o, to)
+    /\ \E a \in Isrs, o \in ObjQs, to \in Sched!WaitTimeouts : Sched!PendCurr(a, o, to)
 
 \* A wake and z_reschedule(), by a running thread or by the ISR.
 WakeStep ==
-    \E a \in Actors, o \in Objs :
+    \E a \in Actors, o \in ObjQs :
         /\ Sched!CanCall(a)
-        /\ \/ Sched!WakeFirst(o, Sched!OK, d1)
+        /\ \/ Sched!WakeFirst(o, Sched!OK, WD)
            \/ Sched!WakeFirstWith(o, WithRet)
            \/ Sched!WakeAll(o, Sched!EAGAIN, NoD)
-           \/ Sched!WakeWalk(o, InWalk, WalkData)
+           \/ Sched!WakeWalk(o, InWalk, NoStop, WalkData)
         /\ Sched!Release(a, "resched")
+
+\* The calls of round B (MCExtra): a thread writes its swap data before a
+\* wait; z_unpend_all() and a reschedule only if it had waiters
+\* (k_heap_free()); a mailbox send; a msgq hand-over.
+ExtraStep ==
+    /\ MCExtra
+    /\ \/ \E a \in Threads : Sched!CanCall(a) /\ NoOuterLock(a) /\ Sched!SetSwapData(a, d1)
+       \/ \E a \in Actors, o \in ObjQs :
+            /\ Sched!CanCall(a)
+            /\ \/ /\ Sched!UnpendAll(o)
+                  /\ Sched!Release(a, IF Sched!HasWaiters(o) THEN "resched" ELSE "unlock")
+               \/ /\ Sched!WakeWalk(o, MbxMatch, MbxMatch, KeepData)
+                  /\ Sched!Release(a, "resched")
+               \/ /\ Sched!WakeFirstWith(o, CopyTo)
+                  /\ Sched!Release(a, "resched")
+
+\* k_thread_join() by a running thread (MCJoin).
+JoinStep ==
+    /\ MCJoin
+    /\ \E a, t \in Threads, to \in Sched!WaitTimeouts :
+        /\ Sched!CanCall(a)
+        /\ NoOuterLock(a)
+        /\ Sched!Join(a, t, to)
+
+\* The init function of an object (k_sem_init() and more) by a running
+\* thread, with z_waitq_init() (MCInit). No lock, no reschedule.
+InitStep ==
+    /\ MCInit
+    /\ \E a \in Threads, o \in ObjQs :
+        /\ Sched!CanCall(a)
+        /\ NoOuterLock(a)
+        /\ Sched!WaitqInit(o)
 
 \* Mutant: a wake that ends with k_spin_unlock().
 MissedReschedStep ==
     /\ MCMutant = "missed_resched"
-    /\ \E a \in Threads, o \in Objs :
+    /\ \E a \in Threads, o \in ObjQs :
         /\ Sched!CanCall(a)
-        /\ Sched!WakeFirst(o, Sched!OK, d1)
+        /\ Sched!WakeFirst(o, Sched!OK, WD)
         /\ Sched!Release(a, "unlock")
 
 \* Mutant: z_sched_wake_thread_locked() on the best waiter, without
 \* z_abort_timeout() first.
 WakeNoCancelStep ==
     /\ MCMutant = "wake_no_cancel"
-    /\ \E a \in Actors, o \in Objs :
+    /\ \E a \in Actors, o \in ObjQs :
         /\ Sched!CanCall(a)
         /\ Sched!HasWaiters(o)
         /\ LET t == Sched!WQ!Best(o) IN
-           /\ Sched!WQ!Remove(t)
-           /\ tstate' = [tstate EXCEPT ![t] = "ready"]
-           /\ swapRet' = [swapRet EXCEPT ![t] = Sched!OK]
-           /\ UNCHANGED <<prio, swapData, panic, tq, tqCost>>
-           /\ Sched!QueueReady({t})
+           /\ Sched!WakeThreadLocked(t, Sched!OK, swapData[t])
+           /\ UNCHANGED <<tq, tqCost>>
         /\ Sched!Release(a, "resched")
 
 \* The calls of k_thread_priority_set(t, p) by a that the configuration
@@ -152,7 +219,8 @@ Halted == panic # "none" /\ UNCHANGED vars
 
 Next ==
     \/ panic = "none" /\ (PendStep \/ IsrPendStep \/ WakeStep
-                          \/ MissedReschedStep \/ WakeNoCancelStep)
+                          \/ MissedReschedStep \/ WakeNoCancelStep
+                          \/ ExtraStep \/ JoinStep \/ InitStep)
     \/ \E c \in MCCPUS : Sched!ThreadTimeout(c) \/ Sched!Preempt(c) \/ Sched!PendSV(c)
     \/ MCAbort /\ \E a \in Actors, t \in Threads : NoOuterLock(a) /\ Sched!Abort(a, t)
     \/ \E a \in Actors, t \in Threads, p \in Prios :
@@ -182,6 +250,8 @@ Inv_DeadIsInert     == Sched!DeadIsInert
 Inv_RunRuleHolds    == Sched!RunRuleHolds
 \* @expected violation (configuration isr_pend)
 Inv_NoPanic         == Sched!NoPanic
+\* @expected violation (configuration p6_init, finding P6-u)
+Inv_NoUndefined     == Sched!NoUndefined
 Inv_WQ_StampsNormal == Sched!WQ!StampsNormal
 Inv_WQ_RanksDistinct == Sched!WQ!RanksDistinct
 Inv_TO_ArmedOnce    == Sched!TO!ArmedOnce
@@ -194,6 +264,7 @@ Live_SelectionHappens == Sched!SelectionHappens
 -----------------------------------------------------------------------------
 (* The normative properties of the library module (one CPU).              *)
 
+\* @expected violation (configurations f14_join*, finding F14)
 Inv_PreemptibleRunsHighest == Sched!PreemptibleRunsHighest
 Prop_SwitchSelectsHighest  == Sched!SwitchSelectsHighest
 \* @expected violation (configuration p7_tie, finding P7-a)
@@ -247,4 +318,28 @@ Reach_WakeUnderLock ==
         /\ irqNest[c] > 0
         /\ cur[c] \in Threads
         /\ \E t \in Threads : tstate[t] = "ready" /\ prio[t] > prio[cur[c]])
+\* Round B (configuration reach_b): a thread that a msgq or mailbox wake
+\* ended keeps the data that it wrote before its wait (P1). The other
+\* wakes give NoD.
+Reach_WaiterDataKept ==
+    ~(\E t \in Threads : tstate[t] = "ready" /\ swapRet[t] = Sched!OK /\ swapData[t] = d1)
+\* A thread returns -EAGAIN after its timeout and still has the data that
+\* it wrote before the wait (P1: no step resets the swap data).
+Reach_TimeoutKeepsData ==
+    ~(\E c \in MCCPUS : cur[c] \in Threads /\ swapRet[cur[c]] = Sched!EAGAIN
+                        /\ swapData[cur[c]] = d1 /\ tqCost.op = "expire")
+\* z_unpend_all() wakes two timed waiters in one step: they keep -EAGAIN
+\* and their swap data (WakeAll in this model gives NoD, the mailbox walk
+\* wakes one waiter).
+Reach_UnpendAllTwo ==
+    ~(/\ tqCost.op = "cancel_set" /\ tqCost.cost = 2
+      /\ \E a, b \in Threads : a # b
+           /\ tstate[a] = "ready" /\ tstate[b] = "ready"
+           /\ swapRet[a] = Sched!EAGAIN /\ swapRet[b] = Sched!EAGAIN
+           /\ swapData[a] = d1)
+\* A joiner is ready with the return value 0 after the abort (configuration
+\* join).
+Reach_JoinerWoken ==
+    ~(\E t \in Threads : tstate[t] = "dead" /\ \E u \in Threads : u # t /\ tstate[u] = "ready"
+                                                  /\ swapRet[u] = Sched!OK)
 =============================================================================

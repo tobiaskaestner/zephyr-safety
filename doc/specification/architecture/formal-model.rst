@@ -81,6 +81,14 @@ the unlock. With ``arch_swap()``, TLC finds a counterexample for
 that runs before PendSV can give the CPU back to a cooperative thread that
 waits. These are open design findings too.
 
+Round B (2026-10-29) added the join queue of a thread. TLC finds a
+counterexample for ``PreemptibleRunsHighest`` (:need:`ZEP-SRS-2-9`):
+``k_thread_abort()`` of another thread makes the joiners of the target
+ready, and ``halt_thread()`` does not reschedule, so a joiner with a higher
+priority does not run (finding F14). The fault-model step ``WaitqInit``
+models ``z_waitq_init()`` on a wait queue with waiters, which is undefined
+behavior in the code; ``NoUndefined`` shows the path (finding P6-u).
+
 .. tla:module:: Scheduler
    :body:
    :property-needs:

@@ -31,9 +31,6 @@ CONSTANTS
     \* The threads: the actors that are not ISRs.
     \* @type: Set(THREAD);
     Threads,
-    \* The CPUs. A set with one CPU is a uniprocessor.
-    \* @type: Set(CPU);
-    CPUS,
     \* The ISR actors of the objects (not the timer ISR of the expiry).
     \* @type: Set(THREAD);
     Isrs,
@@ -44,6 +41,15 @@ CONSTANTS
     \* bound of the model, not a Kconfig option.
     \* @type: Int;
     MaxIrqNest
+
+\* The CPUs. A set with one CPU is a uniprocessor: CONFIG_SMP=n and
+\* CONFIG_MP_MAX_NUM_CPUS=1. A set with two CPUs is CONFIG_SMP=y (design
+\* exploration at level 1). CONFIG_SMP=y with one CPU is not in the model.
+\* This is a Kconfig option of kind 2: each model configuration fixes the
+\* set.
+\* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
+\* @type: Set(CPU);
+CONSTANT CPUS
 
 \* The variant of the context switch. TRUE: CONFIG_USE_SWITCH=y,
 \* z_swap() calls arch_switch() (arm_m_switch() on Cortex-M) and the exit
@@ -227,6 +233,7 @@ TypeOK ==
 
 \* With CONFIG_USE_SWITCH no PendSV is pending: the switch has no gap.
 \* @kind invariant
+\* @kconfig CONFIG_USE_SWITCH
 NoPendSVWithSwitch == UseSwitch => \A c \in CPUS : ~pendsv[c]
 
 \* A switch is pending only on a CPU without an outer lock. arch_swap()

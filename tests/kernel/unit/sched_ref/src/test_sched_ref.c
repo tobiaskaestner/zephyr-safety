@@ -906,6 +906,44 @@ ZTEST(sched_ref_unit, test_prio_set_of_cooperative_current_yields_to_higher)
 }
 
 /**
+ * @brief An abort of another thread lets a higher thread take the CPU of a cooperative thread.
+ *
+ * @details
+ * This is the code, not the requirement (finding P7-c, reference fake gap
+ * RF-1). halt_thread() calls update_cache(1) for each target (sched.c:914),
+ * so the rule for cooperative threads does not apply at the next selection.
+ * A thread that aborts another thread does not reschedule.
+ * - Setup: t1 runs with the cooperative priority -1. t2 is ready with -2
+ *   (higher). t3 is ready with 5.
+ * - Action: t1 aborts t3. Then z_reschedule() by t1.
+ * - Expected: after the abort t1 still runs, but the selection rule gives
+ *   t2: the check RUN_RULE_HOLDS fails as expected (Scheduler: RunRuleHolds,
+ *   configuration coop_rule). At the reschedule, t2 runs. Without the abort,
+ *   t1 keeps the CPU (see test_reschedule_keeps_cooperative_current()).
+ *
+ * @ingroup kernel_unit_sched_ref_resched
+ */
+ZTEST(sched_ref_unit, test_abort_of_other_thread_preempts_cooperative)
+{
+	three_threads(-1, -2, 5);
+	kernel_unit_sched_ref_set_current(&t1);
+	zassert_equal(kernel_unit_sched_ref_choices(), kernel_unit_sched_ref_bit(&t1));
+	kernel_unit_sched_ref_expect(KERNEL_UNIT_SCHED_REF_RUN_RULE_HOLDS);
+
+	kernel_unit_sched_ref_abort(&t3);
+
+	zassert_equal(ref(&t3)->state, KERNEL_UNIT_SCHED_REF_DEAD);
+	zassert_equal_ptr(_current, &t1);
+	zassert_equal(kernel_unit_sched_ref_choices(), kernel_unit_sched_ref_bit(&t2));
+	zassert_equal(kernel_unit_sched_ref.found, KERNEL_UNIT_SCHED_REF_RUN_RULE_HOLDS);
+
+	z_reschedule(&test_lock, test_key);
+
+	zassert_equal_ptr(_current, &t2);
+	kernel_unit_sched_ref_assert_ok();
+}
+
+/**
  * @defgroup kernel_unit_sched_ref_misuse Misuse of the contract
  * @ingroup kernel_unit_sched_ref_tests
  * @brief The checks of the fake find the misuses that the invariants of MCScheduler find.

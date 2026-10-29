@@ -6,7 +6,12 @@
 (* the Zephyr wait queue, not its data structure: a higher priority comes  *)
 (* first, and threads with the same priority keep their order of arrival.  *)
 (* Both CONFIG_WAITQ_SIMPLE (z_priq_simple_add()) and                      *)
-(* CONFIG_WAITQ_SCALABLE (z_priq_rb_add()) give this order.                *)
+(* CONFIG_WAITQ_SCALABLE (z_priq_rb_add()) give this order. These options  *)
+(* are of Kconfig kind 1: the module covers both values, and the unit      *)
+(* tests of the wait queue check each backend. One visible difference is   *)
+(* not in this module: k_event_post() wakes the matched waiters in the     *)
+(* reverse walk order with CONFIG_WAITQ_SCALABLE (Scheduler!WakeWalk; the  *)
+(* run queue order of threads that become ready in one step is free).      *)
 (*                                                                         *)
 (* The stamp of a waiter is its position in the order of arrival over all  *)
 (* waiters. Each action that changes the waiters renumbers the stamps to   *)
@@ -17,7 +22,7 @@
 (* it (INSTANCE WaitQueue). prio belongs to the Scheduler. This module     *)
 (* reads it and does not change it.                                        *)
 (***************************************************************************)
-EXTENDS Naturals, FiniteSets, Sequences
+EXTENDS Naturals, FiniteSets
 
 CONSTANTS
     \* @type: Set(THREAD);
@@ -76,6 +81,49 @@ Best(o) == CHOOSE t \in W(o) : Rank(o, t) = 1
 \* rank i, for each i (invariant RanksDistinct). For TLC only: Apalache
 \* does not accept a range with a bound that depends on the state.
 Ordered(o) == [i \in 1..Cardinality(W(o)) |-> CHOOSE t \in W(o) : Rank(o, t) = i]
+
+\* z_waitq_head() and z_waitq_head_locked() (wait_q.h:50-53, 93-96,
+\* 100-117): the first waiter of o, or None if no thread waits. The two
+\* functions differ only in the lock: z_waitq_head() takes the scheduler
+\* lock, which matters only on SMP. Users at Zephyr 770fdef1567:
+\*
+\* - the priority inheritance of the mutex: the best waiter of each mutex
+\*   that the owner holds (mutex.c:157);
+\* - the checks "no waiter" of the cleanup functions of the stack
+\*   (stack.c:94, 99), the message queue (msg_q.c:137, 142) and the timer
+\*   (timer.c:181, 186), and of sem_destroy() of POSIX
+\*   (subsys/portability/posix/options/semaphore.c:94);
+\* - the loops "until the queue is empty" of z_unpend_all() and of the
+\*   static unpend_all() (sched.c:810-812, 832-834);
+\* - the expiry of a timer, which wakes only the first waiter of
+\*   k_timer_status_sync() (timer.c:147, a single call and not a loop:
+\*   finding F2);
+\* - later: the trace hook of the unit tests (roadmap step 2.2), which
+\*   needs a name for the call.
+\*
+\* The module does not extend Sequences, so that the name Head is free.
+\* Ordered builds its sequence as a function.
+\* @c-function z_waitq_head
+\* @c-function z_waitq_head_locked
+Head(o) == IF W(o) = {} THEN None ELSE Best(o)
+
+\* The waiters of o that z_sched_waitq_walk() visits: the waiters in wait
+\* queue order up to the first waiter t with Stop(t) (walk_func returns a
+\* value other than 0), this waiter included; all waiters if no waiter
+\* stops the walk. The walk follows the wait queue order with both
+\* backends (_WAIT_Q_FOR_EACH_SAFE and _WAIT_Q_FOR_EACH, scheduler.c:91-97).
+\* @kind definition
+\* @c-function z_sched_waitq_walk
+Walked(o, Stop(_)) == {t \in W(o) : \A u \in W(o) : Before(u, t) => ~Stop(u)}
+
+\* The waiter at which z_sched_waitq_walk() stops: the first waiter t of o
+\* with Stop(t), or None if the walk visits all waiters (the C function
+\* then returns 0). Before is a total order on W(o) (invariant
+\* OrderIsTotal), so the CHOOSE has exactly one witness.
+\* @kind definition
+WalkStop(o, Stop(_)) ==
+    LET X == {t \in W(o) : Stop(t)}
+    IN  IF X = {} THEN None ELSE CHOOSE t \in X : \A u \in X \ {t} : Before(t, u)
 
 -----------------------------------------------------------------------------
 (* Stamps *)

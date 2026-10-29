@@ -32,12 +32,25 @@ CONSTANTS
     \* The objects that can be armed: threads with a finite timeout, later
     \* timers.
     \* @type: Set(ENTRY);
-    Entries,
-    \* @type: Str;
-    Backend,
-    \* CONFIG_TIMEOUT_HEAP_MAX_ENTRIES. Used only with Backend = "MINHEAP".
-    \* @type: Int;
-    HeapCapacity
+    Entries
+
+\* The backend of the timeout queue: "DLIST" or "MINHEAP" (see the module
+\* header). This is a Kconfig option of kind 2: each model configuration
+\* fixes the value. CONFIG_TIMEOUT_BACKEND_WHEEL is in scope (decision Q3
+\* of the unit map: kind 2, it does not keep the firing order of the
+\* timeouts of one tick) and is not in the model yet. BUCKET is out of
+\* scope.
+\* @kconfig CONFIG_TIMEOUT_BACKEND_DLIST CONFIG_TIMEOUT_BACKEND_MINHEAP CONFIG_TIMEOUT_BACKEND_WHEEL
+\* @type: Str;
+CONSTANT Backend
+
+\* CONFIG_TIMEOUT_HEAP_MAX_ENTRIES. Used only with Backend = "MINHEAP". A
+\* Kconfig option of kind 3: a heap that is too small panics, so a safe
+\* system must have enough entries (the condition of use NoPanic of
+\* mc/MCTimeout; configuration minheap_full).
+\* @kconfig CONFIG_TIMEOUT_HEAP_MAX_ENTRIES
+\* @type: Int;
+CONSTANT HeapCapacity
 
 VARIABLES
     \* The armed entries, earliest expiry first.
@@ -188,6 +201,7 @@ CostBounded == tqCost.cost <= CostBound(tqCost.op, tqCost.n)
 
 \* The heap never holds more than its capacity.
 \* @kind invariant
+\* @kconfig CONFIG_TIMEOUT_BACKEND_MINHEAP
 HeapWithinCapacity == Backend = "MINHEAP" => Len(tq) <= HeapCapacity
 
 =============================================================================

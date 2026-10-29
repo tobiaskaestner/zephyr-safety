@@ -1,6 +1,7 @@
 # Expected test inventory of the twister scenario kernel.unit.sched_ref.
 # Each line is "<state> <suite>.<test>". The state is "run" or "skip".
 # To regenerate, see "Test inventory" in tests/kernel/unit/README.rst.
+run sched_ref_unit.test_abort_of_other_thread_preempts_cooperative
 run sched_ref_unit.test_abort_of_waiter_leaves_wait_queue
 run sched_ref_unit.test_abort_of_waiting_thread_does_not_return
 run sched_ref_unit.test_absolute_timeout_expires_at_its_tick
