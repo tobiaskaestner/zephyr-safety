@@ -1,0 +1,53 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The real kernel/sched.c on the model of the platform (model group
+# platform, safety/spec/tla/lib/Platform.tla). One scenario for each Kconfig
+# option of kind 2 of the scheduler contract that the code of sched.c and
+# its headers reads:
+#
+# - the context switch: arch_swap() with PendSV (default) and
+#   CONFIG_USE_SWITCH (decision Q1 of the unit map),
+# - the run queue backend: CONFIG_SCHED_SIMPLE (default) and
+#   CONFIG_SCHED_MULTIQ (decision Q3),
+# - the wait queue backend: CONFIG_WAITQ_SIMPLE (default) and
+#   CONFIG_WAITQ_SCALABLE (decision Q3),
+# - time slicing: on (default) and off (decision Q2),
+# - meta-IRQ threads (metairq.h),
+# - the assertions of sched.c and kswap.h (CONFIG_ASSERT, with
+#   CONFIG_SPIN_VALIDATE), with both switch variants.
+#
+# A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST (see the
+# README, "Assertions").
+
+common:
+  type: unit
+  tags:
+    - kernel
+    - kernel_unit
+tests:
+  kernel.unit.sched: {}
+  kernel.unit.sched.switch:
+    extra_configs:
+      - CONFIG_USE_SWITCH=y
+  kernel.unit.sched.multiq:
+    extra_configs:
+      - CONFIG_SCHED_MULTIQ=y
+  kernel.unit.sched.waitq_scalable:
+    extra_configs:
+      - CONFIG_WAITQ_SCALABLE=y
+  kernel.unit.sched.no_timeslicing:
+    extra_configs:
+      - CONFIG_TIMESLICING=n
+  kernel.unit.sched.metairq:
+    extra_configs:
+      - CONFIG_NUM_METAIRQ_PRIORITIES=1
+  kernel.unit.sched.assert:
+    extra_configs:
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y
+  kernel.unit.sched.switch_assert:
+    extra_configs:
+      - CONFIG_USE_SWITCH=y
+      - CONFIG_ASSERT=y
+      - CONFIG_ASSERT_TEST=y

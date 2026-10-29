@@ -15,4 +15,11 @@ kernel_unit_fakes(arch sched fatal init sched_ref)
 kernel_unit_fakes_ifdef(CONFIG_ASSERT assert)
 kernel_unit_fakes_ifdef(CONFIG_SPIN_VALIDATE spinlock)
 
-target_sources(testbinary PRIVATE src/test_sched_ref.c)
+# The contract tests of the scheduler (suite sched_contract) also run here,
+# with the adapter on the reference fake. The application sched runs them
+# against the real kernel/sched.c.
+target_sources(testbinary PRIVATE
+  src/test_sched_ref.c
+  src/contract_ref.c
+  ${KERNEL_UNIT_COMMON_DIR}/src/test_sched_contract.c
+)

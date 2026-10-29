@@ -86,7 +86,9 @@ static inline bool kernel_unit_history_ignored(fff_function_t fn)
 	if ((fn == KERNEL_UNIT_FN(z_spin_lock_valid)) ||
 	    (fn == KERNEL_UNIT_FN(z_spin_unlock_valid)) ||
 	    (fn == KERNEL_UNIT_FN(z_spin_lock_set_owner)) ||
-	    (fn == KERNEL_UNIT_FN(z_spin_lock_transfer_owner))) {
+	    (fn == KERNEL_UNIT_FN(z_spin_lock_transfer_owner)) ||
+	    (fn == KERNEL_UNIT_FN(z_assert_can_swap)) ||
+	    (fn == KERNEL_UNIT_FN(z_spin_validate_reset))) {
 		return true;
 	}
 #endif
