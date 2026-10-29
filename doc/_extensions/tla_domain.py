@@ -65,9 +65,9 @@ Configuration (in conf.py):
     (``PROP-{module}-{name}``).
 ``tla_property_need_fields``
     Field role -> field name. The roles are ``kind``, ``expected``,
-    ``module``, ``source_file``, ``source_line``, ``c_function`` and
-    ``source`` (the ``@source`` values). A role with the value None gives no
-    field.
+    ``module``, ``source_file``, ``source_line``, ``c_function``, ``source``
+    (the ``@source`` values) and ``kconfig`` (the ``@kconfig`` values). A
+    role with the value None gives no field.
 ``tla_source_root``
     The ``source_file`` field is relative to this directory (relative to the
     conf.py directory). Default: the source directory.
@@ -110,7 +110,18 @@ EXPECTED = ("hold", "violation")
 LEVELS = ("1", "2")
 #: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
 #: annotations of Apalache: they are not prose, and the extension does not show them.
-TAGS = ("expresses", "source", "kind", "c-function", "expected", "level", "type", "typeAlias")
+TAGS = (
+    "expresses",
+    "source",
+    "kconfig",
+    "assumption",
+    "kind",
+    "c-function",
+    "expected",
+    "level",
+    "type",
+    "typeAlias",
+)
 
 CSS_NAME = "tla_domain.css"
 #: The start of the rawsource of a rendered block (see code_nodes()).
@@ -125,6 +136,7 @@ DEFAULT_NEED_FIELDS = {
     "source_line": "source_line",
     "c_function": "c_function",
     "source": "tla_source",
+    "kconfig": "tla_kconfig",
 }
 
 
@@ -399,6 +411,17 @@ def _sources(unit):
     return [v.strip() for v in unit.tags.get("source", []) if v.strip()]
 
 
+def _kconfigs(unit):
+    """The Kconfig symbols of the ``@kconfig`` tags of ``unit``. A tag can
+    name more than one symbol (separated by spaces or commas)."""
+    return [k for v in unit.tags.get("kconfig", []) for k in _unit_list(v)]
+
+
+def _assumptions(unit):
+    """The ``@assumption`` values of ``unit``: one for each tag line."""
+    return [v.strip() for v in unit.tags.get("assumption", []) if v.strip()]
+
+
 def _source_uids(sources):
     """The requirement UIDs among ``@source`` values. A value with a prefix
     (``doc:...``) names a document, not a requirement."""
@@ -597,6 +620,13 @@ class TLADirective(SphinxDirective):
                     True,
                 )
             )
+        kconfigs = _kconfigs(unit)
+        if kconfigs:
+            items.append(("Kconfig", ", ".join(f"``{k}``" for k in kconfigs), True))
+        for text in _assumptions(unit):
+            # Plain text: a code location often has characters that are RST
+            # markup (a trailing underscore is a reference).
+            items.append(("Assumption", text, False))
         funcs = [f for v in unit.tags.get("c-function", []) for f in _unit_list(v)]
         if funcs:
             role = self.config.tla_c_function_role
@@ -757,9 +787,10 @@ class TLADirective(SphinxDirective):
         return result
 
     def other_unit_nodes(self, module, unit):
-        """ASSUME, THEOREM, INSTANCE and other units: prose and code."""
+        """ASSUME, THEOREM, INSTANCE and other units: prose, tags and code."""
         self.check_tags(module, unit)
         out = self.prose_nodes(unit.doc, unit.doc_lines, module.path)
+        out += self.tag_nodes(module, unit)
         out += self.code_nodes(module, unit.text)
         return out
 
@@ -833,6 +864,7 @@ class TLADirective(SphinxDirective):
             "source_line": str(unit.start_line),
             "c_function": "; ".join(funcs),
             "source": "; ".join(_sources(unit)),
+            "kconfig": "; ".join(_kconfigs(unit)),
         }
         rst = [f".. {need_type}:: {unit.name}", f"   :id: {need_id}"]
         if uids:

@@ -345,3 +345,12 @@ description = "Sources of a model property of the normative layer (@source), joi
 nullable = true
 [needs.fields.tla_source.schema]
 type = "string"
+
+# tla_kconfig: the @kconfig tags of a model property (the Kconfig options
+# under which the property applies, spec/tla/README.rst "Kconfig"), joined
+# with "; ". Set by tla_domain.
+[needs.fields.tla_kconfig]
+description = "Kconfig options of a model property (@kconfig), joined with '; '"
+nullable = true
+[needs.fields.tla_kconfig.schema]
+type = "string"

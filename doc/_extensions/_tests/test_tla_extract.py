@@ -168,7 +168,7 @@ def test_theorem_and_pluscal(extra):
 
 
 def test_declarations(extra):
-    assert extra.constants == ["N", "F"]
+    assert extra.constants == ["N", "F", "Switch"]
     assert extra.variables == ["x"]
     assert extra.extends == ["Naturals", "Sequences"]
     assert extra.doc == "Edge cases for the extractor of tla_domain. Not a model."

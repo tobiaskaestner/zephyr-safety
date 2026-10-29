@@ -98,7 +98,14 @@ Tag                        Meaning                                        Need f
                            layer: a requirement UID, or ``doc:<page>``    (joined, ``;``) and
                            for a document (repeatable). A UID is also     link ``expresses``
                            an ``expresses`` link.
-``@kind <kind>``           ``invariant``, ``action-property``,            ``kind``
+``@kconfig <CONFIG_X>``    the Kconfig option of a constant, or the       ``tla_kconfig``
+                           option under which a property applies          (joined, ``;``)
+                           (repeatable, more than one symbol on a line
+                           with spaces or commas). Shown as a field.
+``@assumption <text>``     an item of an assumption module: the code      (none)
+                           location or the document that it rests on
+                           (repeatable). Shown as plain text.
+``@kind <kind>``         ``invariant``, ``action-property``,            ``kind``
                            ``liveness``, ``probe``, ``action`` or
                            ``definition`` (default)
 ``@c-function <name>``     the C function that an action models           ``c_function``

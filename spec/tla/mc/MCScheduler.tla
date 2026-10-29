@@ -25,20 +25,36 @@
 (* FALSE removes k_thread_abort() from the environment for the same        *)
 (* reason. The new priority can be the old one: the code then also         *)
 (* requeues the thread.                                                    *)
+(*                                                                         *)
+(* MCUseSwitch selects the variant of the context switch (Platform,        *)
+(* CONFIG_USE_SWITCH). The configurations without the suffix _pendsv use   *)
+(* TRUE: the switch is in the step, as in the model before Platform. The   *)
+(* configurations *_pendsv use FALSE (arch_swap() and PendSV, the default  *)
+(* on Cortex-M).                                                           *)
+(*                                                                         *)
+(* MCOuterLock lets a thread call irq_lock() and irq_unlock() outside a    *)
+(* kernel call, up to MCMaxNest nested calls (finding P2-w). Under an      *)
+(* outer lock a thread calls only the functions that an ISR can call (the  *)
+(* wakes): it does not wait, set a priority or abort a thread              *)
+(* (doc/kernel/services/interrupts.rst, "Preventing Interruptions"). The   *)
+(* mutant "pend_locked" breaks this rule: a thread waits under the lock.   *)
+(*                                                                         *)
+(* MCObjs is the set of objects ({o1, o2}, or {o1} for the small runs).    *)
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
 
 CONSTANTS t1, t2, t3, o1, o2, i1, c1, c2, NoObj, IdleT, d1, NoD,
-          MCCPUS, MCZPrios, MCMutant, MCIsrPends, MCSetPrioBy, MCAbort
+          MCCPUS, MCZPrios, MCMutant, MCIsrPends, MCSetPrioBy, MCAbort,
+          MCUseSwitch, MCOuterLock, MCMaxNest, MCObjs
 
 VARIABLES tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
-          pendedOn, stamp, tq, tqCost
+          pendedOn, stamp, tq, tqCost, irqNest, pendsv
 
 vars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
-          pendedOn, stamp, tq, tqCost>>
+          pendedOn, stamp, tq, tqCost, irqNest, pendsv>>
 
 Threads == {t1, t2, t3}
-Objs    == {o1, o2}
+Objs    == MCObjs
 Isrs    == {i1}
 Actors  == Threads \cup Isrs
 
@@ -46,7 +62,8 @@ MCIsrCpu == [i \in Isrs |-> c1]
 
 Sched == INSTANCE Scheduler WITH None <- NoObj, CPUS <- MCCPUS, IsrCpu <- MCIsrCpu,
             Idle <- IdleT, Data <- {d1}, NoData <- NoD,
-            Backend <- "DLIST", HeapCapacity <- 0
+            Backend <- "DLIST", HeapCapacity <- 0,
+            MaxIrqNest <- MCMaxNest, UseSwitch <- MCUseSwitch
 
 \* Zephyr priorities. A configuration file cannot give negative numbers, so
 \* it selects a set with MCZPrios <- ZPriosMixed.
@@ -71,10 +88,16 @@ Init == \E p0 \in [Threads -> Prios] : Sched!InitState(p0)
 -----------------------------------------------------------------------------
 (* The calls of the objects. Each one is one critical section.            *)
 
+\* Actor a holds no outer interrupt lock (an ISR never does). Under an
+\* outer lock a thread calls only the functions that an ISR can call.
+NoOuterLock(a) == a \in Isrs \/ \A c \in MCCPUS : cur[c] = a => irqNest[c] = 0
+
 \* A running thread waits on o.
 PendStep ==
     \E a \in Threads, o \in Objs, to \in Sched!WaitTimeouts :
-        Sched!CanCall(a) /\ Sched!PendCurr(a, o, to)
+        /\ Sched!CanCall(a)
+        /\ NoOuterLock(a) \/ MCMutant = "pend_locked"
+        /\ Sched!PendCurr(a, o, to)
 
 \* The ISR calls a wait: panic.
 IsrPendStep ==
@@ -130,10 +153,12 @@ Halted == panic # "none" /\ UNCHANGED vars
 Next ==
     \/ panic = "none" /\ (PendStep \/ IsrPendStep \/ WakeStep
                           \/ MissedReschedStep \/ WakeNoCancelStep)
-    \/ \E c \in MCCPUS : Sched!ThreadTimeout(c) \/ Sched!Preempt(c)
-    \/ MCAbort /\ \E a \in Actors, t \in Threads : Sched!Abort(a, t)
-    \/ \E a \in Actors, t \in Threads, p \in Prios : PrioTarget(a, t, p) /\ Sched!SetPrio(a, t, p)
+    \/ \E c \in MCCPUS : Sched!ThreadTimeout(c) \/ Sched!Preempt(c) \/ Sched!PendSV(c)
+    \/ MCAbort /\ \E a \in Actors, t \in Threads : NoOuterLock(a) /\ Sched!Abort(a, t)
+    \/ \E a \in Actors, t \in Threads, p \in Prios :
+          PrioTarget(a, t, p) /\ NoOuterLock(a) /\ Sched!SetPrio(a, t, p)
     \/ \E t \in Threads : Sched!Resume(t)
+    \/ MCOuterLock /\ \E a \in Threads : Sched!IrqLockCall(a) \/ Sched!IrqUnlockCall(a)
     \/ Halted
 
 Spec == Init /\ [][Next]_vars /\ Sched!Fairness
@@ -142,12 +167,18 @@ Spec == Init /\ [][Next]_vars /\ Sched!Fairness
 (* Properties of the library module *)
 
 Inv_TypeOK          == Sched!TypeOK
+Inv_P_NoPendSVWithSwitch == Sched!PF!NoPendSVWithSwitch
+\* @expected violation (configuration pend_locked_pendsv)
+Inv_P_PendingIsUnlocked  == Sched!PF!PendingIsUnlocked
+\* @expected violation (configuration pend_locked)
+Prop_NoSwitchWhileLocked == Sched!NoSwitchWhileLocked
 Inv_CurUnique       == Sched!CurUnique
 Inv_CurIsReady      == Sched!CurIsReady
 Inv_PendingIsQueued == Sched!PendingIsQueued
 Inv_ArmedArePending == Sched!ArmedArePending
 Inv_DeadIsInert     == Sched!DeadIsInert
-\* @expected violation (configuration smp_rule: the IPI comes later)
+\* @expected violation (configurations smp_rule: the IPI comes later;
+\* coop_rule: finding P7-c; p2_rule: finding P2-w)
 Inv_RunRuleHolds    == Sched!RunRuleHolds
 \* @expected violation (configuration isr_pend)
 Inv_NoPanic         == Sched!NoPanic
@@ -170,6 +201,11 @@ Prop_TieGoesToLongestReady == Sched!TieGoesToLongestReady
 \* @expected violation (configurations p7_coop and p7_abort, findings P7-b
 \* and P7-c)
 Prop_CoopKeepsCpu          == Sched!CoopKeepsCpu
+\* @expected violation (configurations p2_window, finding P2-w)
+Prop_UnlockPreempts        == Sched!UnlockPreempts
+\* @expected violation (configuration gap_coop_pendsv, candidate finding
+\* SW-1)
+Prop_BlockedLosesCpu       == Sched!BlockedLosesCpu
 
 -----------------------------------------------------------------------------
 (* Reachability probes. Each one is the negation of a situation that the   *)
@@ -196,4 +232,19 @@ Reach_AllWait == ~(\A t \in Threads : tstate[t] = "pending")
 Reach_WakeAllTwo == ~(tqCost.op = "cancel_set" /\ tqCost.cost = 2)
 \* Two CPUs run a thread (configuration smp).
 Reach_TwoRun == ~(\A c \in MCCPUS : cur[c] \in Threads)
+\* arch_swap(): an ISR runs in the gap before PendSV and makes a thread
+\* ready (configuration reach_pendsv).
+Reach_IsrInGap ==
+    ~(\E c \in MCCPUS :
+        pendsv[c] /\ cur[c] \in Threads /\ tstate[cur[c]] = "ready" /\ swapRet[cur[c]] = Sched!OK)
+\* An outer interrupt lock with two nested calls (configuration
+\* reach_lock).
+Reach_NestedLock == ~(\E c \in MCCPUS : irqNest[c] = 2)
+\* A thread wakes a waiter with a higher priority under an outer lock, and
+\* keeps the CPU (configuration reach_lock).
+Reach_WakeUnderLock ==
+    ~(\E c \in MCCPUS :
+        /\ irqNest[c] > 0
+        /\ cur[c] \in Threads
+        /\ \E t \in Threads : tstate[t] = "ready" /\ prio[t] > prio[cur[c]])
 =============================================================================

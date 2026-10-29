@@ -44,6 +44,22 @@ Timeout queue
    :body:
    :property-needs:
 
+Platform (the world below the scheduler)
+----------------------------------------
+
+The module ``Platform`` is an assumption module: it states only what
+``kernel/sched.c`` relies on. Each item that rests on the architecture code
+or on a document has the tag ``@assumption`` with that location. It has the
+CPUs, the ISRs and their CPUs, the outer interrupt lock (``irq_lock()``
+outside a kernel call) and the two variants of the context switch on
+Cortex-M: ``CONFIG_USE_SWITCH`` (the switch is in the step of the reschedule
+point) and ``arch_swap()`` with PendSV (the step PendSV selects later, and
+ISRs can run in the gap).
+
+.. tla:module:: Platform
+   :body:
+   :property-needs:
+
 Scheduler contract
 ------------------
 
@@ -54,7 +70,16 @@ state :need:`ZEP-SRS-2-9`, :need:`ZEP-SRS-2-12`, :need:`ZEP-SRS-2-13` and
 :need:`ZEP-SRS-2-14`. TLC finds counterexamples for ``TieGoesToLongestReady``
 and ``CoopKeepsCpu`` (expected violations): a priority change with
 ``k_thread_priority_set()`` and an abort with ``k_thread_abort()`` call
-``update_cache(1)``. These are open design findings.
+``update_cache(1)``. These are open design findings. They occur with both
+variants of the context switch.
+
+TLC also finds counterexamples for ``UnlockPreempts`` (:need:`ZEP-SRS-2-9`):
+``irq_unlock()`` is not a reschedule point, so a thread that woke a thread
+with a higher priority under an outer interrupt lock keeps the CPU after
+the unlock. With ``arch_swap()``, TLC finds a counterexample for
+``BlockedLosesCpu`` (:need:`ZEP-SRS-2-12`, :need:`ZEP-SRS-2-14`): an ISR
+that runs before PendSV can give the CPU back to a cooperative thread that
+waits. These are open design findings too.
 
 .. tla:module:: Scheduler
    :body:

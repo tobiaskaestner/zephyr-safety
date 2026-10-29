@@ -3,6 +3,15 @@
 EXTENDS Naturals, Sequences
 
 CONSTANT N, F(_, _)
+
+\* A Kconfig option of kind 2: a constant that changes the behavior.
+\* @kconfig CONFIG_EXTRA_SWITCH
+CONSTANT Switch
+
+\* The switch is a bool. An assumption with its location.
+\* @assumption arch/x/include/x.h:12 (a key_ is 0 if unlocked)
+ASSUME Switch \in BOOLEAN
+
 VARIABLE x
 
 \* An infix operator.
@@ -48,6 +57,12 @@ Text == "a == b \* c"   \* not a definition == here
 \* @c-function k_extra_step
 Step == x' = x ++ 1
 
+\* A step that only the switch enables.
+\* @kind action
+\* @kconfig CONFIG_EXTRA_SWITCH
+\* @assumption doc:x (a step is atomic)
+SwitchStep == Switch /\ x' = x
+
 \* Each step increments x. A rule without @expresses: its kind makes the
 \* need.
 \* @kind action-property
@@ -58,6 +73,13 @@ StepIncrements == [][x' = x ++ 1]_x
 \* @source TEST-REQ-1
 \* @source doc:api#x
 XIsNat == x \in Nat
+
+\* x stays at most N if the switch is on. A guarded property: its Kconfig
+\* options are a field of the need.
+\* @kind invariant
+\* @kconfig CONFIG_EXTRA_SWITCH, CONFIG_EXTRA_OTHER
+\* @assumption doc:x (the option is a bool)
+XAtMostN == Switch => x <= N
 
 Init == x = 0
 Spec == Init /\ [][Step]_x

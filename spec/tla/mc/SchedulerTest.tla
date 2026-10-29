@@ -5,7 +5,10 @@
 (* the direction of the priorities, the cooperative threads, the run queue *)
 (* order, the effect of preempt_ok and the CPUs. The invariant             *)
 (* RunRuleHolds of MCScheduler uses the same rule as the actions, so it    *)
-(* cannot find an error in the rule itself.                                *)
+(* cannot find an error in the rule itself. The tests of Platform are in   *)
+(* PlatformTest. Here: the rule resched() of z_reschedule() (ReschedOk),   *)
+(* which reads the interrupt lock and the in-ISR state of Platform, and    *)
+(* the effect of a pending PendSV on CanCall and Executes.                 *)
 (***************************************************************************)
 EXTENDS Integers, TLC
 
@@ -14,16 +17,35 @@ Th == {"t1", "t2", "t3"}
 \* The scheduler with the CPUs cs, the thread states ts, the Zephyr
 \* priorities zp, the current threads cu, the return values sr, the run
 \* queue positions rs and the flag po (preempt_ok of the last
-\* update_cache()).
+\* update_cache()). No outer interrupt lock, no pending PendSV,
+\* CONFIG_USE_SWITCH (see AtP for the other values).
 At(cs, ts, zp, cu, sr, rs, po) ==
     INSTANCE Scheduler WITH Threads <- Th, Objs <- {"o1"}, None <- "none",
         CPUS <- cs, Isrs <- {"i1"}, IsrCpu <- [i \in {"i1"} |-> "c1"], Idle <- "idle",
         Data <- {"d"}, NoData <- "nod", Backend <- "DLIST", HeapCapacity <- 0,
+        MaxIrqNest <- 2, UseSwitch <- TRUE,
         tstate <- ts, prio <- [t \in Th |-> -zp[t]], cur <- cu,
         swapRet <- sr, swapData <- [t \in Th |-> "nod"], panic <- "none",
         rqStamp <- rs, preemptOk <- po, readySince <- rs,
         pendedOn <- [t \in Th |-> "none"], stamp <- [t \in Th |-> 0],
-        tq <- <<>>, tqCost <- [op |-> "none", n |-> 0, cost |-> 0]
+        tq <- <<>>, tqCost <- [op |-> "none", n |-> 0, cost |-> 0],
+        irqNest <- [c \in cs |-> 0], pendsv <- [c \in cs |-> FALSE]
+
+\* The scheduler on one CPU with all threads ready, t1 current, and the
+\* platform state: the nesting n of the outer interrupt lock and the flag
+\* pv (PendSV pending), arch_swap() (UseSwitch FALSE).
+AtP(n, pv) ==
+    INSTANCE Scheduler WITH Threads <- Th, Objs <- {"o1"}, None <- "none",
+        CPUS <- {"c1"}, Isrs <- {"i1"}, IsrCpu <- [i \in {"i1"} |-> "c1"], Idle <- "idle",
+        Data <- {"d"}, NoData <- "nod", Backend <- "DLIST", HeapCapacity <- 0,
+        MaxIrqNest <- 2, UseSwitch <- FALSE,
+        tstate <- [t \in Th |-> "ready"], prio <- [t \in Th |-> 0], cur <- [c1 |-> "t1"],
+        swapRet <- [t \in Th |-> 1], swapData <- [t \in Th |-> "nod"], panic <- "none",
+        rqStamp <- [t1 |-> 1, t2 |-> 2, t3 |-> 3], preemptOk <- FALSE,
+        readySince <- [t1 |-> 1, t2 |-> 2, t3 |-> 3],
+        pendedOn <- [t \in Th |-> "none"], stamp <- [t \in Th |-> 0],
+        tq <- <<>>, tqCost <- [op |-> "none", n |-> 0, cost |-> 0],
+        irqNest <- [c1 |-> n], pendsv <- [c1 |-> pv]
 
 \* A test: the value got must be the value want.
 Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
@@ -158,6 +180,27 @@ TestChoicesSmp ==
     /\ Check("smp: any of a tie after a wait",
              Ch(SMP, T1Pending, Z(0, 1, 1), [c1 |-> "t1", c2 |-> "idle"], Q(0, 2, 1), TRUE, "c1"),
              {"t2", "t3"})
+
+\* resched(): z_reschedule() switches only for a thread with an unlocked
+\* key (finding P2-w). In an ISR it never switches: the exit of the ISR is
+\* the reschedule point.
+ReschedOk(n, a) == AtP(n, FALSE)!ReschedOk(a, "c1")
+TestResched ==
+    /\ Check("resched: thread, no outer lock",    ReschedOk(0, "t1"), TRUE)
+    /\ Check("resched: thread, outer lock",       ReschedOk(1, "t1"), FALSE)
+    /\ Check("resched: thread, nested lock",      ReschedOk(2, "t1"), FALSE)
+    /\ Check("resched: isr",                      ReschedOk(0, "i1"), FALSE)
+
+\* A pending PendSV (arch_swap()): the current thread executes no code and
+\* cannot call the kernel, an ISR can. An outer lock blocks the ISR.
+TestPlatformState ==
+    /\ Check("pendsv: current does not execute", AtP(0, TRUE)!Executes("t1"), FALSE)
+    /\ Check("pendsv: current is still running", AtP(0, TRUE)!Running("t1"), TRUE)
+    /\ Check("pendsv: thread cannot call",       AtP(0, TRUE)!CanCall("t1"), FALSE)
+    /\ Check("pendsv: isr can call",             AtP(0, TRUE)!CanCall("i1"), TRUE)
+    /\ Check("no pendsv: thread can call",       AtP(0, FALSE)!CanCall("t1"), TRUE)
+    /\ Check("outer lock: isr cannot call",      AtP(1, FALSE)!CanCall("i1"), FALSE)
+    /\ Check("outer lock: thread can call",      AtP(1, FALSE)!CanCall("t1"), TRUE)
 
 \* The queries of the actors.
 TestActors ==

@@ -11,12 +11,14 @@ variable, mutex, and more later). The model is written in TLA+ and checked
 with TLC.
 
 Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``,
-``lib/Timeout`` and ``lib/Scheduler`` exist and are checked alone
-(``mc/MCWaitQueue``, ``mc/MCTimeout``, ``mc/MCScheduler``) and by example
-tests (``mc/WaitQueueTest``, ``mc/TimeoutTest``, ``mc/SchedulerTest``).
-``Waitable`` does not exist yet. ``Platform`` comes at level 2 (roadmap
-step 5). The k_sem proof of concept is still in the workspace notes
-(``claude/kernel-unit/tla/``). It moves here when it is expressed on the
+``lib/Timeout``, ``lib/Platform`` and ``lib/Scheduler`` exist and are
+checked alone (``mc/MCWaitQueue``, ``mc/MCTimeout``, ``mc/MCScheduler``)
+and by example tests (``mc/WaitQueueTest``, ``mc/TimeoutTest``,
+``mc/PlatformTest``, ``mc/SchedulerTest``). ``Platform`` is at level 1
+since 2026-10-29: the interrupt lock and the two variants of the context
+switch. Level 2 adds the IPIs and the lock owners (roadmap step 5).
+``Waitable`` does not exist yet. The k_sem proof of concept is still in
+the workspace notes (``claude/kernel-unit/tla/``). It moves here when it is expressed on the
 library.
 
 .. contents::
@@ -107,17 +109,29 @@ application code.
      - Not in the model
    * - CPU
      - An element of ``CPUS``. For each CPU: the current thread
-       (``cur[c]``). At level 1 an ISR is one step, so the model has no
-       interrupt lock state and no "ISR runs" flag. Level 2 adds them
+       (``cur[c]``), the outer interrupt lock (``irqNest[c]``, the nested
+       ``irq_lock()`` calls of the thread that runs) and a pending PendSV
+       (``pendsv[c]``, ``arch_swap()`` only). At level 1 an ISR is one
+       step, so "in an ISR" is the kind of the actor, not a variable
        (``Platform``).
-     - Registers, caches, the memory model.
+     - Registers, caches, the memory model, the in-ISR state as a
+       variable and the ISR nesting (level 2).
    * - Interrupt and ISR
      - An ISR is an actor that runs on a CPU while that CPU has interrupts
-       unlocked. It is not preempted by a thread. It calls only
-       non-blocking operations. A pend from an ISR sets ``panic``, as
-       ``z_pend_curr()`` does (``kernel/sched.c``). At first, at most one
-       ISR runs on each CPU (no nesting).
-     - Interrupt priorities, nesting (later, for the timer findings).
+       unlocked (``Platform!IrqCanRun``). It is not preempted by a thread.
+       It calls only non-blocking operations. A pend from an ISR sets
+       ``panic``, as ``z_pend_curr()`` does (``kernel/sched.c``). At first,
+       at most one ISR runs on each CPU (no nesting). The exit of an ISR is
+       a reschedule point.
+     - Interrupt priorities, nesting (later, for the timer findings),
+       zero-latency interrupts (they must not call the kernel).
+   * - Context switch
+     - Two variants (``Platform!UseSwitch``, ``CONFIG_USE_SWITCH``). With
+       ``CONFIG_USE_SWITCH`` the selection is in the step of the
+       reschedule point. With ``arch_swap()`` the step sets PendSV pending,
+       and the step ``PendSV`` selects later. ISRs can run in the gap. On
+       one CPU both variants switch to the cache ``_kernel.ready_q.cache``.
+     - The register save and restore, the FPU, the stack switch.
    * - Thread
      - The priority (``prio[t]``, the ``base.prio`` of the code; the mutex
        keeps the original priority), the state (ready, pending, dead; a
@@ -156,7 +170,7 @@ application code.
      - The allocator algorithms.
    * - Kconfig
      - Constants. Each twister scenario of a unit test app has a model
-       configuration with the same options.
+       configuration with the same options (see `Kconfig`_).
      -
 
 Module structure
@@ -164,7 +178,9 @@ Module structure
 
 .. code-block:: none
 
-   lib/Platform     CPUs, ISR actors, lock owners (level 2)
+   lib/Platform     CPUs, ISR actors, interrupt lock, context switch
+     |              (two variants), clock events; IPIs, lock owners
+     |              (level 2)
      |
    lib/Scheduler    thread state, priorities, current thread, swap result,
      |              panic, ready set, run queue order, cache; Abort,
@@ -187,9 +203,12 @@ Module structure
      - Provides
      - Does not know
    * - ``Platform``
-     - CPUs, ISR actors, lock owners (level 2 only)
-     - ``InIsr(a)``, lock steps
-     - objects, priorities
+     - ``irqNest``, ``pendsv``; the constants ``CPUS``, ``Isrs``,
+       ``IsrCpu``, ``UseSwitch``. Level 2: lock owners, IPI flags
+     - ``InIsr(a)``, ``Locked``, ``Key``, ``KeyUnlocked``, ``IrqCanRun``,
+       ``IrqLock``, ``IrqUnlock``, ``SwitchAtOnce``, ``RequestPendSV``,
+       ``SwitchPending``, ``PendSVRuns``, ``ClockCanFire``
+     - threads states, objects, priorities, the cache
    * - ``Scheduler``
      - ``tstate``, ``prio``, ``cur``, ``swapRet``, ``swapData``, ``panic``,
        ``rqStamp``, ``preemptOk``, ``readySince`` (a history variable of the
@@ -215,11 +234,23 @@ Module structure
      - the parameter operators, the object properties
      - scheduler internals
 
-At level 1, ``Platform`` does not exist. ``Scheduler`` has the constants
-``CPUS``, ``Isrs`` and ``IsrCpu``. They move to ``Platform`` at level 2,
-together with the lock owners and the IPIs. ``Scheduler`` instantiates
-``WaitQueue`` and ``Timeout`` (entries: the threads), so a module that
-uses ``Scheduler`` declares the variables of all three.
+``Platform`` is the contract below ``kernel/sched.c`` (roadmap, "Method
+decision 2026-10-28"). It is an assumption module: it states only what
+``sched.c`` relies on, and each item that rests on the architecture code or
+on a document has the tag ``@assumption`` with that location. The fakes of
+the ``arch_*`` layer and later the trace validation check these items, not
+a proof. ``Scheduler`` instantiates ``Platform`` (``PF``), ``WaitQueue``
+and ``Timeout`` (entries: the threads), so a module that uses ``Scheduler``
+declares the variables of all four. The constants ``CPUS``, ``Isrs``,
+``IsrCpu``, ``MaxIrqNest`` and ``UseSwitch`` belong to ``Platform``.
+``Scheduler`` declares them only to pass them on (an ``INSTANCE`` needs
+them).
+
+The outer interrupt lock is a state of the CPU, not of the thread. This is
+correct only if no thread switches while it holds the lock, which the API
+documentation of ``irq_lock()`` forbids. The action property
+``Scheduler!NoSwitchWhileLocked`` states this condition of use, and the
+mutants ``pend_locked`` and ``pend_locked_pendsv`` violate it.
 
 ``pendedOn`` is one function over all threads and all objects of all types.
 The mutex chain walk reads the wait state of other threads, and an abort or
@@ -274,17 +305,24 @@ an ISR), ``o`` an object.
    * - ``Release(a, kind)``
      - The end of the critical section. ``"unlock"``:
        ``k_spin_unlock()``, a thread keeps its CPU. ``"resched"``:
-       ``z_reschedule()``. ``"swap"``: ``z_swap()``. For an ISR each kind
-       is the exit of the ISR, which selects a thread.
+       ``z_reschedule()``, a reschedule point only if ``ReschedOk`` (the
+       rule ``resched()``: the key of the critical section is unlocked and
+       the actor is not an ISR). ``"swap"``: ``z_swap()``. For an ISR each
+       kind is the exit of the ISR, which is a reschedule point.
    * - ``ThreadTimeout(c)``, ``Abort(a, t)``, ``SetPrio(a, t, p)``,
-       ``Resume(t)``, ``Preempt(c)``
+       ``Resume(t)``, ``Preempt(c)``, ``PendSV(c)``, ``IrqLockCall(a)``,
+       ``IrqUnlockCall(a)``
      - Environment actions: the expiry of the first timeout on CPU ``c``,
        ``k_thread_abort()``, ``k_thread_priority_set()``, the return from
-       the swap, an interrupt or IPI that selects a thread on ``c``.
+       the swap, an interrupt or IPI that selects a thread on ``c``, the
+       PendSV handler (``arch_swap()`` only), ``irq_lock()`` and
+       ``irq_unlock()`` of a thread outside a kernel call.
 
 **The selection rule.** At each reschedule point, CPU ``c`` selects a
 thread from ``Choices(c, ...)``. On one CPU this is the cache of the code
-(``CacheOf``). ``next_up()`` gives the head of the run queue: the highest
+(``CacheOf``). With ``arch_swap()`` the reschedule point only sets PendSV
+pending, and the step ``PendSV`` selects the cache as it is then
+(``Platform``). ``next_up()`` gives the head of the run queue: the highest
 priority, then the position (``rqStamp``). The current thread stays in the
 run queue, so "the current thread wins a tie" is only a result of its
 position. ``should_preempt()`` accepts the head if the flag ``preemptOk``
@@ -301,8 +339,12 @@ priority. ``mc/SchedulerTest`` fixes the rules for single states.
 
 **The composition rule.** A critical section that changes the cache ends
 with ``"resched"`` (or is an ISR). Then on one CPU the invariant
-``RunRuleHolds`` holds after each step: each CPU runs the thread that the
-rule selects. The mutant ``missed_resched`` of ``mc/MCScheduler`` (a wake
+``RunRuleHolds`` holds after each step: each CPU without an outer
+interrupt lock and without a pending PendSV runs the thread that the rule
+selects. An outer ``irq_lock()`` defers the switch of ``z_reschedule()``,
+and ``irq_unlock()`` is not a reschedule point: after the unlock the
+invariant fails until the next reschedule point (configuration
+``p2_rule``, finding P2-w). The mutant ``missed_resched`` of ``mc/MCScheduler`` (a wake
 that ends with ``k_spin_unlock()``) violates it. The code itself breaks the
 rule in one place: ``k_thread_abort()`` of another thread calls
 ``update_cache(1)`` and ends with ``k_spin_unlock()`` (configuration
@@ -602,6 +644,11 @@ properties are ``PreemptibleRunsHighest`` (ZEP-SRS-2-9, 2-12),
 ``SwitchSelectsHighest`` (2-12), ``TieGoesToLongestReady`` (2-13) and
 ``CoopKeepsCpu`` (2-14). The configurations ``p7_*`` and ``coop_rule`` of
 ``mc/MCScheduler`` check them. The last two properties fail as expected.
+Round A of ``Platform`` (2026-10-29) added ``UnlockPreempts`` (2-9, finding
+P2-w, configurations ``p2_window*``), ``BlockedLosesCpu`` (2-12, 2-14,
+candidate finding SW-1, configuration ``gap_coop_pendsv``) and the
+condition of use ``NoSwitchWhileLocked``. The configurations with the
+suffix ``_pendsv`` check the variant ``arch_swap()``.
 
 Conventions
 ***********
@@ -625,6 +672,8 @@ Comments
       \* @c-function z_impl_k_sem_give
       \* @expected violation
       \* @level 2
+      \* @kconfig CONFIG_USE_SWITCH
+      \* @assumption arch/arm/core/cortex_m/exc_exit.c:57 (the reason)
 
    ``@expresses`` names a requirement that the definition expresses (one
    UID on each line). ``@source`` names the source of a property of the
@@ -650,6 +699,22 @@ Comments
 
    ``@level 2`` marks an action whose step is finer than the level of its
    module (see `Two grains`_). The values are ``1`` and ``2``.
+
+   ``@kconfig`` names a Kconfig option: on a constant, the option that the
+   constant models; on a property, the option under which it applies (see
+   `Kconfig`_). The doc extension shows it and sets the need field
+   ``tla_kconfig``. A tag line can name more than one option.
+
+   ``@assumption`` marks an item of an assumption module (``Platform``):
+   the code location or the document that the item rests on, and a short
+   reason in parentheses. One location on each line.
+
+TLC and nested instances
+   ``UNCHANGED PF!platVars``, where ``platVars`` is a tuple of the
+   variables of an instance of an instance, fails in TLC with "the
+   identifier ... is either undefined or not an operator". Name the
+   variables (``UNCHANGED <<irqNest, pendsv>>``). An operator of the
+   instance with a prime (``PF!SwitchPending(c)'``) works.
 
 Model configurations
    ``mc/MC<Object>_<scenario>.tla`` and ``.cfg``, one for each twister
@@ -691,6 +756,67 @@ Expected results
    the name of the property that fails). The run script compares the
    results with this file. A difference fails the run, as the test
    inventory of the unit tests does.
+
+Kconfig
+*******
+
+Decided on 2026-10-28 (roadmap, "Kconfig in the TLA+ library", from the
+research ``research/kconfig-family/`` of the workspace notes). A Kconfig
+option has one of five kinds, and each kind has its place in the specs:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 40 30
+
+   * - Kind
+     - Place in the spec
+     - Examples
+   * - 1. No effect at the level of the model: an implementation choice
+       with the same visible behavior.
+     - Not in the spec. A comment says that the module covers all values.
+       The unit tests check each scenario.
+     - ``CONFIG_WAITQ_SIMPLE`` / ``_SCALABLE``
+   * - 2. Changes the behavior.
+     - A ``CONSTANT`` and a predicate that guards a branch of an action.
+       Each ``.cfg`` fixes the value and matches one twister scenario.
+     - ``CONFIG_USE_SWITCH`` (``Platform!UseSwitch``), the timeout
+       backend, ``CPUS``
+   * - 3. A condition that a safe system must meet.
+     - ``ASSUME`` for a structural limit. The premise of a property for a
+       condition of use, with a configuration that shows the failure. It
+       goes into the safety manual.
+     - the heap size of the timeouts (``minheap_full``)
+   * - 4. An initial value that the API can change at run time.
+     - The initial value of a variable.
+     - ``CONFIG_TIMESLICE_SIZE``
+   * - 5. Adds only checks.
+     - The fault model: a constant that selects a panic, an error code or
+       undefined behavior for a misuse. It comes with the specs of the
+       objects.
+     - ``CONFIG_ASSERT``, ``CONFIG_RUNTIME_ERROR_CHECKS``
+
+The rules:
+
+- A property that applies only under an option has a guard
+  (``Prop == Kconfig => P``), so that the document shows the condition,
+  and the tag ``@kconfig`` with the option.
+- Each constant of kind 2 or 4 has the tag ``@kconfig CONFIG_X``. Round A
+  (2026-10-29) tagged ``Platform!UseSwitch``. The other constants get their
+  tags in round B.
+- TLC checks product by product: one run for each twister scenario. SANY
+  accepts only a constant expression for a ``CONSTANT`` of a module with
+  variables, so a ``.cfg`` cannot give a family. Apalache can check a
+  family with ``--cinit`` (mostly integer ranges).
+- The coverage check (to do, a script that reads the tags): each option
+  that a spec names in a ``@kconfig`` tag has a ``.cfg`` for each relevant
+  value, or a stated reason. ``CONFIG_USE_SWITCH``: the configurations of
+  ``mc/MCScheduler`` without a suffix have ``y``, those with the suffix
+  ``_pendsv`` have ``n``. The large runs (``default``, ``coop``,
+  ``p7_rules*``, ``smp*``) have only ``y``. ``n`` has the small run
+  ``small_pendsv`` and the P7 runs.
+- An option that the architecture always selects is not a constant: the
+  spec states it as an ``@assumption`` (``CONFIG_SWAP_NONATOMIC`` is ``y``
+  on each Cortex-M).
 
 Layout
 ******
