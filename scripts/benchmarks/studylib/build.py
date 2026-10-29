@@ -165,7 +165,8 @@ class Tree:
         for p, ap in zip(rj["points"], aj["points"]):
             if not ap["reps"]:
                 continue
-            obs.append(checks.Obs(run_id, p["tree"], p["point"], p["axes"], ap["reps"][0], len(ap["reps"])))
+            obs.append(checks.Obs(run_id, p["tree"], p["point"], p["axes"], ap["reps"][0], len(ap["reps"]),
+                                  rj["run"].get("safety_rev")))
         self.obs[key] = obs
         return obs
 

@@ -93,7 +93,9 @@ with ``tolerance_bins``):
 
 REF is ``point: P``, ``axes: {axis: v}`` (the point with this axis value
 and the same other axes), ``run: <study path>/<experiment>/<UTC>`` with
-``point``, ``points: {selected: reference}`` and ``tree``,
+``point``, ``points: {selected: reference}``, ``tree`` and
+``revision: different`` (no verdict while the selected run and the
+reference run have the same safety revision),
 ``experiment: E`` with ``point: same`` (the default), ``point: P`` and
 ``tree`` (E must have one evidence run with that point), or ``metric: M,
 stat: S`` (the same point). The study must own or import E.

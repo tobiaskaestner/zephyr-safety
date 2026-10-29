@@ -28,9 +28,13 @@ no record yet.
 The third part reads the data of `wake-code-place-q4` of `code-placement`
 (mode `reuse`). It compares the flash points `f0` and `f4` with the
 reference points `p0` and `p4` of the run
-`code-layout/20261025T060257Z` (safety `5a7d0a5`). `f0` and `f4` have
-the same code layout as `p0` and `p4` (commit `48f1341` of
-`LATBENCH_CODE_PLACE`).
+`wake-code-layout/20261029T002905Z` (safety `6325925`, tree `ws-up`).
+`f0` and `f4` have the same code layout as `p0` and `p4` (commit
+`48f1341` of `LATBENCH_CODE_PLACE`). The checks use
+`revision: different`: they give a verdict only when
+`wake-code-place-q4` has a run of another safety revision than the
+reference. Until 2026-10-29, the reference was the run
+`code-layout/20261025T060257Z` (safety `5a7d0a5`, tree `ws-safety`).
 
 The prediction came from the study `code-placement` (criterion C3 of
 `wake-code-place-q4`). It was written on 2026-10-25, before the run

@@ -97,8 +97,9 @@ def problems(check):
 class Obs:
     """One point of a run: rep 1 of its app data."""
 
-    def __init__(self, run, tree, point, axes, rep, reps=1):
+    def __init__(self, run, tree, point, axes, rep, reps=1, safety_rev=None):
         self.run, self.tree, self.point, self.axes, self.rep, self.reps = run, tree, point, axes, rep, reps
+        self.safety_rev = safety_rev
 
     @property
     def series(self):
@@ -351,6 +352,9 @@ def ref_obs_for(o, spec, src):
         found = [r for r in cands if r.point == want and r.tree == tree]
         if not found:
             raise NoValue(f"reference {spec['run']} has no point {tree}/{want}")
+        if spec.get("revision") == "different" and found[0].safety_rev == o.safety_rev:
+            raise NoValue(f"{o.run} and the reference {spec['run']} come from the same safety revision "
+                          f"{(o.safety_rev or '?')[:12]}; the check needs runs of two revisions")
         return found[0]
     if "experiment" in spec:
         want = o.point if spec.get("point", "same") == "same" else spec["point"]

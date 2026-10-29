@@ -36,6 +36,7 @@
 # New statistic: drift_per_wake = LAT META clock_drift_cyc / samples.
 # New form of diff_to (the value minus the value of another point):
 #   diff_to: {run: <run>, points: {<id>: <id there>}}   each selected point against its mapped point
+#   revision: different   no verdict while the run and the reference have the same safety revision
 
 hypotheses:
   - id: H1
@@ -47,7 +48,11 @@ hypotheses:
     basis: >
       f0 and f4 have the same code layout as p0 and p4 (commit 48f1341 of
       LATBENCH_CODE_PLACE). The reference is the run
-      code-layout/20261025T060257Z (safety 5a7d0a5).
+      wake-code-layout/20261029T002905Z (safety 6325925, tree ws-up).
+      Until 2026-10-29 it was code-layout/20261025T060257Z (safety
+      5a7d0a5, tree ws-safety); the study now measures ws-up only. With
+      "revision: different", the checks give a verdict only when
+      wake-code-place-q4 has a run of another safety revision.
     wrong_if: The new revision changes the flash behaviour. Flash data from before and after it are not comparable.
     checks:
       - id: a
@@ -59,7 +64,8 @@ hypotheses:
         stat: p50
         expect:
           diff_to:
-            run: measurement-validity/code-placement/code-layout/20261025T060257Z
+            run: measurement-validity/code-placement/wake-code-layout/20261029T002905Z
+            revision: different
             points: {f0-default: p0-default, f4-default: p4-default, f0-noslice: p0-noslice, f4-noslice: p4-noslice}
             range: [-1, 1]
         basis: Estimate. The comment gives no basis for the tolerance.
@@ -72,7 +78,8 @@ hypotheses:
         stat: p50
         expect:
           diff_to:
-            run: measurement-validity/code-placement/code-layout/20261025T060257Z
+            run: measurement-validity/code-placement/wake-code-layout/20261029T002905Z
+            revision: different
             points: {f0-default: p0-default, f4-default: p4-default, f0-noslice: p0-noslice, f4-noslice: p4-noslice}
             range: [-5, 5]
         basis: As a.
@@ -84,7 +91,8 @@ hypotheses:
         stat: drift_per_wake
         expect:
           diff_to:
-            run: measurement-validity/code-placement/code-layout/20261025T060257Z
+            run: measurement-validity/code-placement/wake-code-layout/20261029T002905Z
+            revision: different
             points: {f0-default: p0-default, f4-default: p4-default}
             range: [-0.05, 0.05]
         basis: As a.

@@ -218,6 +218,18 @@ def test_reference_run_and_hist_identical():
               same, runs)["verdict"] == "confirmed"
 
 
+def test_reference_run_of_a_different_revision():
+    """revision: different: a reference run of the same safety revision gives no verdict."""
+    def at(rev, value=90):
+        return checks.Obs("r/20260101T000001Z", "ws-up", "p", {}, rep({"irq": hist([(value, 10)])}), safety_rev=rev)
+    pts = [checks.Obs("e/20260101T000000Z", "ws-up", "q", {}, rep({"irq": hist([(100, 10)])}), safety_rev="aaa")]
+    spec = {"run": "st/r/20260101T000001Z", "points": {"q": "p"}, "range": [10, 10], "revision": "different"}
+    with pytest.raises(NoValue, match="same safety revision"):
+        ev({"stat": "p50", "expect": {"diff_to": spec}}, pts, {"st/r/20260101T000001Z": [at("aaa")]})
+    r = ev({"stat": "p50", "expect": {"diff_to": spec}}, pts, {"st/r/20260101T000001Z": [at("bbb")]})
+    assert r["verdict"] == "confirmed"
+
+
 def test_within_with_tolerance():
     """within: the value is in min..max of the other experiment, +- k coarse bins (32 cycles)."""
     def run(v):
