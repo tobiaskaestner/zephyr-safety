@@ -91,3 +91,20 @@ the metric in the menu above a figure. ``study.py analysis notebooks``
 runs the notebooks (see :doc:`../cli/study-py`). The HTML of a report
 loads plotly.js from its CDN (``cdn.plot.ly``), so it shows the figures
 only with network access.
+
+To open and change a report in a browser, install JupyterLab into the
+venv of the lab space (``scripts/benchmarks/requirements-jupyter.lock``).
+Open copies of the notebooks, so that the clone of the safety repository
+stays clean: JupyterLab saves the outputs into the file. In the lab
+folder:
+
+.. code-block:: console
+
+   mkdir -p work
+   cp safety/validation/empirical/latencies/st-zephyr-versions/report.ipynb work/zephyr-versions.ipynb
+   LATBENCH_RESULTS=$PWD/results/kernel-latency LATBENCH_REPO=$PWD/safety .venv/bin/jupyter lab work
+
+``LATBENCH_RESULTS`` is the results root. Each notebook finds the
+instance of its study in it. ``LATBENCH_INSTANCE`` gives one instance
+folder instead. To change a report for all, change the notebook in the
+safety repository and commit it without outputs.

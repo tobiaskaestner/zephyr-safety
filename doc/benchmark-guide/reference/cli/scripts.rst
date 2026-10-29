@@ -48,6 +48,12 @@ versions. It also has the Python packages of the Zephyr build
 (``pyelftools`` and others) and ``pyocd``. A :term:`lab space` installs
 the versions of ``requirements.lock`` (see :doc:`../files/lab-config`).
 
+The study notebooks need the packages of
+``scripts/benchmarks/requirements-notebooks.lock`` (see ``study.py
+analysis notebooks``). To open a notebook in a browser, also install
+``scripts/benchmarks/requirements-jupyter.lock`` (JupyterLab). Both are
+optional: the other tools do not need them.
+
 ``latbench.py summary``, ``latbench.py parse``, ``m4.py`` and
 ``loadmodel.py`` use only the standard library of Python.
 ``latbench.py capture`` needs ``pyserial``.
