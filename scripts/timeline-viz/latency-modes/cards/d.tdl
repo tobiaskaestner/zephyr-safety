@@ -1,25 +1,26 @@
 include g474.tdc
 diagram d "ZLI: the edge preempts a masked SysTick ISR"
 letter "D"
-num value "41, 61 to 67 cycles"
-num share "no tail in 2M"
+num value "55, 59 to 65 cycles"
+num share "no tail in 1M"
 num path "zero-latency ISR, idle"
 what "A zero-latency IRQ has a priority above the BASEPRI threshold. It preempts the SysTick ISR and any locked section at once. In exchange it must not call the kernel, so it cannot wake a thread."
-evidence "ZLI max 67 cycles in 2 million samples (both trees). The other paths reach about 1660."
-evidence "Its second mode (61, 0.62 %) is the same cache effect as on the other paths."
-src "irq-baseline-1m/20261024T155016Z"
+evidence "ZLI max 65 cycles in 1 million samples. The direct path reaches 1633."
+evidence "Its second mode (59, 0.60 %) is the same cache effect as on the other paths (card B)."
+src "irq-baseline-1m/20261029T012553Z"
 
 axis "cycles after the edge" -300..300
 
-mask -300..300 "BASEPRI: masks kernel IRQs, not the ZLI"
+mask -300..300 "BASEPRI: masks kernel IRQs, not the ZLI" : The SysTick ISR holds BASEPRI. The lock value is _EXC_IRQ_DEFAULT_PRIO (include/zephyr/arch/arm/cortex_m/exception.h:53). The ZLI priority is above it.
 at -300
 tick 300 "SysTick ISR" : The SysTick ISR runs and holds BASEPRI.
-hw 30 "stacking" : The ZLI priority is above the BASEPRI threshold, so the exception entry starts at once.
-zli miss 25 "miss" : Cold cache: the SysTick code just ran.
+hw 30 "stacking" : The ZLI priority is above the BASEPRI threshold, so the exception entry starts at once. Pin, EXTI, NVIC and stacking; the CPU is awake.
+zli 14? "+14" : The same 14 cycles as in card A. Where in the path these cycles go is not measured.
+zli miss 15 "miss" : Cold cache: the SysTick code just ran. Length: an estimate, so that the total is the max of 65 cycles.
 zli 6 : The ISR reads TIM2->CNT.
-at 80
-tick 220 "SysTick ISR continues" : The SysTick ISR continues after the ZLI returns.
+at 75
+tick 225 "SysTick ISR continues" : The SysTick ISR continues after the ZLI returns.
 
 @t0_1 edge "edge" at 0
-@t0_2 stamp "CNT read" at 61
-span 0..61 "61 cycles; max 67, measured" !
+@t0_2 stamp "CNT read" at 65
+span 0..65 "65 cycles: the max, measured" !

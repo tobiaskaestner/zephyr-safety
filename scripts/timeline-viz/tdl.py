@@ -257,6 +257,9 @@ class Diagram:
         seg = {"lane": lane, "t0": t0, "t1": t1, "s": "mask" if lane == "mask" else style, "label": label}
         if "!" in flags:
             seg["m"] = True
+        if "?" in flags and lane == "mask":
+            # a mask keeps its hatch; "?" marks a length that is not measured
+            seg["u"] = True
         if tip:
             seg["tip"] = tip
         if self.piece:

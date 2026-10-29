@@ -1,25 +1,27 @@
 include g474.tdc
 diagram a2 "Floor: the CPU is busy"
 letter "A2"
-num value "36 cycles"
-num share "98.5 %"
+num value "50 to 54 cycles"
+num share "54.8 % at 50"
 num path "direct ISR, busy thread"
 what "A busy thread runs instead of WFI. The exception entry starts at once, so the floor is 5 cycles shorter than with an idle CPU."
-evidence "Floor 36 in both busy points of irq-checks-1m (with and without time slicing)."
-evidence "The ZLI minimum (34 to 36) has the same cause: the few edges that come while the CPU is awake."
-src "irq-checks-1m/20261024T163216Z"
+evidence "Busy point of irq-checks-1m (with time slicing): 54.8 % at 50, then about 11 % at each of 51, 52, 53 and 54. This spread of 0 to 4 cycles is new. The run of 2026-10-24 had one mode (98.5 % at 36). Its cause is not measured."
+evidence "Busy point without time slicing: 66.3 % at 47 and 33.1 % at 51. So the two busy points do not have the same floor now (both had 36 in the run of 2026-10-24)."
+evidence "The ZLI minimum (50) has the same cause: the few edges that come while the CPU is awake."
+src "irq-checks-1m/20261029T060951Z, irq-baseline-1m/20261029T012553Z"
 
-axis "cycles after the edge" -40..60
+axis "cycles after the edge" -40..70
 
 at -40
 busy 44 "nop loop" : A thread at the lowest application priority runs a nop loop instead of WFI.
 at 0
 hw 4 "pin" : Pin input, EXTI edge detection, NVIC pending. Split not measured.
 hw 26 "stacking, vector" : Exception entry starts at once: no sleep, no PRIMASK.
+dev 14? "+14" : The same 14 cycles as in card A. Where in the path these cycles go is not measured.
 dev 6 "ldr" : The first instructions of the direct ISR read TIM2->CNT.
-at 44
-busy 16 : The busy thread continues after the ISR.
+at 50
+busy 20 : The busy thread continues after the ISR.
 
 @t0_1 edge "edge" at 0
-@t0_2 stamp "CNT read" at 36
-span 0..36 "36 cycles, measured" !
+@t0_2 stamp "CNT read" at 50
+span 0..50 "50 cycles, measured" !

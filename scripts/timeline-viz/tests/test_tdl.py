@@ -141,6 +141,18 @@ dev 50? "place not known"
     assert b["s"] == "unk" and "m" not in b
 
 
+def test_mask_length_not_measured(tmp_path):
+    card = compile_text(tmp_path, """\
+diagram x "x"
+axis "cycles" 0..1000
+mask 100..200 "BASEPRI"
+mask 300..330? "BASEPRI"
+""")
+    a, b = card["segs"]
+    assert a["s"] == b["s"] == "mask"
+    assert "u" not in a and b["u"]
+
+
 def test_lanes_and_priority(tmp_path):
     card = compile_text(tmp_path, """\
 diagram x "x"
@@ -200,6 +212,22 @@ dev 100 "isr" : The ISR.
     assert "cycles" not in svg
     assert ">500<" not in svg  # no tick labels
     assert 'stroke-dasharray="4 3"' not in svg  # solid outlines
+
+
+@pytest.mark.skipif(not shutil.which("node"), reason="node is not on PATH")
+def test_mask_not_measured_has_a_dashed_outline(tmp_path):
+    card = compile_text(tmp_path, """\
+diagram x "x"
+axis "cycles" 0..1000
+mask 100..200 "BASEPRI"
+mask 300..330? "BASEPRI"
+""")
+    data = json.dumps({"lanes": {"mask": {"label": "PRIMASK, BASEPRI", "kind": "mask", "group": "core"}},
+                       "laneKeys": ["mask"], "cards": [card]})
+    run = subprocess.run(["node", str(TOOL / "tdl-svg.cjs"), "--fragments"], input=data,
+                         capture_output=True, text=True, check=True)
+    svg = json.loads(run.stdout)["x"]
+    assert svg.count('stroke-dasharray="3 3"') == 1
 
 
 @pytest.mark.skipif(not shutil.which("node"), reason="node is not on PATH")

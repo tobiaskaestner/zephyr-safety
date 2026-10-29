@@ -4,21 +4,25 @@
 
 """Build the latency-modes page from template.html, cards/ and the run logs.
 
-Usage: build.py --results <dir> -o <page.html>
+Usage: build.py --results <results tree> -o <page.html>
 
-<dir> is the folder that holds the result folders of run.py
-(<experiment>/<stamp>/<tree>/<point>/rep1.log). The page data comes only
-from result folders of pinned runs.
+<results tree> is the root of a results tree of the latency study. A run
+id is <experiment>/<stamp>. The folder of the run is ex-<experiment>/<stamp>
+in one of the instance folders (at any depth). Its logs are
+<tree>/<point>/rep1.log. The page data comes only from pinned runs: the
+run ids in HISTS and CCDFS below. Each run id in the src line of a card
+must also have a run folder.
 """
 import argparse
 import json
 import math
+import re
 import sys
 from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-sys.path.insert(0, str(REPO / "tests" / "benchmarks" / "scripts"))
+sys.path.insert(0, str(REPO / "scripts" / "benchmarks"))
 from latbench import parse_log, quantile  # noqa: E402
 
 sys.path.insert(0, str(HERE.parent))
@@ -26,50 +30,71 @@ import tdl  # noqa: E402
 
 RESULTS = None  # set by main()
 
+# The pinned runs: Zephyr v4.5.0-rc3-40 (ec98918869c), tree ws-up.
+IRQ_BASELINE = "irq-baseline-1m/20261029T012553Z"
+WAKE_ISR = "wake-isr-1m/20261029T064014Z"
+WAKE_TIMERS = "wake-timers-1m/20261029T045125Z"
+SYSTICK_PRIO = "wake-systick-prio-1m/20261029T025755Z"
+BACKENDS = "wake-timeout-backends-1m/20261029T032020Z"
+ANCHORS = "wake-anchors-1m/20261029T014607Z"
+THREAD_SWITCH = "thread-switch/20261029T024719Z"
+
 # Histograms: all bins as [value, count] (1-cycle bins only).
+# Each entry: (run id, tree, point, histogram).
 HISTS = {
-    "irq_direct": ("irq-baseline-1m/20261024T155016Z/ws-safety/direct-idle/rep1.log", "irq"),
-    "irq_zli": ("irq-baseline-1m/20261024T155016Z/ws-safety/zli-idle/rep1.log", "irq"),
-    "isr2thr_sem": ("wake-isr-1m/20261024T170705Z/ws-safety/wrapped-sem/rep1.log", "isr2thr"),
+    "irq_direct": (IRQ_BASELINE, "ws-up", "direct-idle", "irq"),
+    "irq_zli": (IRQ_BASELINE, "ws-up", "zli-idle", "irq"),
+    "isr2thr_sem": (WAKE_ISR, "ws-up", "wrapped-sem", "isr2thr"),
 }
 
 # CCDF curves: [value, P(latency >= value)], reduced.
 CCDFS = {
-    "irq_t0": ("wake-timers-1m/20261024T225125Z/ws-safety/t0-default/rep1.log", "irq"),
-    "irq_t256_same": ("systick-prio-1m/20261025T051643Z/ws-safety/t256-same/rep1.log", "irq"),
-    "irq_t256_lower": ("systick-prio-1m/20261025T051643Z/ws-safety/t256-lower/rep1.log", "irq"),
-    "thr_t0_noslice": ("wake-timers-1m/20261024T225125Z/ws-safety/t0-noslice/rep1.log", "isr2thr"),
-    "thr_t0": ("wake-timers-1m/20261024T225125Z/ws-safety/t0-default/rep1.log", "isr2thr"),
-    "thr_t256_wheel": ("timeout-backends-1m/20261025T040826Z/ws-safety/wheel/rep1.log", "isr2thr"),
-    "thr_t256_dlist": ("timeout-backends-1m/20261025T040826Z/ws-safety/dlist/rep1.log", "isr2thr"),
-    "anc_legacy": ("wake-anchors-1m/20261024T174308Z/ws-safety/default-legacy/rep1.log", "isr2thr"),
-    "anc_switch": ("wake-anchors-1m/20261024T174308Z/ws-safety/default-switch/rep1.log", "isr2thr"),
-    "anc_noslice_legacy": ("wake-anchors-1m/20261024T174308Z/ws-safety/noslice-legacy/rep1.log", "isr2thr"),
-    "anc_noslice_switch": ("wake-anchors-1m/20261024T174308Z/ws-safety/noslice-switch/rep1.log", "isr2thr"),
-    "t2t_sem": ("thread2thread-switch/20261025T100427Z/ws-safety/sem-legacy/rep1.log", "t2t"),
-    "t2t_sem_up": ("thread2thread-switch/20261025T100427Z/ws-up/sem-legacy/rep1.log", "t2t"),
-    "t2t_sem_sw": ("thread2thread-switch/20261025T100427Z/ws-safety/sem-switch/rep1.log", "t2t"),
-    "t2t_sem_sw_up": ("thread2thread-switch/20261025T100427Z/ws-up/sem-switch/rep1.log", "t2t"),
+    "irq_t0": (WAKE_TIMERS, "ws-up", "t0-default", "irq"),
+    "irq_t256_same": (SYSTICK_PRIO, "ws-up", "t256-same", "irq"),
+    "irq_t256_lower": (SYSTICK_PRIO, "ws-up", "t256-lower", "irq"),
+    "thr_t0_noslice": (WAKE_TIMERS, "ws-up", "t0-noslice", "isr2thr"),
+    "thr_t0": (WAKE_TIMERS, "ws-up", "t0-default", "isr2thr"),
+    "thr_t256_wheel": (BACKENDS, "ws-up", "wheel", "isr2thr"),
+    "thr_t256_dlist": (BACKENDS, "ws-up", "dlist", "isr2thr"),
+    "anc_legacy": (ANCHORS, "ws-up", "default-legacy", "isr2thr"),
+    "anc_switch": (ANCHORS, "ws-up", "default-switch", "isr2thr"),
+    "anc_noslice_legacy": (ANCHORS, "ws-up", "noslice-legacy", "isr2thr"),
+    "anc_noslice_switch": (ANCHORS, "ws-up", "noslice-switch", "isr2thr"),
+    "t2t_sem": (THREAD_SWITCH, "ws-up", "sem-legacy", "t2t"),
+    "t2t_sem_sw": (THREAD_SWITCH, "ws-up", "sem-switch", "t2t"),
 }
 
+RUN_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]*/\d{8}T\d{6}Z")
 
-def load(rel, name):
-    run = parse_log(RESULTS / rel)
+
+def run_dir(run_id):
+    """Return the folder of a run id (<experiment>/<stamp>) in the results tree."""
+    experiment, stamp = run_id.split("/")
+    found = sorted(RESULTS.glob(f"**/ex-{experiment}/{stamp}"))
+    if len(found) != 1:
+        what = "no run folder" if not found else f"{len(found)} run folders"
+        raise SystemExit(f"{RESULTS}: {what} for the run {run_id}")
+    return found[0]
+
+
+def load(run_id, tree, point, name):
+    rel = f"{run_id}/{tree}/{point}"
+    run = parse_log(run_dir(run_id) / tree / point / "rep1.log")
     h = run["hists"][name]
     if h.get("invalid", 0) or h.get("overflow", 0):
         raise SystemExit(f"{rel}: {name} has invalid or overflow samples")
-    return run, h
+    return rel, run, h
 
 
-def hist_entry(rel, name):
-    _, h = load(rel, name)
+def hist_entry(run_id, tree, point, name):
+    rel, _, h = load(run_id, tree, point, name)
     if h["width"]:
         raise SystemExit(f"{rel}: coarse bins are not supported for a histogram")
     return {"n": h["n"], "source": rel, "bins": sorted([v, c] for v, c in h["bins"].items())}
 
 
-def ccdf_entry(rel, name):
-    run, h = load(rel, name)
+def ccdf_entry(run_id, tree, point, name):
+    rel, run, h = load(run_id, tree, point, name)
     n = h["n"]
     pts = []
     rest = n
@@ -105,6 +130,16 @@ def tdl_cards():
     return {"lanes": lanes, "laneKeys": list(lanes), "cards": cards}
 
 
+def check_card_sources(cards):
+    """Each run id in the src line of a card must have a run folder."""
+    for card in cards["cards"]:
+        ids = RUN_ID.findall(card.get("src", ""))
+        if not ids:
+            raise SystemExit(f"card {card['id']}: the src line has no run id")
+        for run_id in ids:
+            run_dir(run_id)
+
+
 def fill(tpl, marker, text):
     if tpl.count(marker) != 1:
         raise SystemExit(f"template: the marker {marker} must occur once")
@@ -121,6 +156,7 @@ def main():
     data = {k: hist_entry(*v) for k, v in HISTS.items()}
     data.update({k: ccdf_entry(*v) for k, v in CCDFS.items()})
     cards = tdl_cards()
+    check_card_sources(cards)
     tpl = (HERE / "template.html").read_text()
     out = fill(tpl, "/*DATA*/null", json.dumps(data, separators=(",", ":")))
     out = fill(out, "/*TDL*/null", json.dumps(cards, ensure_ascii=False, separators=(",", ":")))

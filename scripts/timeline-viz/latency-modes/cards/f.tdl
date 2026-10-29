@@ -2,36 +2,38 @@ include g474.tdc
 diagram f "ISR → thread with 256 timers: the slice reset walks the timeout list"
 letter "F"
 new
-num p50 "4192 cycles (DLIST)"
-num WHEEL "1429"
+num p50 "3968 cycles (DLIST)"
+num WHEEL "1333"
 num path "wrapped ISR, k_sem, 256 periodic timers"
 num arch "PendSV (USE_SWITCH=n)"
 what "Each wake resets the slice timeout. With the default DLIST backend, the insert walks all timeouts that expire in the next slice (20 ms), with interrupts masked. So the wake cost grows with the number of pending timeouts in the next 20 ms, not with the length of the queue. The slice timeout is seldom the first timeout here, so there is no SysTick reprogram."
-evidence "ISR → thread p50 1686 / 1529 / 2048 / 4192 cycles for 0 / 16 / 64 / 256 timers. Without time slicing: 766 to 792 for all timer counts."
-evidence "256 timers that expire in one hour cost nothing (p50 1676): the slice timeout goes in before them."
-evidence "Sleeping threads have the same effect: about 25 cycles per sleeper (p50 1431 → 3008 for 2 → 64 sleepers). Blocked threads (K_FOREVER) cost nothing."
-evidence "Other backends at 256 timers, p50: WHEEL 1429, MINHEAP 1502, BUCKET 2880, DLIST 4192. SKIPLIST (ws-up): 1717."
-evidence "ws-up has the same code and gives 4064."
-src "wake-timers-1m/20261024T225125Z, wake-threads-1m/20261025T004141Z, timeout-backends-1m/20261025T040826Z, timeout-skiplist-1m/20261025T045404Z"
+evidence "ISR → thread p50 1666 / 1413 / 1941 / 3968 cycles for 0 / 16 / 64 / 256 timers. Without time slicing: 706 to 712 for all timer counts."
+evidence "256 timers that expire in one hour cost nothing (p50 1573): the slice timeout goes in before them."
+evidence "Sleeping threads have the same effect: about 25 cycles per sleeper (p50 1386 → 2912 for 2 → 64 sleepers). Blocked threads (K_FOREVER) cost nothing."
+evidence "Other backends at 256 timers, p50: WHEEL 1333, MINHEAP 1452, SKIPLIST 1769, BUCKET 2816, DLIST 3968."
+evidence "The run of 2026-10-25 compared the trees ws-safety (4192) and ws-up (4064). The study now has only the tree ws-up. Values of 2048 cycles or more are in 32-cycle bins."
+src "wake-timers-1m/20261029T045125Z, wake-threads-1m/20261029T034228Z, wake-timeout-backends-1m/20261029T032020Z, wake-timeout-skiplist-1m/20261029T071751Z"
 
-axis "cycles after the edge" -100..4400
+axis "cycles after the edge" -100..4200
 
 idle sleep -100..4 "WFI"
 mask -100..9 "PRIMASK"
-mask 150..3758 "BASEPRI: all kernel IRQs wait" : The walk runs with the timeout lock held. All kernel IRQs, also the next stimulus, wait.
-mask 3780..4210 "BASEPRI"
+mask 155..3610 "BASEPRI: all kernel IRQs wait" : The walk runs with the timeout lock held: K_SPINLOCK(&timeout_lock) in z_add_timeout() (kernel/timeout.c:191), insert at :225. All kernel IRQs, also the next stimulus, wait.
 at 0
 hw 60 "entry" : Pin, EXTI, NVIC, wake-up, exception entry, _isr_wrapper.
-dev 22 : The ISR reads TIM2->CNT: time stamp 1 (IRQ p50 82).
+dev 26 : The ISR reads TIM2->CNT: time stamp 1 (IRQ p50 86).
 dev 250 "give" : k_sem_give(): the waiting thread becomes ready.
-dev 600? "slice reset" : The part of the slice reset that does not depend on the timers (card E fast).
-dev 2826 "insert walk over about 120 timeouts" : z_add_timeout() of the slice timeout. The DLIST insert walks all timeouts that expire before it, with the timeout lock held (ws-safety kernel/timeout_list.h:44-60). With periods of 10..100 ms, about 47 % of the 256 timers expire in the next 20 ms: about 120 nodes at 20 to 25 cycles each. Length = p50 4192 minus the no-reprogram mode at T=0 (1366): an estimate.
+dev 650? "slice reset" : The part of the slice reset that does not depend on the timers. As card E fast (575), plus 75 cycles: this build has a different code layout (fast mode 1344 at 0 timers, against 1269 in card E fast).
+dev 2624 "insert walk over about 120 timeouts" : z_add_timeout() of the slice timeout. The DLIST insert walks all timeouts that expire before it, with the timeout lock held (kernel/timeout/list.h:44-60). DLIST is the default backend (kernel/Kconfig:790). With periods of 10..100 ms, about 47 % of the 256 timers expire in the next 20 ms: about 120 nodes at about 22 cycles each. Length = p50 3968 minus the fast mode at 0 timers (1344): an estimate.
 hw 10 : Tail-chaining into PendSV.
-pendsv 450 "switch" : z_arm_pendsv: idle → woken thread.
+@pendsv anchor
+pendsv 378 "switch" : z_arm_pendsv: idle → woken thread (card E fast).
 waker 56 : The thread returns from k_sem_take() and reads TIM2->CNT: time stamp 2.
 
+mask pendsv+20..pendsv+50? "BASEPRI" : z_arm_pendsv sets BASEPRI at swap_helper.S:123 and restores the BASEPRI of the woken thread (0) at swap_helper.S:270, before the MPU reprogram (bl z_arm_configure_dynamic_mpu_regions, :305). The length is not measured: an estimate from the number of instructions.
+
 @t0_1 edge "edge" at 0
-@t0_2 stamp "stamp 1" at 82
-@t0_3 stamp "stamp 2" at 4274
-span 82..4274 "4192 (p50), measured" !
-span 932..3758 "about 2830: the walk (estimate)"
+@t0_2 stamp "stamp 1" at 86
+@t0_3 stamp "stamp 2" at 4054
+span 86..4054 "3968 (p50), measured" !
+span 986..3610 "about 2620: the walk (estimate)"

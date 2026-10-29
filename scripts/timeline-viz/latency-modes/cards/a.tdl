@@ -1,16 +1,17 @@
 include g474.tdc
 diagram a "Floor: the CPU sleeps in WFI"
 letter "A"
-num value "41 cycles"
+num value "55 cycles"
 num share "99.4 %"
 num path "direct ISR, idle"
 what "The CPU sleeps in the idle thread with PRIMASK set. The edge wakes the core. The idle thread clears PRIMASK, and only then the exception entry starts. The ISR code is in the flash cache."
-evidence "Floor 41 with an idle CPU and 36 with a busy CPU, so the wake-up and cpsie take about 5 cycles."
-evidence "Floor 41 / 39 / 37 at 170 / 85 / 16 MHz (4 / 2 / 0 flash wait states)."
-evidence "Same floor on ws-safety and ws-up, and on the ZLI path."
-src "irq-baseline-1m/20261024T155016Z"
+evidence "Floor 55 with an idle CPU and 50 with a busy CPU (card A2), so the wake-up and cpsie take about 5 cycles."
+evidence "Floor 55 / 45 / 39 at 170 / 85 / 16 MHz (4 / 2 / 0 flash wait states)."
+evidence "The floor is 14 cycles higher than in the run of 2026-10-24 (41). At 85 / 16 MHz the step is 6 / 2 cycles, so it grows with the flash wait states. The app code changed between the two runs. The place of these cycles in the path is not measured."
+evidence "Same floor on the ZLI path (55)."
+src "irq-baseline-1m/20261029T012553Z, irq-checks-1m/20261029T060951Z"
 
-axis "cycles after the edge" -40..60
+axis "cycles after the edge" -40..70
 
 idle sleep -40..4 "WFI" : The idle thread sleeps in WFI. k_cpu_idle() set PRIMASK and cleared BASEPRI before WFI (arch/arm/core/cortex_m/cpu_idle.c:81-99).
 mask -40..9 "PRIMASK" : PRIMASK is set during WFI. The ISR can start only after the idle thread clears it.
@@ -18,9 +19,10 @@ mask -40..9 "PRIMASK" : PRIMASK is set during WFI. The ISR can start only after 
 at 0
 @edge
 hw   4 "pin" : Pin input, EXTI edge detection, NVIC pending. Split not measured.
-idle 5! : Wake-up from WFI, then cpsie i (cpu_idle.c:104). About 5 cycles: idle floor 41 minus busy floor 36.
+idle 5! : Wake-up from WFI, then cpsie i (cpu_idle.c:104). About 5 cycles: idle floor 55 minus busy floor 50.
 hw   26 "stacking, vector" : Exception entry: the core stacks 8 registers and fetches the vector. Split not measured.
+dev  14? "+14" : 14 cycles more than in the run of 2026-10-24. The step grows with the flash wait states (+6 at 85 MHz, +2 at 16 MHz). Where in the path these cycles go is not measured.
 dev  6 "ldr" : The first instructions of the direct ISR read TIM2->CNT.
 @cnt "CNT read"
 
-span edge..cnt "41 cycles, measured" !
+span edge..cnt "55 cycles, measured" !

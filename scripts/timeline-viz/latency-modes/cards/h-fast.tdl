@@ -2,32 +2,32 @@ include g474.tdc
 diagram h-fast "Thread → thread, fast mode (21 %): no SysTick reprogram"
 letter "H fast"
 new
-num value "1378 cycles"
+num value "1277 cycles"
 num share "21 %"
 num path "k_sem, giver (prio 2) → taker (prio 1)"
 num arch "PendSV (USE_SWITCH=n)"
 what "The giver wakes a taker of a higher priority. The switch resets the slice timeout twice: it aborts the giver's slice timeout and adds one for the taker. In this mode the main thread's poll timeout is the first timeout, so neither step programs SysTick. The dashed cursor shows where the slow mode ends (card H slow)."
-evidence "Two exact modes for all 11 primitives and both trees; the fast share is 20 to 22 %, as in card E fast (the same poll-period cause)."
-evidence "The fast edges are the same in ISR → giver and in giver → taker: one cause for both."
-evidence "Without preemption, the give call costs 327 cycles (sem) and 442 (mutex)."
-src "thread2thread-1m/20261025T030402Z"
+evidence "Two modes for all 11 primitives; the fast share is 21 to 22 %, as in card E fast (the same poll-period cause). Slow modes of 2048 cycles or more are in 32-cycle bins."
+evidence "The fast edges are the same in ISR → giver and in giver → taker (21.3 %): one cause for both."
+evidence "Without preemption, the give call costs 316 cycles (sem) and 401 (mutex)."
+src "thread-baseline-1m/20261029T021724Z"
 
-axis "cycles after the give call" -100..2150
+axis "cycles after the give call" -100..2050
 
-taker pending -100..1291 "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
-giver pending 1378..2150 "preempted" : The giver is ready, but the taker has the higher priority.
-mask 40..832 "BASEPRI" : Scheduler lock and timeout lock.
-mask 852..1282 "BASEPRI"
+taker pending -100..1190 "blocked in k_sem_take()" : The taker waits in k_sem_take() with K_FOREVER.
+giver pending 1277..2050 "preempted" : The giver is ready, but the taker has the higher priority.
+mask 40..731 "BASEPRI" : Scheduler lock and timeout lock.
+mask 763..793? "BASEPRI" : z_arm_pendsv sets BASEPRI at swap_helper.S:123 and restores the BASEPRI of the taker (0) at swap_helper.S:270, before the MPU reprogram (bl z_arm_configure_dynamic_mpu_regions, :305). The length is not measured: an estimate from the number of instructions.
 at -100
 giver 100 : The giver was woken by the stimulus ISR.
 giver 300 "k_sem_give()" : The giver gives the semaphore. The taker has a higher priority, so update_cache() selects it as the next thread.
-giver 411? "slice reset" : Abort of the giver's slice timeout, add of the taker's slice timeout. Neither is the first timeout (the main thread's poll timeout comes first), so the driver does not program SysTick. The split is not measured.
-giver 121 "z_swap()" : The giver pends PendSV and unlocks.
+giver 310? "slice reset" : Abort of the giver's slice timeout, add of the taker's slice timeout. Neither is the first timeout (the main thread's poll timeout comes first), so the driver does not program SysTick. The split is not measured.
+giver 121 "z_swap()" : The giver pends PendSV and unlocks (arch_swap(), arch/arm/include/cortex_m/kernel_arch_func.h:84-105).
 hw 12 : Exception entry into PendSV.
-pendsv 447 "switch giver → taker" : z_arm_pendsv: save the giver, restore the taker.
+pendsv 447 "switch giver → taker" : z_arm_pendsv: save the giver, take the taker from the ready queue cache (with BASEPRI), restore the taker.
 taker 87 : The taker returns from k_sem_take() and reads TIM2->CNT.
 
 @t0_1 stamp "give" at 0
-@t0_2 stamp "taker runs" at 1378
-@t0_3 ref "slow mode" at 2047
-span 0..1378 "1378, measured" !
+@t0_2 stamp "taker runs" at 1277
+@t0_3 ref "slow mode" at 1957
+span 0..1277 "1277, measured" !

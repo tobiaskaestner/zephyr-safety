@@ -103,26 +103,29 @@ a { color: inherit; }
 
 <div class="wrap">
   <header>
-    <div class="eyebrow">Latency study · results of 2026-10-24 and 2026-10-25</div>
+    <div class="eyebrow">Latency study · re-run of 2026-10-28 and 2026-10-29</div>
     <h1>G474 Latency Modes</h1>
     <p>Each mode in the measured distributions has its own cause. Each card below shows one sample of that mode as a timing diagram. The lanes are the run contexts, and the vertical cursors are the stimulus edge and the time stamps.</p>
     <div class="meta">
-      <span>NUCLEO-G474RE · Cortex-M4F</span><span>170 MHz · 1 cycle = 5.88 ns</span><span>Zephyr ws-safety 770fdef15673 · ws-up 3b42ac0d24bd</span><span>SysTick, tickless, 10 kHz ticks</span><span>board defaults: time slicing on (20 ms), DLIST timeouts</span>
+      <span>NUCLEO-G474RE · Cortex-M4F</span><span>170 MHz · 1 cycle = 5.88 ns</span><span>Zephyr v4.5.0-rc3-40 (ec98918869c), tree ws-up</span><span>SysTick, tickless, 10 kHz ticks</span><span>board defaults: time slicing on (20 ms), DLIST timeouts</span>
     </div>
   </header>
 
   <section aria-labelledby="new">
-    <h2 id="new">New on 2026-10-25</h2>
+    <h2 id="new">Changes in the re-run of 2026-10-29</h2>
     <div class="panel">
       <ul class="changes">
-        <li><a href="#mode-e-fast">E fast</a> and <a href="#mode-e-slow">E slow</a>: the cause of the two ISR → thread modes is known. The slow mode has one SysTick reprogram (about 310 cycles) in the slice reset. A test confirmed the prediction: the share of the fast mode follows only the poll period of the main thread (20 % at 100 ms, 2 % at 1000 ms).</li>
-        <li><a href="#mode-f">F</a>: with timers, each slice reset walks the timeout list with interrupts masked. ISR → thread p50 goes from 1686 to 4192 cycles with 256 timers. WHEEL gives 1429.</li>
-        <li><a href="#mode-g">G</a> and <a href="#mode-g2">G2</a>: with 256 timers, most of the IRQ tail is the SysTick ISR body, because SysTick has the same priority as the device IRQ. With SysTick one level lower, the p99.99 falls from 25888 to 6912 cycles.</li>
-        <li><a href="#mode-h-fast">H fast</a> and <a href="#mode-h-slow">H slow</a>: thread → thread has two SysTick reprograms per switch in the slow mode: 668 of the 2047 cycles of the slow mode.</li>
-        <li><a href="#mode-i">I</a>: each reprogram loses some cycles of the kernel clock: 8.0 or 9.7 cycles per wake. With 256 timers, the clock also loses whole reloads (4661 ppm).</li>
-        <li><a href="#mode-esw-fast">E-sw fast</a> and <a href="#mode-esw-slow">E-sw slow</a>: with USE_SWITCH=y there is no PendSV on Cortex-M. The switch runs at the end of the ISR in handler mode. The two modes stay (one reprogram), but each wake costs about 250 to 280 cycles more, and the masked section of the switch is longer.</li>
-        <li><a href="#mode-hsw-fast">H-sw fast</a> and <a href="#mode-hsw-slow">H-sw slow</a>: with USE_SWITCH=y a thread switch resets the slice twice (kswap.h:130 after update_cache()). The slow mode then programs SysTick four times per switch: the mode distance grows from about 650 to about 1300 cycles on both trees. We predicted this from the code before the run.</li>
-        <li>Method: the place of the code in flash changes the results. Single builds of the same code differ by up to about 190 cycles. Do not compare single builds when the difference is small.</li>
+        <li>All data comes from the re-run at Zephyr v4.5.0-rc3-40. The study now has one Zephyr tree (ws-up). The cards that compared the trees ws-safety and ws-up show ws-up only. All code references are for ec98918869c.</li>
+        <li><a href="#mode-a">A</a>, <a href="#mode-a2">A2</a> and <a href="#mode-b">B</a>: the IRQ floor is 55 cycles, not 41. The step grows with the flash wait states. The second mode is now +4 cycles (59), not +20. With a busy CPU, the floor has a spread of 0 to 4 cycles (50 to 54). The app code changed; the causes are not measured.</li>
+        <li><a href="#mode-c2">C2</a>, <a href="#mode-e-fast">E</a>, <a href="#mode-f">F</a> and <a href="#mode-h-fast">H</a>: PendSV holds BASEPRI only from swap_helper.S:123 to :270. The MPU reprogram comes after that point and runs without a mask. The cards of 2026-10-25 showed BASEPRI over almost all of PendSV. Now the span is short, and its length is an estimate (dashed outline).</li>
+        <li><a href="#mode-e-fast">E fast</a> and <a href="#mode-e-slow">E slow</a>: the two ISR → thread modes are 1269 and 1582 cycles (one SysTick reprogram of 313 cycles). The share of the fast mode still follows only the poll period of the main thread (20 % at 100 ms, 2 % at 1000 ms).</li>
+        <li><a href="#mode-f">F</a>: with timers, each slice reset walks the timeout list with interrupts masked. ISR → thread p50 goes from 1666 to 3968 cycles with 256 timers. WHEEL gives 1333.</li>
+        <li><a href="#mode-g">G</a> and <a href="#mode-g2">G2</a>: with 256 timers, most of the IRQ tail is the SysTick ISR body, because SysTick has the same priority as the device IRQ. With SysTick one level lower, the p99.99 falls from 24704 to 6592 cycles.</li>
+        <li><a href="#mode-h-fast">H fast</a> and <a href="#mode-h-slow">H slow</a>: thread → thread has two SysTick reprograms per switch in the slow mode: 680 of the 1957 cycles of the slow mode.</li>
+        <li><a href="#mode-i">I</a>: each reprogram loses some cycles of the kernel clock: 8.0 or 9.6 cycles per wake. With 256 timers, the clock also loses whole reloads (3308 ppm). The test patch for the gap now gives −30.3 ppm (−121.0 ppm on the old tree).</li>
+        <li><a href="#mode-esw-fast">E-sw fast</a> and <a href="#mode-esw-slow">E-sw slow</a>: with USE_SWITCH=y there is no PendSV on Cortex-M. The switch runs at the end of the ISR in handler mode. The two modes stay (one reprogram), but each wake costs about 250 to 310 cycles more, and the masked section of the switch is longer.</li>
+        <li><a href="#mode-hsw-fast">H-sw fast</a> and <a href="#mode-hsw-slow">H-sw slow</a>: with USE_SWITCH=y a thread switch resets the slice twice (kswap.h:130 after update_cache()). The slow mode then programs SysTick four times per switch: the mode distance grows from 680 to about 1389 cycles.</li>
+        <li>Method: the place of the code in flash changes the results. Single builds of the same code differ by up to about 70 cycles (p50 1582 against 1653). Do not compare single builds when the difference is small.</li>
       </ul>
     </div>
   </section>
@@ -137,12 +140,12 @@ a { color: inherit; }
 
   <section aria-labelledby="where">
     <h2 id="where">Where the modes sit</h2>
-    <div class="subhead">2026-10-24 · idle CPU, no load</div>
+    <div class="subhead">2026-10-29 · idle CPU, no load</div>
     <div class="hists">
       <div class="panel hist" id="hist-irq"></div>
       <div class="panel hist" id="hist-thr"></div>
     </div>
-    <div class="subhead">2026-10-25 · load timers, time slicing, thread to thread (share of samples at or above a value)</div>
+    <div class="subhead">2026-10-29 · load timers, time slicing, thread to thread (share of samples at or above a value)</div>
     <div class="hists">
       <div class="panel hist" id="ccdf-irq"></div>
       <div class="panel hist" id="ccdf-thr"></div>
@@ -180,12 +183,12 @@ const SCENARIOS = ["a", "a2", "b", "c", "c2", "d", "e-fast", "e-slow", "esw-fast
 
 /* Where each mode sits in the distributions (links to the cards). */
 const MARKS = {
-  irq: [{ v: 41, id: "a" }, { v: 61, id: "b" }, { v0: 71, v1: 1662, id: "c", label: "C, C2" }, { v: 67, id: "d", zli: true }],
-  thr: [{ v: 1366, id: "e-fast", label: "E fast" }, { v: 1676, id: "e-slow", label: "E slow" }],
-  irq256: [{ v: 12704, id: "g", label: "G p99", dy: -13 }, { v: 6912, id: "g2", label: "G2 p99.99" }],
-  thr256: [{ v: 1686, id: "e-slow", label: "E slow" }, { v: 4192, id: "f", label: "F p50" }],
-  arch: [{ v: 1621, id: "esw-fast", label: "E-sw fast", dy: -13 }, { v: 1922, id: "esw-slow", label: "E-sw slow" }],
-  t2t: [{ v: 1378, id: "h-fast", label: "H fast" }, { v: 2047, id: "h-slow", label: "H slow" }, { v: 1879, id: "hsw-fast", label: "H-sw fast", dy: -13 }, { v: 3168, id: "hsw-slow", label: "H-sw slow" }],
+  irq: [{ v: 55, id: "a" }, { v: 59, id: "b", dy: -13 }, { v0: 64, v1: 1633, id: "c", label: "C, C2" }, { v: 65, id: "d", zli: true }],
+  thr: [{ v: 1269, id: "e-fast", label: "E fast" }, { v: 1582, id: "e-slow", label: "E slow" }],
+  irq256: [{ v: 12032, id: "g", label: "G p99", dy: -13 }, { v: 6592, id: "g2", label: "G2 p99.99" }],
+  thr256: [{ v: 1666, id: "e-slow", label: "E slow" }, { v: 3968, id: "f", label: "F p50" }],
+  arch: [{ v: 1520, id: "esw-fast", label: "E-sw fast", dy: -13 }, { v: 1829, id: "esw-slow", label: "E-sw slow" }],
+  t2t: [{ v: 1277, id: "h-fast", label: "H fast" }, { v: 1957, id: "h-slow", label: "H slow" }, { v: 1780, id: "hsw-fast", label: "H-sw fast", dy: -13 }, { v: 3169, id: "hsw-slow", label: "H-sw slow" }],
 };
 
 /* ---------- histogram (1-cycle bins) ---------- */
@@ -311,6 +314,7 @@ function legend() {
     sw("url(#lg-miss)", "var(--c-dev)", "", 1) + "Flash cache miss",
     sw("url(#lg-unk)", "var(--fg2)", "3 3", 1) + "Cost whose place is not split",
     sw("url(#lg-mask)", "var(--c-mask)", "", 0.55) + "Interrupts masked (BASEPRI or PRIMASK)",
+    sw("url(#lg-mask)", "var(--c-mask)", "3 3", 0.55) + "Masked, length not measured",
     sw("var(--c-hw)", "var(--c-hw)", "", 0.28) + "Solid outline: length measured",
     `<svg width="34" height="16" aria-hidden="true"><path d="M2 4 V10 H32 V4" fill="none" stroke="var(--fg)" stroke-width="1.3"/></svg>Measured total`,
     `<svg width="34" height="16" aria-hidden="true"><line x1="17" y1="0" x2="17" y2="16" stroke="var(--c-dev)" stroke-width="2"/></svg>Stimulus edge (TIM2 CCR4)`,
@@ -371,13 +375,13 @@ histogram(document.getElementById("hist-irq"), {
 histogram(document.getElementById("hist-thr"), {
   title: "ISR → thread, k_sem, wrapped ISR",
   src: "results/" + DATA.isr2thr_sem.source,
-  x0: 1200, x1: 4500, ticks: [1366, 1676, 2000, 3000, 4000],
+  x0: 1200, x1: 4500, ticks: [1269, 1582, 2000, 3000, 4000],
   marks: MARKS.thr,
   series: [{ name: "isr2thr", bins: DATA.isr2thr_sem.bins, n: DATA.isr2thr_sem.n, color: "var(--c-sw)", width: 1.6 }],
 });
 ccdf(document.getElementById("ccdf-irq"), {
   title: "IRQ → ISR with load timers, SysTick priority",
-  src: "results/systick-prio-1m/20261025T051643Z/ws-safety/t256-{same,lower} · wake-timers-1m/20261024T225125Z/ws-safety/t0-default",
+  src: "results/" + DATA.irq_t256_same.source.replace(/t256-same$/, "t256-{same,lower}") + " · " + DATA.irq_t0.source,
   x0: 60, x1: 50000, ticks: [100, 300, 1000, 3000, 10000, 30000],
   marks: MARKS.irq256,
   series: [
@@ -388,7 +392,7 @@ ccdf(document.getElementById("ccdf-irq"), {
 });
 ccdf(document.getElementById("ccdf-thr"), {
   title: "ISR → thread, k_sem: time slicing and timers",
-  src: "results/wake-timers-1m/20261024T225125Z/ws-safety/t0-{noslice,default} · timeout-backends-1m/20261025T040826Z/ws-safety/{wheel,dlist}",
+  src: "results/" + DATA.thr_t0.source.replace(/t0-default$/, "t0-{noslice,default}") + " · " + DATA.thr_t256_dlist.source.replace(/dlist$/, "{wheel,dlist}"),
   x0: 600, x1: 60000, ticks: [1000, 2000, 5000, 10000, 20000, 50000],
   marks: MARKS.thr256,
   series: [
@@ -400,7 +404,7 @@ ccdf(document.getElementById("ccdf-thr"), {
 });
 ccdf(document.getElementById("ccdf-arch"), {
   title: "ISR → thread, k_sem: PendSV against USE_SWITCH=y",
-  src: "results/wake-anchors-1m/20261024T174308Z/ws-safety/{default,noslice}-{legacy,switch}",
+  src: "results/" + DATA.anc_legacy.source.replace(/default-legacy$/, "{default,noslice}-{legacy,switch}"),
   x0: 600, x1: 5000, ticks: [700, 1000, 1500, 2000, 3000, 4000],
   marks: MARKS.arch,
   series: [
@@ -412,14 +416,12 @@ ccdf(document.getElementById("ccdf-arch"), {
 });
 ccdf(document.getElementById("ccdf-t2t"), {
   title: "Thread → thread, k_sem, giver → taker: PendSV against USE_SWITCH=y",
-  src: "results/thread2thread-switch/20261025T100427Z/{ws-safety,ws-up}/sem-{legacy,switch}",
+  src: "results/" + DATA.t2t_sem.source.replace(/sem-legacy$/, "sem-{legacy,switch}"),
   x0: 1200, x1: 6000, ticks: [1500, 2000, 3000, 4000, 5000],
   marks: MARKS.t2t,
   series: [
-    { name: "ws-safety, PendSV", d: DATA.t2t_sem, color: "var(--s1)" },
-    { name: "ws-up, PendSV", d: DATA.t2t_sem_up, color: "var(--s2)" },
-    { name: "ws-safety, USE_SWITCH", d: DATA.t2t_sem_sw, color: "var(--s3)" },
-    { name: "ws-up, USE_SWITCH", d: DATA.t2t_sem_sw_up, color: "var(--s4)" },
+    { name: "PendSV", d: DATA.t2t_sem, color: "var(--s1)" },
+    { name: "USE_SWITCH", d: DATA.t2t_sem_sw, color: "var(--s2)" },
   ],
 });
 cards();

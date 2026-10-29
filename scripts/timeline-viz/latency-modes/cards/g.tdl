@@ -2,41 +2,42 @@ include g474.tdc
 diagram g "IRQ tail with 256 timers: the edge waits for the full SysTick ISR"
 letter "G"
 new
-num p99 "12704 cycles"
-num p99.99 "25888"
-num max "36577 (215 µs)"
+num p99 "12032 cycles"
+num p99.99 "24704"
+num max "34762 (204 µs)"
 num path "wrapped ISR, SysTick same priority"
 what "With 256 periodic timers, some ticks have several expiries. The SysTick ISR runs each expiry and adds the next timeout of the timer, and each add walks the timeout list. SysTick has the same priority as the device IRQ. So an edge during the SysTick ISR waits for all of it, also for the parts without a lock."
-evidence "IRQ p99.99 867 / 2400 / 5600 / 25600 cycles for 0 / 16 / 64 / 256 timers; max 38458 (226 µs). Time slicing has no effect on this tail."
-evidence "256 timers that expire in one hour do not add to the tail (p99.99 891)."
+evidence "IRQ p99.99 792 / 2240 / 5312 / 24704 cycles for 0 / 16 / 64 / 256 timers. Without time slicing at 256 timers: p99.99 24544, max 35669 (210 µs). Time slicing has no effect on this tail."
+evidence "256 timers that expire in one hour do not add to the tail (p99.99 644)."
 evidence "With SysTick one level lower, the tail is 3.7 times smaller (card G2). So most of the tail is the ISR body, not the locked sections."
-evidence "The masked sections are longer than the shortest SysTick reload (10 µs), so the kernel clock loses whole reloads: 4661 ppm (card I)."
-evidence "WHEEL at 256 timers: IRQ p99.99 5408, max 7894."
-src "wake-timers-1m/20261024T225125Z, systick-prio-1m/20261025T051643Z, timeout-backends-1m/20261025T040826Z"
+evidence "The masked sections are longer than the shortest SysTick reload (10 µs), so the kernel clock loses whole reloads: 3308 ppm (card I)."
+evidence "WHEEL at 256 timers: IRQ p99.99 5088, max 7252."
+evidence "Values of 2048 cycles or more are in 32-cycle bins."
+src "wake-timers-1m/20261029T045125Z, wake-systick-prio-1m/20261029T025755Z, wake-timeout-backends-1m/20261029T032020Z"
 
-axis "cycles after the edge" -9000..14000
+axis "cycles after the edge" -9000..13500
 
 idle sleep -9000..-8030 "WFI"
-dev pending 0..12600 "pending in the NVIC: same priority as SysTick" : SysTick and the EXTI0 IRQ have the same priority. The EXTI0 IRQ waits for the full SysTick ISR, also for the parts without a lock.
-idle sleep 12760..14000 "WFI"
-mask -7950..-3450 "BASEPRI"
-mask -2800..1700 "BASEPRI"
-mask 2350..6850 "BASEPRI"
-mask 7500..12000 "BASEPRI"
+dev pending 0..11928 "pending in the NVIC: same priority as SysTick" : SysTick and the EXTI0 IRQ have the same priority (drivers/timer/cortex_m_systick.c:578, card C). The EXTI0 IRQ waits for the full SysTick ISR, also for the parts without a lock.
+idle sleep 12090..13500 "WFI"
+mask -7950..-3618 "BASEPRI"
+mask -2968..1364 "BASEPRI"
+mask 2014..6346 "BASEPRI"
+mask 6996..11328 "BASEPRI"
 at -8030
 hw 30 : Exception entry into the SysTick ISR.
-tick 4550 "restart: insert walk" : A tick with several expiries. For each periodic timer, the ISR runs the expiry and adds the next timeout. Each add walks the DLIST with the timeout lock held. Lengths are estimates.
-tick 650 "cb" : Timer expiry function, without the timeout lock.
-tick 4500 "restart: insert walk"
+tick 4382 "restart: insert walk" : A tick with several expiries. For each periodic timer, z_timer_expiration_handler() adds the next timeout first (kernel/timer.c:111). Each add walks the DLIST with the timeout lock held (kernel/timeout/list.h:44-60). Lengths are estimates.
+tick 650 "cb" : Timer expiry function, without a lock: the announce releases the timeout lock around each handler (kernel/timeout.c:400-402), and the handler releases timer_lock around the expiry function (kernel/timer.c:124-133).
+tick 4332 "restart: insert walk"
 tick 650 "cb"
-tick 4500 "restart: insert walk"
+tick 4332 "restart: insert walk"
 tick 650 "cb"
-tick 4500 "restart: insert walk"
-tick 600 "next" : The ISR programs the next SysTick deadline and returns.
+tick 4332 "restart: insert walk"
+tick 600 "next" : The ISR programs the next SysTick deadline (reprogram_next(0), kernel/timeout.c:410) and returns.
 hw 6 : Tail-chaining into the EXTI0 ISR.
 dev 98 : Wrapper, cache misses, read of TIM2->CNT.
 
 @t0_1 tick "SysTick IRQ" at -8030
 @t0_2 edge "edge" at 0
-@t0_3 stamp "CNT read" at 12704
-span 0..12704 "example: 12704 cycles (p99), measured value, estimated split"
+@t0_3 stamp "CNT read" at 12032
+span 0..12032 "example: 12032 cycles (p99), measured value, estimated split"

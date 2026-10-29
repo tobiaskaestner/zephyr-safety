@@ -73,13 +73,19 @@ The SVG files have light and dark colours (`--dark`: dark only) and
 ### The latency-modes page
 
 ```console
-scripts/timeline-viz/latency-modes/build.py --results <results folder> -o latency-modes.html
+scripts/timeline-viz/latency-modes/build.py --results <results tree> -o latency-modes.html
 ```
 
-`<results folder>` holds the result folders of `run.py`. `build.py`
-reads the histograms of the runs that `HISTS` and `CCDFS` name, and puts
-them, the compiled cards and `render.js` into `template.html`. The card
-order is the list `SCENARIOS` in the template.
+`<results tree>` is the root of a results tree of the latency study
+(for example `.../results/kernel-latency`). A run has the id
+`<experiment>/<stamp>`. Its folder is `ex-<experiment>/<stamp>` in one of
+the instance folders, at any depth. `build.py` finds the folder of each
+run id, and stops if it finds no folder or more than one. It reads the
+histograms that `HISTS` and `CCDFS` name (run id, tree, point,
+histogram). It also makes sure that each run id in the `src` line of a
+card has a run folder. Then it puts the data, the compiled cards and
+`render.js` into `template.html`. The card order is the list `SCENARIOS`
+in the template.
 
 ### Tests
 
@@ -87,8 +93,11 @@ order is the list `SCENARIOS` in the template.
 pytest scripts/timeline-viz/tests
 ```
 
-## Status (2026-10-25)
+## Status (2026-10-29)
 
+- The cards show the re-run of the latency study at Zephyr
+  v4.5.0-rc3-40 (ec98918869c), tree ws-up. The code references in the
+  cards are for this revision.
 - All 18 cards of the latency-modes page come from `latency-modes/cards/*.tdl`.
   The page template has no scenario data of its own.
 - 16 cards were hand-written JavaScript before. Five of them were written
@@ -127,6 +136,9 @@ pytest scripts/timeline-viz/tests
 5. **Measured or not.** A duration with `!` is measured (solid
    outline). A duration with `?` is a cost whose place in the path is
    not known (hatched). All other durations are estimates (dashed).
+   A mask span always has a hatch and a solid outline. A mask span with
+   `?` has a dashed outline: no measurement gives its length, for
+   example the end of a lock inside PendSV.
 6. **Named time points.** `@name` sets a time point. Cursors, spans and
    later times refer to it (`stamp1+1366`).
 

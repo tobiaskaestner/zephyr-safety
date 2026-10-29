@@ -1,40 +1,41 @@
 include g474.tdc
 diagram c2 "Tail: the edge comes while the main thread wakes"
 letter "C2"
-num value "up to 1662 cycles"
+num value "up to 1633 cycles"
 num share "part of 0.024 %"
 num path "direct ISR, idle, poll 100 ms"
 num arch "PendSV (USE_SWITCH=n)"
-what "Every 100 ms the main thread wakes to check for the end of the run. The SysTick ISR makes it ready, PendSV switches to it, it calls k_msleep() again, and PendSV switches back to the idle thread. Many of these steps hold BASEPRI. An edge in a masked part waits until the mask drops."
-evidence "About 3160 masked cycles per main-thread wake (poll 10 ms point), against about 900 for a bare SysTick event."
-evidence "The longest masked section that an edge hit is about 1620 cycles (max 1662 minus the floor 41), about 9.5 µs."
-evidence "With a busy thread and time slicing, the slice expiry adds more of these sections: max 2056 cycles."
-src "irq-baseline-1m/20261024T155016Z, irq-checks-1m/20261024T163216Z"
+what "Every 100 ms the main thread wakes to check for the end of the run. The SysTick ISR makes it ready and pends PendSV. PendSV switches to it, it calls k_msleep() again, and PendSV switches back to the idle thread. This SysTick ISR is longer than a bare one. Some of the other steps hold BASEPRI. An edge in the SysTick ISR or in a masked part waits."
+evidence "About 3370 masked cycles per main-thread wake (poll 10 ms point), against about 990 for a bare SysTick event."
+evidence "The longest wait that an edge hit is about 1580 cycles (max 1633 minus the floor 55), about 9.3 µs."
+evidence "With a busy thread and time slicing, the slice expiry adds more of these sections: max 2041 cycles."
+evidence "PendSV holds BASEPRI only from swap_helper.S:123 to :270, while it takes the next thread from the ready queue cache. The MPU reprogram after :270 runs without a mask. Until 2026-10-25 this card showed BASEPRI over almost all of PendSV. That was not correct."
+src "irq-baseline-1m/20261029T012553Z, irq-checks-1m/20261029T060951Z"
 
-axis "cycles after the edge" -1400..1700
+axis "cycles after the edge" -1600..2000
 
-idle sleep -1400..-1320 "WFI"
-dev pending 0..140 "pending" : Masked by BASEPRI. As soon as PendSV restores BASEPRI, the EXTI0 IRQ preempts it (PendSV has the lowest priority).
-idle sleep 1410..1700 "WFI"
-mask -1280..-540 "BASEPRI"
-mask -470..140 "BASEPRI"
-mask 420..760 "BASEPRI"
-mask 1030..1380 "BASEPRI"
-at -1300
-tick 780 "announce, ready main" : The main thread's k_msleep() timeout expires. The ISR makes the thread ready and pends PendSV.
-at -500
-pendsv 640 "switch idle → main" : z_arm_pendsv: BASEPRI is set from swap_helper.S:123 to :264.
-hw 26 : Exception entry, preempting PendSV.
-dev miss 20 : Cold cache after the timer and switch code.
+idle sleep -1600..-1320 "WFI"
+mask -1280..200 "BASEPRI" : sys_clock_lock() (the timeout lock) holds BASEPRI for most of the ISR. The same priority already blocks the EXTI0 IRQ for the full ISR.
+dev pending 0..280 "pending" : Same priority: the EXTI0 IRQ waits until the SysTick ISR returns. PendSV is also pending, but the EXTI0 IRQ has the higher priority and runs first.
+at -1320
+hw 20 : Exception entry into the SysTick ISR.
+tick 1580 "announce, ready main" : The main thread's k_msleep() timeout expires. The ISR makes the thread ready, and z_arm_exc_exit() pends PendSV (arch/arm/core/cortex_m/exc_exit.c:58-64). About 1580 cycles: the longest wait (max 1633 minus the floor 55). An estimate.
+hw 6 : Tail-chaining into the EXTI0 ISR.
+dev 14? "+14" : The same 14 cycles as in card A. Where in the path these cycles go is not measured.
+dev miss 4 : Cold cache after the timer code (card B).
 dev 6 : The ISR reads TIM2->CNT.
-at 200
-pendsv 40 : PendSV finishes.
-at 250
+hw 6 : Tail-chaining into PendSV.
+pendsv 380 "→ main" : z_arm_pendsv, idle thread to main thread: save the idle thread, take the main thread from the ready queue cache, program the MPU stack guard, restore the main thread. Length: an estimate (as card E fast).
+mask 336..366? "BASEPRI" : z_arm_pendsv sets BASEPRI at swap_helper.S:123 and restores the BASEPRI of the main thread (0) at swap_helper.S:270, before the MPU reprogram (bl z_arm_configure_dynamic_mpu_regions, :305). The length is not measured: an estimate from the number of instructions.
+at 710
 main 750 "k_msleep() again" : The main thread checks for the end of the run and sleeps again: it adds a timeout and calls the scheduler, with locks.
-at 1010
-pendsv 390 "main → idle" : Switch back to the idle thread.
+mask 880..1220 "BASEPRI"
+at 1470
+pendsv 380 "→ idle" : z_arm_pendsv: switch from the main thread back to the idle thread.
+mask 1490..1520? "BASEPRI" : The same BASEPRI section of z_arm_pendsv (swap_helper.S:123 to :270). The length is not measured: an estimate.
+idle sleep 1860..2000 "WFI"
 
 @t0_1 tick "SysTick IRQ" at -1300
 @t0_2 edge "edge" at 0
-@t0_3 stamp "CNT read" at 192
-span 0..192 "example: 192 cycles"
+@t0_3 stamp "CNT read" at 310
+span 0..310 "example: 310 cycles"

@@ -165,7 +165,7 @@ function timeline(sc, env) {
     if (s.s === "wfi") { op = 0.10; dash = "1 3"; }
     if (s.s === "pending") { fill = "none"; op = 1; dash = "5 3"; sw = 1.6; }
     // a PRIMASK lock (from {primask}) has the other hatch direction
-    if (s.s === "mask") { fill = `url(#${id}-mask${s.lock === "primask" ? "-p" : ""})`; op = 0.55; stroke = "var(--c-mask)"; dash = ""; sw = 1; }
+    if (s.s === "mask") { fill = `url(#${id}-mask${s.lock === "primask" ? "-p" : ""})`; op = 0.55; stroke = "var(--c-mask)"; dash = s.u ? "3 3" : ""; sw = 1; }
     if (s.s === "miss") { fill = `url(#${id}-miss)`; op = 1; stroke = "var(--c-dev)"; }
     if (s.s === "unk") { fill = `url(#${id}-unk)`; op = 1; stroke = "var(--fg2)"; dash = "3 3"; }
     o += hit(tip);
