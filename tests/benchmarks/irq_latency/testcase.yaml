@@ -31,3 +31,9 @@ tests:
     # A cmake argument, not a Kconfig fragment: CMakeLists.txt needs the
     # path to select the overlay of the board port.
     extra_args: CONFIG_LATBENCH_IRQ_PATH_ZLI=y
+  benchmark.latency.irq.direct.swtrig:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_SWTRIG=y
+    platform_allow:
+      - nucleo_g474re

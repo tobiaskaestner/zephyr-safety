@@ -85,3 +85,22 @@ Output:
        phase histogram.
    * - ``irq2thr``
      - Edge to the woken thread (end to end).
+
+Software trigger
+----------------
+
+With ``LATBENCH_SWTRIG=y`` each edge sample is followed by a software
+sample. After it took the edge sample, the woken thread starts the trigger
+thread (priority ``LATBENCH_WAKE_PRIO`` + 1) and waits again. The trigger
+thread waits a random gap, reads the stimulus timer (``t0``) and writes the
+response IRQ to ``NVIC->STIR``. The ISR wakes the thread, which preempts
+the trigger thread. This is the set-up of the scenario ``irq_to_thread``
+of Zephyr PR 117170: a lower-priority thread spins, and the interrupt wakes
+a higher-priority thread.
+
+The extra histograms are ``irq_sw`` (``t0`` to the ISR), ``isr2thr_sw``
+(ISR to thread) and ``irq2thr_sw`` (``t0`` to the thread), and the phase
+histogram ``irq_sw``. :ref:`benchguide-irq-latency-swtrig` describes the
+time stamps and the ``LAT META`` keys. The edge samples meet the idle
+thread in WFI. The software samples meet a running thread, so the wake
+path switches away from a preempted thread and not from the idle thread.

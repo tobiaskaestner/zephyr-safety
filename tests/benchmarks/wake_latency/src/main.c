@@ -34,6 +34,7 @@
 #include <latbench/load.h>
 #include <latbench/meta.h>
 #include <latbench/stim.h>
+#include <latbench/swtrig.h>
 
 #if defined(CONFIG_LATBENCH_WAKE_ISR_DIRECT)
 #define ISR_KIND "direct"
@@ -66,6 +67,14 @@ static LAT_HIST_DEFINE(h_isr2thr, "isr2thr");
 static LAT_HIST_DEFINE(h_irq2thr, "irq2thr");
 static LAT_PHASE_DEFINE(p_irq, "irq");
 static LAT_PHASE_DEFINE(p_isr2thr, "isr2thr");
+
+#if defined(CONFIG_LATBENCH_SWTRIG)
+/* The software samples: the STIR store of the trigger thread starts them. */
+static LAT_HIST_DEFINE(h_irq_sw, "irq_sw");
+static LAT_HIST_DEFINE(h_isr2thr_sw, "isr2thr_sw");
+static LAT_HIST_DEFINE(h_irq2thr_sw, "irq2thr_sw");
+static LAT_PHASE_DEFINE(p_irq_sw, "irq_sw");
+#endif
 
 static volatile uint32_t t_isr;
 static volatile uint32_t n_spurious;
@@ -142,7 +151,12 @@ ISR_DIRECT_DECLARE(resp_isr)
 	uint32_t now = stim_now();
 
 	stim_resp_ack();
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* A software sample has no compare match. */
+	if (!swtrig_take(now) && !stim_fired()) {
+#else
 	if (!stim_fired()) {
+#endif
 		n_spurious++;
 	}
 	t_isr = now;
@@ -159,7 +173,12 @@ static void resp_isr(const void *arg)
 
 	ARG_UNUSED(arg);
 	stim_resp_ack();
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* A software sample has no compare match. */
+	if (!swtrig_take(now) && !stim_fired()) {
+#else
 	if (!stim_fired()) {
+#endif
 		n_spurious++;
 	}
 	t_isr = now;
@@ -187,6 +206,27 @@ static void waker_fn(void *a, void *b, void *c)
 			lat_phase_add(&p_isr2thr, phase, t_thr - ti);
 		}
 		rearm_object();
+#if defined(CONFIG_LATBENCH_SWTRIG)
+		/*
+		 * A software sample after each edge sample: the trigger thread
+		 * (lower priority) runs while this thread waits.
+		 */
+		swtrig_request();
+		wait_for_isr();
+		{
+			uint32_t t_thr_sw = stim_now();
+			uint32_t t0 = swtrig_t0;
+			uint32_t ti_sw = t_isr;
+
+			if (n >= CONFIG_LATBENCH_WARMUP) {
+				lat_hist_add(&h_irq_sw, ti_sw - t0);
+				lat_hist_add(&h_isr2thr_sw, t_thr_sw - ti_sw);
+				lat_hist_add(&h_irq2thr_sw, t_thr_sw - t0);
+				lat_phase_add(&p_irq_sw, stim_phase_of(t0), ti_sw - t0);
+			}
+			rearm_object();
+		}
+#endif
 		if (n + 1 < N_TOTAL) {
 			stim_arm(stim_now());
 		}
@@ -232,6 +272,9 @@ int main(void)
 	}
 	lat_phase_init(&p_irq, stim_tick_period());
 	lat_phase_init(&p_isr2thr, stim_tick_period());
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	lat_phase_init(&p_irq_sw, stim_tick_period());
+#endif
 	if (!stim_static_check()) {
 		printk("LAT ERROR static check failed (wire D2 -> A3?)\n");
 		lat_done();
@@ -248,6 +291,11 @@ int main(void)
 	load_start();
 	/* M4: empty unless CONFIG_ARM_IRQ_MASK_HOOKS=y. */
 	irqmask_start();
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* Below the woken thread: the wake preempts the trigger thread, as in the PR. */
+	swtrig_start(CONFIG_LATBENCH_WAKE_PRIO + 1, NULL);
+	swtrig_print_setup();
+#endif
 
 	k_thread_create(&waker_thread, waker_stack, K_THREAD_STACK_SIZEOF(waker_stack), waker_fn,
 			NULL, NULL, NULL, CONFIG_LATBENCH_WAKE_PRIO, 0, K_NO_WAIT);
@@ -265,6 +313,13 @@ int main(void)
 	lat_hist_print(&h_irq2thr);
 	lat_phase_print(&p_irq);
 	lat_phase_print(&p_isr2thr);
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	swtrig_print_stats();
+	lat_hist_print(&h_irq_sw);
+	lat_hist_print(&h_isr2thr_sw);
+	lat_hist_print(&h_irq2thr_sw);
+	lat_phase_print(&p_irq_sw);
+#endif
 	irqmask_print();
 	lat_done();
 	return 0;

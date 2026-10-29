@@ -234,6 +234,72 @@ int stim_init(void)
 	return 0;
 }
 
+#if defined(CONFIG_LATBENCH_SWTRIG)
+/*
+ * Helpers of the software trigger (common/src/swtrig.c). The trigger
+ * thread has a generator of its own, so the sequence of the edges stays
+ * the same as without the software trigger.
+ */
+#if defined(CONFIG_LATBENCH_STIM_RANDOM)
+#define GAP_SEED (CONFIG_LATBENCH_STIM_SEED ^ 0x9e3779b9U)
+static uint32_t gap_state = (GAP_SEED != 0U) ? GAP_SEED : 1U;
+#endif
+
+uint32_t stim_gap(void)
+{
+#if defined(CONFIG_LATBENCH_STIM_RANDOM)
+	uint32_t x = gap_state;
+
+	x ^= x << 13;
+	x ^= x >> 17;
+	x ^= x << 5;
+	gap_state = x;
+	return stim_min + (x % stim_span);
+#else
+	return stim_period;
+#endif
+}
+
+uint32_t stim_phase_of(uint32_t at)
+{
+	unsigned int key = irq_lock();
+	uint32_t cnt = port_stim_now();
+	uint64_t cyc = sys_cyc();
+	int64_t d;
+	int64_t ph;
+
+	irq_unlock(key);
+	/* at is a count of the stimulus timer, in the past or the near future. */
+	d = (int32_t)(at - cnt);
+	if (stim_hz != sys_hz) {
+		d = d * (int64_t)sys_hz / (int64_t)stim_hz;
+	}
+	ph = (int64_t)(cyc % tick_period) + d;
+	ph %= (int64_t)tick_period;
+	if (ph < 0) {
+		ph += tick_period;
+	}
+	return (uint32_t)ph;
+}
+
+uint32_t stim_read_cyc(void)
+{
+	uint32_t best = UINT32_MAX;
+
+	for (int i = 0; i < 64; i++) {
+		unsigned int key = irq_lock();
+		uint32_t a = port_stim_now();
+		uint32_t b = port_stim_now();
+
+		irq_unlock(key);
+		if (b - a < best) {
+			best = b - a;
+		}
+	}
+	return best;
+}
+#endif /* CONFIG_LATBENCH_SWTRIG */
+
 void stim_print_stats(void)
 {
 	printk("LAT META stim_overruns=%u\n", n_overruns);

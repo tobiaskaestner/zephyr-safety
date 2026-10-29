@@ -31,3 +31,8 @@ tests:
   benchmark.latency.wake.poll:
     extra_configs:
       - CONFIG_LATBENCH_WAKE_POLL=y
+  benchmark.latency.wake.swtrig:
+    extra_configs:
+      - CONFIG_LATBENCH_SWTRIG=y
+    platform_allow:
+      - nucleo_g474re

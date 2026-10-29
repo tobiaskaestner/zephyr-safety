@@ -59,7 +59,8 @@ The order of the lines in a measurement app is:
    check.
 #. After the last sample: ``spurious_edges``, the stimulus counters, the
    load settings and counters (with the phase histogram ``tmr`` if there
-   are load timers), the histograms, the phase histograms.
+   are load timers), the histograms, the phase histograms. With
+   ``LATBENCH_SWTRIG``: then ``sw_triggers`` and the ``_sw`` histograms.
 #. ``LAT DONE``.
 
 Example (shortened):
@@ -213,7 +214,25 @@ Metadata keys
      - ``ok`` or ``fail``
    * - ``spurious_edges``
      - all
-     - Response interrupts without a compare match of the stimulus timer
+     - Response interrupts without a compare match of the stimulus timer.
+       With ``LATBENCH_SWTRIG``, the software samples do not count
+   * - ``stim_trigger``
+     - ``LATBENCH_SWTRIG``
+     - ``gpio+sw``: the app alternates edges and software triggers. A log
+       without this key has edges only
+   * - ``sw_trigger``, ``sw_trigger_irqn``, ``sw_trigger_prio``
+     - ``LATBENCH_SWTRIG``
+     - The kind of the software trigger (``nvic-stir``), the IRQ that it
+       pends (the response IRQ), the priority of the trigger thread
+   * - ``sw_read_cyc``
+     - ``LATBENCH_SWTRIG``
+     - The smallest difference of two back-to-back reads of the stimulus
+       timer. It is the bound of the offset in the hardware path (see
+       :ref:`benchguide-method-swtrig`)
+   * - ``sw_triggers``
+     - ``LATBENCH_SWTRIG``
+     - Number of software triggers, warm-up included. It comes after the
+       edge histograms, before the ``_sw`` histograms
    * - ``stim_overruns``
      - stimulus
      - Edges that the fixed stimulus armed too late for its period

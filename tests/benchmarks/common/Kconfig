@@ -202,6 +202,19 @@ config LATBENCH_STIM_PERIOD_ADJ_CYC
 	  small value scans the full tick slowly: 1 cycle at 170 MHz and
 	  10000 ticks/s scans the tick in 17000 edges.
 
+config LATBENCH_SWTRIG
+	bool "Also pend the response IRQ from software (NVIC STIR)"
+	depends on CPU_CORTEX_M && ARMV7_M_ARMV8_M_MAINLINE
+	help
+	  The app alternates two stimuli in one image: an edge of the wire,
+	  then a write of the response IRQ to NVIC STIR by a trigger thread.
+	  The trigger thread reads the stimulus timer just before the write.
+	  The same ISR records the software samples in histograms with the
+	  suffix _sw. The difference to the edge samples is the cost of the
+	  hardware path (compare match, pin, wire, input synchronizer,
+	  EXTI). See common/src/swtrig.c. Only for the apps and paths that
+	  support it (irq_latency: wrapped and direct; wake_latency).
+
 endmenu
 
 menu "Load generators (common/src/load.c)"

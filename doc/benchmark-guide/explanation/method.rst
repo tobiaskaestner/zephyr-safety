@@ -215,6 +215,47 @@ If the stimulus timer and the system timer have different clocks,
 ``stim.c`` converts the counts for the phase. ``clock_drift_cyc`` is then
 ``n/a``.
 
+.. _benchguide-method-swtrig:
+
+The software trigger and the hardware path
+------------------------------------------
+
+The latency of an edge sample starts at the compare match of the
+stimulus timer. Thus it contains a hardware path that the software of an
+application does not see:
+
+#. The compare match sets the output of the timer channel.
+#. The output drives the stimulus pin, and the wire takes the edge to the
+   response pin.
+#. The input synchronizer of the response pin samples the edge.
+#. The EXTI line detects the edge and pends the IRQ in the NVIC.
+
+The upstream interrupt benchmark (Zephyr PR 117170) does not have this
+path. It pends the IRQ from software with a store to ``NVIC->STIR``. The
+option ``LATBENCH_SWTRIG`` adds the same trigger to ``irq_latency`` and
+``wake_latency``, beside the edges, in the same image (see
+:ref:`benchguide-irq-latency-swtrig`).
+
+Both stimuli end at the same time stamp in the same ISR. Thus:
+
+.. code-block:: text
+
+   hardware path = irq - irq_sw + offset
+
+The offset is the time from the counter value of the ``t0`` read to the
+pend of the IRQ by the ``STIR`` store. It contains the rest of the read,
+the store of ``t0`` and the ``STIR`` store. It is more than 0 and less than
+about ``sw_read_cyc`` + 2 cycles. Thus a difference ``irq - irq_sw`` of d
+cycles gives a hardware path of d to d + ``sw_read_cyc`` + 2 cycles.
+
+Use ``irq`` of a busy build for the difference. An idle edge also
+contains the wake-up from WFI, and the software trigger never meets WFI.
+
+The software trigger is synchronous to the software: it never meets a
+kernel lock, a system timer ISR or WFI, except when such an event comes
+in the few cycles between ``t0`` and the store. Thus ``irq_sw`` shows the
+floor of the entry path, but not its tail. The tail needs the edges.
+
 What the method needs from a board
 ----------------------------------
 

@@ -58,6 +58,11 @@ if(LATBENCH_STIM)
     # The load timers take their tick period from the stimulus.
     ${CMAKE_CURRENT_LIST_DIR}/src/load.c
   )
+  # Optional parts: only with their option, so that the other images and
+  # their code layout do not change.
+  if(CONFIG_LATBENCH_SWTRIG)
+    target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/swtrig.c)
+  endif()
 endif()
 
 # Hot code in RAM (LATBENCH_CODE_RAM in common/Kconfig). Relocates the code

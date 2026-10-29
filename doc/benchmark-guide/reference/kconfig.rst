@@ -78,6 +78,13 @@ Common options
      - 1
      - Counts of the stimulus timer added to the fixed period (range -10000
        to 10000, only with ``LATBENCH_STIM_FIXED``)
+   * - ``LATBENCH_SWTRIG``
+     - n
+     - Alternate the edges with a software trigger (``NVIC->STIR``) of the
+       response IRQ, in one image. Adds the histograms with the suffix
+       ``_sw``. Only ``irq_latency`` (paths ``wrapped``, ``direct``) and
+       ``wake_latency``, Cortex-M Mainline (see
+       :ref:`benchguide-method-swtrig`)
 
 Load generators
 ---------------

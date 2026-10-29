@@ -108,4 +108,15 @@ static inline void stim_stop(void)
 /** Print the counters of the stimulus (overruns) as LAT META. */
 void stim_print_stats(void);
 
+#if defined(CONFIG_LATBENCH_SWTRIG)
+/** The next gap of the software trigger, in counts (the range of the edges, own generator). */
+uint32_t stim_gap(void);
+
+/** Tick phase of the count at of the stimulus timer (in the past or the near future). */
+uint32_t stim_phase_of(uint32_t at);
+
+/** The smallest difference of two back-to-back reads of the stimulus timer. */
+uint32_t stim_read_cyc(void);
+#endif
+
 #endif /* LATBENCH_STIM_H_ */

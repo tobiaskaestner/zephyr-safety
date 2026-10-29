@@ -89,3 +89,51 @@ the edges:
   priority.
 
 Output: one histogram ``irq`` and one phase histogram ``irq``.
+
+.. _benchguide-irq-latency-swtrig:
+
+Software trigger
+----------------
+
+With ``LATBENCH_SWTRIG=y`` the app alternates two stimuli in one image:
+
+#. An edge of the wire, as without the option. The ISR records the
+   sample in ``irq``.
+#. A software trigger. The ISR wakes a trigger thread (priority 1). The
+   trigger thread waits a random gap (the range of the edges, from a
+   generator of its own), reads the stimulus timer (``t0``) and writes the
+   response IRQ to ``NVIC->STIR``. The same ISR runs. It sees the flag
+   ``swtrig_pending`` and stores its time stamp. The trigger thread then
+   records ``ISR time stamp - t0`` in ``irq_sw``, and arms the next edge.
+
+Thus both histograms come from the same ISR, the same code layout and the
+same build. The difference of the two histograms is free of the code
+placement effect (see :ref:`benchguide-code-placement`).
+
+The software trigger needs the paths ``wrapped`` or ``direct``. The GPIO
+driver of the ``stock`` path reads the EXTI pending bit, and a software
+pend does not set that bit. A ``zli`` ISR must not call
+``k_sem_give()``. A ``BUILD_ASSERT`` stops the other builds. In this build
+the direct ISR returns 1, so that the trigger thread runs after the ISR.
+This changes only the code after the time stamp.
+
+Time stamps: the start ``t0`` and the end are reads of the same timer
+register (``TIM2->CNT``) through the same bus. The counter value comes from
+the same point of each read, so the bus delay cancels. The software sample
+also contains the rest of the read of ``t0``, one store of ``t0`` to RAM
+and the store to ``STIR``. ``LAT META sw_read_cyc`` gives the smallest
+difference of two back-to-back reads. The app does not use the DWT cycle
+counter: it stops in WFI, and the edge time comes from TIM2. See
+:ref:`benchguide-method-swtrig` for the cost of the hardware path that
+follows from the two histograms.
+
+The CPU state is different for the two stimuli. An edge meets the idle
+thread in WFI (``LATBENCH_BG_IDLE``) or the busy thread
+(``LATBENCH_BG_BUSY``). The software trigger always meets the trigger
+thread in its spin loop. Thus compare ``irq`` of a busy build with
+``irq_sw``.
+
+Output with the option: the histograms and phase histograms ``irq`` and
+``irq_sw``, and the ``LAT META`` keys ``stim_trigger=gpio+sw``,
+``sw_trigger``, ``sw_trigger_irqn``, ``sw_trigger_prio``, ``sw_read_cyc``
+and ``sw_triggers`` (see :doc:`/reference/log-format`).

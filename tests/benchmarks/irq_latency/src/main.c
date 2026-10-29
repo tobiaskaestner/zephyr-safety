@@ -30,6 +30,7 @@
 #include <latbench/load.h>
 #include <latbench/meta.h>
 #include <latbench/stim.h>
+#include <latbench/swtrig.h>
 
 #if defined(CONFIG_LATBENCH_IRQ_PATH_STOCK)
 #define IRQ_PATH "stock"
@@ -57,6 +58,16 @@ BUILD_ASSERT(PORT_RESP_IRQ_OWNED,
 static LAT_HIST_DEFINE(hist, "irq");
 static LAT_PHASE_DEFINE(phase, "irq");
 
+#if defined(CONFIG_LATBENCH_SWTRIG)
+BUILD_ASSERT(IS_ENABLED(CONFIG_LATBENCH_IRQ_PATH_WRAPPED) || IS_ENABLED(CONFIG_LATBENCH_IRQ_PATH_DIRECT),
+	     "LATBENCH_SWTRIG needs the wrapped or the direct path: the GPIO driver of the stock path "
+	     "does not see a software pend, and a ZLI must not call k_sem_give()");
+/* The software samples: STIR store -> first instruction of the ISR. */
+static LAT_HIST_DEFINE(hist_sw, "irq_sw");
+static LAT_PHASE_DEFINE(phase_sw, "irq_sw");
+static uint32_t n_sw_seen;
+#endif
+
 static volatile uint32_t n_seen;
 static volatile uint32_t n_spurious;
 static volatile bool done;
@@ -72,6 +83,12 @@ static inline void on_edge(uint32_t now)
 {
 	uint32_t n = n_seen;
 
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* A software sample: the trigger thread records it. */
+	if (swtrig_take(now)) {
+		return;
+	}
+#endif
 	/* An edge without a timer compare match did not come from the stimulus. */
 	if (!stim_fired()) {
 		n_spurious++;
@@ -83,13 +100,41 @@ static inline void on_edge(uint32_t now)
 		lat_phase_add(&phase, stim_edge_phase(), lat);
 	}
 	n_seen = ++n;
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* A software sample follows each edge sample. sw_done() arms the next edge. */
+	ARG_UNUSED(now);
+	swtrig_request();
+#else
 	if (n < N_TOTAL) {
 		stim_arm(now);
 	} else {
 		stim_stop();
 		done = true;
 	}
+#endif
 }
+
+#if defined(CONFIG_LATBENCH_SWTRIG)
+/* In the trigger thread, after the ISR took the software sample. */
+static void sw_done(uint32_t t0, uint32_t t_isr)
+{
+	uint32_t m = n_sw_seen;
+
+	if (m >= CONFIG_LATBENCH_WARMUP) {
+		uint32_t lat = t_isr - t0;
+
+		lat_hist_add(&hist_sw, lat);
+		lat_phase_add(&phase_sw, stim_phase_of(t0), lat);
+	}
+	n_sw_seen = ++m;
+	if (n_seen < N_TOTAL) {
+		stim_arm(stim_now());
+	} else {
+		stim_stop();
+		done = true;
+	}
+}
+#endif
 
 #if defined(CONFIG_LATBENCH_IRQ_PATH_STOCK)
 
@@ -128,7 +173,12 @@ ISR_DIRECT_DECLARE(resp_isr)
 
 	stim_resp_ack();
 	on_edge(now);
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* on_edge() can wake the trigger thread: ask for a reschedule at the exit. */
+	return 1;
+#else
 	return 0;
+#endif
 }
 
 #endif
@@ -187,6 +237,9 @@ int main(void)
 		return 0;
 	}
 	lat_phase_init(&phase, stim_tick_period());
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	lat_phase_init(&phase_sw, stim_tick_period());
+#endif
 	if (!stim_static_check()) {
 		printk("LAT ERROR static check failed (wire D2 -> A3?)\n");
 		lat_done();
@@ -199,6 +252,11 @@ int main(void)
 	}
 
 	load_start();
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	/* Above the busy thread, below the main thread. */
+	swtrig_start(1, sw_done);
+	swtrig_print_setup();
+#endif
 	stim_arm(stim_now());
 	while (!done) {
 		k_msleep(CONFIG_LATBENCH_POLL_MS);
@@ -209,6 +267,11 @@ int main(void)
 	load_print();
 	lat_hist_print(&hist);
 	lat_phase_print(&phase);
+#if defined(CONFIG_LATBENCH_SWTRIG)
+	swtrig_print_stats();
+	lat_hist_print(&hist_sw);
+	lat_phase_print(&phase_sw);
+#endif
 	lat_done();
 	return 0;
 }
