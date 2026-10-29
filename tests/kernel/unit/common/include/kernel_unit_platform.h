@@ -33,6 +33,11 @@
  *   (exc_exit.c:55-61) sets PendSV pending if the cache differs from
  *   @c _current, and PendSV runs. With @c CONFIG_USE_SWITCH, the model of
  *   arm_m_must_switch() calls the real z_sched_next_handle().
+ * - Without @c CONFIG_PREEMPT_ENABLED (only cooperative priorities), the
+ *   exit of z_arm_int_exit() does not set PendSV pending (exc_exit.c:57).
+ *   The idle loop then switches itself (idle.c:90-105), and the model does
+ *   this after an ISR that returns to the idle thread. The exit with
+ *   @c CONFIG_USE_SWITCH has no such condition.
  *
  * One host thread runs all threads of a test. The test code always runs as
  * @c _current. A switch of a thread that cannot run (it waits or is dead)
@@ -119,7 +124,10 @@ struct kernel_unit_platform_switch {
 	struct k_thread *from;
 	/** The new current thread. */
 	struct k_thread *to;
-	/** The place of the switch: "pendsv", "arch_switch" or "isr exit". */
+	/**
+	 * The place of the switch: "pendsv", "idle" (PendSV after a yield of the
+	 * idle loop), "arch_switch" or "isr exit".
+	 */
 	const char *where;
 };
 
@@ -157,6 +165,13 @@ struct kernel_unit_platform {
 	size_t n_switches;
 	/** The number of times that PendSV became pending. */
 	unsigned int pendsv_requests;
+	/**
+	 * The number of times that the idle loop switched itself (only without
+	 * @c CONFIG_PREEMPT_ENABLED and without @c CONFIG_USE_SWITCH).
+	 */
+	unsigned int idle_yields;
+	/** True from the yield of the idle loop until its PendSV runs. */
+	bool idle_yield;
 };
 
 /** The state of the platform model. */

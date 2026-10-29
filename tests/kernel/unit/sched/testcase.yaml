@@ -16,6 +16,13 @@
 # - meta-IRQ threads (metairq.h),
 # - the assertions of sched.c and kswap.h (CONFIG_ASSERT, with
 #   CONFIG_SPIN_VALIDATE), with both switch variants.
+# - the kinds of priorities, with both switch variants:
+#   CONFIG_NUM_PREEMPT_PRIORITIES=0 (only cooperative threads and the idle
+#   thread, CONFIG_PREEMPT_ENABLED=n, CONFIG_TIMESLICING=n by its
+#   dependency) and CONFIG_NUM_COOP_PRIORITIES=0 (only preemptible
+#   threads). Both 0 is not legal (zephyr/kernel.h stops the build). Without
+#   CONFIG_PREEMPT_ENABLED the exit of an interrupt with arch_swap() does
+#   not switch (exc_exit.c:57), with CONFIG_USE_SWITCH it does.
 #
 # A scenario with CONFIG_ASSERT also sets CONFIG_ASSERT_TEST (see the
 # README, "Assertions").
@@ -51,3 +58,17 @@ tests:
       - CONFIG_USE_SWITCH=y
       - CONFIG_ASSERT=y
       - CONFIG_ASSERT_TEST=y
+  kernel.unit.sched.coop_only:
+    extra_configs:
+      - CONFIG_NUM_PREEMPT_PRIORITIES=0
+  kernel.unit.sched.coop_only_switch:
+    extra_configs:
+      - CONFIG_NUM_PREEMPT_PRIORITIES=0
+      - CONFIG_USE_SWITCH=y
+  kernel.unit.sched.preempt_only:
+    extra_configs:
+      - CONFIG_NUM_COOP_PRIORITIES=0
+  kernel.unit.sched.preempt_only_switch:
+    extra_configs:
+      - CONFIG_NUM_COOP_PRIORITIES=0
+      - CONFIG_USE_SWITCH=y

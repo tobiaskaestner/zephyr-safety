@@ -222,11 +222,11 @@ extern struct kernel_unit_sched_ref kernel_unit_sched_ref;
  *
  * Sets the @c custom_fake of z_pend_curr(), z_reschedule(), z_sched_wake(),
  * z_sched_ready_locked(), z_unpend_first_thread_locked(), z_thread_prio_set(),
- * z_sched_waitq_walk(), z_sched_wake_thread_locked(),
- * z_try_abort_thread_timeout(), z_waitq_init(), z_waitq_head(),
- * z_waitq_head_locked() and arch_thread_return_value_set(). With the group
- * @c scheduler, also of k_sched_current_thread_query(). The CPU runs the idle
- * thread until kernel_unit_sched_ref_set_current().
+ * z_sched_wake_thread_locked(), z_try_abort_thread_timeout(), z_waitq_init(),
+ * z_waitq_head(), z_waitq_head_locked() and arch_thread_return_value_set().
+ * With the group @c scheduler (the fakes of kernel/scheduler.c), also of
+ * k_sched_current_thread_query(), z_sched_waitq_walk() and z_sched_wait().
+ * The CPU runs the idle thread until kernel_unit_sched_ref_set_current().
  */
 void kernel_unit_sched_ref_install(void);
 

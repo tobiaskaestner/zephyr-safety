@@ -30,6 +30,14 @@
  * the order of kernel_unit_contract_thread() for each priority. In the names
  * of SchedulerTest, Z(a, b, c) are the priorities of t1, t2, t3 and Q(a, b, c)
  * their positions in the run queue.
+ *
+ * The scenarios with @kconfig{CONFIG_NUM_PREEMPT_PRIORITIES} = 0 or
+ * @kconfig{CONFIG_NUM_COOP_PRIORITIES} = 0 have only one kind of thread. A
+ * test that needs a kind of thread that the scenario does not have is
+ * skipped (@kconfig{CONFIG_PREEMPT_ENABLED}, @kconfig{CONFIG_COOP_ENABLED}).
+ * A test with the same result for cooperative threads writes its priorities
+ * with KERNEL_UNIT_CONTRACT_PRIO(): with only cooperative priorities, they
+ * become cooperative priorities in the same order.
  */
 
 /**
@@ -59,6 +67,18 @@
  * @brief ThreadTimeout, Abort, Join and SetPrio.
  */
 
+/**
+ * @defgroup kernel_unit_sched_contract_walk Walk and wait of kernel/scheduler.c
+ * @ingroup kernel_unit_sched_contract
+ * @brief WakeWalk (z_sched_waitq_walk()) and z_sched_wait() (PendCurr, then Resume).
+ *
+ * The walk callbacks of these tests do what @c kernel/events.c and
+ * @c kernel/mailbox.c do: they cancel the timeout of a matched waiter and
+ * wake it with z_sched_wake_thread_locked(), in walk_func, or in post_func
+ * with @kconfig{CONFIG_WAITQ_SCALABLE}. In the application @c sched the walk
+ * is the real @c kernel/scheduler.c on the real @c kernel/sched.c.
+ */
+
 #include <setjmp.h>
 #include <string.h>
 #include <zephyr/ztest.h>
@@ -68,6 +88,7 @@
 #include <wait_q.h>
 #include <timeout_q.h>
 #include <kernel_arch_interface.h>
+#include <scheduler.h>
 #include <kernel_unit_sched_contract.h>
 #include <fakes/fatal.h>
 #ifdef CONFIG_ASSERT
@@ -79,6 +100,9 @@
 
 /* Swap data that a waker gives */
 #define DATA(n) ((void *)(uintptr_t)(0x1000U + (n)))
+
+/* A priority of the rank n in a test that also runs with only cooperative threads. */
+#define PRIO(n) KERNEL_UNIT_CONTRACT_PRIO(n)
 
 static struct k_thread t1;
 static struct k_thread t2;
@@ -159,6 +183,11 @@ static void give_a(void)
  */
 ZTEST(sched_contract, test_choice_higher_preempts)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(1, 0, 2);
 	kernel_unit_contract_start(&t1);
 
@@ -176,7 +205,7 @@ ZTEST(sched_contract, test_choice_higher_preempts)
  */
 ZTEST(sched_contract, test_choice_lower_does_not_preempt)
 {
-	three_threads(0, 1, 2);
+	three_threads(PRIO(0), PRIO(1), PRIO(2));
 	kernel_unit_contract_start(&t1);
 
 	zassert_equal_ptr(kernel_unit_contract_next(), &t1);
@@ -195,7 +224,7 @@ ZTEST(sched_contract, test_choice_lower_does_not_preempt)
  */
 ZTEST(sched_contract, test_choice_current_at_head_wins_tie)
 {
-	three_threads(0, 0, 1);
+	three_threads(PRIO(0), PRIO(0), PRIO(1));
 	kernel_unit_contract_start(&t1);
 
 	zassert_equal_ptr(kernel_unit_contract_next(), &t1);
@@ -223,6 +252,11 @@ ZTEST_EXPECT_FAIL(sched_contract, test_choice_current_behind_peer_loses_tie);
  */
 ZTEST(sched_contract, test_choice_current_behind_peer_loses_tie)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t2, 0);
 	kernel_unit_contract_thread(&t1, 0);
 	kernel_unit_contract_thread(&t3, 1);
@@ -242,6 +276,15 @@ ZTEST(sched_contract, test_choice_current_behind_peer_loses_tie)
  */
 ZTEST(sched_contract, test_choice_coop_keeps_cpu)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(-1, -2, 0);
 	kernel_unit_contract_start(&t1);
 
@@ -261,6 +304,15 @@ ZTEST(sched_contract, test_choice_coop_keeps_cpu)
  */
 ZTEST(sched_contract, test_choice_coop_behind_peer_keeps_cpu)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t2, -1);
 	kernel_unit_contract_thread(&t1, -1);
 	kernel_unit_contract_thread(&t3, 0);
@@ -281,6 +333,15 @@ ZTEST(sched_contract, test_choice_coop_behind_peer_keeps_cpu)
  */
 ZTEST(sched_contract, test_choice_coop_preempts_preemptible)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(0, -1, 1);
 	kernel_unit_contract_start(&t1);
 
@@ -299,6 +360,15 @@ ZTEST(sched_contract, test_choice_coop_preempts_preemptible)
  */
 ZTEST(sched_contract, test_choice_pending_coop_leaves)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(-1, 0, 1);
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_wait(&t1, &wq_a, K_FOREVER);
@@ -318,9 +388,9 @@ ZTEST(sched_contract, test_choice_pending_coop_leaves)
  */
 ZTEST(sched_contract, test_choice_head_of_tie_after_wait)
 {
-	kernel_unit_contract_thread(&t1, 0);
-	kernel_unit_contract_thread(&t3, 1);
-	kernel_unit_contract_thread(&t2, 1);
+	kernel_unit_contract_thread(&t1, PRIO(0));
+	kernel_unit_contract_thread(&t3, PRIO(1));
+	kernel_unit_contract_thread(&t2, PRIO(1));
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_wait(&t1, &wq_a, K_FOREVER);
 
@@ -339,7 +409,7 @@ ZTEST(sched_contract, test_choice_head_of_tie_after_wait)
  */
 ZTEST(sched_contract, test_choice_idle_if_no_thread_ready)
 {
-	three_threads(0, 0, 0);
+	three_threads(PRIO(0), PRIO(0), PRIO(0));
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
 	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
@@ -359,7 +429,7 @@ ZTEST(sched_contract, test_choice_idle_if_no_thread_ready)
  */
 ZTEST(sched_contract, test_choice_idle_leaves)
 {
-	three_threads(2, 1, 0);
+	three_threads(PRIO(2), PRIO(1), PRIO(0));
 	kernel_unit_contract_start(NULL);
 
 	zassert_equal_ptr(kernel_unit_contract_next(), &t3);
@@ -379,12 +449,12 @@ ZTEST(sched_contract, test_choice_idle_leaves)
  */
 ZTEST(sched_contract, test_prio_set_same_prio_on_itself_switches)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t3, 5);
-	kernel_unit_contract_thread(&t2, 9);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t3, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(9));
 	kernel_unit_contract_start(&t1);
 
-	zassert_true(z_thread_prio_set(&t1, 5));
+	zassert_true(z_thread_prio_set(&t1, PRIO(5)));
 
 	zassert_equal_ptr(kernel_unit_contract_current(), &t1);
 	zassert_equal_ptr(kernel_unit_contract_next(), &t3);
@@ -405,6 +475,15 @@ ZTEST(sched_contract, test_prio_set_same_prio_on_itself_switches)
  */
 ZTEST(sched_contract, test_prio_set_of_other_lets_higher_preempt_coop)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(-1, -2, 3);
 	kernel_unit_contract_start(&t1);
 	zassert_equal_ptr(kernel_unit_contract_next(), &t1);
@@ -428,10 +507,10 @@ ZTEST(sched_contract, test_prio_set_of_other_lets_higher_preempt_coop)
  */
 ZTEST(sched_contract, test_prio_set_of_peer_keeps_current)
 {
-	three_threads(5, 5, 9);
+	three_threads(PRIO(5), PRIO(5), PRIO(9));
 	kernel_unit_contract_start(&t1);
 
-	zassert_true(z_thread_prio_set(&t2, 5));
+	zassert_true(z_thread_prio_set(&t2, PRIO(5)));
 
 	zassert_equal_ptr(kernel_unit_contract_next(), &t1);
 	kernel_unit_contract_assert_ok();
@@ -464,6 +543,11 @@ static void t1_runs_t2_waits(void)
 ZTEST(sched_contract, test_reschedule_switches_to_woken_higher_thread)
 {
 	k_spinlock_key_t key;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	t1_runs_t2_waits();
 	kernel_unit_contract_assert_ok();
@@ -506,6 +590,11 @@ ZTEST(sched_contract, test_reschedule_under_outer_lock_does_not_switch)
 	unsigned int outer;
 	k_spinlock_key_t key;
 
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	t1_runs_t2_waits();
 
 	outer = irq_lock();
@@ -541,6 +630,11 @@ static void isr_give_a(void)
  */
 ZTEST(sched_contract, test_reschedule_in_isr_selects_at_exit)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	t1_runs_t2_waits();
 	current_in_isr = NULL;
 
@@ -582,6 +676,11 @@ ZTEST(sched_contract, test_pend_presets_eagain_until_wake)
 {
 	k_spinlock_key_t key;
 
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 7);
 	kernel_unit_contract_start(&t1);
@@ -617,6 +716,11 @@ ZTEST(sched_contract, test_wake_order_priority_then_arrival)
 {
 	static struct k_thread *const order[] = {&t3, &t4, &t2};
 	k_spinlock_key_t key;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 6);
@@ -657,8 +761,8 @@ ZTEST(sched_contract, test_wake_on_empty_queue_returns_false)
 {
 	k_spinlock_key_t key;
 
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
 	kernel_unit_contract_start(&t1);
 
 	key = k_spin_lock(&lock);
@@ -686,6 +790,11 @@ ZTEST(sched_contract, test_wake_all_wakes_each_waiter)
 {
 	k_spinlock_key_t key;
 	unsigned int woken = 0U;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
@@ -725,6 +834,11 @@ ZTEST(sched_contract, test_unpend_all_keeps_eagain_and_cancels_timeouts)
 {
 	int ret;
 
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
 	kernel_unit_contract_thread(&t3, 4);
@@ -760,9 +874,9 @@ ZTEST(sched_contract, test_unpend_all_keeps_eagain_and_cancels_timeouts)
  */
 ZTEST(sched_contract, test_waitq_head_is_best_waiter)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
-	kernel_unit_contract_thread(&t3, 4);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
+	kernel_unit_contract_thread(&t3, PRIO(4));
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
 	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t1);
@@ -786,8 +900,8 @@ ZTEST(sched_contract, test_waitq_head_is_best_waiter)
  */
 ZTEST(sched_contract, test_waitq_init_of_empty_queue_changes_nothing)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t1);
 
@@ -816,17 +930,17 @@ ZTEST(sched_contract, test_prio_set_of_waiter_moves_it_behind_equal_priority)
 	static struct k_thread *const before[] = {&t3, &t2, &t4};
 	static struct k_thread *const after[] = {&t2, &t3, &t4};
 
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 5);
-	kernel_unit_contract_thread(&t3, 4);
-	kernel_unit_contract_thread(&t4, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(5));
+	kernel_unit_contract_thread(&t3, PRIO(4));
+	kernel_unit_contract_thread(&t4, PRIO(6));
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
 	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
 	kernel_unit_contract_wait(&t4, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t1);
 	assert_waiters(&wq_a, before, ARRAY_SIZE(before));
 
-	zassert_false(z_thread_prio_set(&t3, 5));
+	zassert_false(z_thread_prio_set(&t3, PRIO(5)));
 
 	assert_waiters(&wq_a, after, ARRAY_SIZE(after));
 	kernel_unit_contract_assert_ok();
@@ -849,6 +963,11 @@ ZTEST(sched_contract, test_wake_first_with_is_one_wake)
 {
 	k_spinlock_key_t key;
 	struct k_thread *thread;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
@@ -885,6 +1004,11 @@ ZTEST(sched_contract, test_isr_wake_selects_at_isr_exit)
 {
 	k_spinlock_key_t key;
 
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 7);
 	kernel_unit_contract_start(&t1);
@@ -913,7 +1037,7 @@ ZTEST(sched_contract, test_wait_without_waker_does_not_return)
 {
 	k_spinlock_key_t key;
 
-	kernel_unit_contract_thread(&t1, 5);
+	kernel_unit_contract_thread(&t1, PRIO(5));
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_expect(KERNEL_UNIT_CONTRACT_NO_RETURN);
 
@@ -967,8 +1091,8 @@ static void isr_pend_a(void)
  */
 ZTEST(sched_contract, test_pend_in_isr_panics_before_a_change)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_expect_panic();
 
@@ -1006,7 +1130,7 @@ ZTEST(sched_contract, test_timeout_ends_wait_with_eagain)
 {
 	k_spinlock_key_t key;
 
-	kernel_unit_contract_thread(&t1, 5);
+	kernel_unit_contract_thread(&t1, PRIO(5));
 	kernel_unit_contract_start(&t1);
 
 	key = k_spin_lock(&lock);
@@ -1031,6 +1155,11 @@ ZTEST(sched_contract, test_timeout_ends_wait_with_eagain)
  */
 ZTEST(sched_contract, test_wake_cancels_timeout)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
 	kernel_unit_contract_wait(&t2, &wq_a, TEST_TIMEOUT);
@@ -1059,6 +1188,11 @@ ZTEST(sched_contract, test_wake_cancels_timeout)
  */
 ZTEST(sched_contract, test_timeout_of_waiter_selects_it)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
 	kernel_unit_contract_wait(&t2, &wq_a, TEST_TIMEOUT);
@@ -1085,8 +1219,8 @@ ZTEST(sched_contract, test_timeout_of_waiter_selects_it)
  */
 ZTEST(sched_contract, test_abort_of_waiter_leaves_wait_queue)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
 	kernel_unit_contract_wait(&t2, &wq_a, TEST_TIMEOUT);
 	kernel_unit_contract_start(&t1);
 
@@ -1118,6 +1252,15 @@ ZTEST(sched_contract, test_abort_of_other_thread_selects_head_at_next_point)
 {
 	k_spinlock_key_t key;
 
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(-1, -2, 0);
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_expect(KERNEL_UNIT_CONTRACT_RUN_RULE_HOLDS);
@@ -1147,7 +1290,7 @@ ZTEST(sched_contract, test_abort_of_other_thread_selects_head_at_next_point)
  */
 ZTEST(sched_contract, test_abort_of_self_selects_next_thread)
 {
-	three_threads(5, 6, 7);
+	three_threads(PRIO(5), PRIO(6), PRIO(7));
 	kernel_unit_contract_start(&t1);
 
 	kernel_unit_contract_abort(&t1);
@@ -1172,6 +1315,15 @@ ZTEST(sched_contract, test_abort_of_self_selects_next_thread)
  */
 ZTEST(sched_contract, test_isr_exit_switches_to_next_thread)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	three_threads(-1, -2, 3);
 	kernel_unit_contract_start(&t1);
 	zassert_true(z_thread_prio_set(&t3, 3));
@@ -1208,7 +1360,7 @@ ZTEST_EXPECT_FAIL(sched_contract, test_abort_wakes_joiner_with_zero);
  */
 ZTEST(sched_contract, test_abort_wakes_joiner_with_zero)
 {
-	three_threads(1, 1, 0);
+	three_threads(PRIO(1), PRIO(1), PRIO(0));
 	kernel_unit_contract_wait(&t3, &t2.join_queue, K_FOREVER);
 	kernel_unit_contract_start(&t1);
 	kernel_unit_contract_expect(KERNEL_UNIT_CONTRACT_RUN_RULE_HOLDS);
@@ -1235,13 +1387,445 @@ ZTEST(sched_contract, test_abort_wakes_joiner_with_zero)
  */
 ZTEST(sched_contract, test_set_prio_above_current_switches)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 7);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(7));
 	kernel_unit_contract_start(&t1);
 
-	kernel_unit_contract_set_prio(&t2, 3);
+	kernel_unit_contract_set_prio(&t2, PRIO(3));
 
-	zassert_equal(t2.base.prio, 3);
+	zassert_equal(t2.base.prio, PRIO(3));
 	zassert_equal_ptr(kernel_unit_contract_current(), &t2);
+	kernel_unit_contract_assert_ok();
+}
+
+/* ------------------------------------------------------------------------- */
+
+/* The data D(t) that a walk gives to the woken thread t. */
+static void *walk_data(struct k_thread *thread)
+{
+	if (thread == &t2) {
+		return DATA(12);
+	}
+	if (thread == &t3) {
+		return DATA(13);
+	}
+
+	return DATA(14);
+}
+
+/* The callbacks of a walk, and what they saw. */
+struct walk_ctx {
+	/* P(t): the waiters that the walk wakes. */
+	struct k_thread *match[4];
+	size_t n_match;
+	/* Stop(t): walk_func returns 1 at this waiter (NULL: never). */
+	struct k_thread *stop;
+	/* The visited waiters, in the order of the calls of walk_func. */
+	struct k_thread *seen[4];
+	size_t n_seen;
+	/* The matched waiters that post_func wakes (CONFIG_WAITQ_SCALABLE). */
+	struct k_thread *later[4];
+	size_t n_later;
+	bool walk_locked;
+	unsigned int post_calls;
+	int post_status;
+	size_t post_seen;
+	bool post_locked;
+	struct k_thread *post_current;
+};
+
+static bool walk_matches(const struct walk_ctx *ctx, struct k_thread *thread)
+{
+	for (size_t i = 0; i < ctx->n_match; i++) {
+		if (ctx->match[i] == thread) {
+			return true;
+		}
+	}
+
+	return false;
+}
+
+/* The wake of one matched waiter: return value 0 and the data D(t) (events.c:125-128). */
+static void walk_wake(struct k_thread *thread)
+{
+	thread->base.swap_data = walk_data(thread);
+	arch_thread_return_value_set(thread, 0);
+	z_sched_wake_thread_locked(thread);
+}
+
+/*
+ * walk_func, as event_walk_op() (events.c:137-176) and the mailbox send
+ * (mailbox.c): for a matched waiter, cancel its timeout, then wake it now, or
+ * in post_func with CONFIG_WAITQ_SCALABLE (the walk must not remove a thread
+ * then, scheduler.h:71-74). At the stop waiter, wake it now (the last step of
+ * the walk can remove it) and return 1.
+ */
+static int walk_func(struct k_thread *thread, void *data)
+{
+	struct walk_ctx *ctx = data;
+	bool stop = (thread == ctx->stop);
+
+	ctx->walk_locked = ctx->walk_locked && kernel_unit_contract_irq_locked();
+	if (ctx->n_seen < ARRAY_SIZE(ctx->seen)) {
+		ctx->seen[ctx->n_seen] = thread;
+	}
+	ctx->n_seen++;
+	if (walk_matches(ctx, thread)) {
+		(void)z_try_abort_thread_timeout(thread);
+		if (stop || !IS_ENABLED(CONFIG_WAITQ_SCALABLE)) {
+			walk_wake(thread);
+		} else if (ctx->n_later < ARRAY_SIZE(ctx->later)) {
+			ctx->later[ctx->n_later++] = thread;
+		} else {
+			ztest_test_fail();
+		}
+	}
+
+	return stop ? 1 : 0;
+}
+
+/* post_func, as event_post_walk_op() (events.c:115-131). */
+static void post_func(int status, void *data)
+{
+	struct walk_ctx *ctx = data;
+
+	ctx->post_calls++;
+	ctx->post_status = status;
+	ctx->post_seen = ctx->n_seen;
+	ctx->post_locked = kernel_unit_contract_irq_locked();
+	ctx->post_current = kernel_unit_contract_current();
+	for (size_t i = 0; i < ctx->n_later; i++) {
+		walk_wake(ctx->later[i]);
+	}
+}
+
+/* The walk of an object: k_spin_lock(), z_sched_waitq_walk() of wq_a, z_reschedule(). */
+static int walk_a(struct walk_ctx *ctx)
+{
+	k_spinlock_key_t key = k_spin_lock(&lock);
+	int ret = z_sched_waitq_walk(&wq_a, walk_func, post_func, ctx);
+
+	z_reschedule(&lock, key);
+
+	return ret;
+}
+
+/*
+ * t1 (5) runs. t2 (6), t3 (4) and t4 (4) wait on wq_a, in this order of
+ * arrival, t2 and t4 with TEST_TIMEOUT. The wait queue order is t3, t4, t2.
+ */
+static void three_waiters_on_a(void)
+{
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
+	kernel_unit_contract_thread(&t3, PRIO(4));
+	kernel_unit_contract_thread(&t4, PRIO(4));
+	kernel_unit_contract_wait(&t2, &wq_a, TEST_TIMEOUT);
+	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
+	kernel_unit_contract_wait(&t4, &wq_a, TEST_TIMEOUT);
+	kernel_unit_contract_start(&t1);
+}
+
+/**
+ * @brief The walk visits the waiters in wait queue order, then calls post_func once.
+ *
+ * @details
+ * WaitQueue!Walked(o, Stop) with Stop always FALSE, and P always FALSE (no
+ * wake).
+ * - Setup: t1 (Zephyr priority 5) runs. t2 (6), t3 (4) and t4 (4) wait on
+ *   wq_a, in this order of arrival.
+ * - Action: z_sched_waitq_walk() of wq_a. walk_func matches no waiter and
+ *   returns 0.
+ * - Expected: walk_func sees t3, t4, t2. post_func is called once, after the
+ *   last walk_func, with the status 0, while t1 still runs. The walk returns
+ *   0, and each waiter still waits with -EAGAIN.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk()
+ */
+ZTEST(sched_contract, test_walk_visits_waiters_in_wait_queue_order)
+{
+	static struct k_thread *const order[] = {&t3, &t4, &t2};
+	struct walk_ctx ctx = {.walk_locked = true};
+
+	three_waiters_on_a();
+
+	zassert_equal(walk_a(&ctx), 0);
+
+	zassert_equal(ctx.n_seen, ARRAY_SIZE(order));
+	for (size_t i = 0; i < ARRAY_SIZE(order); i++) {
+		zassert_equal_ptr(ctx.seen[i], order[i], "visit %zu", i);
+	}
+	zassert_equal(ctx.post_calls, 1U);
+	zassert_equal(ctx.post_status, 0);
+	zassert_equal(ctx.post_seen, ARRAY_SIZE(order));
+	zassert_equal_ptr(ctx.post_current, &t1);
+	zassert_true(z_is_thread_pending(&t2));
+	zassert_true(z_is_thread_pending(&t3));
+	zassert_true(z_is_thread_pending(&t4));
+	assert_waiters(&wq_a, order, ARRAY_SIZE(order));
+	zassert_equal_ptr(kernel_unit_contract_current(), &t1);
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief The walk stops after the first waiter for which walk_func returns a value other than 0.
+ *
+ * @details
+ * WaitQueue!Walked and WaitQueue!WalkStop: the walk visits the waiters up to
+ * the first waiter with Stop, this waiter included.
+ * - Setup: as above (wait queue order t3, t4, t2). walk_func returns 1 at
+ *   t4 and matches no waiter.
+ * - Action: z_sched_waitq_walk() of wq_a.
+ * - Expected: walk_func sees t3 and t4, not t2. post_func gets the status 1,
+ *   and the walk returns 1.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk()
+ */
+ZTEST(sched_contract, test_walk_stops_at_nonzero_return)
+{
+	struct walk_ctx ctx = {.walk_locked = true, .stop = &t4};
+
+	three_waiters_on_a();
+
+	zassert_equal(walk_a(&ctx), 1);
+
+	zassert_equal(ctx.n_seen, 2U);
+	zassert_equal_ptr(ctx.seen[0], &t3);
+	zassert_equal_ptr(ctx.seen[1], &t4);
+	zassert_equal(ctx.post_calls, 1U);
+	zassert_equal(ctx.post_status, 1);
+	zassert_equal(ctx.post_seen, 2U);
+	kernel_unit_contract_assert_ok();
+}
+
+#ifdef KERNEL_UNIT_FAKE_GROUP_sched_ref
+/*
+ * Difference RF-6 (sched-app.md): the reference fake has no interrupt lock
+ * state (as for RF-2), and its z_sched_waitq_walk() takes no lock. The
+ * contract (WakeWalk: walk_func and post_func in one critical section) and
+ * the code (scheduler.c:90-120, Z_SCHED_SPINLOCK) hold the scheduler lock.
+ */
+ZTEST_EXPECT_FAIL(sched_contract, test_walk_runs_callbacks_under_the_lock);
+#endif
+
+/**
+ * @brief walk_func and post_func run with the CPU locked, and the lock ends with the walk.
+ *
+ * @details
+ * WakeWalk is one step: the walk and post_func are in one critical section
+ * (scheduler.c:90-120, the scheduler lock). The objects call the walk with
+ * their own lock held. This test calls it without, so that only the lock of
+ * the walk is held.
+ * - Setup: as above (wait queue order t3, t4, t2). The CPU is unlocked.
+ * - Action: z_sched_waitq_walk() of wq_a, without a match, without a lock
+ *   of the caller.
+ * - Expected: each call of walk_func and the call of post_func see the CPU
+ *   locked (Platform!Locked). After the walk, the CPU is unlocked.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk()
+ */
+ZTEST(sched_contract, test_walk_runs_callbacks_under_the_lock)
+{
+	struct walk_ctx ctx = {.walk_locked = true};
+
+	three_waiters_on_a();
+	zassert_false(kernel_unit_contract_irq_locked());
+
+	zassert_equal(z_sched_waitq_walk(&wq_a, walk_func, post_func, &ctx), 0);
+
+	zassert_equal(ctx.n_seen, 3U);
+	zassert_true(ctx.walk_locked, "walk_func without the lock");
+	zassert_true(ctx.post_locked, "post_func without the lock");
+	zassert_false(kernel_unit_contract_irq_locked());
+}
+
+/**
+ * @brief The walk wakes each matched waiter with 0 and its data, and cancels its timeout.
+ *
+ * @details
+ * WakeWalk(o, P, Stop, D) with Stop always FALSE (k_event_post()): each
+ * visited waiter t with P(t) stops to wait with the return value 0 and the
+ * data D(t), as by z_sched_wake_thread_locked() after the cancellation of
+ * its timeout (WakeSet).
+ * - Setup: as above (wait queue order t3, t4, t2; t2 and t4 with a
+ *   timeout). P is {t2, t4}.
+ * - Action: z_sched_waitq_walk() of wq_a, then z_reschedule().
+ * - Expected: t2 and t4 are ready, with the return value 0, their data and
+ *   no armed timeout. t3 still waits with -EAGAIN and without data. The walk
+ *   returns 0. Then t4 (Zephyr priority 4) runs, because it preempts t1 (5).
+ *   With only cooperative priorities, t1 keeps the CPU.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk(), z_sched_wake_thread_locked()
+ */
+ZTEST(sched_contract, test_walk_wakes_matched_waiters_with_zero_and_data)
+{
+	static struct k_thread *const left[] = {&t3};
+	struct walk_ctx ctx = {.walk_locked = true, .match = {&t2, &t4}, .n_match = 2U};
+
+	three_waiters_on_a();
+
+	zassert_equal(walk_a(&ctx), 0);
+
+	zassert_equal(ctx.n_seen, 3U);
+	zassert_true(z_is_thread_ready(&t2));
+	zassert_true(z_is_thread_ready(&t4));
+	zassert_equal(kernel_unit_contract_ret(&t2), 0);
+	zassert_equal(kernel_unit_contract_ret(&t4), 0);
+	zassert_equal_ptr(t2.base.swap_data, walk_data(&t2));
+	zassert_equal_ptr(t4.base.swap_data, walk_data(&t4));
+	zassert_true(z_is_inactive_timeout(&t2.base.timeout));
+	zassert_true(z_is_inactive_timeout(&t4.base.timeout));
+	zassert_true(z_is_thread_pending(&t3));
+	zassert_equal(kernel_unit_contract_ret(&t3), -EAGAIN);
+	zassert_is_null(t3.base.swap_data);
+	assert_waiters(&wq_a, left, ARRAY_SIZE(left));
+	/* A cooperative t1 keeps the CPU (CONFIG_NUM_PREEMPT_PRIORITIES=0). */
+	zassert_equal_ptr(kernel_unit_contract_current(),
+			  IS_ENABLED(CONFIG_PREEMPT_ENABLED) ? &t4 : &t1);
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief A walk with a stop at the first match wakes only this waiter.
+ *
+ * @details
+ * WakeWalk with P = Stop = "the receiver matches" (the mailbox send,
+ * mailbox.c:280): the first matching waiter in wait queue order is woken.
+ * - Setup: as above (wait queue order t3, t4, t2). P is {t4, t2}, and
+ *   walk_func stops at t4.
+ * - Action: z_sched_waitq_walk() of wq_a, then z_reschedule().
+ * - Expected: the walk returns 1. t4 is ready with 0, its data and no armed
+ *   timeout. t3 and t2 still wait, and the timeout of t2 is still armed.
+ *   Then t4 runs (with only cooperative priorities, t1 keeps the CPU).
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk()
+ */
+ZTEST(sched_contract, test_walk_stop_wakes_first_match_only)
+{
+	static struct k_thread *const left[] = {&t3, &t2};
+	struct walk_ctx ctx = {
+		.walk_locked = true, .match = {&t4, &t2}, .n_match = 2U, .stop = &t4};
+
+	three_waiters_on_a();
+
+	zassert_equal(walk_a(&ctx), 1);
+
+	zassert_equal(ctx.n_seen, 2U);
+	zassert_true(z_is_thread_ready(&t4));
+	zassert_equal(kernel_unit_contract_ret(&t4), 0);
+	zassert_equal_ptr(t4.base.swap_data, walk_data(&t4));
+	zassert_true(z_is_inactive_timeout(&t4.base.timeout));
+	zassert_true(z_is_thread_pending(&t2));
+	zassert_false(z_is_inactive_timeout(&t2.base.timeout));
+	assert_waiters(&wq_a, left, ARRAY_SIZE(left));
+	zassert_equal_ptr(kernel_unit_contract_current(),
+			  IS_ENABLED(CONFIG_PREEMPT_ENABLED) ? &t4 : &t1);
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief The walk of an empty wait queue calls only post_func, with 0.
+ *
+ * @details
+ * - Setup: t1 runs. wq_a has no waiter.
+ * - Action: z_sched_waitq_walk() of wq_a.
+ * - Expected: no call of walk_func. One call of post_func with 0. The walk
+ *   returns 0, and t1 keeps the CPU.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_waitq_walk()
+ */
+ZTEST(sched_contract, test_walk_of_empty_queue_calls_post_func_with_zero)
+{
+	struct walk_ctx ctx = {.walk_locked = true};
+
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_start(&t1);
+
+	zassert_equal(walk_a(&ctx), 0);
+
+	zassert_equal(ctx.n_seen, 0U);
+	zassert_equal(ctx.post_calls, 1U);
+	zassert_equal(ctx.post_status, 0);
+	zassert_equal_ptr(kernel_unit_contract_current(), &t1);
+	kernel_unit_contract_assert_ok();
+}
+
+/* A give of wq_a in an ISR with the value 3 and the data DATA(4). */
+static void isr_give_a_with_data(void)
+{
+	k_spinlock_key_t key = k_spin_lock(&lock);
+
+	(void)z_sched_wake(&wq_a, 3, DATA(4));
+	z_reschedule(&lock, key);
+}
+
+/**
+ * @brief z_sched_wait() returns the value and the data of the waker.
+ *
+ * @details
+ * PendCurr(a, o, to), WakeFirst(o, ret, data), then Resume(a): the return
+ * value is swapRet, and the data is swapData (scheduler.c:130-139).
+ * - Setup: t1 (Zephyr priority 5) runs alone. An ISR wakes the first waiter
+ *   of wq_a with 3 and DATA(4).
+ * - Action: t1 calls z_sched_wait() on wq_a with K_FOREVER.
+ * - Expected: z_sched_wait() returns 3 and gives DATA(4). t1 runs and does
+ *   not wait.
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_wait()
+ */
+ZTEST(sched_contract, test_sched_wait_returns_value_and_data_of_waker)
+{
+	k_spinlock_key_t key;
+	void *data = NULL;
+
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_start(&t1);
+	kernel_unit_contract_env_isr(isr_give_a_with_data);
+
+	key = k_spin_lock(&lock);
+	zassert_equal(z_sched_wait(&lock, key, &wq_a, K_FOREVER, &data), 3);
+
+	zassert_equal_ptr(data, DATA(4));
+	zassert_equal_ptr(kernel_unit_contract_current(), &t1);
+	zassert_is_null(t1.base.pended_on);
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief After a timeout, z_sched_wait() returns -EAGAIN and the old swap data.
+ *
+ * @details
+ * PendCurr, ThreadTimeout, Resume: the timeout keeps the return value
+ * -EAGAIN and the swap data of the thread (Resume does not reset it).
+ * - Setup: t1 (Zephyr priority 5) runs alone, with the swap data DATA(9).
+ *   No waker.
+ * - Action: t1 calls z_sched_wait() on wq_a with TEST_TIMEOUT.
+ * - Expected: the timeout expires. z_sched_wait() returns -EAGAIN and gives
+ *   DATA(9).
+ *
+ * @ingroup kernel_unit_sched_contract_walk
+ * @see z_sched_wait()
+ */
+ZTEST(sched_contract, test_sched_wait_timeout_gives_eagain_and_old_data)
+{
+	k_spinlock_key_t key;
+	void *data = NULL;
+
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_start(&t1);
+	t1.base.swap_data = DATA(9);
+
+	key = k_spin_lock(&lock);
+	zassert_equal(z_sched_wait(&lock, key, &wq_a, TEST_TIMEOUT, &data), -EAGAIN);
+
+	zassert_equal_ptr(data, DATA(9));
+	zassert_equal_ptr(kernel_unit_contract_current(), &t1);
 	kernel_unit_contract_assert_ok();
 }

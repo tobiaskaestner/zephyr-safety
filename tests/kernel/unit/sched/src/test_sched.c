@@ -51,7 +51,13 @@
  * @par Contract tests
  * The suite @c sched_contract (@ref kernel_unit_sched_contract) runs the same
  * tests against this application and against the reference fake (application
- * @c sched_ref). The adapter of the real code is in this file. The suite
+ * @c sched_ref). The adapter of the real code is in this file. The contract
+ * Scheduler also has two functions of @c kernel/scheduler.c,
+ * z_sched_waitq_walk() and z_sched_wait(). Thus this file also includes
+ * @c kernel/scheduler.c (the second kernel source file of this application),
+ * and the contract tests of the walk and of the wait run on the real code of
+ * both files. The unit test of scheduler.c on fakes is the application
+ * @c scheduler (@ref kernel_unit_scheduler). The suite
  * @c sched_unit of this file has the tests of the findings and the tests that
  * only the real code can have (the switch variants, the time slices).
  *
@@ -67,6 +73,14 @@
  *   @c metairq.h.
  * - @kconfig{CONFIG_ASSERT}: the assertions of sched.c, and with
  *   @kconfig{CONFIG_SPIN_VALIDATE} the checks of a switch.
+ * - @kconfig{CONFIG_NUM_PREEMPT_PRIORITIES} = 0 (only cooperative threads,
+ *   @kconfig{CONFIG_PREEMPT_ENABLED} is n) and
+ *   @kconfig{CONFIG_NUM_COOP_PRIORITIES} = 0 (only preemptible threads,
+ *   @kconfig{CONFIG_COOP_ENABLED} is n): sched.c has no code for them, but
+ *   the priority range changes, and without @kconfig{CONFIG_PREEMPT_ENABLED}
+ *   the exit of an interrupt with arch_swap() does not switch
+ *   (exc_exit.c:57). A test that needs a kind of thread that the scenario
+ *   does not have is skipped.
  * - @kconfig{CONFIG_SMP} is not in this application (level 1 is one CPU).
  */
 
@@ -121,7 +135,12 @@
 /**
  * @defgroup kernel_unit_sched_z_sched_lock_reschedule z_sched_lock_reschedule()
  * @ingroup kernel_unit_sched
- * @brief No unit test covers z_sched_lock_reschedule() (k_sched_unlock() is in scheduler.c).
+ * @brief The reschedule point of k_sched_unlock() and k_reschedule() (scheduler.c).
+ *
+ * update_cache(0), then reschedule() with the key of the scheduler lock: a
+ * switch only if the key is unlocked and the caller is not an ISR. The tests
+ * call it through k_sched_unlock() and k_reschedule() of the real
+ * @c kernel/scheduler.c, which this application also includes.
  */
 
 /**
@@ -262,6 +281,13 @@
 
 #include <kernel/sched.c>
 #include <scheduler.h>
+/*
+ * kernel/scheduler.c is the second source file of the contract Scheduler
+ * (z_sched_waitq_walk(), z_sched_wait()). The contract tests of the walk
+ * and of the wait run on it and on the real sched.c. Its unit test on fakes
+ * is the application scheduler.
+ */
+#include <kernel/scheduler.c>
 
 #if defined(CONFIG_WAITQ_SCALABLE) || defined(CONFIG_SCHED_SCALABLE)
 /*
@@ -580,6 +606,11 @@ struct k_thread *kernel_unit_contract_next(void)
 	return (_kernel.ready_q.cache == idle_thread()) ? NULL : _kernel.ready_q.cache;
 }
 
+bool kernel_unit_contract_irq_locked(void)
+{
+	return kernel_unit_platform_locked();
+}
+
 size_t kernel_unit_contract_waiters(_wait_q_t *wait_q, struct k_thread **out, size_t max)
 {
 	struct k_thread *t;
@@ -631,6 +662,9 @@ void kernel_unit_contract_assert_ok(void)
  * The tests of the findings and of the platform variants (suite sched_unit).
  */
 
+/* A priority of the rank n in a test that also runs with only cooperative threads. */
+#define PRIO(n) KERNEL_UNIT_CONTRACT_PRIO(n)
+
 static struct k_thread t1;
 static struct k_thread t2;
 static struct k_thread t3;
@@ -673,6 +707,13 @@ static void give_a(void)
 	z_reschedule(&test_lock, key);
 }
 
+/* A give of wq_a in an ISR (an action of the platform model). */
+static void isr_give_a(void *arg)
+{
+	ARG_UNUSED(arg);
+	give_a();
+}
+
 /* A give to all waiters of wq_a with 0 (z_sched_wake_all()), in the gap of arch_swap(). */
 static void give_all_a(void *arg)
 {
@@ -688,7 +729,9 @@ static void give_all_a(void *arg)
  * delays a preemption past its irq_unlock(). Expected failure until the
  * finding has a decision: the test asserts the requirement.
  */
+#ifdef CONFIG_PREEMPT_ENABLED
 ZTEST_EXPECT_FAIL(sched_unit, test_p2w_irq_unlock_gives_cpu_to_woken_thread);
+#endif
 
 /**
  * @brief The end of an outer interrupt lock gives the CPU to a higher thread that the lock woke.
@@ -716,6 +759,11 @@ ZTEST(sched_unit, test_p2w_irq_unlock_gives_cpu_to_woken_thread)
 {
 	unsigned int outer;
 	k_spinlock_key_t key;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 1);
 	kernel_unit_contract_thread(&t3, 0);
@@ -747,7 +795,9 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7a_priority_set_to_same_priority_keeps_cpu);
  * @details
  * Finding P7-a (property TieGoesToLongestReady, @c @@source ZEP-SRS-2-13,
  * reading R1: a priority change does not restart "ready").
- * - Setup: t1 and t3 with Zephyr priority 5, t1 ready first. t1 runs.
+ * - Setup: t1 and t3 with Zephyr priority 5, t1 ready first. t1 runs. With
+ *   only cooperative priorities, both have the same cooperative priority,
+ *   and ZEP-SRS-2-14 also asks that t1 keeps the CPU.
  * - Action: t1 calls k_thread_priority_set(t1, 5): the code of thread.c,
  *   z_thread_prio_set(), then z_reschedule_unlocked().
  * - Expected by the requirement (fails): t1 runs, because it has been ready
@@ -759,12 +809,12 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7a_priority_set_to_same_priority_keeps_cpu);
  */
 ZTEST(sched_unit, test_p7a_priority_set_to_same_priority_keeps_cpu)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t3, 5);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t3, PRIO(5));
 	kernel_unit_contract_start(&t1);
 	zassert_equal_ptr(_kernel.ready_q.cache, &t1);
 
-	kernel_unit_contract_set_prio(&t1, 5);
+	kernel_unit_contract_set_prio(&t1, PRIO(5));
 
 	/* ZEP-SRS-2-13, reading R1: t1 keeps the CPU. */
 	zassert_equal_ptr(_current, &t1, "P7-a: the priority change acted as a yield");
@@ -774,7 +824,9 @@ ZTEST(sched_unit, test_p7a_priority_set_to_same_priority_keeps_cpu)
  * Finding P7-b: a priority change of another thread preempts a cooperative
  * thread. Expected failure: the test asserts the requirement.
  */
+#ifdef CONFIG_COOP_ENABLED
 ZTEST_EXPECT_FAIL(sched_unit, test_p7b_priority_change_of_other_thread_keeps_cooperative);
+#endif
 
 /**
  * @brief A priority change of another thread does not preempt a cooperative current thread.
@@ -782,11 +834,12 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7b_priority_change_of_other_thread_keeps_coo
  * @details
  * Finding P7-b (property CoopKeepsCpu, @c @@source ZEP-SRS-2-14), the trace
  * of @c MCScheduler_p7_coop.
- * - Setup: Zephyr priorities t1 0, t2 -1, t3 -2 (t2 and t3 cooperative). t3
- *   waits on wq_a. t2 runs.
+ * - Setup: Zephyr priorities t1 0, t2 -1, t3 -2 (t2 and t3 cooperative). With
+ *   only cooperative priorities: t1 -1, t2 -2, t3 -3. t3 waits on wq_a. t2
+ *   runs.
  * - Action: t2 gives wq_a (t3 is ready, t2 keeps the CPU: update_cache(0)
  *   keeps a cooperative current thread). Then t2 calls
- *   k_thread_priority_set(t1, 0).
+ *   k_thread_priority_set(t1) with the priority of t1.
  * - Expected by the code (asserted first): after the give, t2 runs and the
  *   cache is t2.
  * - Expected by the requirement (fails): t2 still runs after the priority
@@ -798,9 +851,17 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7b_priority_change_of_other_thread_keeps_coo
  */
 ZTEST(sched_unit, test_p7b_priority_change_of_other_thread_keeps_cooperative)
 {
-	kernel_unit_contract_thread(&t1, 0);
-	kernel_unit_contract_thread(&t2, -1);
-	kernel_unit_contract_thread(&t3, -2);
+	/* t1 is the lowest thread: preemptible, or cooperative without preemptible priorities. */
+	int low = IS_ENABLED(CONFIG_PREEMPT_ENABLED) ? 0 : -1;
+
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
+	kernel_unit_contract_thread(&t1, low);
+	kernel_unit_contract_thread(&t2, low - 1);
+	kernel_unit_contract_thread(&t3, low - 2);
 	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t2);
 
@@ -809,7 +870,7 @@ ZTEST(sched_unit, test_p7b_priority_change_of_other_thread_keeps_cooperative)
 	zassert_equal_ptr(_kernel.ready_q.cache, &t2);
 	zassert_true(z_is_thread_ready(&t3));
 
-	kernel_unit_contract_set_prio(&t1, 0);
+	kernel_unit_contract_set_prio(&t1, low);
 
 	/* ZEP-SRS-2-14: a cooperative thread runs until it yields or blocks. */
 	zassert_equal_ptr(_current, &t2, "P7-b: the priority change of t1 preempted t2");
@@ -818,8 +879,13 @@ ZTEST(sched_unit, test_p7b_priority_change_of_other_thread_keeps_cooperative)
 /*
  * Finding P7-c: an abort of another thread preempts a cooperative thread at
  * the next interrupt exit. Expected failure: the test asserts the requirement.
+ * Not with arch_swap() and only cooperative priorities: then the interrupt
+ * exit does not switch (exc_exit.c:57), and the test passes (see
+ * test_isr_exit_switch_needs_preempt_enabled_or_use_switch).
  */
+#if defined(CONFIG_COOP_ENABLED) && (defined(CONFIG_PREEMPT_ENABLED) || defined(CONFIG_USE_SWITCH))
 ZTEST_EXPECT_FAIL(sched_unit, test_p7c_abort_of_other_thread_keeps_cooperative);
+#endif
 
 /**
  * @brief An abort of another thread does not preempt a cooperative current thread.
@@ -828,8 +894,9 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7c_abort_of_other_thread_keeps_cooperative);
  * Finding P7-c (properties CoopKeepsCpu and RunRuleHolds,
  * @c @@source ZEP-SRS-2-14), the traces of @c MCScheduler_coop_rule and
  * @c MCScheduler_p7_abort.
- * - Setup: Zephyr priorities t1 0, t2 -1, t3 -2. t3 waits on wq_a. t2 runs
- *   and gives wq_a: t3 is ready, t2 keeps the CPU.
+ * - Setup: Zephyr priorities t1 0, t2 -1, t3 -2. With only cooperative
+ *   priorities: t1 -1, t2 -2, t3 -3. t3 waits on wq_a. t2 runs and gives
+ *   wq_a: t3 is ready, t2 keeps the CPU.
  * - Action: t2 calls k_thread_abort(t1). Then an interrupt without a kernel
  *   call comes (its exit is a reschedule point).
  * - Expected by the code (asserted first): after the abort, t1 is dead and t2
@@ -838,15 +905,25 @@ ZTEST_EXPECT_FAIL(sched_unit, test_p7c_abort_of_other_thread_keeps_cooperative);
  *   test_abort_of_other_thread_selects_head_at_next_point), so the invariant
  *   RunRuleHolds can be false until the interrupt.
  * - Expected by the requirement (fails): t2 still runs after the interrupt.
+ *   With arch_swap() and only cooperative priorities the test passes: the
+ *   exit of the interrupt does not switch (exc_exit.c:57).
  *
  * @ingroup kernel_unit_sched_z_thread_halt
  * @see z_thread_halt()
  */
 ZTEST(sched_unit, test_p7c_abort_of_other_thread_keeps_cooperative)
 {
-	kernel_unit_contract_thread(&t1, 0);
-	kernel_unit_contract_thread(&t2, -1);
-	kernel_unit_contract_thread(&t3, -2);
+	/* t1 is the lowest thread: preemptible, or cooperative without preemptible priorities. */
+	int low = IS_ENABLED(CONFIG_PREEMPT_ENABLED) ? 0 : -1;
+
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
+	kernel_unit_contract_thread(&t1, low);
+	kernel_unit_contract_thread(&t2, low - 1);
+	kernel_unit_contract_thread(&t3, low - 2);
 	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t2);
 	give_a();
@@ -866,7 +943,9 @@ ZTEST(sched_unit, test_p7c_abort_of_other_thread_keeps_cooperative)
  * Finding F14: k_thread_abort() makes the joiners ready without a reschedule
  * point. Expected failure: the test asserts the requirement.
  */
+#ifdef CONFIG_PREEMPT_ENABLED
 ZTEST_EXPECT_FAIL(sched_unit, test_f14_abort_gives_cpu_to_higher_joiner);
+#endif
 
 /**
  * @brief An abort that makes a higher joiner ready gives it the CPU.
@@ -888,6 +967,11 @@ ZTEST_EXPECT_FAIL(sched_unit, test_f14_abort_gives_cpu_to_higher_joiner);
  */
 ZTEST(sched_unit, test_f14_abort_gives_cpu_to_higher_joiner)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 1);
 	kernel_unit_contract_thread(&t2, 1);
 	kernel_unit_contract_thread(&t3, 0);
@@ -905,12 +989,14 @@ ZTEST(sched_unit, test_f14_abort_gives_cpu_to_higher_joiner)
 	zassert_equal_ptr(_current, &t3, "F14: t1 keeps the CPU after the abort");
 }
 
-#ifndef CONFIG_USE_SWITCH
+#if !defined(CONFIG_USE_SWITCH) && defined(CONFIG_PREEMPT_ENABLED) && defined(CONFIG_COOP_ENABLED)
 /*
  * Candidate finding SW-1: with arch_swap(), an ISR before PendSV gives the
  * CPU back to a cooperative thread that waits. Expected failure without
  * CONFIG_USE_SWITCH: the test asserts the requirement. With
  * CONFIG_USE_SWITCH, the switch has no gap and the test passes (the control).
+ * The test needs a preemptible t1 and cooperative t2, t3: it is skipped in the
+ * scenarios with one kind of priority.
  */
 ZTEST_EXPECT_FAIL(sched_unit, test_sw1_blocked_cooperative_thread_loses_cpu);
 #endif
@@ -943,6 +1029,15 @@ ZTEST(sched_unit, test_sw1_blocked_cooperative_thread_loses_cpu)
 {
 	k_spinlock_key_t key;
 	bool t3_ran_first = false;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 0);
 	kernel_unit_contract_thread(&t2, -1);
@@ -989,8 +1084,8 @@ ZTEST(sched_unit, test_sw1_blocked_cooperative_thread_loses_cpu)
  */
 ZTEST(sched_unit, test_p6u_init_of_wait_queue_with_waiter_loses_it)
 {
-	kernel_unit_contract_thread(&t1, 5);
-	kernel_unit_contract_thread(&t2, 6);
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_thread(&t2, PRIO(6));
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
 	kernel_unit_contract_start(&t1);
 
@@ -1022,6 +1117,11 @@ ZTEST(sched_unit, test_p6u_init_of_wait_queue_with_waiter_loses_it)
 ZTEST(sched_unit, test_wake_resets_time_slice_once_per_decision)
 {
 	unsigned int resets;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
 
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
@@ -1062,6 +1162,11 @@ ZTEST(sched_unit, test_wake_resets_time_slice_once_per_decision)
  */
 ZTEST(sched_unit, test_reschedule_switch_follows_the_variant)
 {
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
 	kernel_unit_contract_thread(&t1, 5);
 	kernel_unit_contract_thread(&t2, 3);
 	kernel_unit_contract_wait(&t2, &wq_a, K_FOREVER);
@@ -1084,5 +1189,202 @@ ZTEST(sched_unit, test_reschedule_switch_follows_the_variant)
 		zassert_equal(kernel_unit_platform.pendsv_requests, 1U);
 		zassert_str_equal(kernel_unit_platform.switches[0].where, "pendsv");
 	}
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief k_sched_unlock() is a reschedule point: a thread that the lock kept out runs at once.
+ *
+ * @details
+ * The contrast of finding P2-w (findings.md: "k_sched_unlock() reschedules,
+ * scheduler.c:50, sched.c:413-417"). The other half, irq_unlock() is not a
+ * reschedule point, is test_p2w_irq_unlock_gives_cpu_to_woken_thread.
+ * - Setup: as P2-w: Zephyr priorities t1 1, t3 0 (both preemptible). t3
+ *   waits on wq_a. t1 runs.
+ * - Action: t1 calls k_sched_lock(). Then a give: k_spin_lock(),
+ *   z_sched_wake() of wq_a, z_reschedule(). Then k_sched_unlock().
+ * - Expected: under the scheduler lock, t1 is not preemptible: the give does
+ *   not switch and the cache stays t1. k_sched_unlock() calls
+ *   z_sched_lock_reschedule(): update_cache(0) sets the cache to t3, and
+ *   reschedule() switches with the unlocked key. t3 runs after
+ *   k_sched_unlock(), with the return value 0.
+ *
+ * @ingroup kernel_unit_sched_z_sched_lock_reschedule
+ * @see k_sched_unlock(), z_sched_lock_reschedule()
+ */
+ZTEST(sched_unit, test_p2w_contrast_sched_unlock_reschedules_at_once)
+{
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
+	kernel_unit_contract_thread(&t1, 1);
+	kernel_unit_contract_thread(&t3, 0);
+	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
+	kernel_unit_contract_start(&t1);
+
+	k_sched_lock();
+	give_a();
+	zassert_equal_ptr(_current, &t1, "the give switched under k_sched_lock()");
+	zassert_equal_ptr(_kernel.ready_q.cache, &t1);
+	zassert_true(z_is_thread_ready(&t3));
+	k_sched_unlock();
+
+	zassert_equal_ptr(_current, &t3, "k_sched_unlock() did not switch to t3");
+	zassert_equal(kernel_unit_contract_ret(&t3), 0);
+	zassert_equal(t1.base.sched_locked, 0U);
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief k_reschedule() after the outer irq_unlock() gives the CPU to the woken thread.
+ *
+ * @details
+ * The condition of use that finding P2-w recommends: "call k_reschedule()
+ * after the outer irq_unlock()". The API documentation of k_reschedule()
+ * (ZEP-SRS-2-19) says "provided interrupts were not locked when invoked".
+ * - Setup: as P2-w: t1 (1) runs, t3 (0) waits on wq_a.
+ * - Action: t1 calls irq_lock(), gives wq_a, and calls k_reschedule() under
+ *   the outer lock. Then irq_unlock(), then k_reschedule() again.
+ * - Expected: the first k_reschedule() does not switch (resched() sees the
+ *   locked key). After irq_unlock() t1 still runs (finding P2-w). The second
+ *   k_reschedule() switches to t3.
+ *
+ * @ingroup kernel_unit_sched_z_sched_lock_reschedule
+ * @see z_impl_k_reschedule(), z_sched_lock_reschedule()
+ */
+ZTEST(sched_unit, test_p2w_k_reschedule_after_irq_unlock_switches)
+{
+	unsigned int outer;
+
+	/* The test needs preemptible threads (CONFIG_NUM_PREEMPT_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		ztest_test_skip();
+	}
+
+	kernel_unit_contract_thread(&t1, 1);
+	kernel_unit_contract_thread(&t3, 0);
+	kernel_unit_contract_wait(&t3, &wq_a, K_FOREVER);
+	kernel_unit_contract_start(&t1);
+
+	outer = irq_lock();
+	give_a();
+	z_impl_k_reschedule();
+	zassert_equal_ptr(_current, &t1, "k_reschedule() switched under the outer lock");
+	irq_unlock(outer);
+	zassert_equal_ptr(_current, &t1);
+	zassert_equal_ptr(_kernel.ready_q.cache, &t3);
+
+	z_impl_k_reschedule();
+
+	zassert_equal_ptr(_current, &t3, "k_reschedule() did not switch to t3");
+	kernel_unit_contract_assert_ok();
+}
+
+/**
+ * @brief The exit of an interrupt switches a cooperative thread only with PREEMPT_ENABLED or
+ * CONFIG_USE_SWITCH.
+ *
+ * @details
+ * Open point 5 of the Platform round A (@c tla/platform-round-a.md). Without
+ * @kconfig{CONFIG_PREEMPT_ENABLED} (@kconfig{CONFIG_NUM_PREEMPT_PRIORITIES}
+ * = 0), z_arm_exc_exit() does not set PendSV pending (exc_exit.c:57-61).
+ * The exit of the @kconfig{CONFIG_USE_SWITCH} variant (arm_m_must_switch(),
+ * arm-m-switch.c:510-536) has no such condition.
+ * - Setup: Zephyr priorities t1 -1, t2 -2, t3 -1 (all cooperative). t1 runs.
+ *   t1 calls z_thread_prio_set(t3, -1): update_cache(1) sets the cache to
+ *   t2, the head of the run queue (as in P7-b and P7-c).
+ * - Action: an interrupt without a kernel call.
+ * - Expected with @kconfig{CONFIG_PREEMPT_ENABLED} or
+ *   @kconfig{CONFIG_USE_SWITCH}: the exit switches to t2 (PendSV, or the
+ *   exit itself).
+ * - Expected with arch_swap() and only cooperative priorities: t1 keeps the
+ *   CPU, PendSV is not pending, and the cache stays t2 (RunRuleHolds is
+ *   false until t1 blocks or yields).
+ *
+ * @ingroup kernel_unit_sched_z_thread_prio_set
+ * @see z_thread_prio_set()
+ */
+ZTEST(sched_unit, test_isr_exit_switch_needs_preempt_enabled_or_use_switch)
+{
+	bool exit_switches = IS_ENABLED(CONFIG_PREEMPT_ENABLED) || IS_ENABLED(CONFIG_USE_SWITCH);
+
+	/* The test needs cooperative threads (CONFIG_NUM_COOP_PRIORITIES > 0). */
+	if (!IS_ENABLED(CONFIG_COOP_ENABLED)) {
+		ztest_test_skip();
+	}
+
+	kernel_unit_contract_thread(&t1, -1);
+	kernel_unit_contract_thread(&t2, -2);
+	kernel_unit_contract_thread(&t3, -1);
+	kernel_unit_contract_start(&t1);
+	kernel_unit_contract_expect(KERNEL_UNIT_CONTRACT_RUN_RULE_HOLDS);
+	zassert_true(z_thread_prio_set(&t3, -1));
+	zassert_equal_ptr(_current, &t1);
+	zassert_equal_ptr(_kernel.ready_q.cache, &t2);
+
+	kernel_unit_contract_run_isr(NULL);
+
+	if (exit_switches) {
+		zassert_equal_ptr(_current, &t2);
+		zassert_equal(kernel_unit_platform.n_switches, 1U);
+		zassert_str_equal(kernel_unit_platform.switches[0].where,
+				  IS_ENABLED(CONFIG_USE_SWITCH) ? "isr exit" : "pendsv");
+	} else {
+		zassert_equal_ptr(_current, &t1, "the exit switched without PREEMPT_ENABLED");
+		zassert_equal(kernel_unit_platform.n_switches, 0U);
+		zassert_equal(kernel_unit_platform.pendsv_requests, 0U);
+		zassert_equal_ptr(_kernel.ready_q.cache, &t2);
+	}
+}
+
+/**
+ * @brief A thread that an ISR wakes leaves the idle thread at the exit, or by the idle loop.
+ *
+ * @details
+ * The second effect of exc_exit.c:57: without
+ * @kconfig{CONFIG_PREEMPT_ENABLED} and without @kconfig{CONFIG_USE_SWITCH},
+ * the exit of an ISR does not leave the idle thread either. The idle loop
+ * switches itself (idle.c:90-105, an @c \@assumption of the platform model).
+ * - Setup: t1 runs alone (Zephyr priority 5, or a cooperative priority). An
+ *   ISR gives wq_a.
+ * - Action: t1 waits on wq_a with K_FOREVER (z_pend_curr()).
+ * - Expected: z_pend_curr() returns 0, and t1 runs. Two switches: t1 to the
+ *   idle thread, then the idle thread to t1. The second switch is at the
+ *   exit of the ISR with @kconfig{CONFIG_USE_SWITCH} ("isr exit"), in PendSV
+ *   from the exit with @kconfig{CONFIG_PREEMPT_ENABLED} ("pendsv"), else in
+ *   PendSV after one yield of the idle loop ("idle").
+ *
+ * @ingroup kernel_unit_sched_z_pend_curr
+ * @see z_pend_curr()
+ */
+ZTEST(sched_unit, test_isr_wake_leaves_idle_by_exit_or_idle_loop)
+{
+	k_spinlock_key_t key;
+	const char *where;
+	unsigned int yields = 0U;
+
+	kernel_unit_contract_thread(&t1, PRIO(5));
+	kernel_unit_contract_start(&t1);
+	kernel_unit_platform_env_isr(isr_give_a, NULL);
+
+	key = k_spin_lock(&test_lock);
+	zassert_equal(z_pend_curr(&test_lock, key, &wq_a, K_FOREVER), 0);
+
+	if (IS_ENABLED(CONFIG_USE_SWITCH)) {
+		where = "isr exit";
+	} else if (IS_ENABLED(CONFIG_PREEMPT_ENABLED)) {
+		where = "pendsv";
+	} else {
+		where = "idle";
+		yields = 1U;
+	}
+	zassert_equal_ptr(_current, &t1);
+	zassert_equal(kernel_unit_platform.n_switches, 2U);
+	zassert_equal_ptr(kernel_unit_platform.switches[1].from, idle_thread());
+	zassert_equal_ptr(kernel_unit_platform.switches[1].to, &t1);
+	zassert_str_equal(kernel_unit_platform.switches[1].where, where);
+	zassert_equal(kernel_unit_platform.idle_yields, yields);
 	kernel_unit_contract_assert_ok();
 }

@@ -136,7 +136,8 @@ static void pendsv_runs(void)
 	struct k_thread *next = _kernel.ready_q.cache;
 
 	PF.pendsv = false;
-	record_switch(_current, next, "pendsv");
+	record_switch(_current, next, PF.idle_yield ? "idle" : "pendsv");
+	PF.idle_yield = false;
 	_kernel.cpus[0].current = next;
 	PF.basepri = next->arch.basepri;
 	next->arch.basepri = 0U;
@@ -149,6 +150,11 @@ static void request_pendsv(void)
 	PF.pendsv_requests++;
 }
 #endif
+
+static bool idle_runs(void)
+{
+	return (_current == NULL) || (_current == _kernel.cpus[0].idle_thread);
+}
 
 /*
  * The exit of an ISR to thread mode: a reschedule point.
@@ -185,6 +191,22 @@ static void isr_exit(void)
 	PF.basepri = 0U;
 #else
 	if (IS_ENABLED(CONFIG_PREEMPT_ENABLED) && (_kernel.ready_q.cache != _current)) {
+		request_pendsv();
+	}
+	/*
+	 * Without CONFIG_PREEMPT_ENABLED (CONFIG_NUM_PREEMPT_PRIORITIES=0), the
+	 * exit above never sets PendSV pending. The idle thread is the only
+	 * preemptible thread then, and its loop switches itself: after
+	 * k_cpu_idle() returns (the interrupt), idle() calls z_swap_unlocked()
+	 * if the cache differs from _current. z_swap_unlocked() is arch_swap()
+	 * with the key 0: PendSV. A cooperative thread keeps the CPU.
+	 * @assumption kernel/idle.c:90-105 (the idle loop yields without
+	 * CONFIG_PREEMPT_ENABLED and without CONFIG_USE_SWITCH)
+	 */
+	if (!IS_ENABLED(CONFIG_PREEMPT_ENABLED) && !PF.in_gap && idle_runs() &&
+	    (_kernel.ready_q.cache != _current)) {
+		PF.idle_yields++;
+		PF.idle_yield = true;
 		request_pendsv();
 	}
 	if (PF.pendsv && !PF.in_gap) {
@@ -245,10 +267,6 @@ bool kernel_unit_platform_timer_isr(void)
 	return expired;
 }
 
-static bool idle_runs(void)
-{
-	return (_current == NULL) || (_current == _kernel.cpus[0].idle_thread);
-}
 
 /* Run one environment step. */
 static void run_step(const struct kernel_unit_platform_step *step)
