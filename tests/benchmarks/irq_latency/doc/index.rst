@@ -137,3 +137,13 @@ Output with the option: the histograms and phase histograms ``irq`` and
 ``irq_sw``, and the ``LAT META`` keys ``stim_trigger=gpio+sw``,
 ``sw_trigger``, ``sw_trigger_irqn``, ``sw_trigger_prio``, ``sw_read_cyc``
 and ``sw_triggers`` (see :doc:`/reference/log-format`).
+
+Tail witnesses
+--------------
+
+With ``LATBENCH_TAIL=y`` the app keeps a witness table of the largest
+``irq`` samples (``LAT TAIL irq``). The ISR marks the window when it arms
+the next edge, and adds the sample after its time stamp, through a
+wrapper that is not inline. The add also reads the interrupted PC and
+``ICSR``. The software samples of ``LATBENCH_SWTRIG`` get no table: they
+have no tail. See :doc:`/explanation/tail-witnesses`.

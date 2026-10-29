@@ -14,6 +14,8 @@ A metric is one of:
                                          exception n) and of a function
                                          (the start function or one of the
                                          inlined functions of the site)
+    tail.<hist>                          the witness table of a histogram
+                                         (LATBENCH_TAIL, scripts/benchmarks/tails.py)
     None                                 the point itself (drift_per_wake,
                                          drift_ppm)
 
@@ -23,7 +25,10 @@ at least 0.1 % of the samples, with at most 2 cycles between neighbours;
 the modes are numbered by value (mode 1 is the fastest). mode_share(k) is
 the share of the samples in mode k, 0 if the histogram has fewer modes. A stat of a set of M4 sites: n (sum of the sections), max,
 max_net, min_net (net = value - the floor of the calibration), max(x),
-top_place. A stat of a META metric: value.
+top_place. A stat of a META metric: value. A stat of a witness table: n
+(rows), seen, exc_min, rows_ge(x), explained_share(x) (the share of the
+rows >= x cycles with a cause other than none), cause_share(c, x),
+label_share(l, x).
 
 value() returns a number or a text, or raises NoValue with the reason.
 """
@@ -52,6 +57,9 @@ MODE_MIN_SHARE = 0.001
 MODE_GAP = 2
 _AGG = re.compile(r"^(max|min)\((.+)\)$")
 _M4 = re.compile(r"^m4\.(mask|isr)(?:\.(t|e\d+))?(?:\[([\w.]+)\])?$")
+_TAIL_X = re.compile(r"^(rows_ge|explained_share)\((\d+)\)$")
+_TAIL_L = re.compile(r"^(cause_share|label_share)\(([a-z+-]+),\s*(\d+)\)$")
+TAIL_STATS = {"n", "seen", "exc_min"}
 
 
 def quantile_bin(h, q):
@@ -136,7 +144,7 @@ def hist_value(h, stat):
 
 def value_width(rep, metric, stat):
     """The width of the bin of a quantile value (1 for an exact value)."""
-    if metric is None or metric.startswith(("meta.", "m4.")) or not isinstance(stat, str):
+    if metric is None or metric.startswith(("meta.", "m4.", "tail.")) or not isinstance(stat, str):
         return 1
     m = _Q.match(stat)
     h = rep["hists"].get(metric)
@@ -250,6 +258,39 @@ def point_value(rep, stat):
     raise NoValue(f"stat {stat!r} of a point has no tool")
 
 
+def tail_value(rep, metric, stat):
+    """A stat of the witness table of a histogram (metric tail.<hist>)."""
+    import sys
+    from pathlib import Path
+
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # scripts/benchmarks: tails.py
+    import tails
+
+    t = (rep.get("tails") or {}).get(metric[5:])
+    if t is None:
+        raise NoValue(f"the point has no witness table {metric[5:]!r} (LATBENCH_TAIL)")
+    if stat in TAIL_STATS:
+        return t[stat]
+    meta = rep.get("meta", {})
+    m = _TAIL_X.match(stat or "")
+    if m:
+        x = int(m.group(2))
+        if m.group(1) == "rows_ge":
+            return len(tails.rows(t, meta, x))
+        v = tails.explained_share(t, meta, x)
+    else:
+        m = _TAIL_L.match(stat or "")
+        if not m:
+            raise NoValue(f"stat {stat!r} of a witness table has no tool")
+        kind, name, x = m.group(1), m.group(2), int(m.group(3))
+        sel = tails.rows(t, meta, x)
+        v = None if not sel else sum((r["cause"] == name) if kind == "cause_share" else (name in r["labels"])
+                                     for r in sel) / len(sel)
+    if v is None:
+        raise NoValue(f"{metric}: no row of {m.group(m.lastindex)} cycles or more")
+    return v
+
+
 def value(rep, metric, stat):
     """The value of a metric and a stat for one repetition of a point."""
     if metric is None:
@@ -260,6 +301,8 @@ def value(rep, metric, stat):
         return meta_value(rep, metric[5:])
     if metric.startswith("m4."):
         return m4_value(rep, metric, stat)
+    if metric.startswith("tail."):
+        return tail_value(rep, metric, stat)
     h = rep["hists"].get(metric)
     if h is None:
         raise NoValue(f"the point has no histogram {metric!r}")
@@ -282,6 +325,8 @@ def known(metric, stat):
             ok = st in ("drift_per_wake", "drift_ppm")
         elif metric.startswith("meta."):
             ok = st in (None, "value")
+        elif metric.startswith("tail."):
+            ok = st in TAIL_STATS or bool(_TAIL_X.match(st or "") or _TAIL_L.match(st or ""))
         elif metric.startswith("m4."):
             inner = _AGG.match(st).group(2) if st and _AGG.match(st) else st
             ok = bool(_M4.match(metric)) and (st == "top_place" or inner in ("n", "max", "min", "max_net", "min_net"))

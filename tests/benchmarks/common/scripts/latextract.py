@@ -18,6 +18,11 @@ of this module with its name. The output is one JSON object on stdout
 - phases: the tick phase tables: period, nbins, bins [[bin, count, min, max, sum]].
 - m4: null, or the M4 table and its sites (kind, ctx, pc, n, sum, min,
   max, hist, and function/place if the ELF and the binutils are there).
+- tails: the witness tables (LATBENCH_TAIL): {name: {n, seen, min_cyc,
+  exc_min, exc_max, fields, rows}}. Each row has the fields of the table,
+  pc as "0x..", and "function" (the function of pc, or null) if the ELF
+  and the binutils are there. scripts/benchmarks/tails.py gives the
+  causes.
 
 The extractor reads only the run folder; the run folder does not change.
 """
@@ -136,6 +141,35 @@ def m4_out(run, log, prefix):
     return {"table": run["m4"]["table"], "symbols": sym is not None, "sites": out}
 
 
+def tails_out(run, log, prefix):
+    """The witness tables of a log, with the function of each pc."""
+    tails = run.get("tails") or {}
+    if not tails:
+        return {}
+    pcs = sorted({r["pc"] & ~1 for t in tails.values() for r in t["rows"] if r.get("pc")})
+    sym = m4.symbolizer_for(log, prefix=prefix) if (prefix and pcs) else None
+    names = {}
+    if sym is not None:
+        found = sym.lookup(pcs)
+        for a in pcs:
+            names[a] = m4.describe(found.get(a, []), sym.nm_name(a))[0]
+    out = {}
+    for name, t in tails.items():
+        rows = []
+        for r in t["rows"]:
+            row = dict(r)
+            if "pc" in row:
+                row["function"] = names.get(row["pc"] & ~1) if row["pc"] else None
+                row["pc"] = f"0x{r['pc']:08x}"
+            if "icsr" in row:
+                row["icsr"] = f"0x{r['icsr']:08x}"
+            rows.append(row)
+        out[name] = {k: t[k] for k in ("n", "seen", "min_cyc", "exc_min", "exc_max", "fields") if k in t}
+        out[name]["symbols"] = sym is not None
+        out[name]["rows"] = rows
+    return out
+
+
 def extract(run_dir, app, prefix=None):
     run_dir = Path(run_dir)
     manifest = json.loads((run_dir / "manifest.json").read_text())
@@ -157,6 +191,7 @@ def extract(run_dir, app, prefix=None):
                 "hists": {k: hist_out(h) for k, h in sorted(run["hists"].items()) if k not in site_names},
                 "phases": {k: phase_out(p) for k, p in sorted(run["phases"].items())},
                 "m4": m4_out(run, log, prefix),
+                "tails": tails_out(run, log, prefix),
             })
         points.append({"tree": e["tree"], "point": e["id"], "reps": reps})
     return {"app": app, "unit": "cycles", "core_hz": core_hz, "points": points}

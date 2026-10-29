@@ -31,6 +31,7 @@
 #include <latbench/meta.h>
 #include <latbench/stim.h>
 #include <latbench/swtrig.h>
+#include <latbench/tail.h>
 
 #if defined(CONFIG_LATBENCH_IRQ_PATH_STOCK)
 #define IRQ_PATH "stock"
@@ -68,6 +69,25 @@ static LAT_PHASE_DEFINE(phase_sw, "irq_sw");
 static uint32_t n_sw_seen;
 #endif
 
+#if defined(CONFIG_LATBENCH_TAIL)
+/* Witnesses of the largest edge samples. The window starts at the arm of the edge. */
+static LAT_TAIL_DEFINE(tail, "irq");
+static struct lat_tail_mark tail_m;
+#define TAIL_MARK() lat_tail_mark(&tail_m)
+
+/*
+ * Not inline, with two arguments: the ISR then needs no more registers,
+ * and its code before the time stamp stays the same as without witnesses.
+ */
+static __noinline void tail_add(uint32_t n, uint32_t lat)
+{
+	lat_tail_add(&tail, &tail_m, n - CONFIG_LATBENCH_WARMUP, lat, 0U, stim_edge_phase(),
+		     LAT_TAIL_ISR_CTX);
+}
+#else
+#define TAIL_MARK()
+#endif
+
 static volatile uint32_t n_seen;
 static volatile uint32_t n_spurious;
 static volatile bool done;
@@ -98,6 +118,10 @@ static inline void on_edge(uint32_t now)
 
 		lat_hist_add(&hist, lat);
 		lat_phase_add(&phase, stim_edge_phase(), lat);
+#if defined(CONFIG_LATBENCH_TAIL)
+		/* After the time stamp: the sample is complete. */
+		tail_add(n, lat);
+#endif
 	}
 	n_seen = ++n;
 #if defined(CONFIG_LATBENCH_SWTRIG)
@@ -106,6 +130,7 @@ static inline void on_edge(uint32_t now)
 	swtrig_request();
 #else
 	if (n < N_TOTAL) {
+		TAIL_MARK();
 		stim_arm(now);
 	} else {
 		stim_stop();
@@ -128,6 +153,7 @@ static void sw_done(uint32_t t0, uint32_t t_isr)
 	}
 	n_sw_seen = ++m;
 	if (n_seen < N_TOTAL) {
+		TAIL_MARK();
 		stim_arm(stim_now());
 	} else {
 		stim_stop();
@@ -251,12 +277,17 @@ int main(void)
 		return 0;
 	}
 
+#if defined(CONFIG_LATBENCH_TAIL)
+	lat_tail_init();
+	lat_tail_print_setup();
+#endif
 	load_start();
 #if defined(CONFIG_LATBENCH_SWTRIG)
 	/* Above the busy thread, below the main thread. */
 	swtrig_start(1, sw_done);
 	swtrig_print_setup();
 #endif
+	TAIL_MARK();
 	stim_arm(stim_now());
 	while (!done) {
 		k_msleep(CONFIG_LATBENCH_POLL_MS);
@@ -267,6 +298,9 @@ int main(void)
 	load_print();
 	lat_hist_print(&hist);
 	lat_phase_print(&phase);
+#if defined(CONFIG_LATBENCH_TAIL)
+	lat_tail_print(&tail);
+#endif
 #if defined(CONFIG_LATBENCH_SWTRIG)
 	swtrig_print_stats();
 	lat_hist_print(&hist_sw);

@@ -32,6 +32,11 @@ The modes of a histogram (check-forms.rst, studylib.stats.modes):
     nbfig.mode_table(inst, [exp], "t2t")       one row per point: the modes and their shares
     nbfig.mode_range(series, "t2t", pad)       an x range around the modes (for hist)
 
+The witnesses of the tail samples (LATBENCH_TAIL, tails.py):
+
+    w = inst.tails("irq-witness-check-1m")     one row per tail sample: counters, labels, cause
+    nbfig.tails(w, "title")                    each tail sample at its tick phase, the colour is the cause
+
 df is a table of inst.rows(experiment) (or several of them, concatenated).
 Each figure has a hover text with the value in cycles and in microseconds,
 a legend (click an entry to hide the series) and zoom (drag). The
@@ -67,6 +72,14 @@ METRIC_NAMES = {
     "irq": "IRQ entry (edge to ISR)",
     "irq2thr": "edge to thread",
     "t2t_ret": "wake call to its return",
+    "irq_sw": "IRQ entry, software trigger (STIR to ISR)",
+    "isr2thr_sw": "ISR to thread, software trigger",
+    "irq2thr_sw": "STIR to thread, software trigger",
+    "irq_unlock": "irq_unlock() to ISR",
+    "irq_nested": "IRQ entry in a lower-priority ISR",
+    "irq_nested_sw": "IRQ entry in a lower-priority ISR, software trigger",
+    "irq_exit": "end of the ISR to the interrupted thread",
+    "irq_b2b": "ISR entry to the next ISR entry (back to back)",
 }
 CORE_HZ = 170_000_000
 # The statistics of the difference figures, and the open end of a limit band.
@@ -599,3 +612,25 @@ def mode_range(series, metric, pad=20, coarse=False):
     if no series has a mode."""
     ms = [m for hists in series.values() for m in modes(hists[metric], coarse=coarse)]
     return (min(a for a, _, _ in ms) - pad, max(b for _, b, _ in ms) + pad) if ms else None
+
+
+def tails(df, title, x="phase"):
+    """Each row of inst.tails() as a dot: x the tick phase of its stimulus (or another column), y its latency,
+    the colour its cause (tails.CAUSES order), the symbol its point. The hover gives the labels, the function of
+    the interrupted code and the sample number."""
+    import tails as tailmod
+    fig = go.Figure()
+    points = list(dict.fromkeys(df.point)) if len(df) else []
+    for i, c in enumerate(tailmod.CAUSES):
+        for k, p in enumerate(points):
+            sub = df[(df.cause == c) & (df.point == p)]
+            if sub.empty:
+                continue
+            name = c if len(points) == 1 else f"{p} {c}"
+            text = [f"{m} #{s}: {lab or '-'}; {f or '-'}" for m, s, lab, f in
+                    zip(sub.metric, sub.seq, sub.labels, sub.function)]
+            fig.add_trace(go.Scatter(x=sub[x], y=sub.lat, mode="markers", name=name, text=text,
+                                     marker={"color": color(i), "size": 9, "symbol": SYMBOLS[k % len(SYMBOLS)],
+                                             "line": {"color": "#fcfcfb", "width": 1}},
+                                     hovertemplate="%{text}<br>" + x + " %{x}, %{y} cycles<extra>" + name + "</extra>"))
+    return style(fig, title, "tick phase of the stimulus (cycles)" if x == "phase" else x, "latency (cycles)")

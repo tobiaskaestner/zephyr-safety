@@ -17,6 +17,8 @@
     inst.drift(["wake-clock-drift"])  one row per point: the clock drift in ppm and in cycles per sample
     inst.sites("wake-m4-validate")    one row per M4 site of each point, with max_net
     inst.hist(point, "irq", "wake-stim-seed-1m")
+    inst.tails("irq-witness-check-1m")  one row per witness row (LATBENCH_TAIL) with its labels and cause
+    inst.tail_causes("irq-witness-check-1m")   the count of each cause per point and table
     data.ccdf(hist)              (x, share of samples >= x)
 
 An experiment of another instance (an import) or a reference run is found
@@ -31,9 +33,14 @@ import yaml
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+import tails as tailmod  # noqa: E402
 import trees  # noqa: E402
 from studylib import layout, stats  # noqa: E402
 
+
+# The columns of Instance.tails.
+TAIL_COLUMNS = ["run", "tree", "point", "metric", "seq", "lat", "aux", "phase", "win", "exc", "extra_exc",
+                "systick_age", "tmr", "wake", "pc", "function", "labels", "cause"]
 
 # The columns of Instance.sites.
 SITE_COLUMNS = ["tree", "point", "kind", "exc", "ctx", "function", "place", "via", "n", "min", "max", "max_net"]
@@ -217,6 +224,34 @@ class Instance:
                             "via": s.get("via"), "n": s["n"], "min": s["min"], "max": s["max"],
                             "max_net": stats.value(one, f"m4.{s['kind']}", "max_net") if s["n"] else None})
         return pd.DataFrame(out, columns=SITE_COLUMNS)
+
+    def tails(self, experiment, metric=None, at_least=0):
+        """One row per witness row of the evidence points (LATBENCH_TAIL), largest first in each table:
+        the fields of the row, extra_exc (exc - exc_min of the table), systick_age (counts from the last
+        SysTick reload to the end, None without a jump), the function of pc, the labels and the cause
+        (tails.py). metric: only this table. at_least: only rows with lat >= at_least."""
+        import pandas as pd
+        out = []
+        for rid, tree, point, rep in self.points(experiment):
+            for name, t in (rep.get("tails") or {}).items():
+                if metric is not None and name != metric:
+                    continue
+                for r in tailmod.rows(t, rep["meta"], at_least):
+                    n = tailmod.norm(r)
+                    out.append({"run": rid, "tree": tree, "point": point, "metric": name,
+                                **{k: n.get(k) for k in ("seq", "lat", "aux", "phase", "win", "exc", "tmr", "wake")},
+                                "extra_exc": r["extra_exc"], "systick_age": tailmod.systick_age(n, rep["meta"]),
+                                "pc": r.get("pc"), "function": r.get("function"),
+                                "labels": " ".join(r["labels"]), "cause": r["cause"]})
+        return pd.DataFrame(out, columns=TAIL_COLUMNS)
+
+    def tail_causes(self, experiment, metric=None, at_least=0):
+        """The count of each cause per point and table (columns: the causes of tails.CAUSES)."""
+        df = self.tails(experiment, metric, at_least)
+        if df.empty:
+            return df
+        out = df.groupby(["tree", "point", "metric", "cause"]).size().unstack("cause", fill_value=0)
+        return out.reindex(columns=[c for c in tailmod.CAUSES if c in out.columns]).reset_index()
 
     def hist(self, point, metric, experiment, tree=None, run_id=None):
         for rid, t, p, rep in (self.points(experiment) if run_id is None else

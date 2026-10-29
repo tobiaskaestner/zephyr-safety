@@ -35,6 +35,7 @@
 #include <latbench/meta.h>
 #include <latbench/stim.h>
 #include <latbench/swtrig.h>
+#include <latbench/tail.h>
 
 #if defined(CONFIG_LATBENCH_WAKE_ISR_DIRECT)
 #define ISR_KIND "direct"
@@ -74,6 +75,26 @@ static LAT_HIST_DEFINE(h_irq_sw, "irq_sw");
 static LAT_HIST_DEFINE(h_isr2thr_sw, "isr2thr_sw");
 static LAT_HIST_DEFINE(h_irq2thr_sw, "irq2thr_sw");
 static LAT_PHASE_DEFINE(p_irq_sw, "irq_sw");
+#endif
+
+#if defined(CONFIG_LATBENCH_TAIL)
+/*
+ * Witnesses of the largest irq2thr samples (aux: the irq part). The
+ * window starts at the arm of the edge and ends after the time stamps of
+ * the thread. No PC: a read in the ISR would make the wake path longer.
+ */
+static LAT_TAIL_DEFINE(tail, "irq2thr");
+static struct lat_tail_mark tail_m;
+#define TAIL_MARK() lat_tail_mark(&tail_m)
+#if defined(CONFIG_LATBENCH_SWTRIG)
+/* The same for the software samples. The window starts at the request. */
+static LAT_TAIL_DEFINE(tail_sw, "irq2thr_sw");
+static struct lat_tail_mark tail_sw_m;
+#define TAIL_SW_MARK() lat_tail_mark(&tail_sw_m)
+#endif
+#else
+#define TAIL_MARK()
+#define TAIL_SW_MARK()
 #endif
 
 static volatile uint32_t t_isr;
@@ -189,6 +210,7 @@ static void resp_isr(const void *arg)
 
 static void waker_fn(void *a, void *b, void *c)
 {
+	TAIL_MARK();
 	stim_arm(stim_now());
 	for (uint32_t n = 0; n < N_TOTAL; n++) {
 		wait_for_isr();
@@ -204,6 +226,10 @@ static void waker_fn(void *a, void *b, void *c)
 			lat_hist_add(&h_irq2thr, t_thr - edge);
 			lat_phase_add(&p_irq, phase, ti - edge);
 			lat_phase_add(&p_isr2thr, phase, t_thr - ti);
+#if defined(CONFIG_LATBENCH_TAIL)
+			lat_tail_add(&tail, &tail_m, n - CONFIG_LATBENCH_WARMUP, t_thr - edge, ti - edge,
+				     phase, LAT_TAIL_NO_CTX);
+#endif
 		}
 		rearm_object();
 #if defined(CONFIG_LATBENCH_SWTRIG)
@@ -211,6 +237,7 @@ static void waker_fn(void *a, void *b, void *c)
 		 * A software sample after each edge sample: the trigger thread
 		 * (lower priority) runs while this thread waits.
 		 */
+		TAIL_SW_MARK();
 		swtrig_request();
 		wait_for_isr();
 		{
@@ -223,11 +250,17 @@ static void waker_fn(void *a, void *b, void *c)
 				lat_hist_add(&h_isr2thr_sw, t_thr_sw - ti_sw);
 				lat_hist_add(&h_irq2thr_sw, t_thr_sw - t0);
 				lat_phase_add(&p_irq_sw, stim_phase_of(t0), ti_sw - t0);
+#if defined(CONFIG_LATBENCH_TAIL)
+				lat_tail_add(&tail_sw, &tail_sw_m, n - CONFIG_LATBENCH_WARMUP,
+					     t_thr_sw - t0, ti_sw - t0, stim_phase_of(t0),
+					     LAT_TAIL_NO_CTX);
+#endif
 			}
 			rearm_object();
 		}
 #endif
 		if (n + 1 < N_TOTAL) {
+			TAIL_MARK();
 			stim_arm(stim_now());
 		}
 	}
@@ -290,6 +323,10 @@ int main(void)
 	irq_enable(STIM_RESP_IRQN);
 	load_start();
 	/* M4: empty unless CONFIG_ARM_IRQ_MASK_HOOKS=y. */
+#if defined(CONFIG_LATBENCH_TAIL)
+	lat_tail_init();
+	lat_tail_print_setup();
+#endif
 	irqmask_start();
 #if defined(CONFIG_LATBENCH_SWTRIG)
 	/* Below the woken thread: the wake preempts the trigger thread, as in the PR. */
@@ -313,12 +350,18 @@ int main(void)
 	lat_hist_print(&h_irq2thr);
 	lat_phase_print(&p_irq);
 	lat_phase_print(&p_isr2thr);
+#if defined(CONFIG_LATBENCH_TAIL)
+	lat_tail_print(&tail);
+#endif
 #if defined(CONFIG_LATBENCH_SWTRIG)
 	swtrig_print_stats();
 	lat_hist_print(&h_irq_sw);
 	lat_hist_print(&h_isr2thr_sw);
 	lat_hist_print(&h_irq2thr_sw);
 	lat_phase_print(&p_irq_sw);
+#if defined(CONFIG_LATBENCH_TAIL)
+	lat_tail_print(&tail_sw);
+#endif
 #endif
 	irqmask_print();
 	lat_done();

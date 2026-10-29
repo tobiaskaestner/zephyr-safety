@@ -17,6 +17,9 @@ The apps print "LAT" lines (see common/src/hist.c and common/src/meta.c):
     LAT PHASE <name> bins=.. period=..
     LAT PB <bin> <count> <min> <max> <sum>
     LAT END <name>
+    LAT TAIL <name> n=.. seen=.. min_cyc=.. exc_min=.. exc_max=.. fields=f1,f2,..
+    LAT TW <value of f1> <value of f2> ...      (one row of the witness table, tails.py)
+    LAT END <name>
     LAT ERROR <text>
     LAT DONE
 
@@ -118,12 +121,14 @@ def parse_log(path):
     run = None
     hist = None
     phase = None
+    tail = None
     for line in Path(path).read_text().splitlines():
         if not line.startswith("LAT "):
             continue
         tag, _, rest = line[4:].partition(" ")
         if tag == "BEGIN":
-            run = {"source": str(path), "meta": {}, "cfg": {}, "hists": {}, "phases": {}, "errors": []}
+            run = {"source": str(path), "meta": {}, "cfg": {}, "hists": {}, "phases": {}, "tails": {},
+                   "errors": []}
         elif run is None:
             continue
         elif tag == "META":
@@ -165,9 +170,19 @@ def parse_log(path):
         elif tag == "PB" and phase is not None:
             b, count, vmin, vmax, vsum = (int(x) for x in rest.split())
             phase["bins"][b] = {"count": count, "min": vmin, "max": vmax, "sum": vsum}
+        elif tag == "TAIL":
+            name, *fields = rest.split()
+            tail = {"name": name, "rows": []}
+            for item in fields:
+                key, _, value = item.partition("=")
+                tail[key] = value.split(",") if key == "fields" else int(value)
+            run["tails"][name] = tail
+        elif tag == "TW" and tail is not None:
+            tail["rows"].append({k: int(v, 0) for k, v in zip(tail["fields"], rest.split())})
         elif tag == "END":
             hist = None
             phase = None
+            tail = None
     if run is None:
         raise ValueError(f"{path}: no 'LAT BEGIN'")
     return run

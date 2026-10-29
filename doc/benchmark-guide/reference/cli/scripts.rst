@@ -22,6 +22,13 @@ The folder ``scripts/benchmarks/`` has the host tools.
      - Plots the distributions from the logs.
    * - ``m4.py``
      - Prints the tables of the M4 sites of a log.
+   * - ``tails.py``
+     - The library that gives the cause of each tail :term:`sample <Sample>` from the
+       witness tables (``LATBENCH_TAIL``, see :doc:`../../explanation/tail-witnesses`). No
+       commands.
+   * - ``prestamp.py``
+     - Compares the instructions of an ISR before its time stamp in two
+       images (see :doc:`../../explanation/tail-witnesses`).
    * - ``loadmodel.py``
      - Calculates the ticks on which several periodic load timers expire.
    * - ``trees.py``

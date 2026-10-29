@@ -215,6 +215,32 @@ config LATBENCH_SWTRIG
 	  EXTI). See common/src/swtrig.c. Only for the apps and paths that
 	  support it (irq_latency: wrapped and direct; wake_latency).
 
+config LATBENCH_TAIL
+	bool "Witnesses of the tail samples"
+	depends on CPU_CORTEX_M_HAS_DWT && CORTEX_M_SYSTICK
+	help
+	  Keep a table of the largest samples of the main histograms, with
+	  the counters of a window around each sample: DWT EXCCNT, SysTick
+	  VAL, the load counters and the interrupted PC. The host names the
+	  cause of each sample from them (scripts/benchmarks/tails.py). The
+	  witness code runs after the end time stamp of the sample. See
+	  latbench/tail.h.
+
+config LATBENCH_TAIL_N
+	int "Rows of a witness table"
+	depends on LATBENCH_TAIL
+	range 1 256
+	default 32
+
+config LATBENCH_TAIL_MIN_CYC
+	int "Smallest sample for a witness table (cycles)"
+	depends on LATBENCH_TAIL
+	default 0
+	help
+	  Only samples of this value or more go into the table. The table
+	  keeps the largest of them. The LAT TAIL line counts all of them
+	  (seen=).
+
 endmenu
 
 menu "Load generators (common/src/load.c)"

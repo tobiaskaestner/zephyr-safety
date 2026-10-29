@@ -37,3 +37,10 @@ tests:
       - CONFIG_LATBENCH_SWTRIG=y
     platform_allow:
       - nucleo_g474re
+  benchmark.latency.irq.direct.tail:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_SWTRIG=y
+      - CONFIG_LATBENCH_TAIL=y
+    platform_allow:
+      - nucleo_g474re

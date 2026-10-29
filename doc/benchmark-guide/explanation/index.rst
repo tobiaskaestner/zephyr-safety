@@ -18,6 +18,7 @@ work in this way.
    lab-exchange
    mask-time
    code-placement
+   tail-witnesses
    measurement-effects
    documentation-guidelines
    decisions/index

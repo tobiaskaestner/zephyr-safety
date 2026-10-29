@@ -16,6 +16,9 @@ Metrics:
    ``e<n>`` exception n: ``e14`` PendSV, ``e15`` SysTick, ``e22`` IRQ 6)
    and of a function. A site has the function that starts the mask
    section and its inlined functions. ``<function>`` matches one of them.
+``tail.<hist>``
+   The witness table of a histogram (``LATBENCH_TAIL``, see
+   :doc:`../explanation/tail-witnesses`).
 no metric
    The :term:`point` itself: ``drift_per_wake`` (``clock_drift_cyc / samples``),
    ``drift_ppm``.
@@ -36,6 +39,13 @@ A mode is a group of fine bins. Each bin of the group holds at least
 0.1 % of the samples. Two neighbour bins of a group are at most 2 cycles
 apart. The modes have numbers in the order of their values: mode 1 is
 the fastest.
+
+Stats of a witness table: ``n`` (rows), ``seen`` (samples at or above
+``LATBENCH_TAIL_MIN_CYC``), ``exc_min``, ``rows_ge(x)`` (rows of x cycles or
+more), ``explained_share(x)`` (the share of these rows with a cause other
+than ``none``), ``cause_share(c, x)`` and ``label_share(l, x)`` (the share
+of these rows with the cause c or the label l). If no row has x cycles or
+more, the check is not evaluated.
 
 Stats of M4 sites: ``n`` (sum of the sections), ``max``, ``max_net``,
 ``min_net`` (net: minus the floor of the calibration), ``max(<x>)`` over

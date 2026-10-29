@@ -48,6 +48,16 @@ Line types
    * - ``LAT PB <bin> <count> <min> <max> <sum>``
      - One bin of a phase histogram. Only bins with a count other than 0
        are printed.
+   * - ``LAT TAIL <name> n=<rows> seen=<k> min_cyc=<c> exc_min=<e> exc_max=<e> fields=<f1>,<f2>,...``
+     - Start of a witness table of the histogram ``<name>``
+       (``LATBENCH_TAIL``, see :doc:`../explanation/tail-witnesses`). ``seen``
+       counts the samples of ``min_cyc`` or more. ``exc_min`` and ``exc_max``
+       are the smallest and the largest exception cycles of all windows.
+       ``fields`` names the values of each row, in their order.
+   * - ``LAT TW <value> ...``
+     - One row of a witness table, one value per field. ``pc`` and ``icsr``
+       are hexadecimal (``0x...``), all others decimal. The rows are not in
+       order.
    * - ``LAT DONE``
      - End of the output. The host stops the capture at the first
        ``LAT DONE`` after a ``LAT BEGIN``.
@@ -229,6 +239,19 @@ Metadata keys
      - The smallest difference of two back-to-back reads of the stimulus
        timer. It is the bound of the offset in the hardware path (see
        :ref:`benchguide-method-swtrig`)
+   * - ``tail_n``, ``tail_min_cyc``
+     - ``LATBENCH_TAIL``
+     - ``LATBENCH_TAIL_N`` and ``LATBENCH_TAIL_MIN_CYC``
+   * - ``tail_cost_empty_cyc``, ``tail_cost_mark_cyc``,
+       ``tail_cost_reject_cyc``, ``tail_cost_store_cyc``,
+       ``tail_cost_full_cyc``
+     - ``LATBENCH_TAIL``
+     - The cost of the witness calls in counts of the stimulus timer, with
+       the interrupts locked, the smallest of 64 tries: two time stamps
+       with nothing between, the mark, an add that the table rejects, an
+       add that fills the last free row (with the scan of the full
+       table), an add that replaces a row. Each value includes one empty
+       pair (``tail_cost_empty_cyc``)
    * - ``sw_triggers``
      - ``LATBENCH_SWTRIG``
      - Number of software triggers, warm-up included. It comes after the

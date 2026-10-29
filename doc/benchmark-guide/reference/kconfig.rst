@@ -85,6 +85,17 @@ Common options
        ``_sw``. Only ``irq_latency`` (paths ``wrapped``, ``direct``) and
        ``wake_latency``, Cortex-M Mainline (see
        :ref:`benchguide-method-swtrig`)
+   * - ``LATBENCH_TAIL``
+     - n
+     - Witness tables of the largest :term:`samples <Sample>` (see
+       :doc:`../explanation/tail-witnesses`). Cortex-M with DWT and SysTick
+   * - ``LATBENCH_TAIL_N``
+     - 32
+     - Rows of a witness table (range 1 to 256, only with ``LATBENCH_TAIL``)
+   * - ``LATBENCH_TAIL_MIN_CYC``
+     - 0
+     - Smallest sample that goes into a witness table (only with
+       ``LATBENCH_TAIL``)
 
 Load generators
 ---------------

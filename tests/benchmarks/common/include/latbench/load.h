@@ -33,4 +33,11 @@ void load_start(void);
 /** Stop the load timers, then print the load settings and counters. */
 void load_print(void);
 
+#if defined(CONFIG_LATBENCH_TAIL)
+/** Number of expiries of the load timers so far. */
+uint32_t load_timer_count(void);
+/** Number of wakes of the sleeper load threads so far. */
+uint32_t load_wake_count(void);
+#endif
+
 #endif /* LATBENCH_LOAD_H_ */

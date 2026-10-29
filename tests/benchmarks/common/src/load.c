@@ -202,3 +202,24 @@ void load_print(void)
 	lat_phase_print(&p_tmr);
 #endif
 }
+
+#if defined(CONFIG_LATBENCH_TAIL)
+/* The load counters, for the tail witnesses (latbench/tail.h). */
+uint32_t load_timer_count(void)
+{
+#if N_TIMERS > 0
+	return n_timer_expiries;
+#else
+	return 0U;
+#endif
+}
+
+uint32_t load_wake_count(void)
+{
+#if N_THREADS > 0 && defined(CONFIG_LATBENCH_LOAD_THREAD_SLEEPER)
+	return n_sleeper_wakes;
+#else
+	return 0U;
+#endif
+}
+#endif

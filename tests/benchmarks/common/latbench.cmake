@@ -63,6 +63,9 @@ if(LATBENCH_STIM)
   if(CONFIG_LATBENCH_SWTRIG)
     target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/swtrig.c)
   endif()
+  if(CONFIG_LATBENCH_TAIL)
+    target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/tail.c)
+  endif()
 endif()
 
 # Hot code in RAM (LATBENCH_CODE_RAM in common/Kconfig). Relocates the code

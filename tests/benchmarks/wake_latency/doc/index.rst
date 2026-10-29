@@ -104,3 +104,14 @@ histogram ``irq_sw``. :ref:`benchguide-irq-latency-swtrig` describes the
 time stamps and the ``LAT META`` keys. The edge samples meet the idle
 thread in WFI. The software samples meet a running thread, so the wake
 path switches away from a preempted thread and not from the idle thread.
+
+Tail witnesses
+--------------
+
+With ``LATBENCH_TAIL=y`` the woken thread keeps a witness table of the
+largest ``irq2thr`` samples (``LAT TAIL irq2thr``, ``aux`` is the ``irq``
+part). The window starts when the thread arms the edge and ends after the
+time stamps of the thread. With ``LATBENCH_SWTRIG=y`` a second table
+``irq2thr_sw`` has the software samples. Its window starts at the request
+to the trigger thread. The tables have no PC: a read in the ISR makes the
+wake path longer. See :doc:`/explanation/tail-witnesses`.
