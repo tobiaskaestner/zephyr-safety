@@ -8,6 +8,7 @@
 #include <zephyr/arch/cpu.h>
 #include <zephyr/arch/syscall.h>
 #include <kernel_arch_interface.h>
+#include <kernel_arch_func.h>
 
 DEFINE_FAKE_VALUE_FUNC(uint32_t, unit_arch_k_cycle_get_32);
 DEFINE_FAKE_VALUE_FUNC(uint64_t, unit_arch_k_cycle_get_64);
@@ -32,7 +33,15 @@ DEFINE_FAKE_VALUE_FUNC(bool, unit_arch_is_user_context);
 #endif /* CONFIG_USERSPACE */
 
 DEFINE_FAKE_VALUE_FUNC(bool, arch_is_in_isr);
+#ifndef CONFIG_USE_SWITCH
 DEFINE_FAKE_VOID_FUNC(arch_thread_return_value_set, struct k_thread *, unsigned int);
+#endif
+DEFINE_FAKE_VALUE_FUNC(int, arch_coprocessors_disable, struct k_thread *);
+
+/* The context switch of kernel_arch_func.h (see the model group platform). */
+DEFINE_FAKE_VALUE_FUNC(int, arch_swap, unsigned int);
+DEFINE_FAKE_VOID_FUNC(arch_switch, void *, void **);
+DEFINE_FAKE_VOID_FUNC(arch_spin_relax);
 
 static void arch_fakes_reset(const struct ztest_unit_test *test, void *fixture)
 {
@@ -44,6 +53,7 @@ static void arch_fakes_reset(const struct ztest_unit_test *test, void *fixture)
 	ARCH_SYSCALL_FFF_FAKES_LIST(RESET_FAKE);
 #endif
 	KERNEL_ARCH_INTERFACE_FFF_FAKES_LIST(RESET_FAKE);
+	KERNEL_ARCH_FUNC_FFF_FAKES_LIST(RESET_FAKE);
 }
 
 ZTEST_RULE(arch_fakes_reset, arch_fakes_reset, NULL);

@@ -362,15 +362,13 @@ uint32_t kernel_unit_sched_ref_choices(void)
  * (ready_seq), as the code does. The contract permits any of them. The
  * selection ends the effect of z_thread_prio_set() on the rule.
  */
-static void select_thread(void)
+static struct kernel_unit_sched_ref_thread *next_thread(void)
 {
 	uint32_t choices = kernel_unit_sched_ref_choices();
 	struct kernel_unit_sched_ref_thread *next = NULL;
 
-	REF.preempt_ok = false;
 	if (choices == KERNEL_UNIT_SCHED_REF_IDLE) {
-		set_cur(NULL);
-		return;
+		return NULL;
 	}
 	for (size_t i = 0; i < REF.n_threads; i++) {
 		struct kernel_unit_sched_ref_thread *t = &REF.threads[i];
@@ -380,7 +378,23 @@ static void select_thread(void)
 			next = t;
 		}
 	}
+
+	return next;
+}
+
+static void select_thread(void)
+{
+	struct kernel_unit_sched_ref_thread *next = next_thread();
+
+	REF.preempt_ok = false;
 	set_cur(next);
+}
+
+struct k_thread *kernel_unit_sched_ref_next(void)
+{
+	struct kernel_unit_sched_ref_thread *next = next_thread();
+
+	return (next != NULL) ? next->thread : NULL;
 }
 
 unsigned int kernel_unit_sched_ref_check(void)

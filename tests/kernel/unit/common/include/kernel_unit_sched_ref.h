@@ -328,6 +328,15 @@ void kernel_unit_sched_ref_assert_ok(void);
  */
 uint32_t kernel_unit_sched_ref_choices(void);
 
+/**
+ * @brief Return the thread that the next selection takes, without a change (NULL: idle).
+ *
+ * This is the thread of kernel_unit_sched_ref_choices() that is first in the
+ * run queue order: the thread that the fake selects at the next reschedule
+ * point.
+ */
+struct k_thread *kernel_unit_sched_ref_next(void);
+
 /** @brief Return the bit of @p thread in a set of threads (NULL: the idle thread). */
 uint32_t kernel_unit_sched_ref_bit(const struct k_thread *thread);
 

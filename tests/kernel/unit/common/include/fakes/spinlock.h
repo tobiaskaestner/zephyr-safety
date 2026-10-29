@@ -30,12 +30,17 @@ extern "C" {
 	FAKE(z_spin_lock_valid)                                                                    \
 	FAKE(z_spin_unlock_valid)                                                                  \
 	FAKE(z_spin_lock_set_owner)                                                                \
-	FAKE(z_spin_lock_transfer_owner)
+	FAKE(z_spin_lock_transfer_owner)                                                           \
+	FAKE(z_assert_can_swap)                                                                    \
+	FAKE(z_spin_validate_reset)
 
 DECLARE_FAKE_VALUE_FUNC(bool, z_spin_lock_valid, struct k_spinlock *);
 DECLARE_FAKE_VALUE_FUNC(bool, z_spin_unlock_valid, struct k_spinlock *);
 DECLARE_FAKE_VOID_FUNC(z_spin_lock_set_owner, struct k_spinlock *);
 DECLARE_FAKE_VOID_FUNC(z_spin_lock_transfer_owner, struct k_spinlock *);
+/* The checks of a context switch (kernel/include/kswap.h, kernel/sched.c). */
+DECLARE_FAKE_VOID_FUNC(z_assert_can_swap, unsigned int, struct k_spinlock *);
+DECLARE_FAKE_VOID_FUNC(z_spin_validate_reset, bool);
 
 #ifdef __cplusplus
 }

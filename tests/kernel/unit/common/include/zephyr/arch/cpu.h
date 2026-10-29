@@ -40,11 +40,16 @@ struct _callee_saved {
 
 typedef struct _callee_saved _callee_saved_t;
 
+/*
+ * The two fields of the Cortex-M thread record that the context switch uses
+ * (arch/arm/include/cortex_m/thread.h). The model group platform
+ * (kernel_unit_platform.h) reads and writes them, as arch_swap() and PendSV
+ * do: the swap return value of a thread, and its BASEPRI while it is
+ * switched out. No other fake group uses them.
+ */
 struct _thread_arch {
-#ifdef CONFIG_CPP
-	/* C++ does not allow empty structs, add an extra 1 byte */
-	uint8_t c;
-#endif
+	int swap_return_value;
+	unsigned int basepri;
 };
 
 typedef struct _thread_arch _thread_arch_t;

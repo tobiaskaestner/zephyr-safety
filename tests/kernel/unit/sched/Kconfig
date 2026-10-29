@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+config KERNEL_UNIT_CORTEX_M_SWITCH
+	bool "Model the context switch of Cortex-M"
+	default y
+	select SWAP_NONATOMIC
+	select USE_SWITCH_SUPPORTED
+	help
+	  The unit_testing architecture has no context switch. The sched
+	  application models the one of Cortex-M (the model group platform).
+	  On Cortex-M, CONFIG_SWAP_NONATOMIC is always y, and
+	  CONFIG_USE_SWITCH is an option (arch/arm/core/Kconfig). This option
+	  selects the same symbols. Then a scenario can set
+	  CONFIG_USE_SWITCH.
+
+rsource "../common/Kconfig"
+
+source "Kconfig.zephyr"

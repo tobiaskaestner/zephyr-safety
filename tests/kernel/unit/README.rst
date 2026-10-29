@@ -24,6 +24,10 @@ The application ``sched_ref`` is an exception: it includes no kernel source
 file. It is the self-test of the reference fake of the scheduler (see
 `Reference fake of the scheduler`_).
 
+The application ``sched`` is the other exception: its kernel-internal headers
+are real, and the arch layer below the unit has a model of the platform (see
+`The real scheduler on the platform model`_).
+
 Test applications
 *****************
 
@@ -63,6 +67,9 @@ Test applications
    * - ``sched_ref``
      - the fake group ``sched_ref`` (no kernel source file)
      - 2
+   * - ``sched``
+     - ``kernel/sched.c`` with its real headers
+     - 8
 
 `Configurations`_ gives the configuration options of each unit.
 
@@ -359,8 +366,41 @@ the *shadow headers*.
   ``__ztest_set_test_result_mrsh.c`` and ``libc-hooks.h`` are empty. ztest
   and ``zephyr/sys/libc-hooks.h`` include them.
 
+- ``kernel_arch_func.h`` replaces the arch header of a real port (for
+  Cortex-M ``arch/arm/include/cortex_m/kernel_arch_func.h``). It declares the
+  fakes ``arch_swap()``, ``arch_switch()`` and ``arch_spin_relax()`` of the
+  group ``arch``. ``kernel/sched.c`` and ``kswap.h`` include it.
+- ``zephyr/arch/cpu.h`` gives ``struct _thread_arch`` the two fields of the
+  Cortex-M thread record that the context switch uses:
+  ``swap_return_value`` and ``basepri``. Only the model group ``platform``
+  uses them.
+
 ``kernel/include`` is not on the include path. If a unit includes a new
-kernel-internal header, the build fails until the header has a shadow.
+kernel-internal header, the build fails until the header has a shadow, or
+until the application makes the header real (see `Real headers of an
+application`_).
+
+Real headers of an application
+==============================
+
+An application can make kernel-internal headers real (decision Q8 of the unit
+map). Thus it states its unit boundary in its ``CMakeLists.txt``:
+
+.. code-block:: cmake
+
+   kernel_unit_real_headers(ksched kthread wait_q)
+
+For each name, ``kernel_unit_real_headers()`` writes a forwarding header
+``<build>/kernel_unit/real_include/<name>.h`` with one ``#include`` of
+``kernel/include/<name>.h``. This directory comes before ``common/include``.
+The other kernel-internal headers stay shadows. A forwarding header and not
+a copy: the compiler messages and gcov see the real path. Each name also
+gives the definition ``KERNEL_UNIT_REAL_HEADER_<name>``.
+
+Do not link a fake group that fakes a function of a real header. For
+example, the group ``sched`` fakes ``z_sched_wake()``, which is inline code
+of the real ``ksched.h``. Today only the application ``sched`` has real
+headers.
 
 Pure helpers stay real
 ======================
@@ -448,8 +488,12 @@ it must not link. The groups are:
 
 - ``arch``: the architecture layer. These are the ``unit_arch_*()`` fakes
   of ``zephyr/arch/cpu.h`` and, with ``CONFIG_USERSPACE``, of
-  ``zephyr/arch/syscall.h``. The group also has ``arch_is_in_isr()`` and
-  ``arch_thread_return_value_set()`` of ``kernel_arch_interface.h``.
+  ``zephyr/arch/syscall.h``. The group also has ``arch_is_in_isr()``,
+  ``arch_thread_return_value_set()`` and ``arch_coprocessors_disable()`` of
+  ``kernel_arch_interface.h``, and ``arch_swap()``, ``arch_switch()`` and
+  ``arch_spin_relax()`` of ``kernel_arch_func.h``. With ``CONFIG_USE_SWITCH``,
+  the real ``kernel_internal.h`` defines ``arch_thread_return_value_set()``,
+  and the group has no fake of it.
 - ``sched``: the kernel-internal scheduler interface. These are the fakes
   of the shadows ``ksched.h``, ``scheduler.h``, ``wait_q.h`` and
   ``timeout_q.h``, for example ``z_thread_prio_set()``. The real functions
@@ -474,7 +518,8 @@ it must not link. The groups are:
 - ``init``: the data ``_kernel`` of ``kernel/init.c``. Without SMP,
   ``_current`` is ``_kernel.cpus[0].current``. The rule sets ``_kernel`` to
   zeros before each test. A test that needs a current thread sets this
-  pointer. This group has no fakes and no header: ``zephyr/kernel_structs.h``
+  pointer. The group also defines ``z_idle_threads`` (the rule sets it to
+  zeros). This group has no fakes and no header: ``zephyr/kernel_structs.h``
   declares ``_kernel``. The group also defines the log module ``os``
   (``LOG_MODULE_REGISTER(os)``), for a unit with
   ``LOG_MODULE_DECLARE(os, ...)``, for example ``mutex.c``.
@@ -507,13 +552,32 @@ it must not link. The groups are:
 - ``assert``: ``assert_print()`` and ``assert_post_action()``
   (``lib/os/assert.c``). Link it only with ``CONFIG_ASSERT``.
 - ``spinlock``: the spinlock validation functions
-  (``kernel/spinlock_validate.c``). Link it only with
-  ``CONFIG_SPIN_VALIDATE``.
+  (``kernel/spinlock_validate.c``), also ``z_assert_can_swap()``,
+  ``z_spin_validate_reset()`` and the data ``z_spinlock_abort_sentinel`` of a
+  context switch. Link it only with ``CONFIG_SPIN_VALIDATE``.
 - ``sched_ref``: the reference fake of the scheduler contract (see
   `Reference fake of the scheduler`_). This group is a model group: no
   kernel source file defines its functions. It sets the ``custom_fake`` of
   the fakes of the groups ``sched`` and ``arch``, so it needs the groups
   ``sched``, ``arch``, ``fatal`` and ``init``.
+- ``timeout``: ``z_add_timeout()``, ``z_try_abort_timeout()`` and
+  ``z_timeout_inflight_superseded()`` (``kernel/timeout.c``, header
+  ``fakes/timeout.h``). Link it only with the real ``timeout_q.h``: with the
+  shadow, ``z_try_abort_thread_timeout()`` is a fake of the group ``sched``.
+  After the reset, each fake returns 0. The opt-in model
+  (``kernel_unit_timeout_model_install()``) is the C form of the module
+  Timeout: armed timeouts with a deadline on a fake clock, and
+  ``kernel_unit_timeout_expire_first()``, which runs the handler of the first
+  armed timeout.
+- ``timeslicing``: ``z_time_slice_reset()`` and the data ``pending_current``
+  (``kernel/timeslicing.c``, header ``fakes/timeslicing.h``).
+- ``thread``: ``z_dummy_thread_init()`` (``kernel/thread.c``, header
+  ``fakes/thread.h``). Do not link it in a unit test of ``kernel/thread.c``.
+- ``platform``: the model of the platform below the scheduler (see `The real
+  scheduler on the platform model`_). This group is a model group, as
+  ``sched_ref``. It sets the ``custom_fake`` of the fakes of the group
+  ``arch``, so it needs the groups ``arch`` and ``init``. With the group
+  ``timeout``, its timer ISR lets the timeouts expire.
 - ``log_minimal``: ``z_log_minimal_printk()``
   (``subsys/logging/log_minimal.c``). The ``unit_testing`` board uses
   ``CONFIG_LOG_MODE_MINIMAL``. A ``LOG_DBG()`` of the unit calls this
@@ -574,6 +638,15 @@ of each unit are:
   ``CONFIG_X``).
 - ``sched_ref`` (the self-test of the reference fake): ``CONFIG_ASSERT``
   (scenario ``assert``), for the assertion hook of the ISR refusal.
+- ``sched.c``: the context switch (``CONFIG_USE_SWITCH``, scenarios ``switch``
+  and ``switch_assert``; the default is ``arch_swap()`` with PendSV), the run
+  queue backend (``CONFIG_SCHED_MULTIQ``), the wait queue backend
+  (``CONFIG_WAITQ_SCALABLE``), ``CONFIG_TIMESLICING`` (scenario
+  ``no_timeslicing``), ``CONFIG_NUM_METAIRQ_PRIORITIES`` (scenario
+  ``metairq``) and ``CONFIG_ASSERT`` (with ``CONFIG_SPIN_VALIDATE``). The
+  option ``CONFIG_KERNEL_UNIT_CORTEX_M_SWITCH`` of the application (default
+  y) selects ``CONFIG_SWAP_NONATOMIC`` and ``CONFIG_USE_SWITCH_SUPPORTED``, as
+  the Cortex-M port does.
 - ``obj_core.c``: ``CONFIG_OBJ_CORE`` (all scenarios,
   ``CONFIG_OBJ_CORE_SYSTEM`` has no prompt), ``CONFIG_OBJ_CORE_STATS``,
   ``CONFIG_OBJ_CORE_STATS_SYSTEM`` (scenario ``stats_no_system`` disables
@@ -915,6 +988,75 @@ An application that uses the fake links the groups ``init`` and
 application ``sched_ref`` tests the fake against the example values of
 ``mc/SchedulerTest.tla`` and against the misuses of ``mc/MCScheduler.tla``.
 
+The real scheduler on the platform model
+----------------------------------------
+
+The application ``sched`` builds the real ``kernel/sched.c``. Its headers
+``kswap.h``, ``ksched.h``, ``kthread.h``, ``metairq.h``, ``run_q.h``,
+``priority_q.h``, ``wait_q.h``, ``kspinlock.h``, ``scheduler.h``,
+``kernel_internal.h``, ``timeout_q.h``, ``timeslicing.h``, ``ipi.h`` and
+``usage.h`` are real (see `Real headers of an application`_). With
+``CONFIG_WAITQ_SCALABLE``, the test source also includes
+``kernel/priority_queues.c`` and ``lib/utils/rb.c``: they are data structures
+below the scheduler without a layer below.
+
+The model group ``platform`` (``common/include/kernel_unit_platform.h``,
+``common/fakes/platform.c``) is the contract below the scheduler: the C form of
+``safety/spec/tla/lib/Platform.tla`` for one Cortex-M CPU. Each model function
+names its operator or its ``@assumption``:
+
+- The interrupt lock is BASEPRI: ``arch_irq_lock()`` returns the old value and
+  locks, ``arch_irq_unlock(key)`` writes the key, ``arch_irq_unlocked(key)``
+  is true only for the key 0.
+- ``arch_is_in_isr()`` is true while an ISR step of the model runs.
+- ``arch_swap()`` sets PendSV pending and unlocks. The ISR steps of the gap run
+  before PendSV (``CONFIG_SWAP_NONATOMIC``). Then PendSV switches to
+  ``_kernel.ready_q.cache``.
+- ``arch_switch()`` (``CONFIG_USE_SWITCH``) comes after ``do_swap()`` has
+  set ``_current``. No gap.
+- The exit of an ISR is a reschedule point: ``z_arm_int_exit()`` without
+  ``CONFIG_USE_SWITCH``, the real ``z_sched_next_handle()`` with it.
+
+One host thread runs all threads of a test. The test code always runs as
+``_current``. A switch of a thread that cannot run (it waits or is dead) runs
+the environment steps of the test until the thread runs again: a thread
+action, an action of the thread that runs, an ISR, an ISR in the gap of
+``arch_swap()``, and the timer ISR, which calls the real ``z_thread_timeout()``.
+Then the switch returns the swap return value. If no step is left, the first
+armed timeout expires. If no timeout is armed, the check ``NO_RETURN`` fails.
+A switch of a thread that can run (a preemption) returns at once, and the
+test continues as the new current thread. An environment action must not
+wait (check ``MISUSE``), and it ends after its last reschedule point.
+
+Contract tests of the scheduler
+-------------------------------
+
+The contract tests (``common/src/test_sched_contract.c``, suite
+``sched_contract``) check layer A of ``safety/spec/tla/lib/Scheduler.tla``,
+with the example values of ``mc/SchedulerTest.tla`` and the actions that the
+objects use. The applications ``sched_ref`` and ``sched`` both build them:
+
+- In ``sched_ref``, the scheduler is the reference fake. The adapter is
+  ``sched_ref/src/contract_ref.c``.
+- In ``sched``, the scheduler is the real ``kernel/sched.c`` on the platform
+  model. The adapter is in ``sched/src/test_sched.c``, because a start state
+  calls the static ``update_cache()``.
+
+The adapter (``common/include/kernel_unit_sched_contract.h``) makes only what
+the two schedulers do in a different way: the setup, the environment of a
+wait, the code of ``kernel/thread.c`` (abort, priority change) and the
+queries. The actions call the functions of layer A directly. Thus a
+difference between the reference fake and the real code is a failing test. A
+known difference of the reference fake has ``ZTEST_EXPECT_FAIL()`` only in the
+``sched_ref`` build, with its id in a comment.
+
+The tests of the design findings of the scheduler (suite ``sched_unit`` of
+``sched``) assert the behavior that the requirement asks for, and have
+``ZTEST_EXPECT_FAIL()``. The id of the finding is in a comment. After the
+action, such a test asserts only the requirement, so a fix of the code makes
+the test pass, and ztest reports the unexpected pass as a failure. Then
+remove the ``ZTEST_EXPECT_FAIL()`` line, and regenerate the expected sets.
+
 Real object core code
 =====================
 
@@ -1012,7 +1154,9 @@ Each test has a Doxygen comment:
 The tests have no ``@testid`` and no ``@verifies`` yet.
 
 The application ``sched_ref`` is not a unit of a kernel source file. Its
-group ``kernel_unit_sched_ref_tests`` keeps its subgroups by design topic.
+group ``kernel_unit_sched_ref_tests`` keeps its subgroups by design topic. The
+contract tests are in one more group, ``kernel_unit_sched_contract``, with
+subgroups by operator, because two applications build them.
 
 The Doxygen document ``dox-kernel-unit-testspec`` ("Kernel Unit Test
 Specification", ``safety/doc/dox/kernel-unit-testspec``) shows these groups.

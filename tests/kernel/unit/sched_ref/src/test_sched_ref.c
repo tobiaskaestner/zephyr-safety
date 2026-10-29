@@ -31,8 +31,9 @@
  * priority, and a negative number is a cooperative thread. The contract uses
  * the reverse (@c ToZephyr).
  *
- * A later contract test runs the same tests against the real
- * @c kernel/sched.c (roadmap step 2, item 3).
+ * The contract tests (suite @c sched_contract, @c common/src/test_sched_contract.c)
+ * also run in this application. The application @c sched runs them against
+ * the real @c kernel/sched.c.
  */
 
 #include <string.h>
