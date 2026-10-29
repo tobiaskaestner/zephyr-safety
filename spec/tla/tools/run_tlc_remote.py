@@ -85,12 +85,13 @@ echo running > state
 export PATH=$root/jdk/current/bin:$PATH
 export TLA2TOOLS=$root/tla2tools-1.8.0/tla2tools.jar
 # user.home: TLC reads ~/.tlaplus/esc.txt (NO_STATISTICS) from there.
-# java.io.tmpdir: TLC writes the standard modules there.
-mkdir -p "$root/tmp"
-export JAVA_TOOL_OPTIONS="-Xmx$mem -Duser.home=$root/home -Djava.io.tmpdir=$root/tmp"
+# java.io.tmpdir: TLC writes the standard modules there, and does not
+# delete the directories. The job deletes them at the end.
+mkdir -p "$run/tmp"
+export JAVA_TOOL_OPTIONS="-Xmx$mem -Duser.home=$root/home -Djava.io.tmpdir=$run/tmp"
 
 finish() { # <status>
-	rm -rf "$run/out/states"
+	rm -rf "$run/out/states" "$run/tmp"
 	[ "$mode" = unpinned ] && rm -rf "$root/snapshots/$id"
 	{
 		echo "end=$(date -Iseconds)"
