@@ -147,10 +147,10 @@ Insert(e, i) ==
 \* @kind action
 InsertAny(e) == \E i \in 1..(Cardinality(Entries) + 1) : Insert(e, i)
 
-\* z_abort_timeout(): entry e is no longer armed (a give or a flush won
+\* z_try_abort_timeout(): entry e is no longer armed (a give or a flush won
 \* the race against the expiry). Without effect if e is not armed.
 \* @kind action
-\* @c-function z_abort_timeout
+\* @c-function z_try_abort_timeout
 \* @c-function z_timeout_q_remove
 Cancel(e) ==
     IF e \in Armed
@@ -159,12 +159,12 @@ Cancel(e) ==
       ELSE UNCHANGED <<tq, tqCost>>
 
 \* The entries in S are no longer armed, in one critical section (a wake of
-\* all waiters). The code calls z_abort_timeout() for each entry. The cost
+\* all waiters). The code calls z_try_abort_timeout() for each entry. The cost
 \* is k removals from a queue with n entries: exact for DLIST, an upper
 \* bound for MINHEAP (the heap becomes smaller after each removal). Without
 \* effect if no entry of S is armed.
 \* @kind action
-\* @c-function z_abort_timeout
+\* @c-function z_try_abort_timeout
 CancelSet(S) ==
     LET k == Cardinality(S \cap Armed) IN
     IF k > 0
