@@ -134,6 +134,15 @@ def instance_page(folder, root, studies, design=None):
     out = head(f"{layout.display(s['instance'])}")
     out.append(crumbs(folder, root, studies))
     out.append(f"<h1>{esc(layout.display(s['instance']))}</h1>")
+    nbi = folder / "notebooks" / "notebooks.json"
+    nbs = json.loads(nbi.read_text()).get("notebooks", {}) if nbi.is_file() else {}
+    if nbs:
+        # the report first: it has the interactive figures and the text of the study
+        links = [f"<a href='notebooks/{esc(n['html'])}'>{esc(name)}</a>" if n.get("html")
+                 else f"{esc(name)}: <span class='wrong'>failed</span> {esc(n.get('error'))}"
+                 for name, n in sorted(nbs.items())]
+        out.append(f"<div class='note'>Study report (interactive figures and the text of the study): "
+                   f"{', '.join(links)}</div>")
     study_body(s, out)
     if s["experiments"]:
         out.append("<h2>Experiments</h2><table><tr><th>Experiment</th><th>Runs</th></tr>")
@@ -143,14 +152,14 @@ def instance_page(folder, root, studies, design=None):
             out.append(f"<tr><td><a href='{layout.EXPERIMENT_PREFIX}{esc(e['name'])}/index.html'>{esc(e['name'])}</a>"
                        f"</td><td>{n}</td></tr>")
         out.append("</table>")
-    nbi = folder / "notebooks" / "notebooks.json"
-    if nbi.is_file():
-        nbs = json.loads(nbi.read_text()).get("notebooks", {})
-        out.append("<h2>Notebooks</h2><ul>")
-        for name, n in sorted(nbs.items()):
-            out.append(f"<li><a href='notebooks/{esc(n['html'])}'>{esc(name)}</a></li>" if n.get("html")
-                       else f"<li>{esc(name)}: <span class='wrong'>failed</span> {esc(n.get('error'))}</li>")
-        out.append("</ul>")
+        for e in s["experiments"]:
+            edir = f"{layout.EXPERIMENT_PREFIX}{e['name']}"
+            imgs = [p for p in plot_list(folder / edir) if p["kind"] == "overview"]
+            if imgs:
+                out.append(f"<h3><a href='{esc(edir)}/index.html'>{esc(e['name'])}</a></h3>")
+                out += [f"<div class='plot'><a href='{esc(edir)}/index.html'><img src='{esc(edir)}/plots/"
+                        f"{esc(p['file'])}' alt='overview of {esc(e['name'])} {esc(p['metric'])}' loading='lazy'>"
+                        "</a></div>" for p in imgs]
     subs = sorted(c for c in studies if c.parent == folder)
     if subs:
         out.append("<h2>Sub-studies</h2><table><tr><th>Sub-study</th><th>Verdicts</th></tr>")
@@ -165,6 +174,14 @@ def instance_page(folder, root, studies, design=None):
 def instance_runs(folder):
     try:
         return json.loads((folder / "instance.json").read_text()).get("runs", [])
+    except (OSError, ValueError):
+        return []
+
+
+def plot_list(edir):
+    """The plots of plots/plots.json of an experiment folder ([] without plots)."""
+    try:
+        return json.loads((edir / "plots" / "plots.json").read_text()).get("plots", [])
     except (OSError, ValueError):
         return []
 

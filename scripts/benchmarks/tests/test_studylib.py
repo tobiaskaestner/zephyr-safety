@@ -338,9 +338,16 @@ def test_build_small_tree(tmp_path, monkeypatch):
     t, w = build.build(res / "top", dry=True, log=lambda *a: None)
     assert w.differ == []
     from studylib import html
+    (inst / "ex-exp1" / "plots").mkdir(exist_ok=True)          # the overview plot and the report on the study page
+    (inst / "ex-exp1" / "plots" / "plots.json").write_text(json.dumps({"runs": [], "app": "wake_latency", "plots": [
+        {"kind": "overview", "metric": "isr2thr", "file": "overview-isr2thr.svg"}]}))
+    (inst / "notebooks").mkdir(exist_ok=True)
+    (inst / "notebooks" / "notebooks.json").write_text(json.dumps({"notebooks": {"report": {"html": "report.html"}}}))
     files = html.write_pages(res / "top", design=design)
     sub = (inst / "index.html").read_text()
     assert "b is slower" in sub and "<a href='../index.html'>top</a>" in sub
+    assert "<img src='ex-exp1/plots/overview-isr2thr.svg'" in sub
+    assert sub.index("<a href='notebooks/report.html'>report</a>") < sub.index("b is slower")
     top_page = (res / "top" / "index.html").read_text()
     assert "<a href='st-sub@nucleo_g474re/index.html'>st-sub@nucleo_g474re</a>" in top_page
     exp_page = (inst / "ex-exp1" / "index.html").read_text()

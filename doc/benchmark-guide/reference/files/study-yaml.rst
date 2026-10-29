@@ -111,7 +111,11 @@ at the results root:
    .venv/bin/jupyter lab results/kernel-latency
 
 The file browser shows the results tree: open the ``notebooks`` folder of
-an instance. An executed notebook finds its instance from its folder and
+an instance, and open ``report.ipynb``. The HTML viewer of JupyterLab runs
+no scripts until you click "Trust HTML", so ``report.html`` shows no
+figures there; open it in a web browser instead. The page of each
+instance (``index.html``) links its report at the top and shows the
+overview plot of each experiment. An executed notebook finds its instance from its folder and
 the safety repository from the lab space, so it can run again and you
 can change it there. To change a report for all, change the notebook in
 the safety repository and commit it without outputs. The next ``analysis
