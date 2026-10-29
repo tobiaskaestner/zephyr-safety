@@ -544,7 +544,8 @@ variables ``LATBENCH_INSTANCE`` (the instance folder) and
 ``LATBENCH_REPO`` (the safety repository). ``scripts/benchmarks/data.py``
 loads the instance. The output goes to
 ``<instance>/notebooks/<name>.html``. ``notebooks.json`` has the digest
-of the inputs (the notebook and ``study.json``). With the same digest,
+of the inputs (the notebook, ``study.json``, ``data.py`` and
+``nbfig.py``). With the same digest,
 the notebook does not run again. The instance page links to the
 notebooks. The output is not byte-stable, so ``analysis check`` does not
 compare it. The packages are in

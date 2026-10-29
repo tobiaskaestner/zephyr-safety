@@ -8,8 +8,11 @@
     inst.hypotheses()            one row per hypothesis
     inst.checks()                one row per check, with the basis from the design
     inst.central()               one row per sentence of a central result
-    inst.rows("wake-stim-seed-1m")    the rows of experiment.json (percentiles per run, tree, point, metric)
+    inst.rows("wake-stim-seed-1m")    the rows of experiment.json (percentiles per run, tree, point, metric),
+                                      with a column value.<axis> for each axis that has numbers
+    inst.axis_values("wake-timers-1m")   {axis: {label: value}} from the design of the experiment
     inst.points("wake-stim-seed-1m")  the points of the evidence runs: app data of rep 1
+    inst.meta("wake-clock-drift")     one row per point with its LAT META values
     inst.hist(point, "irq", "wake-stim-seed-1m")
     data.ccdf(hist)              (x, share of samples >= x)
 
@@ -88,7 +91,20 @@ class Instance:
     def rows(self, experiment):
         import pandas as pd
         ej = self.experiment_json(experiment)
-        return pd.DataFrame(ej["rows"], columns=ej["columns"])
+        df = pd.DataFrame(ej["rows"], columns=ej["columns"])
+        for axis, values in self.axis_values(experiment).items():
+            if f"axis.{axis}" in df and values:
+                df[f"value.{axis}"] = df[f"axis.{axis}"].map(values)
+        return df
+
+    def axis_values(self, experiment):
+        """{axis: {label: value}}: the "value:" of each axis label in the design of the experiment."""
+        f = trees.REPO_DIR / self.experiment_json(experiment)["design"]["file"]
+        if not f.is_file():
+            return {}
+        axes = (yaml.safe_load(f.read_text()) or {}).get("axes") or {}
+        return {a: {k: v["value"] for k, v in (labels or {}).items() if isinstance(v, dict) and "value" in v}
+                for a, labels in axes.items()}
 
     # ------------------------------------------------------------ data
     def experiment_json(self, experiment):
@@ -131,6 +147,11 @@ class Instance:
                 if p["reps"]:
                     out.append((r["id"], p["tree"], p["point"], p["reps"][0]))
         return out
+
+    def meta(self, experiment):
+        """One row per evidence point: run, tree, point and the LAT META values of rep 1."""
+        import pandas as pd
+        return pd.DataFrame([{"run": r, "tree": t, "point": p, **rep["meta"]} for r, t, p, rep in self.points(experiment)])
 
     def hist(self, point, metric, experiment, tree=None, run_id=None):
         for rid, t, p, rep in (self.points(experiment) if run_id is None else

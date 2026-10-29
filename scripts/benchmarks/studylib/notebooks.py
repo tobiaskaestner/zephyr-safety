@@ -17,8 +17,8 @@ environment
 
 and the safety repo as the current folder, and writes
 <instance>/notebooks/<name>.html (nbconvert) and notebooks.json: for each
-notebook the digest of its inputs (the notebook file and the study.json of
-the instance). With the same digest, the notebook does not run again
+notebook the digest of its inputs (the notebook file, the study.json of
+the instance and the helper modules data.py and nbfig.py). With the same digest, the notebook does not run again
 (--force runs it). The output of a notebook is not byte-stable (time
 stamps, ids), so "analysis check" does not compare it. The packages are
 in scripts/benchmarks/requirements-notebooks.lock (not needed for the other
@@ -47,10 +47,17 @@ def notebooks_of(design_folder):
     return sorted(d.glob("*.ipynb")) + sorted((d / "notebooks").glob("*.ipynb"))
 
 
-def inputs_digest(nb, study_json):
+# The helper modules of the notebooks: a change of them changes the output too.
+HELPERS = ("scripts/benchmarks/data.py", "scripts/benchmarks/nbfig.py")
+
+
+def inputs_digest(nb, study_json, repo=None):
     h = hashlib.sha256()
     for f in (nb, study_json):
         h.update(hashlib.sha256(Path(f).read_bytes()).digest())
+    for rel in HELPERS:
+        f = Path(repo or trees.REPO_DIR) / rel
+        h.update(hashlib.sha256(f.read_bytes() if f.is_file() else b"").digest())
     return h.hexdigest()
 
 

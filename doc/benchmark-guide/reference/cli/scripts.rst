@@ -33,6 +33,9 @@ The folder ``scripts/benchmarks/`` has the host tools.
    * - ``data.py``
      - The library that loads a built :term:`instance` for a notebook (no
        commands).
+   * - ``nbfig.py``
+     - The interactive figures (plotly) and tables of the study notebooks
+       (no commands).
 
 Python packages
 ---------------

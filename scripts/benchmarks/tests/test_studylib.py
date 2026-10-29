@@ -563,6 +563,29 @@ def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     assert d.app_data(rid)["app"] == "wake_latency"
     x, y = data.ccdf(d.hist("a", "isr2thr", "exp1"))
     assert x == [100, 200] and y == [1.0, 0.1]
+    assert list(d.meta("exp1")["point"]) == ["a", "b"]
+    assert d.axis_values("exp1") == {"variant": {}}  # an axis without "value:"
+    assert "value.variant" not in d.rows("exp1")
+
+
+def test_notebook_figures(monkeypatch):
+    """The figures of nbfig: one trace per series and metric, a menu for the metrics, colours by series."""
+    pd = pytest.importorskip("pandas")
+    pytest.importorskip("plotly")
+    import nbfig
+    h = {"irq": hist([(50, 9), (60, 1)]), "isr2thr": hist([(700, 10)])}
+    series = {"a": h, "b": h}
+    fig = nbfig.ccdf(series, "t")
+    assert len(fig.data) == 4 and [t.visible for t in fig.data] == [True, True, False, False]
+    assert [b.label for b in fig.layout.updatemenus[0].buttons] == [nbfig.METRIC_NAMES["isr2thr"],
+                                                                     nbfig.METRIC_NAMES["irq"]]
+    assert fig.data[0].line.color == fig.data[2].line.color == nbfig.COLORS[0]
+    df = pd.DataFrame([{"tree": "ws-up", "point": p, "metric": m, "value.timers": v, "p50": 10 * v + 1,
+                        "p99": 20 * v + 1, "max": 30 * v + 1}
+                       for p, v in (("t0", 0), ("t16", 16)) for m in ("irq", "isr2thr")])
+    assert len(nbfig.dots(df, "t").data) == 2 * 3
+    assert len(nbfig.sweep(df, "value.timers", "t").data) == 2 * 3
+    assert nbfig.pivot(df, "p50").loc["t16", "irq"] == 161
 
 
 def test_merge_takes_the_new_runs_of_another_tree(tmp_path, monkeypatch):
@@ -682,6 +705,11 @@ def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
     assert (inst / "notebooks" / "report.html").read_text() == "<html>ok</html>"
     assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["the same inputs"]
     assert len(calls) == 1
+    helper = tmp_path / "scripts" / "benchmarks" / "nbfig.py"     # a changed helper module runs it again
+    helper.parent.mkdir(parents=True)
+    helper.write_text("# changed\n")
+    assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["ran"]
+    assert len(calls) == 2
 
     def broken(nb_file, folder, repo):
         raise notebooks.NotebookError("cell 3: KeyError")

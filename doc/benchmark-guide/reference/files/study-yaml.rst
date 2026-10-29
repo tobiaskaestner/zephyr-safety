@@ -79,7 +79,15 @@ hypothesis whose statement has a ``TODO`` text, gets the :term:`verdict`
 Notebooks
 ---------
 
-A study can have notebooks, for example ``report.ipynb``, committed
-without outputs. A notebook reads a built instance with
-``scripts/benchmarks/data.py``. ``study.py analysis notebooks`` runs them
-(see :doc:`../cli/study-py`).
+A study can have notebooks, committed without outputs. Each study has
+``report.ipynb``, its report. The report starts with the same part in
+all studies: the instance, the question, the central results, the
+hypotheses and the checks. Then it shows the data of the study as
+interactive figures, each with a table of its values. A notebook reads a
+built instance with ``scripts/benchmarks/data.py`` and makes its figures
+with ``scripts/benchmarks/nbfig.py``. In the figures, you can hover for
+values, drag to zoom, click a legend entry to hide a series, and select
+the metric in the menu above a figure. ``study.py analysis notebooks``
+runs the notebooks (see :doc:`../cli/study-py`). The HTML of a report
+loads plotly.js from its CDN (``cdn.plot.ly``), so it shows the figures
+only with network access.
