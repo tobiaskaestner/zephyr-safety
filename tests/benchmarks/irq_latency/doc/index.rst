@@ -138,6 +138,92 @@ Output with the option: the histograms and phase histograms ``irq`` and
 ``sw_trigger``, ``sw_trigger_irqn``, ``sw_trigger_prio``, ``sw_read_cyc``
 and ``sw_triggers`` (see :doc:`/reference/log-format`).
 
+.. _benchguide-irq-latency-scenarios:
+
+Scenarios
+---------
+
+The Kconfig choice ``LATBENCH_IRQ_SCENARIO`` selects what the app
+measures. The default ``LATBENCH_IRQ_SCEN_ENTRY`` is the entry, as
+described above. The other four scenarios come from the upstream
+interrupt benchmark (Zephyr PR 117170, head ``8551fe0ce465``). They need
+the path ``wrapped`` or ``direct``. ``src/scenario.c`` has their code.
+The build adds the file only for these scenarios, so the images of the
+entry do not change.
+
+In these scenarios the main thread drives each sample. It arms the edge
+with the usual random delay, does the part of the scenario before the
+edge, waits for the ISR and records the sample. Between the samples it
+spins: the CPU does not enter WFI. The edge keeps its random time, so the
+samples keep a random tick phase.
+
+.. list-table::
+   :header-rows: 1
+   :widths: 13 44 43
+
+   * - Scenario
+     - This app
+     - Upstream scenario
+   * - ``unlock``
+     - 20 us before the edge, the main thread calls ``irq_lock()``. It
+       waits until the edge is pending in the NVIC, holds the lock until
+       ``LATBENCH_UNLOCK_HOLD_US`` (10) after the edge, reads the timer
+       (``t0``) and calls ``irq_unlock()``. ``irq_unlock`` = ISR time
+       stamp - ``t0``.
+     - ``locked_unlock_to_isr``: the thread locks, pends the IRQ with
+       ``STIR``, holds 10 us, walks a cache pollution buffer, reads the DWT
+       and calls ``irq_unlock()``. The span is the same. The pend comes
+       from the wire, not from ``STIR``, and there is no cache walk.
+   * - ``nested``
+     - 20 us before the edge, the main thread pends the spare IRQ of the
+       port (``PORT_SPARE_IRQN``, priority ``LATBENCH_NESTED_PRIO``). Its
+       ISR spins until the edge ISR (priority 0) preempted it.
+       ``irq_nested`` = edge to the ISR time stamp. Then the spare ISR
+       reads the timer (``t0``), pends the response IRQ with ``STIR`` and
+       spins until that ISR ran. ``irq_nested_sw`` = ``t0`` to the ISR
+       time stamp.
+     - ``nested_preempt``: the low ISR starts the span, pends the high
+       line with ``STIR`` and waits. The high ISR ends the span.
+       ``irq_nested_sw`` is the same span. ``irq_nested`` is new: the
+       edge comes at a random time in the low ISR.
+   * - ``exit``
+     - The main thread spins in a tight loop on a flag. The ISR sets the
+       flag and reads the timer as its last action (``t_exit``). The
+       thread reads the timer after the loop. ``irq_exit`` = thread time
+       stamp - ``t_exit``. ``irq`` = edge to the ISR time stamp (the
+       entry from a busy thread). The direct ISR returns 0 (no
+       reschedule).
+     - ``exit_resume_interrupted``: the same span. The upstream ISR is a
+       regular ISR behind a handler pointer of the benchmark, so its exit
+       path has more function returns.
+   * - ``burst``
+     - The edge starts a burst of ``LATBENCH_BURST_LEN`` (16) ISR runs.
+       Just after its time stamp, the ISR pends its own IRQ again with
+       ``STIR`` (not in the last run). ``irq_b2b`` = time stamp of a run
+       to the time stamp of the next run (15 values per burst). ``irq``
+       = edge to the first run.
+     - ``throughput_round_trip``: the same span, one value per
+       iteration (a burst of two runs). The upstream span also includes
+       the call to the handler pointer and the framework.
+
+Common differences to the upstream scenarios:
+
+- The upstream span starts and ends with a DWT read after a ``DSB`` and
+  an ``ISB``, and the framework subtracts the mean of an empty span. This
+  app reads ``TIM2->CNT`` and subtracts nothing.
+- The upstream thread is a cooperative ztest thread
+  (``CONFIG_ZTEST_THREAD_PRIORITY=-1``). The main thread of this app is
+  preemptible (priority 0), so time slicing applies to it.
+- The upstream app runs a scheduler churn and a cache walk before each
+  sample. This app runs no load unless the experiment adds it.
+
+Output: the histograms of the scenario (see the table), one phase
+histogram (``irq`` in ``burst``, else the main histogram), and the
+``LAT META`` keys ``irq_scenario``, ``scen_lead_us``, ``scen_missed``,
+``scen_timeouts`` and the setting of the scenario (see
+:doc:`/reference/log-format`). With ``LATBENCH_TAIL``, the witness table
+has the main histogram of the scenario, without a PC.
+
 Tail witnesses
 --------------
 

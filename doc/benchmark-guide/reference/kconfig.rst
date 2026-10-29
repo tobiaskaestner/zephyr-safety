@@ -231,6 +231,36 @@ The interrupt path must be on the CMake command line, because
    * - ``LATBENCH_BG_BUSY``
      - n
      - Choice ``LATBENCH_BACKGROUND``: busy thread at the lowest priority
+   * - ``LATBENCH_IRQ_SCEN_ENTRY``
+     - y
+     - Choice ``LATBENCH_IRQ_SCENARIO``: edge to the ISR (see
+       :ref:`benchguide-irq-latency-scenarios`)
+   * - ``LATBENCH_IRQ_SCEN_UNLOCK``
+     - n
+     - Choice ``LATBENCH_IRQ_SCENARIO``: ``irq_unlock()`` to the ISR of a
+       pending edge (histogram ``irq_unlock``)
+   * - ``LATBENCH_IRQ_SCEN_NESTED``
+     - n
+     - Choice ``LATBENCH_IRQ_SCENARIO``: entry of the edge ISR in a
+       lower-priority ISR (``irq_nested``, ``irq_nested_sw``). The port
+       must define ``PORT_SPARE_IRQN``
+   * - ``LATBENCH_IRQ_SCEN_EXIT``
+     - n
+     - Choice ``LATBENCH_IRQ_SCENARIO``: end of the ISR to the interrupted
+       thread (``irq_exit``, ``irq``)
+   * - ``LATBENCH_IRQ_SCEN_BURST``
+     - n
+     - Choice ``LATBENCH_IRQ_SCENARIO``: ISR entry to the next ISR entry in
+       a burst (``irq_b2b``, ``irq``)
+   * - ``LATBENCH_UNLOCK_HOLD_US``
+     - 10
+     - Lock time after the edge in the scenario ``unlock``
+   * - ``LATBENCH_NESTED_PRIO``
+     - 1
+     - Priority of the lower-priority ISR in the scenario ``nested``
+   * - ``LATBENCH_BURST_LEN``
+     - 16
+     - ISR runs in one burst of the scenario ``burst`` (2 to 64)
 
 ``wake_latency``:
 

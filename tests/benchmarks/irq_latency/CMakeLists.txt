@@ -17,3 +17,8 @@ project(irq_latency)
 set(LATBENCH_STIM ON)
 include(${CMAKE_CURRENT_SOURCE_DIR}/../common/latbench.cmake)
 target_sources(app PRIVATE src/main.c)
+# The scenarios other than the entry (LATBENCH_IRQ_SCENARIO). Only with
+# such a scenario, so that the entry images do not change.
+if(NOT CONFIG_LATBENCH_IRQ_SCEN_ENTRY)
+  target_sources(app PRIVATE src/scenario.c)
+endif()

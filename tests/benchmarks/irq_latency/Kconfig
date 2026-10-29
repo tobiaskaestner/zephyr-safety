@@ -60,6 +60,78 @@ config LATBENCH_STIM_MAX_US
 	  The time between two stimuli is random in [MIN, MAX), so the
 	  stimuli do not lock to the phase of the system timer.
 
+choice LATBENCH_IRQ_SCENARIO
+	prompt "Scenario"
+	default LATBENCH_IRQ_SCEN_ENTRY
+	help
+	  What the app measures. The scenarios other than the entry come
+	  from the upstream interrupt benchmark (Zephyr PR 117170). They need
+	  the path wrapped or direct. In these scenarios the main thread
+	  drives each sample and spins between the samples. See
+	  src/scenario.c and the documentation of the app.
+
+config LATBENCH_IRQ_SCEN_ENTRY
+	bool "Entry: edge to the ISR"
+	help
+	  The ISR arms the next edge. Histogram irq.
+
+config LATBENCH_IRQ_SCEN_UNLOCK
+	bool "irq_unlock() to the ISR of a pending edge"
+	help
+	  The main thread locks the interrupts before the edge, waits until
+	  the edge is pending in the NVIC, holds the lock for
+	  LATBENCH_UNLOCK_HOLD_US after the edge, reads the timer (t0) and
+	  calls irq_unlock(). Histogram irq_unlock: ISR time stamp - t0.
+
+config LATBENCH_IRQ_SCEN_NESTED
+	bool "Entry of the edge ISR in a lower-priority ISR"
+	help
+	  Before the edge, the main thread pends a spare IRQ of the port at
+	  the priority LATBENCH_NESTED_PRIO. Its ISR spins until the edge ISR
+	  preempted it. Histogram irq_nested: edge to the ISR time stamp.
+	  Then the spare ISR reads the timer (t0) and pends the response IRQ
+	  with NVIC STIR, as the upstream scenario does. Histogram
+	  irq_nested_sw: t0 to the ISR time stamp.
+
+config LATBENCH_IRQ_SCEN_EXIT
+	bool "Exit: end of the ISR to the interrupted thread"
+	help
+	  The main thread spins on a flag. The ISR sets the flag and reads
+	  the timer as its last action (t_exit). Histogram irq_exit: the
+	  time stamp of the thread after the spin - t_exit. Histogram irq:
+	  the entry, from a busy thread.
+
+config LATBENCH_IRQ_SCEN_BURST
+	bool "Back to back: ISR entry to the next ISR entry"
+	help
+	  The edge starts a burst of LATBENCH_BURST_LEN ISR runs. The ISR
+	  pends its own IRQ again with NVIC STIR just after its time stamp.
+	  Histogram irq_b2b: time stamp to the next time stamp (the cost of
+	  one ISR in a burst). Histogram irq: the edge to the first ISR.
+
+endchoice
+
+config LATBENCH_UNLOCK_HOLD_US
+	int "Lock time after the edge (us)"
+	depends on LATBENCH_IRQ_SCEN_UNLOCK
+	range 0 1000
+	default 10
+
+config LATBENCH_NESTED_PRIO
+	int "Priority of the lower-priority ISR"
+	depends on LATBENCH_IRQ_SCEN_NESTED
+	range 1 14
+	default 1
+	help
+	  The response IRQ has the priority 0, so the edge ISR preempts the
+	  spare ISR.
+
+config LATBENCH_BURST_LEN
+	int "ISR runs in one burst"
+	depends on LATBENCH_IRQ_SCEN_BURST
+	range 2 64
+	default 16
+
 config LATBENCH_POLL_MS
 	int "Period of the main thread that checks for the end of the run (ms)"
 	default 100

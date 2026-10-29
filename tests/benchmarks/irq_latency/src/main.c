@@ -48,13 +48,18 @@ BUILD_ASSERT(PORT_RESP_IRQ_OWNED,
 #endif
 #endif
 
-#if defined(CONFIG_LATBENCH_BG_BUSY)
+#if !defined(CONFIG_LATBENCH_IRQ_SCEN_ENTRY)
+/* The main thread of the scenario spins (src/scenario.c). */
+#define BACKGROUND "scenario"
+#elif defined(CONFIG_LATBENCH_BG_BUSY)
 #define BACKGROUND "busy"
 #else
 #define BACKGROUND "idle"
 #endif
 
 #define N_TOTAL (CONFIG_LATBENCH_WARMUP + CONFIG_LATBENCH_SAMPLES)
+
+#if defined(CONFIG_LATBENCH_IRQ_SCEN_ENTRY)
 
 static LAT_HIST_DEFINE(hist, "irq");
 static LAT_PHASE_DEFINE(phase, "irq");
@@ -244,6 +249,10 @@ K_THREAD_DEFINE(busy_tid, 512, busy_fn, NULL, NULL, NULL, K_LOWEST_APPLICATION_T
 		0);
 #endif
 
+#else /* another scenario: src/scenario.c */
+#include "scenario.h"
+#endif
+
 int main(void)
 {
 	char buf[24];
@@ -262,6 +271,11 @@ int main(void)
 		lat_done();
 		return 0;
 	}
+#if !defined(CONFIG_LATBENCH_IRQ_SCEN_ENTRY)
+	scen_main();
+	lat_done();
+	return 0;
+#else
 	lat_phase_init(&phase, stim_tick_period());
 #if defined(CONFIG_LATBENCH_SWTRIG)
 	lat_phase_init(&phase_sw, stim_tick_period());
@@ -308,4 +322,5 @@ int main(void)
 #endif
 	lat_done();
 	return 0;
+#endif
 }

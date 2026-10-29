@@ -256,6 +256,21 @@ Metadata keys
      - ``LATBENCH_SWTRIG``
      - Number of software triggers, warm-up included. It comes after the
        edge histograms, before the ``_sw`` histograms
+   * - ``irq_scenario``, ``scen_lead_us``
+     - ``irq_latency``, a scenario other than the entry
+     - The scenario (``unlock``, ``nested``, ``exit``, ``burst``) and the
+       time before the edge at which the main thread starts the part of
+       the sample that needs the edge (see
+       :ref:`benchguide-irq-latency-scenarios`)
+   * - ``unlock_hold_us``, ``nested_prio``, ``spare_irqn``, ``burst_len``
+     - the scenario
+     - ``LATBENCH_UNLOCK_HOLD_US``, ``LATBENCH_NESTED_PRIO`` and the spare
+       IRQ of the port, ``LATBENCH_BURST_LEN``
+   * - ``scen_missed``, ``scen_timeouts``
+     - a scenario other than the entry
+     - Samples that did not fit the scenario and were not recorded (the
+       edge came before the lock, or did not meet the lower-priority ISR),
+       and waits that took more than 20 ms. Both must be 0
    * - ``stim_overruns``
      - stimulus
      - Edges that the fixed stimulus armed too late for its period

@@ -44,3 +44,27 @@ tests:
       - CONFIG_LATBENCH_TAIL=y
     platform_allow:
       - nucleo_g474re
+  benchmark.latency.irq.direct.unlock:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_SCEN_UNLOCK=y
+    platform_allow:
+      - nucleo_g474re
+  benchmark.latency.irq.direct.nested:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_SCEN_NESTED=y
+    platform_allow:
+      - nucleo_g474re
+  benchmark.latency.irq.direct.exit:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_SCEN_EXIT=y
+    platform_allow:
+      - nucleo_g474re
+  benchmark.latency.irq.direct.burst:
+    extra_args: CONFIG_LATBENCH_IRQ_PATH_DIRECT=y
+    extra_configs:
+      - CONFIG_LATBENCH_IRQ_SCEN_BURST=y
+    platform_allow:
+      - nucleo_g474re
