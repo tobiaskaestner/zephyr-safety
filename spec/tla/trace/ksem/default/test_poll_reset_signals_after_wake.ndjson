@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_poll_reset_signals_after_wake","config":{"poll":false,"rtc":true,"assert":false}}
+{"ev":"end"}

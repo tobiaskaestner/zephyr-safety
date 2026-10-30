@@ -1,0 +1,10 @@
+{"ev":"test","suite":"sem_unit","name":"test_ref_take_timeout_returns_eagain","config":{"poll":false,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":true,"count":0,"limit":1}
+{"ev":"setup","ref":true,"current":"t1","preempt_ok":false,"threads":[{"id":"t1","prio":5,"state":"ready","on":"none","stamp":0,"ready_seq":0,"armed":false,"deadline":0,"armed_seq":0,"ret":1}]}
+{"ev":"call","op":"take","actor":"t1","obj":"s1","timeout":"TICKS"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"fake","fn":"z_pend_curr","obj":"s1","arg":1,"ret":0,"res":0}
+{"ev":"env","op":"ThreadTimeout","thread":"t1"}
+{"ev":"pend_ret","actor":"t1","obj":"s1","ret":-11}
+{"ev":"ret","op":"take","actor":"t1","obj":"s1","ret":-11,"count":0,"limit":1}
+{"ev":"end"}

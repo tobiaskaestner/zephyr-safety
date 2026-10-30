@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_poll_give_signals_at_limit","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"end"}

@@ -1,0 +1,14 @@
+{"ev":"test","suite":"sem_unit","name":"test_ref_give_wakes_equal_priority_in_wait_order","config":{"poll":true,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":true,"count":0,"limit":1}
+{"ev":"setup","ref":true,"current":"t1","preempt_ok":false,"threads":[{"id":"t1","prio":1,"state":"ready","on":"none","stamp":0,"ready_seq":0,"armed":false,"deadline":0,"armed_seq":0,"ret":1},{"id":"t2","prio":5,"state":"pending","on":"s1","stamp":1,"ready_seq":1,"armed":false,"deadline":0,"armed_seq":0,"ret":-11},{"id":"t3","prio":5,"state":"pending","on":"s1","stamp":2,"ready_seq":2,"armed":false,"deadline":0,"armed_seq":0,"ret":-11}]}
+{"ev":"call","op":"give","actor":"t1","obj":"s1"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"fake","fn":"z_sched_wake","obj":"s1","arg":0,"ret":1,"res":0,"thread":"t2"}
+{"ev":"fake","fn":"z_reschedule","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"give","actor":"t1","obj":"s1","ret":1,"count":0,"limit":1}
+{"ev":"call","op":"give","actor":"t1","obj":"s1"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"fake","fn":"z_sched_wake","obj":"s1","arg":0,"ret":1,"res":0,"thread":"t3"}
+{"ev":"fake","fn":"z_reschedule","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"give","actor":"t1","obj":"s1","ret":1,"count":0,"limit":1}
+{"ev":"end"}

@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_count_get_returns_count_without_lock","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"end"}

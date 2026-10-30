@@ -1,0 +1,10 @@
+{"ev":"test","suite":"sem_unit","name":"test_give_saturates_at_limit","config":{"poll":true,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":true,"count":3,"limit":3}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"give","actor":"t1","obj":"s1"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":3}
+{"ev":"fake","fn":"z_sched_wake","obj":"s1","arg":0,"ret":0,"res":3}
+{"ev":"fake","fn":"z_handle_obj_poll_events","obj":"s1","arg":2,"ret":0,"res":3}
+{"ev":"fake","fn":"arch_irq_unlock","obj":"s1","arg":0,"ret":0,"res":3}
+{"ev":"ret","op":"give","actor":"t1","obj":"s1","ret":1,"count":3,"limit":3}
+{"ev":"end"}

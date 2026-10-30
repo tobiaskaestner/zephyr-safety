@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_init_no_runtime_checks_accepts_invalid","config":{"poll":false,"rtc":true,"assert":false}}
+{"ev":"end"}

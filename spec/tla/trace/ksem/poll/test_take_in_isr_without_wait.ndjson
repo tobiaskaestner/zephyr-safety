@@ -1,0 +1,12 @@
+{"ev":"test","suite":"sem_unit","name":"test_take_in_isr_without_wait","config":{"poll":true,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":true,"count":1,"limit":1}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"take","actor":"i1","obj":"s1","timeout":"NO_WAIT"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":1}
+{"ev":"fake","fn":"arch_irq_unlock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"take","actor":"i1","obj":"s1","ret":0,"count":0,"limit":1}
+{"ev":"call","op":"take","actor":"i1","obj":"s1","timeout":"NO_WAIT"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"fake","fn":"arch_irq_unlock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"take","actor":"i1","obj":"s1","ret":-16,"count":0,"limit":1}
+{"ev":"end"}

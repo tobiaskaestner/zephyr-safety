@@ -1,0 +1,7 @@
+{"ev":"test","suite":"sem_unit","name":"test_init_sets_count_and_limit","config":{"poll":true,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":false}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"init","actor":"t1","obj":"s1","args":[2,5]}
+{"ev":"fake","fn":"z_waitq_init","obj":"s1","arg":0,"ret":0,"res":2}
+{"ev":"ret","op":"init","actor":"t1","obj":"s1","ret":0,"count":2,"limit":5}
+{"ev":"end"}

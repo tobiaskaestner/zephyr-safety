@@ -1,0 +1,6 @@
+{"ev":"test","suite":"sem_unit","name":"test_init_rejects_count_above_limit","config":{"poll":false,"rtc":true,"assert":false}}
+{"ev":"sem","id":"s1","init":false}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"init","actor":"t1","obj":"s1","args":[3,2]}
+{"ev":"ret","op":"init","actor":"t1","obj":"s1","ret":-22}
+{"ev":"end"}

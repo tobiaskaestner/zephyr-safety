@@ -1,0 +1,7 @@
+{"ev":"test","suite":"sem_unit","name":"test_init_initializes_wait_queue","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"sem","id":"s1","init":false}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"init","actor":"t1","obj":"s1","args":[0,1]}
+{"ev":"fake","fn":"z_waitq_init","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"init","actor":"t1","obj":"s1","ret":0,"count":0,"limit":1}
+{"ev":"end"}
