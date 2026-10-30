@@ -247,20 +247,135 @@ Reference runs
 Apalache
 ********
 
-:Version: 0.62.4 (https://github.com/apalache-mc/apalache)
-:SHA-256: ``b781b53bba32fac14ac2e02b0332e1dc2edc64cb7b850c0608d8142cc7aa2ef4``
-   of ``apalache-0.62.4.tgz`` (``tools/apalache.sha256``)
-:Java: 17 or later.
-:Use: research only. The type check of the library modules and one
-   symbolic check of ``Timeout`` (``README.rst``, "Running"). No run
-   script, no recorded results.
-:Known defects: not surveyed.
-:Status: no Apalache result is evidence today. Before the first evidence
-   run: archive the tgz by hash (today it is only in a cache directory of
-   the workspace), a run script with recorded results, known-answer
-   models for the features used (for example an inductive invariant that
-   holds and one that fails at a known length), and a survey of the known
-   defects.
+Identity
+========
+
+.. list-table::
+   :widths: 25 75
+
+   * - File
+     - ``apalache-0.62.4.tgz`` (the release), with ``lib/apalache.jar``
+       and the launcher ``bin/apalache-mc``
+   * - Version
+     - 0.62.4, build ``7954daf`` (``Implementation-Version`` of the
+       manifest, and the first line of each log)
+   * - SHA-256
+     - ``b781b53bba32fac14ac2e02b0332e1dc2edc64cb7b850c0608d8142cc7aa2ef4``
+       of the tarball, ``e5223915507b65cc5f1638bd037ede60f8a4fc1644aff46355779f9b05df9262``
+       of ``lib/apalache.jar`` in it (``tools/apalache.sha256``)
+   * - Solver
+     - Z3 4.14.1.0, the native library in the jar
+       (``com/microsoft/z3/linux/<arch>/libz3.so``)
+   * - Download
+     - https://github.com/apalache-mc/apalache/releases, 2026-10-21, with
+       the ``sha256sum.txt`` of the release
+   * - Archive
+     - ``/wrk/z/tla-archive/apalache/sha256-<hash>/`` in the workspace.
+       Read-only, with ``ARCHIVE.txt`` and ``apalache-0.62.4.tgz.sha256``.
+       Not on the lab host yet.
+
+Environment
+===========
+
+Local host only (2026-10-30): OpenJDK 25.0.4.1 of Fedora, aarch64. Apalache
+needs Java 17 or later. The lab host has no Apalache runs yet.
+
+Use
+===
+
+Research only. ``tools/run_apalache.sh`` runs the lines of
+``apalache/expected.txt``:
+
+- It stops if the jar has another hash, and if the archived tarball
+  exists with another hash.
+- One run at a time. ``JVM_ARGS=-Xmx2g`` (``APALACHE_HEAP``). Each run
+  is in a systemd scope with ``MemoryMax=3G`` and no swap
+  (``APALACHE_MEM``): Z3 runs in the same process outside the Java heap,
+  and a run that needs more memory stops alone. ``TMPDIR`` and
+  ``--out-dir`` are in the build directory.
+- ``typecheck`` for the lines with the name ``typecheck*``. Else
+  ``check --no-deadlock`` with ``--init``, ``--next``, ``--inv``,
+  ``--length``, ``--cinit`` of the line, and the defaults of the release
+  for the other options (``--algo=incremental``,
+  ``--smt-encoding=oopsla19``, ``--discard-disabled=true``).
+- The script copies ``lib/``, ``objects/``, ``mc/`` and ``apalache/`` into
+  one directory and removes the definitions of the key ``omit=``. Today
+  this is ``WaitQueue!Head`` and ``WaitQueue!WalkStop``, which Apalache
+  does not accept and which no checked formula uses.
+
+The features that the lines use: ``typecheck``, invariants with
+``--init`` other than ``Init`` (the inductive step), ``--cinit``,
+``--next`` with a part of ``Next``, ``EXTENDS`` of a model module, and
+``INSTANCE`` of the library.
+
+Known defects and limits
+========================
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 35 35
+
+   * - Defect or limit
+     - Effect
+     - What the lines do
+   * - A ``CHOOSE`` without a witness gives an arbitrary value of the type
+       (TLC stops with an error).
+     - In an inductive step from a state outside the reachable states, an
+       operator such as ``RunqBest`` can give a thread that does not exist.
+       A counterexample can be spurious, and a pass can depend on it.
+     - Each ``IndInv`` has the invariants that give each ``CHOOSE`` one
+       witness (``RqStampsNormal``, ``StampsNormal``, ``ArmedOnce``).
+   * - ``INSTANCE`` over three levels, with an operator of the first
+       module for a constant: "used before it is defined" at the type
+       check (0.62.4).
+     - ``INSTANCE MCScheduler`` fails.
+     - ``APScheduler`` extends ``MCScheduler`` and gives the constants with
+       ``--cinit``.
+   * - A function constructor ``[x \in S |-> e]`` has a function type, not
+       a sequence type. A range must have constant bounds. An operator has
+       one result type.
+     - ``Waitable!Flush``, ``WaitQueue!Ordered``, ``WaitQueue!Head`` and
+       ``WalkStop`` do not type-check or do not run.
+     - The expected file records the failures (``fail:120``).
+   * - "Trying to expand a set of functions" for ``\E f \in [S -> T]`` in
+       an initial predicate.
+     - A type domain of a sequence cannot use a function set.
+     - ``TypeDom`` of ``APScheduler`` gives ``tq`` with ``SubSeq`` of a
+       tuple of three threads.
+   * - The cost grows fast with the constants. One run of the inductive
+       step of ``MCScheduler`` with all 487 transitions of ``default`` did
+       not end in its time limit.
+     - Large steps need long runs and much memory: the wake group takes
+       about 25 minutes (``small``) and 28 minutes (``default``), with a
+       peak of about 2.3 GB.
+     - ``APScheduler`` splits ``Next`` into groups, one line for each
+       group.
+   * - Apalache checks one fixed set of constants for each line
+       (``--cinit`` can give a finite family).
+     - The result says nothing for 4 threads or 2 CPUs.
+     - The evidence scope of a line is its constants. The small-scope
+       arguments cover the other sizes.
+
+No survey of the issue tracker is done yet.
+
+Regression tests of the tool
+============================
+
+The expected file has known answers: lines that must give ``violated``
+(the candidates 0 to 2 of ``APScheduler``, ``range_inv`` and
+``order_step`` of ``APWaitQueue``) and lines that must give ``fail:120``
+or ``fail:255`` (the type check). A pass of a check line is not evidence
+alone: the same file must also show that the check finds a violation.
+There is no selftest of Apalache yet (models that do not change with the
+specs, like ``selftest/`` for TLC).
+
+Status
+======
+
+No Apalache result is evidence today. Before the first evidence run: the
+archive on the lab host, a selftest, a survey of the known defects, and a
+decision on ``WaitQueue!Head``, ``WalkStop`` and ``Waitable!Flush``
+(the workspace notes have the proposals).
 
 CBMC
 ****
