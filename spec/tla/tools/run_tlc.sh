@@ -2,21 +2,27 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 #
-# Run TLC on the models in mc/expected.txt (or selftest/expected.txt) and
-# compare each result with the expected result and the recorded counts.
+# Run TLC on the models in mc/expected.txt (or selftest/expected.txt, or
+# another list file) and compare each result with the expected result and
+# the recorded counts.
 #
 # Usage: run_tlc.sh [<module>[:<config>] ...]
-#   Without arguments, all lines of the expected file run. With arguments,
+#   Without arguments, all lines of the list file run. With arguments,
 #   only the lines of these modules (or of these module:config pairs) run.
 #
 # Environment:
 #   TLA2TOOLS  path of tla2tools.jar, required. The hash must be the hash
 #              in tools/tla2tools.sha256.
 #   TLC_SUITE  mc (default) or selftest: the directory with the models and
-#              the expected.txt file.
-#   TLC_OUT    output directory (default: <spec>/build/<suite>). For each
-#              line: <module>_<config>.log. For all lines: summary.md and
-#              results.tsv.
+#              the list files.
+#   TLC_LIST   the list file <suite>/<list>.txt (default: expected). For
+#              example TLC_LIST=sensitivity: mc/sensitivity.txt, the
+#              sensitivity set. A run of mc/expected.txt never runs the
+#              lines of another list.
+#   TLC_OUT    output directory (default: <spec>/build/<suite>, or
+#              <spec>/build/<suite>-<list> for a list other than
+#              expected). For each line: <module>_<config>.log. For all
+#              lines: summary.md and results.tsv.
 #   TLC_WORKERS  number of TLC workers in one TLC process (default: 1).
 #              Only 1 gives evidence: see the comment at the TLC command.
 #   TLC_JOBS   number of TLC processes that run at the same time
@@ -30,7 +36,7 @@
 #              only if its heap fits in the rest of the budget, or if no
 #              other line runs.
 #
-# The fields of a line of the expected file:
+# The fields of a line of a list file:
 #
 #   <module> <config> <expected> [<key>=<value> ...]
 #
@@ -54,7 +60,17 @@ spec=$(cd "$(dirname "$0")/.." && pwd)
 suite=${TLC_SUITE:-mc}
 case "$suite" in mc|selftest) ;; *) echo "run_tlc: TLC_SUITE must be mc or selftest" >&2; exit 2 ;; esac
 dir=$spec/$suite
-out=${TLC_OUT:-$spec/build/$suite}
+list=${TLC_LIST:-expected}
+case "$list" in
+''|*[!a-z0-9_-]*) echo "run_tlc: TLC_LIST must be a name like expected or sensitivity" >&2; exit 2 ;;
+esac
+listfile=$dir/$list.txt
+[ -f "$listfile" ] || { echo "run_tlc: no list file $listfile" >&2; exit 2; }
+if [ "$list" = expected ]; then
+	out=${TLC_OUT:-$spec/build/$suite}
+else
+	out=${TLC_OUT:-$spec/build/$suite-$list}
+fi
 workers=${TLC_WORKERS:-1}
 jobs=${TLC_JOBS:-1}
 heap_default=${TLC_HEAP:-}
@@ -80,7 +96,7 @@ mb() { # <size like 2g or 512m> -> megabytes
 }
 mb "$budget" > /dev/null || { echo "run_tlc: TLC_MEM_BUDGET must be like 16g" >&2; exit 2; }
 
-# Read the selected lines of the expected file.
+# Read the selected lines of the list file.
 SELECT=("$@")
 selected() {
 	[ ${#SELECT[@]} -eq 0 ] && return 0
@@ -102,7 +118,7 @@ while read -r module config expected rest; do
 		esac
 	done
 	L_MOD+=("$module") L_CFG+=("$config") L_EXP+=("$expected") L_REST+=("$rest")
-done < "$dir/expected.txt"
+done < "$listfile"
 
 if [ ${#L_MOD[@]} -eq 0 ]; then
 	echo "run_tlc: no model selected" >&2
@@ -301,7 +317,7 @@ for i in "${order[@]}"; do
 done
 wait
 
-# results.tsv and summary.md in the order of the expected file.
+# results.tsv and summary.md in the order of the list file.
 status=0
 {
 	printf 'module\tconfig\texpected\tresult\tverdict\tviolated\tdistinct\tdepth\ttrace\tlasso\t'
