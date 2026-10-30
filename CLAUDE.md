@@ -71,6 +71,7 @@ A document's registry id is its target stem and deploy path:
 |---|---|---|
 | `requirements` | Sphinx + sphinx-needs | One `req` need per StrictDoc requirement, generated (see below) |
 | `architecture` | Sphinx + sphinx-needs | Arc42-style architecture document; one `design` need per `.. design::` block in zephyr `doc/kernel` (generated), and one `impl` need per kernel-internal `@satisfies` symbol (`symbolneeds::`, from the detailed design) |
+| `formal-design` | Sphinx + sphinx-needs + `tla_domain` | Zephyr Kernel Formal Design Specification: the TLA+ spec library (`spec/tla`), one `prop` need per model property (link `expresses`), the method, its decisions and the glossary (`spec/tla/GLOSSARY.rst`, included) |
 | `test-specification` | Sphinx + sphinx-needs | Test spec |
 | `test-report` | Sphinx + sphinx-needs | Test report |
 | `api-documentation` | Sphinx + Breathe + sphinx-needs | API doc consuming Doxygen XML; one `impl` need per `@satisfies` symbol (`symbolneeds::`) |
@@ -308,7 +309,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `_doxygen/safety-api-groups.dox` — API group stubs
 - `dox/*/Doxyfile.in`, `dox/*/mainpage.md` — Doxygen templates and introductions
 - The Sphinx documents sit in three folders: `specification/` (requirements, architecture,
-  api-documentation, test-specification), `verification/` (test-report) and `governance/`
+  formal-design, api-documentation, test-specification), `verification/` (test-report) and `governance/`
   (safety-committee). Each registry entry names its folder with `doc_dir`. The folder is not
   the navigation group: api-documentation is in `specification/` and in the `reference` group.
 - `specification/api-documentation/queue_apis.rst` — Breathe pull for API doc

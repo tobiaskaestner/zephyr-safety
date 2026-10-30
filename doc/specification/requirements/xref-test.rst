@@ -11,6 +11,7 @@ Intersphinx — other Sphinx documents
 ------------------------------------
 
 * Architecture: :external+arch:doc:`index`
+* Formal Design Specification: :external+formal:doc:`index`
 * Test Specification: :external+testspec:doc:`index`
 * Test Report: :external+testreport:doc:`index`
 * API Documentation: :external+api:doc:`index`
