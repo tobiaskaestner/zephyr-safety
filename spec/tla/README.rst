@@ -50,8 +50,8 @@ jobs:
 - **A source of tests.** TLC behaviors give call sequences for tests on
   the unit test board and on the real kernel.
 - **The contract of the scheduler fakes.** The unit tests replace the
-  scheduler with fakes. The scheduler layer of this model (layer A below)
-  is the contract that a reference fake implements and that contract tests
+  scheduler with fakes. The scheduler contract of this model (the module
+  ``Scheduler`` below) is the contract that a reference fake implements and that contract tests
   check against the real ``kernel/sched.c``.
 
 The model does not prove the C code. It proves properties of the model.
@@ -81,9 +81,9 @@ module boundaries against eight kernel objects).
    * - CPUs
      - Explicit. The constant ``CPUS`` is a set. One CPU is the default
        (uniprocessor). The same modules serve SMP.
-   * - Layers
-     - Two. Layer A is the contract of the scheduler API that the objects
-       call. Layer B is the ``Waitable`` template that the objects
+   * - Contract and template
+     - ``Scheduler`` is the contract module of the scheduler API that the
+       objects call. ``Waitable`` is the template module that the objects
        instantiate. Both are review items.
    * - Wait queue
      - A set with stamps, not a sequence. The order is a definition
@@ -97,8 +97,8 @@ module boundaries against eight kernel objects).
        pinned by hash (see `Running`_).
        The style stays readable for Apalache (see `Apalache`_).
    * - Method
-     - Two layers in each spec (2026-10-28, see `Descriptive and normative
-       layer`_): the operators follow the code, the properties come from
+     - Two parts in each spec (2026-10-28, see `Behavior part and property
+       part`_): the operators follow the code, the properties come from
        the requirements and the documentation (``@source``).
 
 Entities
@@ -197,7 +197,7 @@ Module structure
      |
    lib/Timeout      timeout entries, the expiry event, the insertion cost
      |
-   lib/Waitable     layer B: Take, Give, Flush, ResumeOp, the common
+   lib/Waitable     template: Take, Give, Flush, ResumeOp, the common
      |              properties
    objects/KSem, objects/KQueue, ...   the resource of each object, its
                                        parameters, its own properties
@@ -220,8 +220,8 @@ Module structure
    * - ``Scheduler``
      - ``tstate``, ``prio``, ``cur``, ``swapRet``, ``swapData``, ``panic``,
        ``rqStamp``, ``preemptOk``, ``readySince`` (a history variable of the
-       normative layer)
-     - layer A operators, the selection rule ``Choices``, ``ThreadTimeout``,
+       property part)
+     - the contract operators, the selection rule ``Choices``, ``ThreadTimeout``,
        ``Abort``, ``SetPrio``, ``Resume``, ``Preempt``, the ISR guard,
        fairness
      - resources, requests
@@ -246,7 +246,7 @@ Module structure
 decision 2026-10-28"). It is an assumption module: it states only what
 ``sched.c`` relies on, and each item that rests on the architecture code or
 on a document has the tag ``@assumption`` with that location. The fakes of
-the ``arch_*`` layer and later the trace validation check these items, not
+the ``arch_*`` functions and later the trace validation check these items, not
 a proof. ``Scheduler`` instantiates ``Platform`` (``PF``), ``WaitQueue``
 and ``Timeout`` (entries: the threads), so a module that uses ``Scheduler``
 declares the variables of all four. The constants ``CPUS``, ``Isrs``,
@@ -264,8 +264,8 @@ mutants ``pend_locked`` and ``pend_locked_pendsv`` violate it.
 The mutex chain walk reads the wait state of other threads, and an abort or
 a priority change acts on a waiter in any wait queue.
 
-Layer A: the scheduler contract
-===============================
+The scheduler contract
+======================
 
 One operator for each C function of the scheduler API that the objects
 call. An object action composes these operators inside one critical
@@ -406,8 +406,8 @@ from the wakers the run ``small`` has more than three times the states.
 The data ``d1`` comes only from ``SetSwapData`` (``MCExtra``: ``small_b``,
 ``reach_b``), and the msgq and mailbox wakes of these runs keep it.
 
-Layer B: the ``Waitable`` template
-==================================
+The ``Waitable`` template
+=========================
 
 The template has the actions ``Take``, ``Give``, ``Flush`` and
 ``ResumeOp``. Each object gives the template its operators. The parameters
@@ -632,7 +632,7 @@ callers must show that the assumption holds for a product.
 The observation record
 **********************
 
-Each action writes the variable ``obs``. It has a generic part from layer A
+Each action writes the variable ``obs``. It has a generic part from the contract
 (``actor``, ``op``, ``obj``, ``timeout``, ``woken``, ``ret``) and an object
 part (``args``). Since the k_sem slice, the generic part has ``calls``: the
 calls of the step into the lock and the scheduler contract, in order, each
@@ -688,18 +688,19 @@ roadmap step 5. The specs keep a style that it can read from the start:
 The doc extension takes ``@type`` and ``@typeAlias`` lines as tags, so
 they do not show in the rendered prose.
 
-Descriptive and normative layer
+Behavior part and property part
 *******************************
 
 Decided on 2026-10-28 (roadmap, "Method decision 2026-10-28"). Each spec
-has two layers:
+has two parts (named "descriptive layer" and "normative layer" until
+2026-10-30):
 
-- **Descriptive layer: the operators.** They follow the C code
+- **Behavior part: the operators.** They follow the C code
   (``@c-function``), also where the code is surprising. An operator is
   never adjusted to the intent. The unit tests check the code against the
   operators, later trace validation too. An incidental choice of the code,
   which no document promises, is a free choice in the model.
-- **Normative layer: the properties.** Each property is written from its
+- **Property part: the properties.** Each property is written from its
   own source, before a look at the code if possible: a requirement
   (``@source ZEP-SRS-2-13``) or a document (``@source doc:<page>``). Where
   the source text has more than one reading, the comment of the property
@@ -707,7 +708,7 @@ has two layers:
   history variable that records what the source names (``readySince`` for
   "ready the longest"). Such a variable is not a field of the code.
 
-A property of the normative layer that fails on the model is a design
+A property of the property part that fails on the model is a design
 finding. Its model configuration expects the failure (``mc/expected.txt``,
 with a comment that names the finding). A property that cannot be written,
 because the sources say nothing, is a finding too. One register holds all
@@ -753,7 +754,7 @@ Comments
 
    ``@expresses`` names a requirement that the definition expresses (one
    UID on each line). ``@source`` names the source of a property of the
-   normative layer, one on each line: a requirement UID (the doc extension
+   property part, one on each line: a requirement UID (the doc extension
    also makes it an ``expresses`` link) or ``doc:<page>`` for a document.
    ``@kind`` is one of:
 

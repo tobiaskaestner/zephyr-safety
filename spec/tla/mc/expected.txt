@@ -51,7 +51,7 @@ MCScheduler wake_no_cancel fail:Inv_ArmedArePending
 MCScheduler reach          probes
 MCScheduler reach_smp      probes
 # The normative properties of lib/Scheduler.tla (method: README.rst,
-# "Two layers"). p7_rules and p7_rules_coop: ZEP-SRS-2-9 and 2-12 hold.
+# "Behavior part and property part"). p7_rules and p7_rules_coop: ZEP-SRS-2-9 and 2-12 hold.
 # The expected failures are design findings of the pilot P7 (register:
 # claude/kernel-unit/tla/findings.md of the workspace notes).
 MCScheduler p7_rules       pass      states=556266 depth=20

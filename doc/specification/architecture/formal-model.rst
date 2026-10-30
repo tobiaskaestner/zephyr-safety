@@ -11,11 +11,11 @@ conventions of the model.
 The model is work in progress. This page shows the modules of the library
 (``spec/tla/lib``). The models of the kernel objects come later.
 
-The model has two layers. The operators are the descriptive layer: they
+The model has two parts. The operators are the behavior part: they
 follow the C code, also where the code is surprising. The properties with a
-``@source`` tag are the normative layer: each one states a requirement or a
+``@source`` tag are the property part: each one states a requirement or a
 documented rule, written from that source and not from the code. A property
-of the normative layer that fails on the model is a design finding. Its
+of the property part that fails on the model is a design finding. Its
 configuration in ``spec/tla/mc/expected.txt`` expects the failure and names
 the finding.
 

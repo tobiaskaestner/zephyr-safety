@@ -94,8 +94,8 @@ Tag                        Meaning                                        Need f
 =========================  =============================================  =====================
 ``@expresses <UID>``       the requirement that the property expresses    link ``expresses``
                            (one UID for each line, repeatable)
-``@source <source>``       the source of a property of the normative      ``tla_source``
-                           layer: a requirement UID, or ``doc:<page>``    (joined, ``;``) and
+``@source <source>``       the source of a property of the property       ``tla_source``
+                           part: a requirement UID, or ``doc:<page>``     (joined, ``;``) and
                            for a document (repeatable). A UID is also     link ``expresses``
                            an ``expresses`` link.
 ``@kconfig <CONFIG_X>``    the Kconfig option of a constant, or the       ``tla_kconfig``
@@ -105,7 +105,7 @@ Tag                        Meaning                                        Need f
 ``@assumption <text>``     an item of an assumption module: the code      (none)
                            location or the document that it rests on
                            (repeatable). Shown as plain text.
-``@kind <kind>``         ``invariant``, ``action-property``,            ``kind``
+``@kind <kind>``           ``invariant``, ``action-property``,            ``kind``
                            ``liveness``, ``probe``, ``action`` or
                            ``definition`` (default)
 ``@c-function <name>``     the C function that an action models           ``c_function``
