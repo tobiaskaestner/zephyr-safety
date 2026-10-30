@@ -44,7 +44,9 @@ On the lab host, each job runs under the lock <lab-root>/.lock (flock),
 with ``nice -n 10``. A job waits until the lock is free. The job runs in
 the background on the lab host: if the connection stops, the job
 continues, and ``--collect <run-id>`` gets the results later. After each
-run, the job deletes the TLC state directories.
+run, the job deletes the TLC state directories. The job uses the jar of
+the pin of the commit (tools/tla2tools.sha256) from the read-only archive
+<lab-root>/archive/tla2tools/sha256-<hash>/.
 
 The local output directory (default: spec/tla/build/lab/<run-id>) gets
 the logs, selftest/ (the logs of the selftest), summary.md (the selftest
@@ -98,7 +100,6 @@ flock 9
 echo running > state
 
 export PATH=$root/jdk/current/bin:$PATH
-export TLA2TOOLS=$root/tla2tools-1.8.0/tla2tools.jar
 # user.home: TLC reads ~/.tlaplus/esc.txt (NO_STATISTICS) from there.
 # java.io.tmpdir: TLC writes the standard modules there. run_tlc.sh gives
 # each TLC process its own directory below its output directory. This
@@ -137,11 +138,6 @@ fail() { echo "job: $*" >&2; finish 2; }
 {
 	echo "host=$(hostname)"
 	echo "start=$(date -Iseconds)"
-	echo "java_version=$(java -version 2>&1 | grep -v JAVA_TOOL_OPTIONS | head -1)"
-	echo "java_runtime=$(java -version 2>&1 | grep -v JAVA_TOOL_OPTIONS | sed -n 2p)"
-	echo "jar_sha256=$(sha256sum "$TLA2TOOLS" | cut -d' ' -f1)"
-	echo "mem_total_kb=$(awk '/^MemTotal/ { print $2 }' /proc/meminfo)"
-	echo "mem_available_kb=$(awk '/^MemAvailable/ { print $2 }' /proc/meminfo)"
 } > meta.env
 
 if [ "$mode" = pinned ]; then
@@ -166,6 +162,19 @@ else
 	spec=$root/snapshots/$id/spec/tla
 fi
 cd "$run" || fail "no run directory"
+
+# The jar of the pin of this commit, from the archive (tools/TOOLS.rst).
+jar_hash=$(cut -d' ' -f1 "$spec/tools/tla2tools.sha256")
+export TLA2TOOLS=$root/archive/tla2tools/sha256-$jar_hash/tla2tools.jar
+[ -f "$TLA2TOOLS" ] || fail "no archived jar with the hash $jar_hash"
+{
+	echo "jar=$TLA2TOOLS"
+	echo "jar_sha256=$(sha256sum "$TLA2TOOLS" | cut -d' ' -f1)"
+	echo "java_version=$(java -version 2>&1 | grep -v JAVA_TOOL_OPTIONS | head -1)"
+	echo "java_runtime=$(java -version 2>&1 | grep -v JAVA_TOOL_OPTIONS | sed -n 2p)"
+	echo "mem_total_kb=$(awk '/^MemTotal/ { print $2 }' /proc/meminfo)"
+	echo "mem_available_kb=$(awk '/^MemAvailable/ { print $2 }' /proc/meminfo)"
+} >> meta.env
 sample_rss >> rss.txt &
 rss_pid=$!
 
@@ -475,6 +484,7 @@ def collect(lab, run_id, out):
         "diff_sha256": job["diff_sha256"],
         "evidence": evidence,
         "not_evidence_reasons": reasons,
+        "jar": meta.get("jar"),
         "jar_sha256": meta.get("jar_sha256"),
         "java_version": meta.get("java_version"),
         "java_runtime": meta.get("java_runtime"),
