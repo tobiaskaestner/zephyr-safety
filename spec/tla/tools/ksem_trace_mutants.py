@@ -67,7 +67,7 @@ MUTANTS = {
                                        "\t} else {\n\t\tsem->count +=")]),
     "give_wake_retval": ("unit", [("z_sched_wake(&sem->wait_q, 0, NULL)",
                                    "z_sched_wake(&sem->wait_q, -EAGAIN, NULL)")]),
-    "give_always_unlock": ("unit", [("if (unlikely(resched)) {", "if (0) {")]),
+    "give_always_unlock": ("unit", [("if (unlikely(resched)) {", "if (0 && resched) {")]),
     "take_busy_no_unlock": ("unit", [("\tif (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {\n"
                                       "\t\tk_spin_unlock(&sem_lock, key);",
                                       "\tif (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {\n")]),
