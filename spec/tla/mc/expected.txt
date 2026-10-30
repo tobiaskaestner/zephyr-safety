@@ -138,3 +138,99 @@ MCKSem live_prio       fail:Live_WaiterServedIfGives
 MCKSemMutants give_counts     fail:Inv_TokenConservation
 MCKSemMutants pend_split      fail:Inv_NoWaitWhileAvailable
 MCKSemMutants reset_wakes_one fail:K!ResetWakesAll
+# ---------------------------------------------------------------------
+# Sensitivity set (2026-10-30, recommendation 5 of the method review).
+# The argument for each property: claude/kernel-unit/tla/small-scope.md of
+# the workspace notes. Each configuration <base>_sens_<axis> changes only a
+# bound of mc/<module>_<base>.cfg and checks the same properties:
+#
+#   t2, t4, t5  2, 4 or 5 threads (t2: the lower check)
+#   o1, o2, o3  1, 2 or 3 objects
+#   pc, pm      the other priority set (ZPriosCoop, ZPriosMixed)
+#   pw          the wide priority set ZPriosWide (-2, -1, 0, 1)
+#   p2, p4      2 or 4 priorities (MCWaitQueue)
+#   e2, e4, e5  2, 4 or 5 entries (MCTimeout)
+#   t4o1        4 threads and 1 object
+#   _sym        the symmetry set SymThreadsObjs (safety only, no MCJoin)
+#
+# The expected result is the result of the base. Exceptions: the witness
+# size checks (first subgroup), where the comment of the .cfg file gives
+# the reason; small_sens_pc, small_sens_pw and p7_rules_sens_pw do not
+# check Inv_RunRuleHolds (as coop and p7_rules_coop: with two cooperative
+# priorities and k_thread_abort() it fails through finding P7-c).
+#
+# The lines are in the order of their estimated time, cheap first (one
+# worker, from the base counts of scheduler-round-b.md and lab-tlc.md of
+# the workspace notes). The whole group takes about 47 hours with one
+# worker, and the last line alone about 16 hours. Only gap_coop_sens_t2
+# ran (2026-10-30, local: 1258 distinct states, depth 14). Run the group
+# only on request:
+#   run_tlc.sh MCScheduler:<config> ...   (one line at a time)
+# A full run of this file (run_tlc.sh without arguments) runs it too.
+#
+# Witness size checks: F14 needs 3 threads (expected pass with 2), P7-a
+# needs 2 threads (expected fail with 2).
+MCScheduler f14_join_sens_t2             pass
+MCScheduler p7_tie_sens_t2               fail:Sched!TieGoesToLongestReady
+# Tier A: each line less than 5 minutes.
+MCScheduler gap_coop_sens_t2             pass
+MCScheduler p2_lock_sens_t2              pass
+MCScheduler join_sens_t2                 pass
+MCTimeout   dlist_sens_e2                pass
+MCWaitQueue default_sens_t2              pass
+MCTimeout   minheap_full_sens_e4         fail:Inv_NoPanic
+MCWaitQueue default_sens_o1              pass
+MCWaitQueue default_sens_p2              pass
+MCTimeout   minheap_sens_e4              pass
+MCTimeout   dlist_sens_e4                pass
+MCScheduler small_sens_t2                pass
+MCWaitQueue default_sens_p4              pass
+MCTimeout   minheap_sens_e5              pass
+MCTimeout   dlist_sens_e5                pass
+MCWaitQueue default_sens_o3              pass
+MCScheduler small_pendsv_sens_t2         pass
+MCScheduler p7_tie_sens_t4               fail:Sched!TieGoesToLongestReady
+MCScheduler p6_init_sens_t4              fail:Inv_NoUndefined
+MCWaitQueue default_sens_t4              pass
+MCScheduler p7_rules_sens_t2             pass
+MCScheduler pend_locked_sens_t4          fail:Sched!NoSwitchWhileLocked
+MCScheduler small_b_sens_t2              pass
+MCScheduler f14_join_sens_t4             fail:Inv_PreemptibleRunsHighest
+MCScheduler default_sens_t2              pass
+MCScheduler p2_lock_sym                  pass
+MCScheduler wake_no_cancel_sens_t4       fail:Inv_ArmedArePending
+MCScheduler missed_resched_sens_t4       fail:Inv_RunRuleHolds
+MCScheduler p2_lock_sens_pc              pass
+MCScheduler join_sens_pc                 pass
+MCScheduler small_sens_pc                pass
+MCScheduler p2_window_sens_t4            fail:Sched!UnlockPreempts
+MCScheduler p2_rule_sens_t4              fail:Inv_RunRuleHolds
+MCScheduler gap_coop_pendsv_sens_t4      fail:Sched!BlockedLosesCpu
+MCScheduler reach_sens_t4                probes
+MCScheduler p7_rules_sens_o1             pass
+MCScheduler p7_coop_sens_t4              fail:Sched!CoopKeepsCpu
+MCScheduler p7_abort_sens_t4             fail:Sched!CoopKeepsCpu
+MCScheduler small_pendsv_sens_pc         pass
+MCScheduler p2_lock_sens_o2              pass
+# Tier B: each line 5 to 60 minutes.
+MCScheduler coop_rule_sens_t4            fail:Inv_RunRuleHolds
+MCScheduler p7_rules_sym                 pass
+MCScheduler small_sens_pw                pass
+MCWaitQueue default_sens_t5              pass
+MCScheduler small_sens_o2                pass
+MCScheduler small_pendsv_sens_o2         pass
+MCScheduler p2_lock_sens_t4_sym          pass
+MCScheduler p7_rules_sens_pw             pass
+MCScheduler p7_rules_coop_sens_o3        pass
+MCScheduler p7_rules_sens_o3             pass
+# Tier C: each line more than 1 hour (estimate with one worker).
+MCScheduler p2_lock_pendsv_sens_t4_sym   pass
+MCScheduler small_b_sens_o2              pass
+MCScheduler p2_lock_sens_t4              pass
+MCScheduler default_sens_o3              pass
+MCScheduler join_sens_t4                 pass
+MCScheduler small_sens_t4                pass
+MCScheduler p7_rules_coop_sens_t4o1_sym  pass
+MCScheduler p7_rules_sens_t4o1_sym       pass
+MCScheduler small_pendsv_sens_t4         pass
+MCScheduler p7_rules_sens_t4_sym         pass
