@@ -78,7 +78,9 @@ Grain
    How much code one step of a module is. **Coarse**: one critical section
    is one step. **Fine**: the module splits some boundaries into separate
    steps (lock acquire and release, interrupt entry and exit). Tag
-   ``@grain fine`` on an action that is finer than its module (D14).
+   ``@grain fine`` on an action that is finer than its module (D14). A
+   coarse module is for one CPU by construction: on SMP a step can span
+   two locks.
 
 Representation
    How a module keeps the state of the code, for example a set with stamps
@@ -87,8 +89,12 @@ Representation
 
 Refinement tree
    The modules that describe one component, ordered by *refines*. The root
-   is the contract module, at coarse grain. Each other module refines one
-   parent and states its reason (what it shows that the parent hides).
+   is the most abstract module: the contract module, or a module above it
+   when the state space of an object needs one (D17). Each other module
+   refines one parent and states its reason (what it shows that the parent
+   hides). One parent is a choice for each refinement check, not a law: a
+   module can also refine a second module that does not refine the first,
+   and that check is evidence of its own.
 
 Fine module
    A module at fine grain in a refinement tree. Name ``<Module>_<Reason>``,
