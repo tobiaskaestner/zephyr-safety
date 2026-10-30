@@ -81,7 +81,7 @@ color = "#FFF2CC"
 style = "node"
 
 # One per model property of a TLA+ spec (spec/tla), emitted by the tla_domain
-# extension (doc/_extensions/tla_domain.py) in the architecture document (ids
+# extension (doc/_extensions/tla_domain.py) in the formal design document (ids
 # PROP-<Module>-<Name>).
 [[needs.types]]
 directive = "prop"
