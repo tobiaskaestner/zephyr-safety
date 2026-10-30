@@ -644,6 +644,13 @@ invariants and handles large integers, which TLC cannot list. It comes in
 roadmap step 5. The specs keep a style that it can read from the start:
 
 - Type annotations on each variable and constant (``\* @type: ...;``).
+  Apalache reads the annotation only between the keyword and the name.
+  A single ``CONSTANT`` statement with a doc comment (the Kconfig tags) has
+  the form ``CONSTANT`` / ``\* @type: Bool;`` / ``UseSwitch``, on three
+  lines. An annotation in the doc comment before the keyword is not read.
+- An operator gives values of one type. ``WaitQueue!Head`` and
+  ``WaitQueue!WalkStop`` break this rule today: they give a thread or the
+  object ``None`` (see `Apalache checks`_).
 - A type annotation on each operator that reads a record field of its
   parameter, and on each generic helper (``Seq(a) => Set(a)``). Apalache
   cannot infer the record type from ``r.count`` alone. A type alias
@@ -908,9 +915,10 @@ Layout
      trace/            trace specs and the schema of the trace records
      c-functions.json  the hashes of the tagged C functions at the pin
      selftest/         known-answer models for TLC, expected.txt
+     apalache/         modules for Apalache, expected.txt (research)
      tools/            run_tlc.sh, run_tlc_remote.py, kconfig_coverage.py,
-                       tla2tools.sha256, apalache.sha256, TOOLS.rst,
-                       c_function_hashes.py, uses_graph_diff.py
+                       run_apalache.sh, tla2tools.sha256, apalache.sha256,
+                       TOOLS.rst, c_function_hashes.py, uses_graph_diff.py
        unitmap/        copies of the generator scripts of the unit map
 
 Running
@@ -959,17 +967,59 @@ same commit and give the reason in the commit message.
 known defects and why they do not affect the evidence, the selftest, and
 the steps for a new pin.
 
-Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
-no run script yet. The library modules type-check (``WaitQueue``,
-``Timeout``, ``Scheduler``), and ``Timeout`` also
-passes a symbolic check of its cost bound for both backends and the
-capacities 1 to 3 in one run (``--cinit``, length 6, with the model
-``research/kconfig-family/apalache/MCTimeoutApa.tla`` of the workspace
-notes):
+Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later.
+``tools/run_apalache.sh`` runs the lines of ``apalache/expected.txt`` and
+compares each result with the expected result. See `Apalache checks`_.
 
 .. code-block:: console
 
-   cd spec/tla/lib && apalache-mc typecheck WaitQueue.tla
+   spec/tla/tools/run_apalache.sh              # all lines (about one hour)
+   spec/tla/tools/run_apalache.sh APWaitQueue  # the lines of one module
+
+Run one Apalache or TLC process at a time on a small host. The script
+limits each run to 3 GB (``APALACHE_MEM``).
+
+Apalache checks
+===============
+
+Research only, not evidence (``tools/TOOLS.rst``). The state of
+2026-10-30:
+
+- **Type check.** ``Platform`` and ``Timeout`` pass. ``WaitQueue`` and each
+  module above it fail on ``WaitQueue!Head`` and ``WaitQueue!WalkStop``:
+  they give a thread or the object ``None``, and Apalache has no type for
+  both. Without these two definitions (the key ``omit=`` of the expected
+  file), ``WaitQueue`` and ``Scheduler`` pass. ``KSem`` then fails on
+  ``Waitable!Flush``: it builds a sequence with a function constructor
+  (``[k \in 1..Len(Q) |-> ...] \o ...``), and Apalache types it as a
+  function. ``Waitable`` is a template and type-checks only through an
+  object module. The workspace notes have the proposals for the changes
+  (``kernel-unit/tla/architecture/patch-notes/apalache.md``).
+- **Inductive invariants.** Each module in ``apalache/`` writes an
+  inductive invariant ``IndInv`` and checks three obligations:
+  ``Init => IndInv`` (length 0), ``IndInv /\ Next => IndInv'`` (initial
+  predicate ``IndInv``, length 1) and ``IndInv => Inv`` (length 0). The
+  library modules have no ``Next``. The checks use the ``Next`` of the
+  model module of ``mc/``, with the constants of one configuration.
+- ``apalache/APWaitQueue``: ``StampsNormal`` with the types is inductive
+  for the ``Next`` of ``mc/MCWaitQueue`` (3 threads, 2 objects,
+  3 priorities). It implies ``OrderIsTotal``, ``RanksDistinct`` and
+  ``BestIsHead``. ``OrderIsTotal`` alone is not inductive.
+- ``apalache/APScheduler``: ``PendingIsQueued`` with ``CurIsReady``,
+  ``RqStampsNormal``, ``StampsNormal``, ``ArmedOnce`` and the types is
+  inductive for the ``Next`` of ``mc/MCScheduler`` with the constants of
+  ``small`` and of ``default``. The module extends ``MCScheduler`` (Apalache rejects an
+  instance chain of three levels with an operator for a constant) and
+  splits ``Next`` into groups, one run for each group.
+
+- The workspace notes have one more check (2026-10-21, no line here): the
+  cost bound of ``Timeout`` for both backends and the capacities 1 to 3
+  in one run (``--cinit``, length 6,
+  ``research/kconfig-family/apalache/MCTimeoutApa.tla``).
+
+These results hold for all lengths of a behavior, but only for the
+constants of the line. They do not replace the small-scope arguments for
+other sizes.
 
 Running on the lab host
 =======================
