@@ -1,18 +1,18 @@
 ----------------------------- MODULE Scheduler -----------------------------
 (***************************************************************************)
-(* Layer A: the contract of the scheduler API that the kernel objects call *)
-(* (kernel/sched.c, kernel/include/ksched.h).                              *)
+(* The scheduler contract: the contract module of the scheduler API that   *)
+(* the kernel objects call (kernel/sched.c, kernel/include/ksched.h).      *)
 (*                                                                         *)
 (* Coarse grain: each operator is a part of one critical section. An       *)
 (* object action composes them: first the changes of the wait queues and   *)
 (* of the thread states (PendCurr, WakeFirst, WakeAll, WakeWalk), then the *)
 (* end of the critical section (Release). PendCurr includes its Release.   *)
 (*                                                                         *)
-(* Two layers. The operators are the descriptive layer: they follow the    *)
-(* code (@c-function), also where the code is surprising. The properties   *)
-(* with a @source tag are the normative layer: each one states a           *)
-(* requirement or a documented rule, written from that source and not from *)
-(* the code. A property that fails on the model is a design finding.       *)
+(* Two parts. The operators are the behavior part: they follow the code    *)
+(* (@c-function), also where the code is surprising. The properties with a *)
+(* @source tag are the property part: each one states a requirement or a   *)
+(* documented rule, written from that source and not from the code. A      *)
+(* property that fails on the model is a design finding.                   *)
 (*                                                                         *)
 (* CPUs are explicit. cur[c] is the thread that runs on CPU c. One CPU is  *)
 (* the default, and coarse grain claims one CPU only. On one CPU the model *)
@@ -41,46 +41,46 @@
 (* value "undefined" also stops the model: the code has undefined behavior *)
 (* (the fault model, see WaitqInit).                                       *)
 (*                                                                         *)
-(* Reading map. For each group of operators: the C code, the layer (D:     *)
-(* descriptive, the operators follow the code; N: normative, the           *)
+(* Reading map. For each group of operators: the C code, the part (B:      *)
+(* behavior part, the operators follow the code; P: property part, the     *)
 (* properties come from the requirements) and the configurations that      *)
 (* check it (ST: mc/SchedulerTest; the other names are configurations of   *)
 (* mc/MCScheduler).                                                        *)
 (*                                                                         *)
 (* - Priorities and queries (ToZephyr, Cooperative, Running, Executes,     *)
 (*   CanCall, CpuOf, TimedWait). ksched.h: z_is_prio_higher(); kthread.h:  *)
-(*   thread_is_preemptible(). D. ST.                                       *)
+(*   thread_is_preemptible(). B. ST.                                       *)
 (* - Run queue and cache (RqBefore, RunqBest, CacheOf, QueueReady,         *)
 (*   Requeue, Unqueue, HaltRq). sched.c: update_cache(), next_up(),        *)
 (*   ready_thread(), queue_thread(), dequeue_thread(); kthread.h:          *)
-(*   should_preempt(); run_q.h, priority_q.h. D. ST, all.                  *)
+(*   should_preempt(); run_q.h, priority_q.h. B. ST, all.                  *)
 (* - Selection (Candidates, Top, SmpChoices, Choices, Select, ReschedOk,   *)
 (*   Release). sched.c: z_reschedule(), resched(), need_swap(); kswap.h:   *)
-(*   z_swap(). D. ST, default, coop, smp, smp_rule, missed_resched, p2_*.  *)
+(*   z_swap(). B. ST, default, coop, smp, smp_rule, missed_resched, p2_*.  *)
 (* - Wait and wakes (PendCurr, SetSwapData, WakePre, WakeLocked,           *)
 (*   WakeThreadLocked, WakeSet, WakeFirst, WakeFirstWith, WakeAll,         *)
 (*   UnpendAll, WakeWalk, WaitqInit). sched.c: z_pend_curr(),              *)
 (*   z_sched_wake_thread_locked(), z_unpend_all(); ksched.h:               *)
 (*   z_sched_wake(), z_unpend_first_thread_locked(); scheduler.c:          *)
-(*   z_sched_waitq_walk(); wait_q.h: z_waitq_init(). D. default, coop,     *)
+(*   z_sched_waitq_walk(); wait_q.h: z_waitq_init(). B. default, coop,     *)
 (*   small, small_b, reach_b, isr_pend, wake_no_cancel, p6_init.           *)
 (* - Priority change (PrioSet, SetPrio). sched.c: z_thread_prio_set();     *)
-(*   thread.c: z_impl_k_thread_priority_set(). D. default, p7_tie,         *)
+(*   thread.c: z_impl_k_thread_priority_set(). B. default, p7_tie,         *)
 (*   p7_coop.                                                              *)
 (* - Environment (ThreadTimeout, Abort, Join, Resume, Preempt, PendSV,     *)
 (*   IrqLockCall, IrqUnlockCall, InitState, Fairness). sched.c:            *)
 (*   z_thread_timeout(), halt_thread(), unpend_all(); thread.c:            *)
 (*   z_thread_abort(), z_impl_k_thread_join(); the switch and the          *)
-(*   interrupt lock of Platform. D. default, p7_abort, join, f14_join,     *)
+(*   interrupt lock of Platform. B. default, p7_abort, join, f14_join,     *)
 (*   gap_*, p2_*, reach*.                                                  *)
 (* - Consistency (TypeOK, CurUnique, CurIsReady, PendingIsQueued,          *)
 (*   ArmedArePending, DeadIsInert, RqStampsNormal, RunRuleHolds,           *)
 (*   TimedWaitEnds, SelectionHappens) and conditions of use                *)
-(*   (NoSwitchWhileLocked, NoPanic, NoUndefined). D. default, coop, smp,   *)
+(*   (NoSwitchWhileLocked, NoPanic, NoUndefined). B. default, coop, smp,   *)
 (*   small*, join, the mutants, p6_init.                                   *)
 (* - Requirements (PreemptibleRunsHighest, UnlockPreempts,                 *)
 (*   SwitchSelectsHighest, BlockedLosesCpu, TieGoesToLongestReady,         *)
-(*   CoopKeepsCpu). ZEP-SRS-2-9, 2-12, 2-13, 2-14. N. p7_rules*, p7_*,     *)
+(*   CoopKeepsCpu). ZEP-SRS-2-9, 2-12, 2-13, 2-14. P. p7_rules*, p7_*,     *)
 (*   coop_rule*, p2_window*, gap_coop*, f14_join.                          *)
 (*                                                                         *)
 (* Size: 400 code lines (without comments), the limit of the design note.  *)
@@ -191,7 +191,7 @@ VARIABLES
     \* ready thread or of a thread state calls update_cache().
     \* @type: Bool;
     preemptOk,
-    \* A history variable of the normative layer, not a field of the code:
+    \* A history variable of the property part, not a field of the code:
     \* the order in which the ready threads became ready (1..N, threads
     \* that became ready in the same step have the same value), 0 for a
     \* thread that is not ready. A priority change does not change it. The
@@ -485,7 +485,7 @@ Release(a, kind) ==
       ELSE Select(CpuOf(a))
 
 -----------------------------------------------------------------------------
-(* Layer A: one operator for each function that the objects call.         *)
+(* The contract: one operator for each function that the objects call.     *)
 
 \* z_pend_curr(): the current thread a waits on o with the timeout to. It
 \* leaves the CPU, its return value is -EAGAIN until a waker sets another
@@ -923,7 +923,7 @@ Fairness ==
     /\ \A c \in CPUS : WF_schedVars(PendSV(c))
 
 -----------------------------------------------------------------------------
-(* Properties of the descriptive layer: the consistency of the model.     *)
+(* Properties of the behavior part: the consistency of the model.          *)
 
 \* @kind invariant
 TypeOK ==
@@ -1049,7 +1049,7 @@ SelectionHappens ==
                     (cur[c] \in Choices(c, tstate, prio, cur, rqStamp, preemptOk))
 
 -----------------------------------------------------------------------------
-(* Properties of the normative layer. Each one states a requirement, with  *)
+(* Properties of the property part. Each one states a requirement, with    *)
 (* the reading that the workspace note p7-pilot.md gives. They are for one *)
 (* CPU (coarse grain). "Candidates" and the priorities are the values      *)
 (* after the step.                                                         *)

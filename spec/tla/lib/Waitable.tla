@@ -1,6 +1,6 @@
 ------------------------------ MODULE Waitable ------------------------------
 (***************************************************************************)
-(* Layer B: the template of a kernel object with a wait queue. Minimal     *)
+(* The template module of a kernel object with a wait queue. Minimal       *)
 (* version (roadmap step 2, the k_sem slice): only the actions that KSem   *)
 (* needs. Each action is one critical section of the object lock at the    *)
 (* grain of the scheduler contract (coarse grain).                         *)
