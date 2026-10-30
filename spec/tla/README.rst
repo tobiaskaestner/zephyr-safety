@@ -891,8 +891,11 @@ Layout
      objects/          one module for each kernel object
      mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
+     c-functions.json  the hashes of the tagged C functions at the pin
      tools/            run_tlc.sh, run_tlc_remote.py, kconfig_coverage.py,
-                       tla2tools.sha256, apalache.sha256
+                       tla2tools.sha256, apalache.sha256,
+                       c_function_hashes.py, uses_graph_diff.py
+       unitmap/        copies of the generator scripts of the unit map
 
 Running
 *******
@@ -988,6 +991,142 @@ The worker rule (``--workers auto``, the default):
 ``--workers <n>`` sets the same number for all lines. ``--mem`` sets the
 Java heap (default ``4g``). ``run_tlc.sh`` takes the number of workers
 from ``TLC_WORKERS`` (default 1).
+
+Drift checks
+************
+
+The library follows the code of one Zephyr commit, the pin
+(``770fdef1567``, also in the prose of ``lib/Platform.tla``). Two scripts
+compare the pin with another commit. They read the Zephyr tree only with
+``git grep``, ``git show`` and ``git archive`` of a commit. Nothing runs
+them automatically yet.
+
+Body hashes
+===========
+
+``tools/c_function_hashes.py`` finds the definition of each name of an
+``@c-function`` tag. It removes the comments and the whitespace, and it
+hashes the C tokens of the signature and the body. The record
+``c-functions.json`` holds, for each name, each definition with its file,
+line and hash, and the full hash of the pin.
+
+The script finds functions, static inline functions of headers, aliases
+(``FUNC_ALIAS``, ``ALIAS_OF``), macros (``#define``) and assembly routines
+(``SECTION_FUNC`` in a ``.S`` file). A name can have more than one
+definition: one for each timeout backend (``z_timeout_q_insert``), one for
+each ``#if`` branch (``irq_lock``), or an inline function and an alias
+(``z_arm_int_exit``). The record holds all of them. The search scope is
+the code of the safety case on Cortex-M: ``kernel/``, ``include/zephyr/``
+without other architectures, ``arch/arm/`` without Cortex-A/R, and the
+SysTick driver files. If a name has no definition, the script looks for
+``z_impl_<name>`` (a system call).
+
+The modes:
+
+.. code-block:: console
+
+   spec/tla/tools/c_function_hashes.py tags                  # each tag at the pin
+   spec/tla/tools/c_function_hashes.py check --against <rev> # record vs. commit
+   spec/tla/tools/c_function_hashes.py check --against <rev> --diff
+   spec/tla/tools/c_function_hashes.py log --range <pin>..<rev>
+   spec/tla/tools/c_function_hashes.py record --commit <rev> # new pin
+
+- ``tags`` finds a tag without a definition at the pin (the stale tag
+  ``z_abort_timeout`` of 2026-10-29 is this case). It also finds a tag that
+  is not in the record, a record entry without a tag, and a pin in
+  ``lib/Platform.tla`` that is not the pin of the record. It lists each
+  wrapper (a body of one statement) whose callee has no tag.
+- ``check`` gives one result for each definition: ``unchanged``,
+  ``shifted`` (other line), ``moved`` (other file, same hash), ``changed``,
+  ``changed-trace`` (only ``SYS_PORT_TRACING_*`` or ``LOG_*`` statements
+  changed), ``moved-changed``, ``missing`` or ``added`` (a new definition,
+  for example a new backend). ``--diff`` shows the source diff without
+  comments.
+- ``log`` compares each commit with its first parent and names the
+  commit that changed a recorded body. ``--range A..B`` takes the commits
+  that change a file of the record.
+
+The exit status is 0 without a difference, 1 with a difference, and 2 on
+a setup error.
+
+Uses graph
+==========
+
+``tools/uses_graph_diff.py --other <rev>`` runs the generator scripts of
+the unit map (copies in ``tools/unitmap/``) on the pin and on ``<rev>``.
+It extracts the necessary directories with ``git archive`` into
+``build/drift/unitmap/``. It reports:
+
+- the new and the removed edges between the components after the cuts
+  (``meta.layers.edges`` of ``units.yaml``);
+- the new and the removed cut edges (hooks);
+- each edge from a component to a component of a higher layer (world,
+  foundation, scheduler, kernel API, client);
+- the new, the removed and the unknown unit files. A file that is not in
+  the table of ``gen.py`` gets the group ``New``.
+
+``--reference <units.yaml>`` compares the output for the pin with the unit
+map of the original scripts. At the pin, the copies give the same edges,
+cuts and components. The script needs universal-ctags 6.x and PyYAML.
+
+What the checks do not detect
+=============================
+
+A changed hash means that the text changed, not that the behavior
+changed. A refactor gives a changed hash: ``772e73c8aac`` changes eight
+recorded bodies: it replaces the calls of the scheduler lock with
+helpers, and the behavior stays the same. Thus each change needs a
+review.
+
+The checks do not detect:
+
+- A change of a callee without a tag. The hash covers the text of the
+  tagged function only. ``sys_clock_announce()`` is a wrapper of
+  ``sys_clock_announce_locked()``, so its hash does not see a change of
+  the announce algorithm. The mode ``tags`` lists such wrappers.
+- A change of a macro that a body uses (``K_SPINLOCK``,
+  ``Z_SCHED_SPINLOCK``), and of an inline function of a library header.
+  Only a tagged macro has a hash.
+- A call through a function pointer: timeout handlers, walk callbacks,
+  work handlers. The callee is not in the text, and the uses graph has no
+  edge for it.
+- The Kconfig selection. The scripts read all ``#if`` branches. A change in
+  a branch that a product does not build is a change. A new default in a
+  Kconfig file is not a change. The record does not say which definition
+  (which backend) a product builds.
+- A change of data: a new field of ``struct k_thread``, or a new initial
+  value in a static initializer.
+- The file and line locations of the ``@assumption`` tags.
+- The uses graph is lexical: it has no preprocessor, and it does not see
+  calls through function pointers or inside most macros (see the limits in
+  ``units.yaml``).
+
+A drift job
+===========
+
+The tags and hashes are the pointer from the specs to the code. The
+detectors of a behavior change are the tests of the real code: the unit
+tests, the contract tests and the trace checks. A drift job uses the
+scripts to find the specs that a new commit touches. A periodic job does
+these steps for a new upstream commit ``<rev>``:
+
+1. Run ``c_function_hashes.py tags``. If a tag is stale, stop: correct
+   the tag first.
+2. Run ``c_function_hashes.py check --against <rev> --diff``. For each
+   result that is not ``unchanged`` or ``shifted``, run ``log --range
+   <pin>..<rev>`` to find the commit.
+3. Run ``uses_graph_diff.py --other <rev>``. A new edge, a new cut or an
+   edge against the layer order is a design change. Compare it with the
+   ``INSTANCE`` and ``EXTENDS`` relations of the modules.
+4. Build the unit apps against ``<rev>``. Run the unit tests, the contract
+   tests and the trace checks.
+5. Review each change against the operator that has the tag. Change the
+   spec, or record a finding.
+6. Move the pin: run ``record --commit <rev>``, change the pin in
+   ``lib/Platform.tla``, and commit both together.
+
+Run ``record`` again after each change of a tag. Else ``tags`` reports the
+difference.
 
 Open points
 ***********
