@@ -2,7 +2,7 @@
 \* @foo bar
 \* @kind wrong
 \* @expected maybe
-\* @level 3
+\* @grain medium
 Ok == TRUE
 
 Prop == TRUE

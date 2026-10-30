@@ -3,10 +3,10 @@
 (* Layer A: the contract of the scheduler API that the kernel objects call *)
 (* (kernel/sched.c, kernel/include/ksched.h).                              *)
 (*                                                                         *)
-(* Level 1: each operator is a part of one critical section. An object     *)
-(* action composes them: first the changes of the wait queues and of the   *)
-(* thread states (PendCurr, WakeFirst, WakeAll, WakeWalk), then the end of *)
-(* the critical section (Release). PendCurr includes its Release.          *)
+(* Coarse grain: each operator is a part of one critical section. An       *)
+(* object action composes them: first the changes of the wait queues and   *)
+(* of the thread states (PendCurr, WakeFirst, WakeAll, WakeWalk), then the *)
+(* end of the critical section (Release). PendCurr includes its Release.   *)
 (*                                                                         *)
 (* Two layers. The operators are the descriptive layer: they follow the    *)
 (* code (@c-function), also where the code is surprising. The properties   *)
@@ -15,19 +15,19 @@
 (* the code. A property that fails on the model is a design finding.       *)
 (*                                                                         *)
 (* CPUs are explicit. cur[c] is the thread that runs on CPU c. One CPU is  *)
-(* the default, and level 1 claims one CPU only. On one CPU the model has  *)
-(* the run queue order (rqStamp) and the cache of the code: the argument   *)
-(* of the last update_cache() (preemptOk). Each reschedule point switches  *)
-(* to the cache (CacheOf). On SMP the selection is the old free rule       *)
-(* (SmpChoices), a design exploration: the run queue variables keep their  *)
-(* initial values. The model has no time slices, no k_yield(), no          *)
+(* the default, and coarse grain claims one CPU only. On one CPU the model *)
+(* has the run queue order (rqStamp) and the cache of the code: the        *)
+(* argument of the last update_cache() (preemptOk). Each reschedule point  *)
+(* switches to the cache (CacheOf). On SMP the selection is the old free   *)
+(* rule (SmpChoices), a design exploration: the run queue variables keep   *)
+(* their initial values. The model has no time slices, no k_yield(), no    *)
 (* scheduler lock (k_sched_lock()), no meta-IRQ threads and no CPU masks.  *)
 (*                                                                         *)
 (* The world below sched.c is the module Platform (PF): the CPUs, the ISRs *)
 (* and their CPUs (the constants CPUS, Isrs and IsrCpu are parameters of   *)
 (* Platform), the outer interrupt lock (irqNest), the in-ISR state and the *)
-(* two variants of the context switch (UseSwitch, pendsv). At level 1 an   *)
-(* ISR is one step, and the exit of the ISR is a reschedule point. With    *)
+(* two variants of the context switch (UseSwitch, pendsv). At coarse grain *)
+(* an ISR is one step, and the exit of the ISR is a reschedule point. With *)
 (* arch_swap() (UseSwitch FALSE) a reschedule point only sets PendSV       *)
 (* pending, and the step PendSV selects the thread later.                  *)
 (*                                                                         *)
@@ -418,7 +418,7 @@ Candidates(c, ts, cu) ==
 \* @type: (Set(THREAD), THREAD -> Int) => Set(THREAD);
 Top(S, pr) == {t \in S : \A u \in S : pr[u] <= pr[t]}
 
-\* The selection on SMP (design exploration, not a claim of level 1): a
+\* The selection on SMP (design exploration, not a claim of the coarse grain): a
 \* ready cooperative thread keeps the CPU, else the current thread wins a
 \* tie, else any thread with the highest priority. This is the rule of
 \* next_up() with swap_ok = 0, without the run queue order.
@@ -519,7 +519,7 @@ PendCurr(a, o, to) ==
 \* k_msgq_put() and k_msgq_get() (msg_q.c:248, 387), the message of a
 \* mailbox send and of k_mbox_get() (mailbox.c:265, 503). The waker reads
 \* it (msg_q.c:198, 366; mailbox.c:215, 441). The code writes it in the
-\* critical section of the wait. A separate step is the same at level 1:
+\* critical section of the wait. A separate step is the same at coarse grain:
 \* only a waker of a pending thread writes the swap data of another thread.
 \* @kind action
 SetSwapData(a, d) ==
@@ -543,7 +543,7 @@ WakePre(S) == S \cap TO!Armed = {}
 \* section, with the value ret[t] and the data dat[t] that the caller
 \* writes first (arch_thread_return_value_set(), swap_data). The function
 \* ignores a dead or aborting thread (sched.c:479-482): such a thread keeps
-\* its state (at level 1 "aborting" is not a state: only SMP has it). Each
+\* its state (at coarse grain "aborting" is not a state: only SMP has it). Each
 \* other thread of S leaves its wait queue and is ready (QueueReady). The
 \* operator does not change the timeouts (tq, tqCost): the caller cancels
 \* them (see WakePre) and sets tq' and tqCost'. Thus each thread of S
@@ -752,7 +752,7 @@ HaltRq(t, J) ==
 \* when a joiner with a higher priority is ready (finding F14).
 \* Not in the model: essential threads (panic), k_thread_suspend() (the
 \* same path without the join queue), and the abort of a thread that runs
-\* on another CPU (level 2: the target halts itself in an IPI, roadmap
+\* on another CPU (fine grain: the target halts itself in an IPI, roadmap
 \* step 5).
 \* @kind action
 \* @c-function z_thread_abort
@@ -1051,8 +1051,8 @@ SelectionHappens ==
 -----------------------------------------------------------------------------
 (* Properties of the normative layer. Each one states a requirement, with  *)
 (* the reading that the workspace note p7-pilot.md gives. They are for one *)
-(* CPU (level 1). "Candidates" and the priorities are the values after the *)
-(* step.                                                                   *)
+(* CPU (coarse grain). "Candidates" and the priorities are the values      *)
+(* after the step.                                                         *)
 
 \* While the current thread is preemptible, no ready thread has a higher
 \* priority: a thread with a higher priority that becomes ready (also by a

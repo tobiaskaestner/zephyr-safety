@@ -37,7 +37,7 @@ PendingIsUnlocked(n, pv)    == At(FALSE, n, pv)!PendingIsUnlocked
 -----------------------------------------------------------------------------
 (* The tests *)
 
-\* The actors and arch_is_in_isr(): at level 1 the kind of the actor.
+\* The actors and arch_is_in_isr(): at coarse grain the kind of the actor.
 TestActors ==
     /\ Check("actors",         Actors, {"t1", "t2", "i1"})
     /\ Check("in isr: isr",    InIsr("i1"), TRUE)

@@ -112,9 +112,9 @@ Tag                        Meaning                                        Need f
                            (repeatable)                                   (joined, ``;``)
 ``@expected violation``    TLC must report a counterexample               ``expected``
                                                                           (``hold`` / ``violation``)
-``@level 2``               the step of the action is finer than the       (none)
-                           level of its module (``1`` or ``2``, see
-                           ``safety/spec/tla/README.rst``)
+``@grain fine``            the step of the action is finer than the       (none)
+                           grain of its module (``coarse`` or ``fine``,
+                           see ``safety/spec/tla/README.rst``)
 ``@type: <type>;``         the type annotation of Apalache (also          (none)
                            ``@typeAlias``). Not shown.
 =========================  =============================================  =====================

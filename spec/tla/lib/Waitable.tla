@@ -3,7 +3,7 @@
 (* Layer B: the template of a kernel object with a wait queue. Minimal     *)
 (* version (roadmap step 2, the k_sem slice): only the actions that KSem   *)
 (* needs. Each action is one critical section of the object lock at the    *)
-(* grain of the scheduler contract (level 1, coarse).                      *)
+(* grain of the scheduler contract (coarse grain).                         *)
 (*                                                                         *)
 (* - Take: the resource is available (Consume), or the call returns        *)
 (*   NoWaitRet (K_NO_WAIT), or the caller waits (Scheduler!PendCurr).      *)

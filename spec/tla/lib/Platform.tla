@@ -1,6 +1,6 @@
 ------------------------------ MODULE Platform ------------------------------
 (***************************************************************************)
-(* The world below kernel/sched.c, level 1: the CPUs, the actors, the      *)
+(* The world below kernel/sched.c, coarse grain: the CPUs, the actors, the *)
 (* interrupt lock, the context switch and the clock events.                *)
 (*                                                                         *)
 (* This is an assumption module. It states only what sched.c relies on.    *)
@@ -11,11 +11,11 @@
 (* the boards G474RE and RT1060. The code locations are of Zephyr          *)
 (* 770fdef1567.                                                            *)
 (*                                                                         *)
-(* Level 1: an ISR is one step, so "in an ISR" is the kind of the actor    *)
-(* and not a variable. The interrupt lock of a CPU is the outer lock of    *)
-(* the thread that runs on it (irq_lock() outside a kernel call). The      *)
-(* spinlocks inside a kernel call are a part of the step. Level 2 adds the *)
-(* IPIs, the lock owners and the ISR nesting.                              *)
+(* Coarse grain: an ISR is one step, so "in an ISR" is the kind of the     *)
+(* actor and not a variable. The interrupt lock of a CPU is the outer lock *)
+(* of the thread that runs on it (irq_lock() outside a kernel call). The   *)
+(* spinlocks inside a kernel call are a part of the step. The fine grain   *)
+(* adds the IPIs, the lock owners and the ISR nesting.                     *)
 (*                                                                         *)
 (* The context switch has two variants (UseSwitch). With                   *)
 (* CONFIG_USE_SWITCH the decision and the switch are in one step. With     *)
@@ -44,7 +44,7 @@ CONSTANTS
 
 \* The CPUs. A set with one CPU is a uniprocessor: CONFIG_SMP=n and
 \* CONFIG_MP_MAX_NUM_CPUS=1. A set with two CPUs is CONFIG_SMP=y (design
-\* exploration at level 1). CONFIG_SMP=y with one CPU is not in the model.
+\* exploration at coarse grain). CONFIG_SMP=y with one CPU is not in the model.
 \* This is a Kconfig option of kind 2: each model configuration fixes the
 \* set.
 \* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
@@ -99,7 +99,7 @@ ASSUME ~UseSwitch => Cardinality(CPUS) = 1
 \* An actor calls the kernel: a thread or an ISR.
 Actors == Threads \cup Isrs
 
-\* arch_is_in_isr(): actor a runs in an ISR. At level 1 an ISR is one step,
+\* arch_is_in_isr(): actor a runs in an ISR. At coarse grain an ISR is one step,
 \* so this is the kind of the actor. On Cortex-M each exception counts as an
 \* ISR, also a fault or the SVC of a system call.
 \* @c-function arch_is_in_isr
@@ -213,7 +213,7 @@ PendSVRuns(c) ==
 \* The timer interrupt can run on CPU c (the SysTick ISR calls
 \* sys_clock_announce(), which expires the timeouts). Its exit is a
 \* reschedule point. The model has no clock: the expiry is an event of the
-\* environment (Scheduler!ThreadTimeout). IPIs are not at level 1: level 2
+\* environment (Scheduler!ThreadTimeout). IPIs are not at coarse grain: fine grain
 \* adds them (flag_ipi(), signal_pending_ipi()), together with the lock
 \* owners.
 \* @assumption drivers/timer/cortex_m_systick.c:330-336 (the SysTick ISR announces the ticks and ends with z_arm_int_exit())
