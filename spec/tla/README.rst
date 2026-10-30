@@ -330,7 +330,7 @@ an ISR), ``o`` an object.
        kind 5, invariant ``NoUndefined``, finding P6-u).
    * - ``WaitQueue!Head(o)``
      - The query ``z_waitq_head()`` and ``z_waitq_head_locked()``: the
-       best waiter, or ``None``.
+       best waiter, or ``Idle`` (``WaitQueue!NoThread``).
    * - ``PrioSet(t, p)``
      - ``z_thread_prio_set()``: a waiter goes to the end of the waiters
        with its new priority. A ready thread (on one CPU also the current
@@ -561,8 +561,9 @@ operator (``Walked``, ``WalkStop``): it follows the wait queue order with
 both backends and stops at the first waiter for which ``walk_func``
 returns non-zero. ``CONFIG_WAITQ_SCALABLE`` changes only what a callback
 can do in the walk (no removal before the last step), not the order.
-``Head(o)`` is the query ``z_waitq_head()``. ``WaitQueue`` does not extend
-``Sequences``, so that the name ``Head`` is free.
+``Head(o)`` is the query ``z_waitq_head()``, with the value ``NoThread``
+if no thread waits. ``WaitQueue`` does not extend ``Sequences``, so that
+the name ``Head`` is free.
 
 **Normalization.** Stamps grow without a limit, and TLC needs a finite
 state space. After each step, the stamps are renumbered to their rank
@@ -657,9 +658,11 @@ roadmap step 5. The specs keep a style that it can read from the start:
   A single ``CONSTANT`` statement with a doc comment (the Kconfig tags) has
   the form ``CONSTANT`` / ``\* @type: Bool;`` / ``UseSwitch``, on three
   lines. An annotation in the doc comment before the keyword is not read.
-- An operator gives values of one type. ``WaitQueue!Head`` and
-  ``WaitQueue!WalkStop`` break this rule today: they give a thread or the
-  object ``None`` (see `Apalache checks`_).
+- An operator gives values of one type. For "no thread",
+  ``WaitQueue!Head`` and ``WaitQueue!WalkStop`` give the constant
+  ``NoThread`` (a thread value that is not in ``Threads``), not the object
+  ``None``. ``Scheduler`` sets ``NoThread`` to ``Idle`` (decision D15 of
+  2026-10-31).
 - A type annotation on each operator that reads a record field of its
   parameter, and on each generic helper (``Seq(a) => Set(a)``). Apalache
   cannot infer the record type from ``r.count`` alone. A type alias
@@ -674,8 +677,15 @@ roadmap step 5. The specs keep a style that it can read from the start:
   constant definition (``0..MaxHeight`` in ``Timeout!Log2Ceil``) or
   computed from constants (``1..(Cardinality(Entries) + 1)`` in
   ``Timeout!InsertAny``, where ``Insert`` selects the valid positions).
-  ``WaitQueue!Ordered`` has a range that depends on the state, so it is
-  for TLC only (trace views).
+  A sequence with a length that depends on the state is a function on a
+  constant domain, cut with ``FunAsSeq(f, len, capacity)`` of the
+  standard module ``Apalache`` (decision D16 of 2026-10-31):
+  ``WaitQueue!Ordered`` and the wake calls of ``Waitable!Flush`` use
+  ``1..Cardinality(Threads)`` and a filler after the last element. TLC
+  evaluates ``f`` on all of ``1..capacity``, so ``f`` must be defined
+  there. ``lib/Apalache.tla`` is an unchanged copy of the module of
+  Apalache 0.62.4 for TLC (``tla2tools.jar`` has no such module). Apalache
+  uses its own copy (``tools/run_apalache.sh`` removes the file).
 - ``CHOOSE`` only over finite sets.
 - Each ``CHOOSE`` has exactly one witness, and an invariant or an example
   test checks this: ``RanksDistinct`` and ``BestIsHead`` for
@@ -920,7 +930,8 @@ Layout
 
    spec/tla/
      README.rst        this design note
-     lib/              Platform, Scheduler, WaitQueue, Timeout, Waitable
+     lib/              Platform, Scheduler, WaitQueue, Timeout, Waitable,
+                       Apalache (a copy of the standard module, for TLC)
      objects/          one module for each kernel object
      mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
@@ -1007,16 +1018,11 @@ Apalache checks
 Research only, not evidence (``tools/TOOLS.rst``). The state of
 2026-10-30:
 
-- **Type check.** ``Platform`` and ``Timeout`` pass. ``WaitQueue`` and each
-  module above it fail on ``WaitQueue!Head`` and ``WaitQueue!WalkStop``:
-  they give a thread or the object ``None``, and Apalache has no type for
-  both. Without these two definitions (the key ``omit=`` of the expected
-  file), ``WaitQueue`` and ``Scheduler`` pass. ``KSem`` then fails on
-  ``Waitable!Flush``: it builds a sequence with a function constructor
-  (``[k \in 1..Len(Q) |-> ...] \o ...``), and Apalache types it as a
-  function. ``Waitable`` is a template and type-checks only through an
-  object module. The workspace notes have the proposals for the changes
-  (``kernel-unit/tla/architecture/patch-notes/apalache.md``).
+- **Type check** (2026-10-31). ``Platform``, ``Timeout``, ``WaitQueue``,
+  ``Scheduler`` and ``KSem`` pass, since the decisions D15 (``NoThread``
+  for ``WaitQueue!Head`` and ``WalkStop``) and D16 (``FunAsSeq`` in
+  ``WaitQueue!Ordered`` and ``Waitable!Flush``). ``Waitable`` is a
+  template and type-checks only through an object module.
 - **Inductive invariants.** Each module in ``apalache/`` writes an
   inductive invariant ``IndInv`` and checks three obligations:
   ``Init => IndInv`` (length 0), ``IndInv /\ Next => IndInv'`` (initial
@@ -1032,7 +1038,10 @@ Research only, not evidence (``tools/TOOLS.rst``). The state of
   inductive for the ``Next`` of ``mc/MCScheduler`` with the constants of
   ``small`` and of ``default``. The module extends ``MCScheduler`` (Apalache rejects an
   instance chain of three levels with an operator for a constant) and
-  splits ``Next`` into groups, one run for each group.
+  splits ``Next`` into groups, one run for each group. The lines remove
+  the symmetry set ``SymThreadsObjs`` of ``MCScheduler`` (key ``omit=``):
+  it is a set of functions on threads and objects together, and Apalache
+  has no type for it.
 
 - The workspace notes have one more check (2026-10-21, no line here): the
   cost bound of ``Timeout`` for both backends and the capacities 1 to 3

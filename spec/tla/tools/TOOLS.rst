@@ -306,8 +306,10 @@ Research only. ``tools/run_apalache.sh`` runs the lines of
   ``--smt-encoding=oopsla19``, ``--discard-disabled=true``).
 - The script copies ``lib/``, ``objects/``, ``mc/`` and ``apalache/`` into
   one directory and removes the definitions of the key ``omit=``. Today
-  this is ``WaitQueue!Head`` and ``WaitQueue!WalkStop``, which Apalache
-  does not accept and which no checked formula uses.
+  this is ``MCScheduler!SymThreadsObjs`` (the symmetry set of TLC), which
+  Apalache does not accept and which no checked formula uses. It also
+  removes ``lib/Apalache.tla``, the copy of the standard module for TLC:
+  Apalache reads a module of the directory before its own module.
 
 The features that the lines use: ``typecheck``, invariants with
 ``--init`` other than ``Init`` (the inductive step), ``--cinit``,
@@ -341,8 +343,11 @@ Known defects and limits
        a sequence type. A range must have constant bounds. An operator has
        one result type.
      - ``Waitable!Flush``, ``WaitQueue!Ordered``, ``WaitQueue!Head`` and
-       ``WalkStop`` do not type-check or do not run.
-     - The expected file records the failures (``fail:120``).
+       ``WalkStop`` did not type-check before 2026-10-31.
+     - ``Head`` and ``WalkStop`` give ``NoThread`` (decision D15).
+       ``Ordered`` and ``Flush`` build a function on the constant domain
+       ``1..Cardinality(Threads)`` and cut it with ``FunAsSeq`` (decision
+       D16). The model check of ``Flush`` in Apalache is not tried yet.
    * - "Trying to expand a set of functions" for ``\E f \in [S -> T]`` in
        an initial predicate.
      - A type domain of a sequence cannot use a function set.
@@ -369,8 +374,9 @@ Regression tests of the tool
 
 The expected file has known answers: lines that must give ``violated``
 (the candidates 0 to 2 of ``APScheduler``, ``range_inv`` and
-``order_step`` of ``APWaitQueue``) and lines that must give ``fail:120``
-or ``fail:255`` (the type check). A pass of a check line is not evidence
+``order_step`` of ``APWaitQueue``) and lines that must give ``fail:255``
+(the type check of ``Waitable``, the initial predicate of
+``MCScheduler``). A pass of a check line is not evidence
 alone: the same file must also show that the check finds a violation.
 There is no selftest of Apalache yet (models that do not change with the
 specs, like ``selftest/`` for TLC).
@@ -379,9 +385,9 @@ Status
 ======
 
 No Apalache result is evidence today. Before the first evidence run: the
-archive on the lab host, a selftest, a survey of the known defects, and a
-decision on ``WaitQueue!Head``, ``WalkStop`` and ``Waitable!Flush``
-(the workspace notes have the proposals).
+archive on the lab host, a selftest and a survey of the known defects.
+The decisions on ``WaitQueue!Head``, ``WalkStop`` and ``Waitable!Flush``
+are made and applied (D15, D16 of 2026-10-31).
 
 CBMC
 ****

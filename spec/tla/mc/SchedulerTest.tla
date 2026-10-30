@@ -224,7 +224,7 @@ TestPlatformState ==
 
 \* The queries of round B: the precondition of z_sched_wake_thread_locked()
 \* (no armed timeout), the waiters of a join queue, the wait queue head
-\* and the causes of a panic.
+\* (Idle if no thread waits) and the causes of a panic.
 TestRoundB ==
     /\ Check("wake pre: armed waiter",    AtJ!WakePre({"t2"}), FALSE)
     /\ Check("wake pre: no timeout",      AtJ!WakePre({"t3"}), TRUE)
@@ -233,6 +233,7 @@ TestRoundB ==
     /\ Check("join: no join queue",       AtJ!JoinWaiters("t3"), {})
     /\ Check("has waiters",               AtJ!HasWaiters("o1"), TRUE)
     /\ Check("head",                      AtJ!WQ!Head("o1"), "t2")
+    /\ Check("head: empty is idle",       AtP(0, FALSE)!WQ!Head("o1"), "idle")
     /\ Check("undefined is not a panic",  "undefined" \in AtJ!PanicCauses, FALSE)
 
 \* The queries of the actors.

@@ -10,7 +10,7 @@
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 
-CONSTANTS t1, t2, t3, o1, o2, NoObj
+CONSTANTS t1, t2, t3, o1, o2, NoObj, NoThr
 
 \* The three priorities of the model.
 Prios == {1, 2, 3}
@@ -22,7 +22,7 @@ vars == <<pendedOn, stamp, prio>>
 Threads == {t1, t2, t3}
 Objs    == {o1, o2}
 
-WQ == INSTANCE WaitQueue WITH None <- NoObj
+WQ == INSTANCE WaitQueue WITH None <- NoObj, NoThread <- NoThr
 
 Init ==
     /\ pendedOn = [t \in Threads |-> NoObj]

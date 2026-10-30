@@ -154,6 +154,9 @@ copy_specs() { # <omit list>
 	rm -rf "${out:?}/src"
 	mkdir -p "$out/src"
 	cp "$spec"/lib/*.tla "$spec"/objects/*.tla "$spec"/mc/*.tla "$spec"/apalache/*.tla "$out/src/"
+	# lib/Apalache.tla is a copy of the standard module for TLC. Apalache
+	# reads a module of the directory before its own, so remove the copy.
+	rm -f "$out/src/Apalache.tla"
 	local item m d
 	for item in ${1//,/ }; do
 		m=${item%%.*} d=${item#*.}
