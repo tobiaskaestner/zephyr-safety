@@ -3,6 +3,10 @@
 (* Model of lib/WaitQueue.tla alone. An environment adds and removes       *)
 (* waiters and changes priorities in any order. TLC checks the invariants  *)
 (* and the action properties of the library module.                        *)
+(*                                                                         *)
+(* The sensitivity configurations *_sens_* override the definitions        *)
+(* Threads, Objs and Prios with a value in the configuration file (for     *)
+(* example Threads = {t1, t2, t3, t4}). Nothing else changes.              *)
 (***************************************************************************)
 EXTENDS Naturals, FiniteSets
 

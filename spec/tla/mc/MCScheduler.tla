@@ -53,8 +53,18 @@
 (*   adds k_thread_join(). An abort then wakes the joiners (finding F14).  *)
 (* - MCInit adds z_waitq_init() of an object by a thread: on a wait queue  *)
 (*   with waiters, undefined behavior (finding P6-u).                      *)
+(*                                                                         *)
+(* Sensitivity set (2026-10-30, recommendation 5 of the review): the       *)
+(* configurations *_sens_* change only the bounds of a base                *)
+(* configuration. A configuration file overrides the definition Threads    *)
+(* (Threads = {t1, t2, t3, t4} makes t4 a new model value) and the         *)
+(* constant MCObjs ({o1, o2, o3}). With four threads and MCJoin, it also   *)
+(* sets JoinQ4 to a new object j4. The configurations *_sym add the        *)
+(* symmetry set SymThreadsObjs. The argument for each bound and for the    *)
+(* symmetry is in the workspace notes (tla/small-scope.md).                *)
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
+LOCAL INSTANCE TLC
 
 CONSTANTS
     \* @type: THREAD;
@@ -150,13 +160,21 @@ VARIABLES
 vars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
           pendedOn, stamp, tq, tqCost, irqNest, pendsv>>
 
+\* The threads. A sensitivity configuration overrides this definition with
+\* a value (Threads = {t1, t2} or {t1, t2, t3, t4}). t1 must stay in the
+\* set: InWalk and WithRet name it.
 Threads == {t1, t2, t3}
 \* The objects of the kernel calls (not the join queues).
 ObjQs   == MCObjs
+\* The join queue of a fourth thread. A configuration with four threads and
+\* MCJoin sets it to a new object (JoinQ4 = j4). Without that line, t3 and
+\* t4 share j3, and the ASSUME on JoinQ in Scheduler fails.
+JoinQ4  == j3
 \* The join queue of each thread, if MCJoin.
-MCJoinQ == IF MCJoin THEN [t \in Threads |-> CASE t = t1 -> j1 [] t = t2 -> j2 [] OTHER -> j3]
+MCJoinQ == IF MCJoin THEN [t \in Threads |-> CASE t = t1 -> j1 [] t = t2 -> j2 [] t = t3 -> j3
+                                                 [] OTHER -> JoinQ4]
            ELSE [t \in Threads |-> NoObj]
-Objs    == MCObjs \cup (IF MCJoin THEN {j1, j2, j3} ELSE {})
+Objs    == MCObjs \cup (IF MCJoin THEN {MCJoinQ[t] : t \in Threads} ELSE {})
 Isrs    == {i1}
 Actors  == Threads \cup Isrs
 
@@ -175,6 +193,9 @@ ZPriosMixed == {-1, 0, 1}
 \* priority is higher than each preemptible one, so only a second
 \* cooperative priority can be higher than a cooperative thread.
 ZPriosCoop == {-2, -1, 0}
+\* Wide: two cooperative and two preemptible priorities (only the
+\* sensitivity configurations *_sens_pw use it).
+ZPriosWide == {-2, -1, 0, 1}
 
 \* The model priorities of the Zephyr priorities of the configuration.
 Prios == {Sched!FromZephyr(z) : z \in MCZPrios}
@@ -314,6 +335,24 @@ Next ==
     \/ Halted
 
 Spec == Init /\ [][Next]_vars /\ Sched!Fairness
+
+\* The symmetry set of the configurations *_sym. Only for a configuration
+\* without liveness properties and without MCJoin. The reasons:
+\*
+\* - Init, Next and the properties do not name a thread other than t1
+\*   (InWalk, WithRet) and do not name an object. MCJoinQ names each
+\*   thread, so a configuration with MCJoin is not symmetric.
+\* - Each CHOOSE over threads in the library has exactly one witness while
+\*   CurUnique, RqStampsNormal, ArmedOnce and RanksDistinct hold, so its
+\*   value does not depend on the names. A *_sym configuration checks
+\*   these invariants.
+\* - TLC can miss a liveness violation under symmetry.
+\*
+\* SymThreadsObjs is the product of the two groups: each permutation of the
+\* threads other than t1 together with each permutation of the objects.
+SymThreadsObjs ==
+    {[x \in (Threads \ {t1}) \cup MCObjs |-> IF x \in MCObjs THEN q[x] ELSE p[x]] :
+        p \in Permutations(Threads \ {t1}), q \in Permutations(MCObjs)}
 
 -----------------------------------------------------------------------------
 (* Properties of the library module *)

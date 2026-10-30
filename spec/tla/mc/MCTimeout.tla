@@ -11,6 +11,11 @@
 (* HeapCapacity". A configuration with HeapCapacity < 3 shows that the     *)
 (* assumption is necessary (expected violation). Later the Scheduler       *)
 (* module owns panic.                                                      *)
+(*                                                                         *)
+(* The sensitivity configurations *_sens_* override the definition         *)
+(* Entries with a value in the configuration file (for example             *)
+(* Entries = {e1, e2, e3, e4}). A heap that is "enough" then has one entry *)
+(* for each entry of the model. The heap that is "too small" keeps 2.      *)
 (***************************************************************************)
 EXTENDS Naturals, Sequences, FiniteSets
 
