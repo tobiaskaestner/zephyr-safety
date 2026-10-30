@@ -11,6 +11,12 @@
 #include <latbench/meta.h>
 
 void lat_code_pad(void);
+#if defined(CONFIG_LATBENCH_DATA_PAD)
+extern uint8_t lat_data_pad[];
+#endif
+#if (defined(CONFIG_LATBENCH_DATA_PAD) || defined(CONFIG_LATBENCH_TAIL)) && defined(CONFIG_CPU_CORTEX_M)
+#include <cmsis_core.h>
+#endif
 
 /* The pad exists only with LATBENCH_CODE_FLASH_PAD and LATBENCH_CODE_RAM. */
 #ifndef CONFIG_LATBENCH_CODE_PAD_BYTES
@@ -76,6 +82,14 @@ void lat_meta_print(const char *app, const char *variant)
 #endif
 	/* The reference also keeps the pad from the linker garbage collection. */
 	printk("LAT META code_pad_at=%p\n", (void *)lat_code_pad);
+#if defined(CONFIG_LATBENCH_DATA_PAD)
+	printk("LAT META data_pad=%u\nLAT META data_pad_at=%p\n", CONFIG_LATBENCH_DATA_PAD_BYTES,
+	       (void *)lat_data_pad);
+#endif
+#if (defined(CONFIG_LATBENCH_DATA_PAD) || defined(CONFIG_LATBENCH_TAIL)) && defined(CONFIG_CPU_CORTEX_M)
+	/* The top of the interrupt stack: in thread mode, MSP is not in use. */
+	printk("LAT META msp=0x%08x\n", (unsigned int)__get_MSP());
+#endif
 
 	printk("LAT CFG");
 	LAT_CFG(USE_SWITCH);

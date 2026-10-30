@@ -48,6 +48,15 @@ Common options
    * - ``LATBENCH_CODE_RAM_KERNEL``, ``_ARCH``, ``_DRIVERS``, ``_APP``
      - y
      - The groups of files that ``LATBENCH_CODE_RAM`` relocates
+   * - ``LATBENCH_DATA_PAD``
+     - n
+     - An array of ``LATBENCH_DATA_PAD_BYTES`` in the ``.bss`` of the app.
+       It moves the kernel data and the stacks (see
+       :ref:`benchguide-data-placement`)
+   * - ``LATBENCH_DATA_PAD_BYTES``
+     - 1024
+     - Size of the data pad (range 4 to 65536, only with
+       ``LATBENCH_DATA_PAD``)
    * - ``LATBENCH_HIST_BINS``
      - 4096
      - Number of 1-cycle bins (range 1 to 65536)

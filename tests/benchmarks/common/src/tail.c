@@ -107,13 +107,13 @@ void lat_tail_print(const struct lat_tail *t)
 
 /*
  * The cost of the calls, from the stimulus timer, with the interrupts
- * locked: the smallest value of 64 tries, minus nothing (the empty pair of
- * two time stamps is printed too). The add is measured in its three paths:
- * rejected (fast), stored, and stored with the scan of a full table.
+ * locked: the smallest value of 64 tries (the empty pair of two time
+ * stamps is printed too). The add is measured in its three paths:
+ * rejected (fast), stored, and stored with the scan of a full table. The
+ * measurement uses the table of the app, so that the image has no second
+ * table (RAM and data layout), and empties it at the end.
  */
-static struct lat_tail scratch;
-
-void lat_tail_print_setup(void)
+void lat_tail_print_setup(struct lat_tail *t)
 {
 	uint32_t c_empty = UINT32_MAX;
 	uint32_t c_mark = UINT32_MAX;
@@ -123,7 +123,7 @@ void lat_tail_print_setup(void)
 	struct lat_tail_mark m;
 
 	for (uint32_t i = 0U; i < CONFIG_LATBENCH_TAIL_N; i++) {
-		scratch.rows[i].lat = CONFIG_LATBENCH_TAIL_MIN_CYC + 1000U;
+		t->rows[i].lat = CONFIG_LATBENCH_TAIL_MIN_CYC + 1000U;
 	}
 	for (int i = 0; i < 64; i++) {
 		unsigned int key = irq_lock();
@@ -140,28 +140,32 @@ void lat_tail_print_setup(void)
 		c_mark = MIN(c_mark, b - a);
 
 		/* A table with one free row: the add stores the row. */
-		scratch.n = CONFIG_LATBENCH_TAIL_N - 1U;
+		t->n = CONFIG_LATBENCH_TAIL_N - 1U;
 		a = stim_now();
-		lat_tail_add(&scratch, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC + 1000U, 0U, 0U,
-			     LAT_TAIL_NO_CTX);
+		lat_tail_add(t, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC + 1000U, 0U, 0U, LAT_TAIL_NO_CTX);
 		b = stim_now();
 		c_store = MIN(c_store, b - a);
 
 		/* Full table with low = MIN_CYC + 1000: a smaller sample is rejected. */
 		a = stim_now();
-		lat_tail_add(&scratch, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC, 0U, 0U,
-			     LAT_TAIL_NO_CTX);
+		lat_tail_add(t, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC, 0U, 0U, LAT_TAIL_NO_CTX);
 		b = stim_now();
 		c_reject = MIN(c_reject, b - a);
 
 		/* Full table, larger sample: replace a row and scan the table. */
 		a = stim_now();
-		lat_tail_add(&scratch, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC + 2000U, 0U, 0U,
-			     LAT_TAIL_NO_CTX);
+		lat_tail_add(t, &m, 0U, CONFIG_LATBENCH_TAIL_MIN_CYC + 2000U, 0U, 0U, LAT_TAIL_NO_CTX);
 		b = stim_now();
 		c_full = MIN(c_full, b - a);
 		irq_unlock(key);
 	}
+	/* Empty the table for the run. */
+	t->n = 0U;
+	t->seen = 0U;
+	t->low = 0U;
+	t->low_i = 0U;
+	t->exc_min = UINT32_MAX;
+	t->exc_max = 0U;
 	printk("LAT META tail_n=%u\n", CONFIG_LATBENCH_TAIL_N);
 	printk("LAT META tail_min_cyc=%u\n", CONFIG_LATBENCH_TAIL_MIN_CYC);
 	printk("LAT META tail_cost_empty_cyc=%u\n", c_empty);

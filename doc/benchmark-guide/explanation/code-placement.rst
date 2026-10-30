@@ -180,3 +180,23 @@ application in flash. On ``nucleo_g474re`` it is faster, because the
 code has no flash wait states. Give the
 cost of the code placement with the result: the flash range and the RAM
 number of the same build.
+
+.. _benchguide-data-placement:
+
+The place of the data changes the latency, too
+----------------------------------------------
+
+``LATBENCH_CODE_RAM`` removes the effect of the code address. It does
+not remove the effect of the data address. On the NUCLEO-G474RE (code in
+CCM, 2026-10-30), the wake path (``wake_latency``, semaphore) was 45
+cycles slower and the IRQ entry 2 cycles slower when the interrupt stack
+and the idle stack were in SRAM2 (from ``0x20014000``) and not in SRAM1.
+A larger ``.bss`` of the app before the kernel data moves the stacks.
+Examples are a large witness table, more histograms or more load
+threads. The option ``LATBENCH_DATA_PAD`` adds an array to the ``.bss``
+of the app, so a build can move the stacks without other changes.
+``LAT META msp`` gives the top of the interrupt stack.
+
+Thus compare two RAM builds only if their stacks are in the same SRAM.
+The sub-study ``measurement-validity/code-placement`` (H3) measures the
+effect over a set of data pads.

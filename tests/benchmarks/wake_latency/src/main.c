@@ -83,12 +83,12 @@ static LAT_PHASE_DEFINE(p_irq_sw, "irq_sw");
  * window starts at the arm of the edge and ends after the time stamps of
  * the thread. No PC: a read in the ISR would make the wake path longer.
  */
-static LAT_TAIL_DEFINE(tail, "irq2thr");
+LAT_TAIL_DEFINE(tail, "irq2thr");
 static struct lat_tail_mark tail_m;
 #define TAIL_MARK() lat_tail_mark(&tail_m)
 #if defined(CONFIG_LATBENCH_SWTRIG)
 /* The same for the software samples. The window starts at the request. */
-static LAT_TAIL_DEFINE(tail_sw, "irq2thr_sw");
+LAT_TAIL_DEFINE(tail_sw, "irq2thr_sw");
 static struct lat_tail_mark tail_sw_m;
 #define TAIL_SW_MARK() lat_tail_mark(&tail_sw_m)
 #endif
@@ -325,7 +325,7 @@ int main(void)
 	/* M4: empty unless CONFIG_ARM_IRQ_MASK_HOOKS=y. */
 #if defined(CONFIG_LATBENCH_TAIL)
 	lat_tail_init();
-	lat_tail_print_setup();
+	lat_tail_print_setup(&tail);
 #endif
 	irqmask_start();
 #if defined(CONFIG_LATBENCH_SWTRIG)

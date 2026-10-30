@@ -115,6 +115,22 @@ config LATBENCH_CODE_RAM_APP
 	  All files of the library "app": the app, common/src and the board
 	  port. The code pad is always relocated.
 
+config LATBENCH_DATA_PAD
+	bool "Data pad before the kernel data"
+	help
+	  common/src/data_pad.c adds an array of LATBENCH_DATA_PAD_BYTES to
+	  the .bss of the app. The data of the kernel (thread objects, the
+	  interrupt stack, the thread stacks) comes after it, so it moves by
+	  about this size. For a check of the data placement effect: the
+	  latency can depend on the address of the stacks (for example SRAM1
+	  or SRAM2). lat_meta_print() prints data_pad, data_pad_at and msp.
+
+config LATBENCH_DATA_PAD_BYTES
+	int "Bytes of the data pad"
+	depends on LATBENCH_DATA_PAD
+	range 4 65536
+	default 1024
+
 config LATBENCH_HIST_BINS
 	int "Number of 1-cycle histogram bins"
 	range 1 65536

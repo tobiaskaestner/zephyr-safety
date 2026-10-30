@@ -90,10 +90,17 @@ struct lat_tail {
 	/** Smallest and largest exc of all samples: the exc of a sample without other exceptions. */
 	uint32_t exc_min;
 	uint32_t exc_max;
-	struct lat_tail_row rows[CONFIG_LATBENCH_TAIL_N];
+	/** CONFIG_LATBENCH_TAIL_N rows, in .bss (see LAT_TAIL_DEFINE). */
+	struct lat_tail_row *rows;
 };
 
-#define LAT_TAIL_DEFINE(_var, _name) struct lat_tail _var = {.name = (_name), .exc_min = UINT32_MAX}
+/*
+ * Define a table _var (static). The rows are a separate array without an
+ * initializer, so they are in .bss and not also in the flash image (.data).
+ */
+#define LAT_TAIL_DEFINE(_var, _name)                                                               \
+	static struct lat_tail_row _var##_rows[CONFIG_LATBENCH_TAIL_N];                            \
+	static struct lat_tail _var = {.name = (_name), .exc_min = UINT32_MAX, .rows = _var##_rows}
 
 /** Enable the DWT exception counter. Call it once before the first mark. */
 void lat_tail_init(void);
@@ -124,8 +131,11 @@ void lat_tail_add(struct lat_tail *t, const struct lat_tail_mark *m, uint32_t se
 /** Print the table in the LAT line format (LAT TAIL, LAT TW, LAT END). */
 void lat_tail_print(const struct lat_tail *t);
 
-/** Measure the cost of the witness calls and print it as LAT META tail_*. */
-void lat_tail_print_setup(void);
+/**
+ * Measure the cost of the witness calls on the table t and print it as LAT
+ * META tail_*. Then empty t. Call it before the first sample.
+ */
+void lat_tail_print_setup(struct lat_tail *t);
 
 #endif /* CONFIG_LATBENCH_TAIL */
 

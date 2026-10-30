@@ -165,6 +165,13 @@ Metadata keys
    * - ``code_pad``, ``code_pad_at``
      - all
      - ``LATBENCH_CODE_PAD_BYTES`` and the address of the pad function
+   * - ``data_pad``, ``data_pad_at``
+     - all, with ``LATBENCH_DATA_PAD``
+     - ``LATBENCH_DATA_PAD_BYTES`` and the address of the data pad
+   * - ``msp``
+     - Cortex-M, with ``LATBENCH_DATA_PAD`` or ``LATBENCH_TAIL``
+     - The top of the interrupt stack (MSP in thread mode). It shows where
+       the build put the stacks (see :ref:`benchguide-data-placement`)
    * - ``code_ram_region``, ``code_ram_text``
      - all, with ``LATBENCH_CODE_RAM``
      - ``LATBENCH_CODE_RAM_REGION``, and the start and the end of the

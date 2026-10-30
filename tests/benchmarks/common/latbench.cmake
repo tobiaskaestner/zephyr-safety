@@ -68,6 +68,12 @@ if(LATBENCH_STIM)
   endif()
 endif()
 
+# Data pad (LATBENCH_DATA_PAD): only with the option, so that the other
+# images do not change.
+if(CONFIG_LATBENCH_DATA_PAD)
+  target_sources(app PRIVATE ${CMAKE_CURRENT_LIST_DIR}/src/data_pad.c)
+endif()
+
 # Hot code in RAM (LATBENCH_CODE_RAM in common/Kconfig). Relocates the code
 # of the hot paths with zephyr_code_relocate(). Facts about Zephyr's
 # relocation (gen_relocate_app.py) that this code depends on:

@@ -119,13 +119,23 @@ describes. Three properties make sure of this:
    (see :ref:`benchguide-code-placement`). Thus a comparison of the data
    with and without the witnesses uses ``LATBENCH_CODE_RAM``. The
    sub-study ``measurement-validity/tail-witnesses`` makes this check.
+#. The table adds data, so the kernel data and the stacks move. A move of
+   the stacks into another SRAM changes the latency, also with the code in
+   RAM (see :ref:`benchguide-data-placement`). The rows are therefore in
+   ``.bss`` (``LAT_TAIL_DEFINE``), and the cost measurement uses the table
+   of the app and not a second table. A first version had a second table
+   and the rows in ``.data``: with 256 rows it moved the stacks by 26 KB
+   into SRAM2, and the wake path was 16 to 45 cycles slower. Keep the
+   table small, and check ``LAT META msp`` against a build without
+   witnesses.
 
 At the start, the app measures the cost of the calls with the interrupts
-locked and prints it as ``LAT META tail_cost_*_cyc`` (see
-:doc:`../reference/log-format`). On the NUCLEO-G474RE: the mark costs about
-37 cycles, an add that the table rejects about 76 cycles, and an add that
-stores a row about 550 cycles (most of it is the scan of a full table for
-its smallest row). Set ``LATBENCH_TAIL_MIN_CYC`` above the body of the
+locked on its own table, prints it as ``LAT META tail_cost_*_cyc`` (see
+:doc:`../reference/log-format`) and empties the table. On the
+NUCLEO-G474RE (code in RAM, 64 rows): the mark costs 38 to 42 cycles, an
+add that the table rejects 83 cycles, and an add that replaces a row of a
+full table about 920 cycles (most of it is the scan of the table for its
+smallest row). Set ``LATBENCH_TAIL_MIN_CYC`` above the body of the
 distribution, so that most adds take the short path.
 
 The add runs in the ISR (``irq_latency``) or in the woken thread

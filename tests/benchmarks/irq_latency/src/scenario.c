@@ -82,7 +82,7 @@ static LAT_HIST_DEFINE(h_sw, "irq_nested_sw");
 
 #if defined(CONFIG_LATBENCH_TAIL)
 /* Witnesses of the main histogram. The window starts at the arm of the edge. */
-static LAT_TAIL_DEFINE(tail, MAIN_NAME);
+LAT_TAIL_DEFINE(tail, MAIN_NAME);
 static struct lat_tail_mark tail_m;
 #define TAIL_MARK() lat_tail_mark(&tail_m)
 #define TAIL_ADD(seq, lat, aux)                                                                    \
@@ -364,7 +364,7 @@ void scen_main(void)
 #endif
 #if defined(CONFIG_LATBENCH_TAIL)
 	lat_tail_init();
-	lat_tail_print_setup();
+	lat_tail_print_setup(&tail);
 #endif
 	load_start();
 	while (n < N_TOTAL) {

@@ -76,7 +76,7 @@ static uint32_t n_sw_seen;
 
 #if defined(CONFIG_LATBENCH_TAIL)
 /* Witnesses of the largest edge samples. The window starts at the arm of the edge. */
-static LAT_TAIL_DEFINE(tail, "irq");
+LAT_TAIL_DEFINE(tail, "irq");
 static struct lat_tail_mark tail_m;
 #define TAIL_MARK() lat_tail_mark(&tail_m)
 
@@ -293,7 +293,7 @@ int main(void)
 
 #if defined(CONFIG_LATBENCH_TAIL)
 	lat_tail_init();
-	lat_tail_print_setup();
+	lat_tail_print_setup(&tail);
 #endif
 	load_start();
 #if defined(CONFIG_LATBENCH_SWTRIG)
