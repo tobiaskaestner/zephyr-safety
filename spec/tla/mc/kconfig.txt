@@ -16,11 +16,11 @@
 CONFIG_USE_SWITCH y UseSwitch TRUE
 CONFIG_USE_SWITCH n UseSwitch FALSE
 
-# Platform, Scheduler: the CPUs (kind 2). The level-1 claim is for one CPU;
+# Platform, Scheduler: the CPUs (kind 2). The coarse-grain claim is for one CPU;
 # two CPUs are design exploration.
 CONFIG_SMP n CPUS {c1}
 CONFIG_SMP y CPUS {c1, c2}
-CONFIG_SMP y_one_cpu - not in the model: with one CPU the model follows the code of CONFIG_SMP=n (the cache); CONFIG_SMP=y uses next_up() without the cache, level 2 (roadmap step 5)
+CONFIG_SMP y_one_cpu - not in the model: with one CPU the model follows the code of CONFIG_SMP=n (the cache); CONFIG_SMP=y uses next_up() without the cache, fine grain (roadmap step 5)
 CONFIG_MP_MAX_NUM_CPUS 1 CPUS {c1}
 CONFIG_MP_MAX_NUM_CPUS 2 CPUS {c1, c2}
 

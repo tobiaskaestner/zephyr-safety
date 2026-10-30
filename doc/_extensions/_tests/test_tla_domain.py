@@ -240,7 +240,7 @@ def test_the_warnings(app, warning):
         "Bad.tla:2: WARNING: unknown TLA+ tag @foo",
         "Bad.tla:3: WARNING: unknown @kind 'wrong'",
         "Bad.tla:4: WARNING: unknown @expected 'maybe'",
-        "Bad.tla:5: WARNING: unknown @level '3'",
+        "Bad.tla:5: WARNING: unknown @grain 'medium'",
         "WARNING: duplicate TLA+ definition Bad!Ok",
         "WARNING: TLA+ module Bad has no top-level definition 'NoSuch'",
         "WARNING: need type 'prop' is not configured",

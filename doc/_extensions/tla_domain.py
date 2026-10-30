@@ -106,8 +106,8 @@ KINDS = ("definition", "action", "action-property", "invariant", "liveness", "pr
 NEED_KINDS = ("invariant", "action-property", "liveness", "probe")
 #: The values of the ``@expected`` tag.
 EXPECTED = ("hold", "violation")
-#: The values of the ``@level`` tag (the two grains of the design note).
-LEVELS = ("1", "2")
+#: The values of the ``@grain`` tag (the grain of a step, see the design note).
+GRAINS = ("coarse", "fine")
 #: The tags that the extension knows. ``@type`` and ``@typeAlias`` are the type
 #: annotations of Apalache: they are not prose, and the extension does not show them.
 TAGS = (
@@ -118,7 +118,7 @@ TAGS = (
     "kind",
     "c-function",
     "expected",
-    "level",
+    "grain",
     "type",
     "typeAlias",
 )
@@ -635,9 +635,9 @@ class TLADirective(SphinxDirective):
         expected = (unit.tags.get("expected") or [""])[-1]
         if expected == "violation":
             items.append(("Expected", "violation (TLC reports a counterexample)", False))
-        level = (unit.tags.get("level") or [""])[-1]
-        if level == "2":
-            items.append(("Level", "2 (lock grain)", False))
+        grain = (unit.tags.get("grain") or [""])[-1]
+        if grain == "fine":
+            items.append(("Grain", "fine (lock acquire and release are separate steps)", False))
         if not items:
             return []
         field_list = nodes.field_list(classes=["tla-tags"])
@@ -684,11 +684,11 @@ class TLADirective(SphinxDirective):
                     type="tla",
                     subtype="tag",
                 )
-            elif tag == "level" and value not in LEVELS:
+            elif tag == "grain" and value not in GRAINS:
                 logger.warning(
-                    "unknown @level %r (known: %s)",
+                    "unknown @grain %r (known: %s)",
                     value,
-                    ", ".join(LEVELS),
+                    ", ".join(GRAINS),
                     location=loc,
                     type="tla",
                     subtype="tag",

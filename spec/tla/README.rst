@@ -14,9 +14,9 @@ Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``,
 ``lib/Timeout``, ``lib/Platform`` and ``lib/Scheduler`` exist and are
 checked alone (``mc/MCWaitQueue``, ``mc/MCTimeout``, ``mc/MCScheduler``)
 and by example tests (``mc/WaitQueueTest``, ``mc/TimeoutTest``,
-``mc/PlatformTest``, ``mc/SchedulerTest``). ``Platform`` is at level 1
+``mc/PlatformTest``, ``mc/SchedulerTest``). ``Platform`` is at coarse grain
 since 2026-10-29: the interrupt lock and the two variants of the context
-switch. Level 2 adds the IPIs and the lock owners (roadmap step 5).
+switch. Fine grain adds the IPIs and the lock owners (roadmap step 5).
 Round B (2026-10-29) added the swap data in both directions, the wait
 queue head, ``z_unpend_all()``, the ordered walk with a stop, the wake of
 one thread with its precondition, the join queue, the fault-model step
@@ -119,11 +119,11 @@ application code.
      - An element of ``CPUS``. For each CPU: the current thread
        (``cur[c]``), the outer interrupt lock (``irqNest[c]``, the nested
        ``irq_lock()`` calls of the thread that runs) and a pending PendSV
-       (``pendsv[c]``, ``arch_swap()`` only). At level 1 an ISR is one
+       (``pendsv[c]``, ``arch_swap()`` only). At coarse grain an ISR is one
        step, so "in an ISR" is the kind of the actor, not a variable
        (``Platform``).
      - Registers, caches, the memory model, the in-ISR state as a
-       variable and the ISR nesting (level 2).
+       variable and the ISR nesting (fine grain).
    * - Interrupt and ISR
      - An ISR is an actor that runs on a CPU while that CPU has interrupts
        unlocked (``Platform!IrqCanRun``). It is not preempted by a thread.
@@ -162,8 +162,8 @@ application code.
      - The list and tree code (``sys_dlist``, ``rbtree``). The unit tests
        of that code cover it.
    * - Spinlock
-     - Level 1: implicit, each action is one critical section. Level 2: an
-       owner CPU for each lock (see `Two grains`_).
+     - Coarse grain: implicit, each action is one critical section. Fine grain: an
+       owner CPU for each lock (see `Coarse and fine grain`_).
      - Ticket order, spinning.
    * - Timeout
      - An entry for each thread that waits with a finite timeout. The
@@ -188,7 +188,7 @@ Module structure
 
    lib/Platform     CPUs, ISR actors, interrupt lock, context switch
      |              (two variants), clock events; IPIs, lock owners
-     |              (level 2)
+     |              (fine grain)
      |
    lib/Scheduler    thread state, priorities, current thread, swap result,
      |              panic, ready set, run queue order, cache; Abort,
@@ -212,7 +212,7 @@ Module structure
      - Does not know
    * - ``Platform``
      - ``irqNest``, ``pendsv``; the constants ``CPUS``, ``Isrs``,
-       ``IsrCpu``, ``UseSwitch``. Level 2: lock owners, IPI flags
+       ``IsrCpu``, ``UseSwitch``. Fine grain: lock owners, IPI flags
      - ``InIsr(a)``, ``Locked``, ``Key``, ``KeyUnlocked``, ``IrqCanRun``,
        ``IrqLock``, ``IrqUnlock``, ``SwitchAtOnce``, ``RequestPendSV``,
        ``SwitchPending``, ``PendSVRuns``, ``ClockCanFire``
@@ -395,9 +395,9 @@ object of ``Objs``, or ``None``). ``Abort`` wakes the joiners with the
 return value 0 and calls ``update_cache(1)``. An abort of another thread
 does not reschedule, so a joiner with a higher priority does not run until
 the next reschedule point: ``PreemptibleRunsHighest`` fails
-(configurations ``f14_join*``, finding F14). At level 1 ``Abort`` has no
+(configurations ``f14_join*``, finding F14). At coarse grain ``Abort`` has no
 essential threads, no ``k_thread_suspend()`` and no abort of a thread that
-runs on another CPU (level 2: the target halts itself in an IPI).
+runs on another CPU (fine grain: the target halts itself in an IPI).
 
 **Swap data in the models.** No step resets the swap data, so in a model
 each thread keeps a value. The wakers of ``mc/MCScheduler`` give no data
@@ -461,19 +461,22 @@ TLC both report the violation. The probe gave three rules (see
 annotation, an argument is a named operator and not a ``LAMBDA``, and a
 range has constant bounds.
 
-Two grains
-**********
+Coarse and fine grain
+*********************
 
-**Level 1 (object grain).** One action is one critical section under the
-object lock. This is correct on one CPU, because the object lock also
-locks the interrupts. It is also correct on SMP if the operation holds the
-lock from the first read of the resource or the wait queue to the last
-scheduler call. Most takes and gives of the eight units satisfy this.
-Level 1 is the grain of the trace hook and of the generated tests.
+The grain of a module is how much code one step of the module is (decided
+on 2026-10-30; it replaces "level 1" and "level 2" of 2026-10-26).
 
-**Level 2 (lock grain).** Lock acquire and lock release are separate steps.
-Level 2 is necessary only for the operations that break level 1. The paper
-check lists them:
+**Coarse grain.** One action is one critical section under the object
+lock. This is correct on one CPU, because the object lock also locks the
+interrupts. It is also correct on SMP if the operation holds the lock from
+the first read of the resource or the wait queue to the last scheduler
+call. Most takes and gives of the eight units satisfy this. Coarse grain
+is the grain of the trace hook and of the generated tests.
+
+**Fine grain.** Lock acquire and lock release are separate steps. Fine
+grain is necessary only for the operations that break the coarse grain.
+The paper check lists them:
 
 - ``k_condvar_wait()``: the mutex release, the pend and the relock are
   three sections.
@@ -487,39 +490,42 @@ check lists them:
   reverse of the other operations).
 - The init of each object (no lock).
 
-Level 2 comes in roadmap step 5. Until then, each level-1 action of these
-operations has a comment that names the gap.
+The fine grain comes with the SMP increment (roadmap step 5). Until then,
+each coarse-grain action of these operations has a comment that names the
+gap.
 
-**Grain and data are two different axes.** The level is the grain: what
-one step of the model is in the code. A model can also leave out data or
-keep a free choice that the code does not have (for example, a give that
-wakes any waiter, in place of the head of the wait queue). Such a model
-is a coarser view on the same level, not a different level. Both kinds
-of model relate by refinement (``Fine => Coarse`` with a refinement
-mapping). In a refinement from level 2 to level 1, the extra steps
-are stuttering steps of level 1. Only one step of each critical section,
-usually the lock release, is the level-1 step.
+**Grain and representation are two different axes.** The grain is what one
+step of the model is in the code. The representation is the data: a model
+can also leave out data or keep a free choice that the code does not have
+(for example, a give that wakes any waiter, in place of the head of the
+wait queue). Such a model is more abstract in its representation, at the
+same grain. Both kinds of model relate by refinement (``Fine => Coarse``
+with a refinement mapping). In a refinement from the fine grain to the
+coarse grain, the extra steps are stuttering steps of the coarse grain.
+Only one step of each critical section, usually the lock release, is the
+coarse-grain step.
 
-Marking the level (decided on 2026-10-26):
+Marking the grain:
 
-- Level 1 is the default. A module of level 2 has the suffix ``_L2`` (for
-  example ``objects/KCondVar.tla`` and ``objects/KCondVar_L2.tla``). Its
-  header comment states the level. A level-2 model is a separate module,
-  because a refinement check needs two specs.
-- The tag ``@level 2`` marks an action whose step is finer than the level
-  of its module, for example the two-step form of the expiry in
-  ``Timeout``. An action with the level of its module has no tag.
-- Each level-2 module has a refinement model
-  ``mc/MC<Object>Refinement.tla``. It defines the refinement mapping and
-  the properties ``Refines`` (the level-1 spec) and ``RefinesFair`` (the
-  level-1 spec with its fairness). Its line in ``mc/expected.txt`` is
-  ``pass``. The level-2 module has its own probes, because a model
-  without steps also refines the level-1 spec. The suffix is
-  ``Refinement`` and not ``Ref``, because ``Ref`` can be read as
-  "reference".
-- Each object has one reference model at level 1. The requirements
-  connect to it. Coarser views of an object, for example a model of the
-  count only, are not part of the library.
+- Coarse grain is the default. A fine module has the name
+  ``<Module>_<Reason>``, where the reason says why the grain is finer (for
+  example ``objects/KCondVar.tla`` and ``objects/KCondVar_MutexRelease.tla``,
+  or ``lib/Scheduler_SmpLocks.tla``). Its header comment states the grain
+  and the reason. A fine module is a separate module, because a refinement
+  check needs two specs.
+- The tag ``@grain fine`` marks an action whose step is finer than the
+  grain of its module, for example the two-step form of the expiry in
+  ``Timeout``. An action with the grain of its module has no tag.
+- Each fine module has a refinement model ``mc/MC<Object>Refinement.tla``.
+  It defines the refinement mapping and the properties ``Refines`` (the
+  coarse-grain spec) and ``RefinesFair`` (the coarse-grain spec with its
+  fairness). Its line in ``mc/expected.txt`` is ``pass``. The fine module
+  has its own probes, because a model without steps also refines the
+  coarse-grain spec. The suffix is ``Refinement`` and not ``Ref``, because
+  ``Ref`` can be read as "reference".
+- Each object has one contract module at coarse grain. The requirements
+  connect to it. Models that are more abstract in their representation, for
+  example a model of the count only, are not part of the library.
 
 The wait queue
 **************
@@ -578,7 +584,7 @@ entry of the timeout queue.
 For a thread wait, an atomic ``ThreadTimeout`` is equal to the two-step
 dispatch of ``kernel/timeout.c``: if a give wins, the handler finds nothing
 to do. For the timer object this is not true (finding F1 of the paper
-check). Thus ``Timeout`` offers the atomic form for level 1 and a two-step
+check). Thus ``Timeout`` offers the atomic form for coarse grain and a two-step
 form for the timer model (roadmap step 4).
 
 Bounds of time are step counters, not times:
@@ -741,7 +747,7 @@ Comments
       \* @kind invariant
       \* @c-function z_impl_k_sem_give
       \* @expected violation
-      \* @level 2
+      \* @grain fine
       \* @kconfig CONFIG_USE_SWITCH
       \* @assumption arch/arm/core/cortex_m/exc_exit.c:57 (the reason)
 
@@ -767,8 +773,9 @@ Comments
    ``@expected violation`` marks a property that TLC must find false (a
    documented limit, or a probe that shows a state is reachable).
 
-   ``@level 2`` marks an action whose step is finer than the level of its
-   module (see `Two grains`_). The values are ``1`` and ``2``.
+   ``@grain fine`` marks an action whose step is finer than the grain of its
+   module (see `Coarse and fine grain`_). The values are ``coarse`` and
+   ``fine``. A module without the tag has coarse grain.
 
    ``@kconfig`` names a Kconfig option: on a constant, the option that the
    constant models; on a property, the option under which it applies (see
@@ -790,8 +797,8 @@ Model configurations
    ``mc/MC<Object>_<scenario>.tla`` and ``.cfg``, one for each twister
    scenario of the unit test app of the object, with the same Kconfig
    options as constants. ``mc/MC<Object>Refinement.tla`` and
-   ``mc/MC<Object>Refinement_<scenario>.cfg`` check that the level-2
-   module of the object refines its level-1 module (see `Two grains`_).
+   ``mc/MC<Object>Refinement_<scenario>.cfg`` check that the fine-grain
+   module of the object refines its coarse-grain module (see `Coarse and fine grain`_).
 
 Example tests (decided on 2026-10-26)
    Each module ``lib/<Module>.tla`` and ``objects/<Module>.tla`` has a test
@@ -814,7 +821,7 @@ Example tests (decided on 2026-10-26)
 
    The tests are invariants of a spec with one state (``Init == unused =
    0``, ``Next == UNCHANGED unused``), not ``ASSUME`` statements. SANY gives an
-   expression of an instance of a module with variables the level 1, also
+   expression of an instance of a module with variables the expression level 1, also
    if each variable is replaced by a constant, and it rejects such an
    ``ASSUME``. TLC sees the same invariants as constant formulas and warns
    that an ``ASSUME`` is better. The warning has no effect on the result.
