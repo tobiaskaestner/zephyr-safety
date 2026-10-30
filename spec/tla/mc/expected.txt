@@ -33,6 +33,7 @@ WaitQueueTest default pass           states=1 depth=1
 TimeoutTest   default pass           states=1 depth=1
 PlatformTest  default pass           states=1 depth=1
 SchedulerTest default pass           states=1 depth=1
+KSemTest      default pass           states=1 depth=1
 MCWaitQueue default pass             states=2133 depth=4
 MCWaitQueue reach   probes
 MCTimeout   dlist         pass       states=57 depth=5
@@ -110,3 +111,30 @@ MCScheduler f14_join         fail:Inv_PreemptibleRunsHighest
 MCScheduler f14_join_pendsv  fail:Inv_PreemptibleRunsHighest
 # P6-u: z_waitq_init() of an object with waiters (fault model).
 MCScheduler p6_init          fail:Inv_NoUndefined
+# KSem (roadmap step 2, the k_sem slice, 2026-10-30): objects/KSem.tla on
+# lib/Waitable.tla and the scheduler contract, with Scheduler!EnvNext as
+# its environment. One CPU, CONFIG_USE_SWITCH=y, DLIST, no outer lock.
+MCKSem default         pass
+MCKSem poll            pass
+MCKSem two_sems        pass
+MCKSem nochecks        pass
+MCKSem live            pass
+MCKSem reach           probes
+MCKSem reach_poll      probes
+# Design observation 4 of the sem findings: k_sem_reset() signals
+# K_POLL_STATE_SEM_AVAILABLE with the count 0.
+MCKSem poll_signal     fail:K!PollSignalMeansAvailable
+# Finding 1 of the sem findings: without runtime checks, a give above the
+# limit increments the count (the comparison is !=).
+MCKSem nochecks_tokens fail:Inv_TokenConservation
+# The conditions of use, broken: an ISR waits (ZEP-SRS-5-20), an init of a
+# semaphore with waiters (finding P6-u).
+MCKSem isr_waits       fail:Inv_NoPanic
+MCKSem reinit          fail:Inv_NoUndefined
+# Starvation: a waiter with a lower priority is never served (ZEP-SRS-5-14
+# gives each give to the waiter with the highest priority).
+MCKSem live_prio       fail:Live_WaiterServedIfGives
+# The model mutants of KSem (mc/MCKSemMutants.tla).
+MCKSemMutants give_counts     fail:Inv_TokenConservation
+MCKSemMutants pend_split      fail:Inv_NoWaitWhileAvailable
+MCKSemMutants reset_wakes_one fail:K!ResetWakesAll
