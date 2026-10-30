@@ -26,7 +26,7 @@ Modules
 ``tla_domain.py`` (with ``tla_lexer.py``, ``tla_unicode.py``, ``tla_extract.py``, ``tla_static/``)
     The ``tla`` domain: it shows the TLA+ specs (``spec/tla/*.tla``) in a
     document. The ASCII ``.tla`` files stay the source for TLC and Apalache.
-    Used by ``architecture`` (``formal-model.rst``). The tests are in
+    Used by ``formal-design`` (``formal-model.rst``). The tests are in
     ``_tests/``.
 
     - ``tla_lexer.py``: a Pygments lexer for TLA+ (ASCII and Unicode), names
@@ -157,7 +157,7 @@ project (``_tests/roots/test-tla``) declares the same vocabulary in its
 
 **Wiring.** ``doc/CMakeLists.txt`` gives the Sphinx builds the directory of
 the spec library as ``SAFETY_TLA_SPEC_DIR``. The ``conf.py`` of the
-architecture sets ``tla_spec_paths`` (``spec/tla/lib``) and
+formal design document sets ``tla_spec_paths`` (``spec/tla/lib``) and
 ``tla_source_root`` (the safety repository) from it.
 
 **Tests.** Run them with the Python environment of the workspace::

@@ -95,8 +95,8 @@ list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_REQ_GEN_RST_DIR=${REQ_GEN_RST_DIR})
 # files read this, not the registry's directory: without the Safety Committee
 # sources, the registry is a copy in the build directory.
 list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_EXTENSIONS_DIR=${CMAKE_CURRENT_LIST_DIR}/_extensions)
-# The TLA+ spec library (spec/tla), shown by the architecture document with the
-# tla_domain extension. The conf.py reads this, because the document builds
+# The TLA+ spec library (spec/tla), shown by the formal design document with
+# the tla_domain extension. The conf.py reads this, because the document builds
 # from a copy of its directory.
 list(APPEND ZDOCS_SPHINX_EXTRA_ENV SAFETY_TLA_SPEC_DIR=${SAFETY_BASE}/spec/tla)
 

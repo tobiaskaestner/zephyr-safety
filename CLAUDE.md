@@ -323,7 +323,7 @@ rebasing against upstream Zephyr is less painful. It is not an upstream Zephyr c
 - `_extensions/strictdoc_runner.py` — runs `strictdoc export` on Sphinx build-init (safety-committee only)
 - `_extensions/skip_classes.py` — `skipclasscounts::`, the test report's skips by class and board
 - `_extensions/tla_domain.py` — the `tla` domain: shows the TLA+ spec library (`../spec/tla`) in the
-  architecture document (`formal-model.rst`); one `prop` need per model property, link `expresses`
+  formal design document (`formal-design`, `formal-model.rst`); one `prop` need per model property, link `expresses`
 - `_scripts/` — Doxygen input filters (`FILTER_PATTERNS`)
 
 ### Requirements (in `../doc/reqmgmt/docs/software_requirements/`)

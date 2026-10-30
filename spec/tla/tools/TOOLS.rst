@@ -411,7 +411,7 @@ The doc extension
 :Files: ``doc/_extensions/tla_domain.py``, ``tla_extract.py``,
    ``tla_lexer.py``, ``tla_unicode.py``. The version is the commit of this
    repository.
-:Use: the architecture document shows the library. The extension makes a
+:Use: the formal design document (``formal-design``) shows the library. The extension makes a
    ``prop`` need for each property and the links ``expresses`` to the
    requirements. ``tools/kconfig_coverage.py`` checks that each tagged
    Kconfig value and each tagged property has a run.

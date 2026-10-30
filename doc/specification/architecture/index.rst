@@ -29,7 +29,7 @@ This document describes the software architecture for the Zephyr RTOS in the con
    03_solution_strategy
    04_building_block_view
    detailed-design-symbols
-   formal-model
+   formal-design
    05_runtime_view
    06_deployment_view
    07_cross_cutting_concepts
