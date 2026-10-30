@@ -92,6 +92,20 @@ documents:
       doxygen_source: dox-zephyr-safety-detailed-design
     builders: [html, latex]
 
+  # The formal design of the kernel: the TLA+ spec library (spec/tla), shown
+  # by the tla_domain extension, with the method and its glossary. One `prop`
+  # need per model property; published so a requirement lists the properties
+  # that express it ("Expressed by").
+  formal-design:
+    title: "Zephyr Kernel Formal Design Specification"
+    kind: sphinx
+    group: specification
+    prefix: formal
+    doc_dir: specification/formal-design
+    needs:
+      source: json
+    builders: [html, latex]
+
   # -- Verification -----------------------------------------------------------
 
   # The test specification is in the specification group (and in
