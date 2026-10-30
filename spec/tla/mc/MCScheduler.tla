@@ -56,12 +56,96 @@
 (***************************************************************************)
 EXTENDS Integers, FiniteSets
 
-CONSTANTS t1, t2, t3, o1, o2, j1, j2, j3, i1, c1, c2, NoObj, IdleT, d1, NoD,
-          MCCPUS, MCZPrios, MCMutant, MCIsrPends, MCSetPrioBy, MCAbort,
-          MCUseSwitch, MCOuterLock, MCMaxNest, MCObjs, MCExtra, MCJoin, MCInit
+CONSTANTS
+    \* @type: THREAD;
+    t1,
+    \* @type: THREAD;
+    t2,
+    \* @type: THREAD;
+    t3,
+    \* @type: OBJ;
+    o1,
+    \* @type: OBJ;
+    o2,
+    \* @type: OBJ;
+    j1,
+    \* @type: OBJ;
+    j2,
+    \* @type: OBJ;
+    j3,
+    \* @type: THREAD;
+    i1,
+    \* @type: CPU;
+    c1,
+    \* @type: CPU;
+    c2,
+    \* @type: OBJ;
+    NoObj,
+    \* @type: THREAD;
+    IdleT,
+    \* @type: DATA;
+    d1,
+    \* @type: DATA;
+    NoD,
+    \* @type: Set(CPU);
+    MCCPUS,
+    \* @type: Set(Int);
+    MCZPrios,
+    \* @type: Str;
+    MCMutant,
+    \* @type: Bool;
+    MCIsrPends,
+    \* @type: Str;
+    MCSetPrioBy,
+    \* @type: Bool;
+    MCAbort,
+    \* @type: Bool;
+    MCUseSwitch,
+    \* @type: Bool;
+    MCOuterLock,
+    \* @type: Int;
+    MCMaxNest,
+    \* @type: Set(OBJ);
+    MCObjs,
+    \* @type: Bool;
+    MCExtra,
+    \* @type: Bool;
+    MCJoin,
+    \* @type: Bool;
+    MCInit
 
-VARIABLES tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
-          pendedOn, stamp, tq, tqCost, irqNest, pendsv
+\* The variables of Scheduler (see there).
+VARIABLES
+    \* @type: THREAD -> Str;
+    tstate,
+    \* @type: THREAD -> Int;
+    prio,
+    \* @type: CPU -> THREAD;
+    cur,
+    \* @type: THREAD -> Int;
+    swapRet,
+    \* @type: THREAD -> DATA;
+    swapData,
+    \* @type: Str;
+    panic,
+    \* @type: THREAD -> Int;
+    rqStamp,
+    \* @type: Bool;
+    preemptOk,
+    \* @type: THREAD -> Int;
+    readySince,
+    \* @type: THREAD -> OBJ;
+    pendedOn,
+    \* @type: THREAD -> Int;
+    stamp,
+    \* @type: Seq(THREAD);
+    tq,
+    \* @type: { op: Str, n: Int, cost: Int };
+    tqCost,
+    \* @type: CPU -> Int;
+    irqNest,
+    \* @type: CPU -> Bool;
+    pendsv
 
 vars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
           pendedOn, stamp, tq, tqCost, irqNest, pendsv>>

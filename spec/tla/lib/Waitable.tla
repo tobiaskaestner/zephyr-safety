@@ -82,6 +82,8 @@ PollFn     == "z_handle_obj_poll_events"
 WaitqInitFn == "z_waitq_init"
 
 \* One call of a step.
+\* @typeAlias: call = { fn: Str, obj: OBJ, arg: Int, ret: Int, res: Int, thread: THREAD };
+\* @type: (Str, OBJ, Int, Int, Int, THREAD) => $call;
 Call(fn, o, arg, ret, res, t) ==
     [fn |-> fn, obj |-> o, arg |-> arg, ret |-> ret, res |-> res, thread |-> t]
 
@@ -275,8 +277,10 @@ EnvStep(P) ==
 \* grain assumption of the coarse module in the terms of the record. The
 \* trace check compares the record of the code with this record.
 \* @kind definition
+\* @type: (Seq($call)) => Bool;
 LockDiscipline(calls) ==
     LET n == Len(calls)
+        \* @type: ($call) => Bool;
         IsRelease(c) == c.fn \in {UnlockFn, ReschedFn, PendFn}
     IN  /\ n >= 2
         /\ calls[1].fn = LockFn
