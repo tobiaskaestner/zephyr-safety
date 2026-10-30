@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_init_rejects_count_above_limit","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"end"}

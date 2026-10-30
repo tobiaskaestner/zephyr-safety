@@ -98,7 +98,11 @@ W == INSTANCE Waitable
 \* The scheduler contract.
 S == INSTANCE Scheduler
 
-schedVars == W!schedVars
+\* The variables of the scheduler, named here: TLC does not evaluate UNCHANGED
+\* of a tuple that a definition of an instance gives (design note, "TLC and
+\* nested instances").
+schedVars == <<tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
+               pendedOn, stamp, tq, tqCost, irqNest, pendsv>>
 
 vars == <<schedVars, r, req, tokens, obs>>
 

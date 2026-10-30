@@ -1,0 +1,341 @@
+#!/usr/bin/env python3
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+"""Record the traces of the sem unit tests and check them against KSem.
+
+The trace hook of the unit tests (CONFIG_KERNEL_UNIT_TRACE, the scenarios
+kernel.unit.sem.trace*) writes one line "KTRACE <json>" for each call. This
+script cuts the output of a twister run into one NDJSON file for each test,
+and runs TLC on trace/KSemTrace.tla for each file.
+
+Commands:
+
+  record <twister output dir>
+      Writes trace/ksem/<config>/<test>.ndjson for each test of the trace
+      scenarios (config: default, poll, no_runtime_checks). Review the diff
+      with "git diff": a changed trace is a change of the behavior of the
+      code or of the tests.
+
+  coverage
+      Lists the branches of the step actions of KSem that the accepted traces
+      reach (expected verdict accept), for all tests and for the tests on the
+      reference fake of the scheduler (the contract tests of sem.c on the
+      contract of the scheduler).
+
+  check [<config>/<test> ...]
+      Runs TLC on each trace (all, or the named ones) and compares the
+      verdict with trace/expected.txt. Writes <out>/summary.md and one log
+      for each trace.
+
+The verdicts:
+
+  accept        TLC found a behavior of KSem that matches all steps
+                (the postcondition Accepted holds) and no property fails.
+  reject        TLC found no such behavior (the postcondition fails, or no
+                initial state is correct).
+  fail:<Name>   a property of KSem fails on the trace behavior.
+  empty         the test made no call of the semaphore API (for example a
+                test that is skipped in this configuration). No TLC run.
+  out-of-range  the trace has a value above the integers of TLC (2^31 - 1).
+                No TLC run.
+
+Environment:
+
+  TLA2TOOLS  the path of tla2tools.jar (the hash of tools/tla2tools.sha256).
+  TLC_OUT    the output directory (default: <spec>/build/traces).
+
+Exit status: 0 if each verdict is the expected one, 1 if not, 2 on a setup
+error. TLC runs with one worker (the register of the acceptance belongs to
+the worker), and only if no other TLC runs on the machine.
+"""
+
+import argparse
+import hashlib
+import json
+import os
+import re
+import subprocess
+import sys
+import time
+from pathlib import Path
+
+SPEC = Path(__file__).resolve().parent.parent
+TRACES = SPEC / "trace" / "ksem"
+EXPECTED = SPEC / "trace" / "expected.txt"
+SCENARIOS = {
+    "kernel.unit.sem.trace": "default",
+    "kernel.unit.sem.trace_poll": "poll",
+    "kernel.unit.sem.trace_no_runtime_checks": "no_runtime_checks",
+}
+INT_MAX = 2**31 - 1
+HIDDEN_MAX = 3
+
+
+def record(twister_out: Path, traces: Path = TRACES) -> int:
+    found = 0
+    for log in sorted(twister_out.rglob("handler.log")):
+        scenario = log.parent.name
+        config = SCENARIOS.get(scenario)
+        if config is None:
+            continue
+        found += 1
+        out = traces / config
+        out.mkdir(parents=True, exist_ok=True)
+        for old in out.glob("*.ndjson"):
+            old.unlink()
+        name, lines = None, []
+        for raw in log.read_text().splitlines():
+            m = re.search(r"KTRACE (\{.*\})\s*$", raw)
+            if not m:
+                continue
+            ev = json.loads(m.group(1))
+            if ev["ev"] == "test":
+                name, lines = ev["name"], []
+            lines.append(m.group(1))
+            if ev["ev"] == "end" and name:
+                (out / f"{name}.ndjson").write_text("\n".join(lines) + "\n")
+                name = None
+        print(f"record: {scenario} -> {out} ({len(list(out.glob('*.ndjson')))} traces)")
+    if not found:
+        print(f"record: no trace scenario in {twister_out}", file=sys.stderr)
+        return 2
+    return 0
+
+
+def load(path: Path):
+    return [json.loads(line) for line in path.read_text().splitlines() if line.strip()]
+
+
+def ints(value):
+    if isinstance(value, bool):
+        return
+    if isinstance(value, int):
+        yield value
+    elif isinstance(value, dict):
+        for v in value.values():
+            yield from ints(v)
+    elif isinstance(value, list):
+        for v in value:
+            yield from ints(v)
+
+
+def n_hidden(events) -> int:
+    """The hidden threads of a scripted test: one for each wake of one call."""
+    most, cur = 0, 0
+    for e in events:
+        if e["ev"] == "call":
+            cur = 0
+        elif e["ev"] == "fake" and e["fn"] == "z_sched_wake" and e["ret"] == 1:
+            cur += 1
+            most = max(most, cur)
+    return max(1, most)
+
+
+INVARIANTS = ["Inv_TypeOK", "Inv_ReqIsWait", "Inv_PendingIsQueued",
+              "Inv_NoWaitWhileAvailable", "Inv_CountLeLimit", "Inv_TokenConservation"]
+PROPERTIES = ["RefinesKSem", "Prop_CallsHoldLock", "Prop_GiveHandsOverOrCounts",
+              "Prop_GiveWakesHighest", "Prop_TakeResult", "Prop_ResetWakesAll",
+              "Prop_WaitResult"]
+
+
+def write_cfg(trace: Path, events, cfg: Path):
+    cfg.write_text(
+        f"\\* Generated by check_traces.py for {trace}. Do not edit.\n"
+        "CONSTANTS\n"
+        f"    TraceFile = \"{trace}\"\n"
+        f"    NHidden = {n_hidden(events)}\n"
+        f"    HiddenMax = {HIDDEN_MAX}\n"
+        "INIT TraceInit\nNEXT TraceNext\n"
+        "CONSTRAINT Progress\nPOSTCONDITION Accepted\nCHECK_DEADLOCK FALSE\nALIAS Alias\n"
+        "INVARIANTS\n" + "".join(f"    {x}\n" for x in INVARIANTS) +
+        "PROPERTIES\n" + "".join(f"    {x}\n" for x in PROPERTIES))
+
+
+def tlc_busy() -> bool:
+    out = subprocess.run(["pgrep", "-a", "java"], capture_output=True, text=True).stdout
+    return "tlc2.TLC" in out
+
+
+def run_tlc(jar: str, cfg: Path, log: Path, meta: Path) -> str:
+    while tlc_busy():
+        time.sleep(5)
+    cmd = ["java", "-XX:+UseParallelGC",
+           f"-DTLA-Library={SPEC / 'lib'}:{SPEC / 'objects'}:{SPEC / 'trace'}",
+           "-cp", jar, "tlc2.TLC", "-workers", "1", "-fp", "0", "-cleanup",
+           "-noGenerateSpecTE", "-metadir", str(meta), "-config", str(cfg), "KSemTrace.tla"]
+    env = dict(os.environ)
+    env.setdefault("JAVA_TOOL_OPTIONS", "-Xmx2g")
+    with log.open("w") as f:
+        subprocess.run(cmd, cwd=SPEC / "trace", stdout=f, stderr=subprocess.STDOUT, env=env)
+    text = log.read_text()
+    m = re.search(r"(Invariant|Action property|Temporal property) (\S+) (is|was) violated", text)
+    if m:
+        return f"fail:{m.group(2)}"
+    if "Postcondition" in text and "is false" in text:
+        return "reject"
+    if "No error has been found" in text:
+        distinct = re.findall(r"([\d,]+) distinct states found", text)
+        if distinct and distinct[-1].replace(",", "") == "0":
+            return "reject"
+        return "accept"
+    return "error"
+
+
+def stats(log: Path):
+    text = log.read_text() if log.exists() else ""
+    distinct = re.findall(r"([\d,]+) distinct states found", text)
+    depth = re.findall(r"depth of the complete state graph search is (\d+)", text)
+    return (distinct[-1] if distinct else "-"), (depth[-1] if depth else "-")
+
+
+def check(names, out: Path) -> int:
+    jar = os.environ.get("TLA2TOOLS")
+    if not jar:
+        print("check: set TLA2TOOLS to the path of tla2tools.jar", file=sys.stderr)
+        return 2
+    want = (SPEC / "tools" / "tla2tools.sha256").read_text().split()[0]
+    have = hashlib.sha256(Path(jar).read_bytes()).hexdigest()
+    if want != have:
+        print(f"check: {jar} has the hash {have}, expected {want}", file=sys.stderr)
+        return 2
+    expected = {}
+    for line in EXPECTED.read_text().splitlines():
+        if line.strip() and not line.startswith("#"):
+            config, test, verdict = line.split()[:3]
+            expected[f"{config}/{test}"] = verdict
+    traces = sorted(TRACES.glob("*/*.ndjson"))
+    if names:
+        traces = [t for t in traces if f"{t.parent.name}/{t.stem}" in names]
+    out.mkdir(parents=True, exist_ok=True)
+    rows, status = [], 0
+    for trace in traces:
+        key = f"{trace.parent.name}/{trace.stem}"
+        events = load(trace)
+        log = out / f"{trace.parent.name}__{trace.stem}.log"
+        steps = sum(1 for e in events if e["ev"] in ("call", "pend_ret", "env", "panic"))
+        start = time.time()
+        if not any(e["ev"] == "call" for e in events):
+            verdict = "empty"
+            log.write_text("")
+        elif any(v > INT_MAX for v in ints(events)):
+            verdict = "out-of-range"
+            log.write_text("")
+        else:
+            cfg = out / f"{trace.parent.name}__{trace.stem}.cfg"
+            write_cfg(trace, events, cfg)
+            verdict = run_tlc(jar, cfg, log, out / "states" / f"{trace.parent.name}__{trace.stem}")
+        secs = time.time() - start
+        want_v = expected.get(key, "(none)")
+        ok = verdict == want_v
+        status |= 0 if ok else 1
+        distinct, depth = stats(log)
+        rows.append((key, want_v, verdict, "as expected" if ok else "UNEXPECTED", steps,
+                     distinct, depth, f"{secs:.1f} s"))
+        print(f"{key:70} expected {want_v:14} -> {verdict}{'' if ok else '  UNEXPECTED'}")
+    with (out / "summary.md").open("w") as f:
+        f.write("| Trace | Expected | Result | Verdict | Events | Distinct states | Depth | Time |\n")
+        f.write("|---|---|---|---|---|---|---|---|\n")
+        for row in rows:
+            f.write("| " + " | ".join(str(x) for x in row) + " |\n")
+    return status
+
+
+def branches(events):
+    """The branch of each step of a trace: the step action and its case."""
+    out, step = [], None
+
+    def close(s, ret_line=None):
+        calls = s["calls"]
+        wakes = [c for c in calls if c["fn"] == "z_sched_wake"]
+        woke = sum(1 for c in wakes if c["ret"] == 1)
+        poll = [c for c in calls if c["fn"] == "z_handle_obj_poll_events"]
+        last = calls[-1]["fn"] if calls else ""
+        op = s["op"]
+        if op == "init":
+            return "SemInit/valid" if ret_line and ret_line["ret"] == 0 else "SemInit/rejected"
+        if op == "give":
+            if woke:
+                return "Give/hand-over"
+            first = calls[0]["res"] if calls else 0
+            after = calls[-1]["res"] if calls else 0
+            b = "Give/increment" if after != first else "Give/at-limit"
+            if poll and last == "z_reschedule":
+                b += "+poll-ready"
+            elif poll:
+                b += "+poll"
+            return b
+        if op == "take":
+            if last == "z_pend_curr":
+                return "Take/wait (" + s.get("timeout", "?") + ")"
+            if ret_line and ret_line["ret"] == 0:
+                return "Take/available"
+            return "Take/busy"
+        if op == "reset":
+            b = "Reset/wakes" if woke else "Reset/no-waiter"
+            return b + ("+poll" if poll else "")
+        return op
+
+    for e in events:
+        if e["ev"] == "call":
+            step = {"op": e["op"], "timeout": e.get("timeout", ""), "calls": []}
+        elif e["ev"] == "fake" and step is not None:
+            step["calls"].append(e)
+            if e["fn"] == "z_pend_curr":
+                out.append(close(step))
+                step = None
+        elif e["ev"] == "ret" and step is not None:
+            out.append(close(step, e))
+            step = None
+        elif e["ev"] == "pend_ret":
+            out.append("TakeReturn/" + {0: "ok", -11: "eagain"}.get(e["ret"], str(e["ret"])))
+        elif e["ev"] == "env":
+            out.append("Env/" + e["op"])
+        elif e["ev"] == "panic":
+            out[-1:] = [out[-1] + " -> panic"] if out else ["panic"]
+    return out
+
+
+def coverage() -> int:
+    expected = {}
+    for line in EXPECTED.read_text().splitlines():
+        if line.strip() and not line.startswith("#"):
+            c, t, v = line.split()[:3]
+            expected[f"{c}/{t}"] = v
+    allc, refc = {}, {}
+    for trace in sorted(TRACES.glob("*/*.ndjson")):
+        key = f"{trace.parent.name}/{trace.stem}"
+        if expected.get(key) != "accept":
+            continue
+        events = load(trace)
+        ref = any(e["ev"] == "setup" and e.get("ref") for e in events)
+        for b in set(branches(events)):
+            allc.setdefault(b, set()).add(key)
+            if ref:
+                refc.setdefault(b, set()).add(key)
+    print("| Branch of a step action | Accepted traces | Of these, on the reference fake |")
+    print("|---|---|---|")
+    for b in sorted(allc):
+        print(f"| {b} | {len(allc[b])} | {len(refc.get(b, ()))} |")
+    return 0
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    sub = ap.add_subparsers(dest="cmd", required=True)
+    rec = sub.add_parser("record")
+    rec.add_argument("twister_out", type=Path)
+    sub.add_parser("coverage")
+    chk = sub.add_parser("check")
+    chk.add_argument("names", nargs="*")
+    args = ap.parse_args()
+    if args.cmd == "record":
+        return record(args.twister_out)
+    if args.cmd == "coverage":
+        return coverage()
+    out = Path(os.environ.get("TLC_OUT", SPEC / "build" / "traces"))
+    return check(set(args.names), out)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,163 @@
+# Expected verdict of the trace check of each recorded trace of the sem unit
+# tests (tools/check_traces.py, trace/KSemTrace.tla). One line for each
+# trace in trace/ksem/<config>/<test>.ndjson:
+#
+#   <config> <test> <verdict>
+#
+# <verdict>  accept        a behavior of KSem matches all steps of the trace
+#            reject        no behavior of KSem matches the trace
+#            fail:<Name>   the property <Name> of KSem fails on the trace
+#            empty         the test made no call of the semaphore API in this
+#                          configuration (no TLC run)
+#            out-of-range  a value above the integers of TLC (no TLC run)
+#
+# A separate file and not lines of mc/expected.txt: the traces are records
+# of the code (tools/check_traces.py record writes them from a twister
+# run), not model configurations, and run_tlc.sh runs only mc/ modules
+# with fixed .cfg files. check_traces.py generates the configuration of
+# each trace.
+#
+# no_runtime_checks/test_give_count_above_limit_grows: finding 1 of the sem
+# findings on a real trace. Without runtime checks, a give above the limit
+# increments the count, and the API view has no token for it.
+
+default test_count_get_returns_count_without_lock empty
+default test_give_count_above_limit_grows empty
+default test_give_hands_over_to_waiting_thread accept
+default test_give_increments_count accept
+default test_give_saturates_at_limit accept
+default test_give_wakes_one_thread_only accept
+default test_init_accepts_boundary_values out-of-range
+default test_init_call_order accept
+default test_init_initializes_wait_queue accept
+default test_init_no_runtime_checks_accepts_invalid empty
+default test_init_rejects_count_above_limit accept
+default test_init_rejects_zero_limit accept
+default test_init_sets_count_and_limit accept
+default test_lock_give_no_ready_thread_unlocks accept
+default test_lock_give_poll_ready_reschedules empty
+default test_lock_give_wake_reschedules accept
+default test_lock_not_used_by_init accept
+default test_lock_protects_count accept
+default test_lock_reset_no_ready_thread_unlocks accept
+default test_lock_reset_poll_ready_reschedules empty
+default test_lock_reset_wake_reschedules accept
+default test_lock_shared_by_all_semaphores accept
+default test_lock_take_available_unlocks accept
+default test_lock_take_busy_unlocks accept
+default test_lock_take_wait_hands_lock_to_pend accept
+default test_poll_give_no_signal_after_wake accept
+default test_poll_give_signals_at_limit empty
+default test_poll_not_called_without_config accept
+default test_poll_reset_signals_after_wake empty
+default test_ref_give_ends_timed_wait accept
+default test_ref_give_wakes_equal_priority_in_wait_order accept
+default test_ref_give_wakes_highest_priority_waiter accept
+default test_ref_reset_wakes_all_waiters_with_eagain accept
+default test_ref_take_timeout_returns_eagain accept
+default test_ref_take_wait_ended_by_reset accept
+default test_ref_take_waits_for_give_of_isr accept
+default test_ref_take_waits_for_give_of_other_thread accept
+default test_reset_sets_count_to_zero accept
+default test_reset_wakes_all_waiting_threads accept
+default test_take_available_does_not_wait accept
+default test_take_decrements_count accept
+default test_take_in_isr_with_wait_refused_by_scheduler accept
+default test_take_in_isr_without_wait accept
+default test_take_returns_wait_result accept
+default test_take_unavailable_no_wait_returns_ebusy accept
+default test_take_unavailable_waits accept
+no_runtime_checks test_count_get_returns_count_without_lock empty
+no_runtime_checks test_give_count_above_limit_grows fail:Inv_TokenConservation
+no_runtime_checks test_give_hands_over_to_waiting_thread accept
+no_runtime_checks test_give_increments_count accept
+no_runtime_checks test_give_saturates_at_limit accept
+no_runtime_checks test_give_wakes_one_thread_only accept
+no_runtime_checks test_init_accepts_boundary_values out-of-range
+no_runtime_checks test_init_call_order accept
+no_runtime_checks test_init_initializes_wait_queue accept
+no_runtime_checks test_init_no_runtime_checks_accepts_invalid accept
+no_runtime_checks test_init_rejects_count_above_limit empty
+no_runtime_checks test_init_rejects_zero_limit empty
+no_runtime_checks test_init_sets_count_and_limit accept
+no_runtime_checks test_lock_give_no_ready_thread_unlocks accept
+no_runtime_checks test_lock_give_poll_ready_reschedules empty
+no_runtime_checks test_lock_give_wake_reschedules accept
+no_runtime_checks test_lock_not_used_by_init accept
+no_runtime_checks test_lock_protects_count accept
+no_runtime_checks test_lock_reset_no_ready_thread_unlocks accept
+no_runtime_checks test_lock_reset_poll_ready_reschedules empty
+no_runtime_checks test_lock_reset_wake_reschedules accept
+no_runtime_checks test_lock_shared_by_all_semaphores accept
+no_runtime_checks test_lock_take_available_unlocks accept
+no_runtime_checks test_lock_take_busy_unlocks accept
+no_runtime_checks test_lock_take_wait_hands_lock_to_pend accept
+no_runtime_checks test_poll_give_no_signal_after_wake accept
+no_runtime_checks test_poll_give_signals_at_limit empty
+no_runtime_checks test_poll_not_called_without_config accept
+no_runtime_checks test_poll_reset_signals_after_wake empty
+no_runtime_checks test_ref_give_ends_timed_wait accept
+no_runtime_checks test_ref_give_wakes_equal_priority_in_wait_order accept
+no_runtime_checks test_ref_give_wakes_highest_priority_waiter accept
+no_runtime_checks test_ref_reset_wakes_all_waiters_with_eagain accept
+no_runtime_checks test_ref_take_timeout_returns_eagain accept
+no_runtime_checks test_ref_take_wait_ended_by_reset accept
+no_runtime_checks test_ref_take_waits_for_give_of_isr accept
+no_runtime_checks test_ref_take_waits_for_give_of_other_thread accept
+no_runtime_checks test_reset_sets_count_to_zero accept
+no_runtime_checks test_reset_wakes_all_waiting_threads accept
+no_runtime_checks test_take_available_does_not_wait accept
+no_runtime_checks test_take_decrements_count accept
+no_runtime_checks test_take_in_isr_with_wait_refused_by_scheduler accept
+no_runtime_checks test_take_in_isr_without_wait accept
+no_runtime_checks test_take_returns_wait_result accept
+no_runtime_checks test_take_unavailable_no_wait_returns_ebusy accept
+no_runtime_checks test_take_unavailable_waits accept
+poll test_count_get_returns_count_without_lock empty
+poll test_give_count_above_limit_grows empty
+poll test_give_hands_over_to_waiting_thread accept
+poll test_give_increments_count accept
+poll test_give_saturates_at_limit accept
+poll test_give_wakes_one_thread_only accept
+poll test_init_accepts_boundary_values out-of-range
+poll test_init_call_order accept
+poll test_init_empties_poll_events accept
+poll test_init_initializes_wait_queue accept
+poll test_init_no_runtime_checks_accepts_invalid empty
+poll test_init_rejects_count_above_limit accept
+poll test_init_rejects_zero_limit accept
+poll test_init_sets_count_and_limit accept
+poll test_lock_give_no_ready_thread_unlocks accept
+poll test_lock_give_poll_ready_reschedules accept
+poll test_lock_give_wake_reschedules accept
+poll test_lock_not_used_by_init accept
+poll test_lock_protects_count accept
+poll test_lock_reset_no_ready_thread_unlocks accept
+poll test_lock_reset_poll_ready_reschedules accept
+poll test_lock_reset_wake_reschedules accept
+poll test_lock_shared_by_all_semaphores accept
+poll test_lock_take_available_unlocks accept
+poll test_lock_take_busy_unlocks accept
+poll test_lock_take_wait_hands_lock_to_pend accept
+poll test_poll_give_no_signal_after_wake accept
+poll test_poll_give_signals_after_increment accept
+poll test_poll_give_signals_at_limit accept
+poll test_poll_reset_signals_after_clear accept
+poll test_poll_reset_signals_after_wake accept
+poll test_ref_give_ends_timed_wait accept
+poll test_ref_give_wakes_equal_priority_in_wait_order accept
+poll test_ref_give_wakes_highest_priority_waiter accept
+poll test_ref_reset_wakes_all_waiters_with_eagain accept
+poll test_ref_take_timeout_returns_eagain accept
+poll test_ref_take_wait_ended_by_reset accept
+poll test_ref_take_waits_for_give_of_isr accept
+poll test_ref_take_waits_for_give_of_other_thread accept
+poll test_reset_sets_count_to_zero accept
+poll test_reset_wakes_all_waiting_threads accept
+poll test_take_available_does_not_wait accept
+poll test_take_decrements_count accept
+poll test_take_in_isr_with_wait_refused_by_scheduler accept
+poll test_take_in_isr_without_wait accept
+poll test_take_returns_wait_result accept
+poll test_take_unavailable_no_wait_returns_ebusy accept
+poll test_take_unavailable_waits accept

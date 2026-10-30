@@ -1,0 +1,2 @@
+{"ev":"test","suite":"sem_unit","name":"test_lock_reset_poll_ready_reschedules","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"end"}
