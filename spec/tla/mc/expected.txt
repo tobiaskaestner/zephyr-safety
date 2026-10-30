@@ -68,6 +68,10 @@ MCScheduler p7_coop        fail:Sched!CoopKeepsCpu
 # thread until the next reschedule point (RunRuleHolds).
 MCScheduler p7_abort       fail:Sched!CoopKeepsCpu
 MCScheduler coop_rule      fail:Inv_RunRuleHolds
+# Candidate P7-w (the waiter form of P7-a, 2026-10-31): k_thread_priority_set()
+# of a waiter to the priority that it has puts it behind the waiters of the
+# same priority (WaitQueue!KeepsArrivalOrder).
+MCScheduler arrival_same   fail:Sched!WQ!KeepsArrivalOrder
 # Platform (round A, 2026-10-29): the variant arch_swap() with PendSV
 # (CONFIG_USE_SWITCH=n). The configurations above without a suffix have
 # CONFIG_USE_SWITCH=y. The findings P7-a, P7-b and P7-c occur with both
