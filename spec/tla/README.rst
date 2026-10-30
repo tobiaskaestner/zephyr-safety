@@ -21,9 +21,13 @@ Round B (2026-10-29) added the swap data in both directions, the wait
 queue head, ``z_unpend_all()``, the ordered walk with a stop, the wake of
 one thread with its precondition, the join queue, the fault-model step
 ``WaitqInit``, the ``@kconfig`` tags and the coverage check (see
-`Kconfig`_). ``Waitable`` does not exist yet. The k_sem proof of concept is still in
-the workspace notes (``claude/kernel-unit/tla/``). It moves here when it is expressed on the
-library.
+`Kconfig`_). The k_sem slice (roadmap step 2, 2026-10-30) added
+``lib/Waitable`` (minimal: what ``KSem`` needs), ``objects/KSem`` with its
+own ``Init``, ``Next`` and ``Spec`` (the environment is
+``Scheduler!EnvNext``), the models ``mc/MCKSem`` and the mutants
+``mc/MCKSemMutants``, and the trace check of the sem unit tests
+(``trace/``, see ``trace/README.rst``). The k_sem proof of concept of the
+workspace notes (``claude/kernel-unit/tla/``) is replaced.
 
 .. contents::
    :local:
@@ -422,6 +426,14 @@ The paper check gives this fit:
 - **No fit:** ``k_poll``. A poller waits on several objects. It becomes a
   separate module that uses the ``Notify`` hook of the other objects.
 
+The minimal template of the k_sem slice (``lib/Waitable.tla``) has the
+actions ``Take``, ``Give``, ``Flush``, ``ResumeOp``, ``InitOp`` and
+``EnvStep`` (the step ``Scheduler!EnvNext`` in an object model, without the
+return from a wait, which is the object's ``ResumeOp``). Its variables are
+``r`` (the resource of each object), ``req`` (the object of the wait of
+each thread, until the thread returns) and ``obs``. The other parameters of
+the table below come with the objects that need them.
+
 Composition pattern
 -------------------
 
@@ -615,11 +627,14 @@ The observation record
 **********************
 
 Each action writes the variable ``obs``. It has a generic part from layer A
-(``actor``, ``op``, ``wakes``, ``woken``, ``release``, ``ret``, the work
-counters) and an object part (``args``). The trace hook of the unit tests
-writes the same record from the fakes. The trace spec compares the two.
-The generated tests read the same record. One record type also suits
-Apalache.
+(``actor``, ``op``, ``obj``, ``timeout``, ``woken``, ``ret``) and an object
+part (``args``). Since the k_sem slice, the generic part has ``calls``: the
+calls of the step into the lock and the scheduler contract, in order, each
+as ``[fn, obj, arg, ret, res, thread]`` (``lib/Waitable.tla``). This is the
+hook-call record of the review of 2026-10-30 (answer Q3). The trace hook of
+the unit tests writes the same calls from the fakes, and ``trace/KSemTrace``
+compares them one by one. The generated tests can read the same record.
+One record type also suits Apalache.
 
 Apalache
 ********

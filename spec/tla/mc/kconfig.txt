@@ -33,3 +33,11 @@ CONFIG_TIMEOUT_BACKEND_WHEEL y - not in the model yet: in scope (decision Q3 of 
 # enough: the heap holds all entries of the model; too_small: it does not.
 CONFIG_TIMEOUT_HEAP_MAX_ENTRIES enough HeapCapacity 3 if Backend "MINHEAP"
 CONFIG_TIMEOUT_HEAP_MAX_ENTRIES too_small HeapCapacity 2 if Backend "MINHEAP"
+
+# KSem: the poll events of the semaphore (kind 2).
+CONFIG_POLL y Poll TRUE
+CONFIG_POLL n Poll FALSE
+
+# KSem: the argument check of k_sem_init() (kind 5, the fault model).
+CONFIG_RUNTIME_ERROR_CHECKS y RuntimeChecks TRUE
+CONFIG_NO_RUNTIME_CHECKS y RuntimeChecks FALSE
