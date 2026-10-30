@@ -38,7 +38,7 @@
 (* assumption: each step that takes the lock has the lock as its first     *)
 (* call and one release as its last call.                                  *)
 (***************************************************************************)
-EXTENDS Integers, Sequences, FiniteSets
+EXTENDS Integers, Sequences, FiniteSets, Apalache
 
 CONSTANTS Threads, Objs, None, Isrs, IsrCpu, MaxIrqNest, Idle, Data, NoData, JoinQ,
           CPUS, UseSwitch, Backend, HeapCapacity
@@ -202,7 +202,9 @@ Give(o, a, Settle(_), Res(_), Notify, PollState) ==
 \* returns false), the resource becomes FlushR(x), and with Notify the
 \* poll events get the signal. The step ends with z_reschedule() if a
 \* thread became ready (a waiter, or a polling thread), else with the
-\* unlock.
+\* unlock. The wake calls of the waiters are a function on the constant
+\* domain 1..Cardinality(Threads), cut to the waiters by FunAsSeq (see
+\* WaitQueue!Ordered): Apalache does not accept 1..Len(Q).
 \* @kind action
 Flush(o, a, FlushRet, FlushR(_), Res(_), Notify, PollState) ==
     /\ panic = "none"
@@ -211,18 +213,21 @@ Flush(o, a, FlushRet, FlushR(_), Res(_), Notify, PollState) ==
            c0 == Res(x)
            x1 == FlushR(x)
            Q  == S!WQ!Ordered(o)
+           Wakes == FunAsSeq([k \in 1..Cardinality(Threads) |->
+                                 WakeCall(o, FlushRet, TRUE, c0, IF k <= Len(Q) THEN Q[k] ELSE Idle)],
+                             Len(Q), Cardinality(Threads))
        IN
        \E ready \in PollResults(Notify) :
        /\ S!WakeAll(o, FlushRet, NoData)
        /\ r' = [r EXCEPT ![o] = x1]
-       /\ S!Release(a, IF Q # <<>> \/ ready THEN "resched" ELSE "unlock")
+       /\ S!Release(a, IF S!HasWaiters(o) \/ ready THEN "resched" ELSE "unlock")
        /\ obs' = Obs(a, "flush", o, "none",
                      <<LockCall(o, c0)>>
-                     \o [k \in 1..Len(Q) |-> WakeCall(o, FlushRet, TRUE, c0, Q[k])]
+                     \o Wakes
                      \o <<WakeCall(o, FlushRet, FALSE, c0, Idle)>>
                      \o (IF Notify THEN <<PollCall(o, PollState, ready, Res(x1))>> ELSE <<>>)
-                     \o <<ReleaseCall(IF Q # <<>> \/ ready THEN "resched" ELSE "unlock", o, Res(x1))>>,
-                     NoRet, {Q[k] : k \in 1..Len(Q)})
+                     \o <<ReleaseCall(IF S!HasWaiters(o) \/ ready THEN "resched" ELSE "unlock", o, Res(x1))>>,
+                     NoRet, S!WQ!W(o))
        /\ UNCHANGED req
 
 \* Thread t returns from its wait on req[t]: z_pend_curr() returns the swap

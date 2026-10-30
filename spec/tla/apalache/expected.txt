@@ -19,69 +19,66 @@
 # --- Type check of the library ----------------------------------------------
 Platform    typecheck       pass
 Timeout     typecheck       pass
-# WaitQueue!Head and WaitQueue!WalkStop give a thread or the object None:
-# Snowcat cannot unify THREAD and OBJ (README.rst, "Apalache").
-WaitQueue   typecheck       fail:120
-WaitQueue   typecheck_omit  pass      omit=WaitQueue.Head,WaitQueue.WalkStop
-Scheduler   typecheck       fail:120
-Scheduler   typecheck_omit  pass      omit=WaitQueue.Head,WaitQueue.WalkStop
+# WaitQueue!Head and WalkStop give NoThread for "no thread" (decision D15),
+# and WaitQueue!Ordered and Waitable!Flush build their sequences with
+# FunAsSeq of the module Apalache (decision D16).
+WaitQueue   typecheck       pass
+Scheduler   typecheck       pass
 # Waitable is a template: the type of r and of obs.args comes from the
 # object module. It type-checks only through an object module (KSem).
 Waitable    typecheck       fail:255
-# KSem: Head and WalkStop as above. Without them: Waitable!Flush builds the calls of the flush with a function
-# [k \in 1..Len(Q) |-> ...] and concatenates it with \o, and compares
-# WaitQueue!Ordered (a function) with <<>>. Snowcat types a function
-# constructor as a function, not as a sequence.
-KSem        typecheck       fail:120
-KSem        typecheck_omit  fail:120  omit=WaitQueue.Head,WaitQueue.WalkStop
+KSem        typecheck       pass
 
 # --- Inductive invariant of WaitQueue: StampsNormal ---------------------------
 # The Next of mc/MCWaitQueue, 3 threads, 2 objects, 3 priorities.
-APWaitQueue ind_init        pass      init=Init inv=IndInv length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue ind_step        pass      init=IndInv inv=IndInv length=1 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue ind_inv         pass      init=IndInv inv=Inv length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue ind_inv_order   pass      init=IndInv inv=InvOrderTotal length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue ind_inv_ranks   pass      init=IndInv inv=InvRanks length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue ind_inv_best    pass      init=IndInv inv=InvBestIsHead length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue range_step      pass      init=IndInvRange inv=IndInvRange length=1 omit=WaitQueue.Head,WaitQueue.WalkStop
-APWaitQueue range_inv       violated  init=IndInvRange inv=Inv length=0 omit=WaitQueue.Head,WaitQueue.WalkStop
+APWaitQueue ind_init        pass      init=Init inv=IndInv length=0
+APWaitQueue ind_step        pass      init=IndInv inv=IndInv length=1
+APWaitQueue ind_inv         pass      init=IndInv inv=Inv length=0
+APWaitQueue ind_inv_order   pass      init=IndInv inv=InvOrderTotal length=0
+APWaitQueue ind_inv_ranks   pass      init=IndInv inv=InvRanks length=0
+APWaitQueue ind_inv_best    pass      init=IndInv inv=InvBestIsHead length=0
+APWaitQueue range_step      pass      init=IndInvRange inv=IndInvRange length=1
+APWaitQueue range_inv       violated  init=IndInvRange inv=Inv length=0
 # OrderIsTotal alone is not inductive: a waiter with a stamp that is too
 # large (3 of 2 waiters) and an Add that gives NextStamp = 3 to a second
 # waiter of the same object and priority. StampsNormal excludes the state.
-APWaitQueue order_step      violated     init=IndInvOrder inv=IndInvOrder length=1 omit=WaitQueue.Head,WaitQueue.WalkStop
+APWaitQueue order_step      violated     init=IndInvOrder inv=IndInvOrder length=1
 
 # --- Inductive invariant of Scheduler: PendingIsQueued ------------------------
+# omit=MCScheduler.SymThreadsObjs: the symmetry set of the TLC
+# configurations *_sym is a set of functions on threads and objects
+# together, which Snowcat cannot type. No checked formula uses it.
 # The Next of mc/MCScheduler in groups (NextGroups), constants of small.
 # The candidates 0 to 2 are not inductive: each line gives the
 # counterexample to induction that led to the next candidate.
-APScheduler cand0_step      violated  init=IndInv0 inv=IndInv0 length=1 next=NextResume cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler cand1_step      violated  init=IndInv1 inv=IndInv1 length=1 next=NextPend cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler cand2_step      violated  init=IndInv2 inv=IndInv2 length=1 next=NextPend cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
+APScheduler cand0_step      violated  init=IndInv0 inv=IndInv0 length=1 next=NextResume cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler cand1_step      violated  init=IndInv1 inv=IndInv1 length=1 next=NextPend cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler cand2_step      violated  init=IndInv2 inv=IndInv2 length=1 next=NextPend cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
 # InitAP is Init of MCScheduler in a form that Apalache accepts (one-point
 # rule). Apalache rejects Init itself (fail:255, a set of functions).
-APScheduler init_as_is      fail:255  init=Init inv=IndInv length=0 cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_init        pass      init=InitAP inv=IndInv length=0 cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_pend   pass      init=IndInv inv=IndInv length=1 next=NextPend cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_wake   pass      init=IndInv inv=IndInv length=1 next=NextWake cinit=CInitSmall timeout=3600 omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_other  pass      init=IndInv inv=IndInv length=1 next=NextOther cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_cpu    pass      init=IndInv inv=IndInv length=1 next=NextCpu cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_abort  pass      init=IndInv inv=IndInv length=1 next=NextAbort cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_prio   pass      init=IndInv inv=IndInv length=1 next=NextPrio cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_resume pass      init=IndInv inv=IndInv length=1 next=NextResume cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_lock   pass      init=IndInv inv=IndInv length=1 next=NextLock cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_step_halted pass      init=IndInv inv=IndInv length=1 next=NextHalted cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler ind_inv         pass      init=IndInv inv=Inv length=0 cinit=CInitSmall omit=WaitQueue.Head,WaitQueue.WalkStop
+APScheduler init_as_is      fail:255  init=Init inv=IndInv length=0 cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_init        pass      init=InitAP inv=IndInv length=0 cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_pend   pass      init=IndInv inv=IndInv length=1 next=NextPend cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_wake   pass      init=IndInv inv=IndInv length=1 next=NextWake cinit=CInitSmall timeout=3600 omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_other  pass      init=IndInv inv=IndInv length=1 next=NextOther cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_cpu    pass      init=IndInv inv=IndInv length=1 next=NextCpu cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_abort  pass      init=IndInv inv=IndInv length=1 next=NextAbort cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_prio   pass      init=IndInv inv=IndInv length=1 next=NextPrio cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_resume pass      init=IndInv inv=IndInv length=1 next=NextResume cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_lock   pass      init=IndInv inv=IndInv length=1 next=NextLock cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_step_halted pass      init=IndInv inv=IndInv length=1 next=NextHalted cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
+APScheduler ind_inv         pass      init=IndInv inv=Inv length=0 cinit=CInitSmall omit=MCScheduler.SymThreadsObjs
 
 # The same obligations with the constants of default (2 objects, priority
 # changes by each actor).
-APScheduler d_ind_init        pass      init=InitAP inv=IndInv length=0 cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_pend    pass      init=IndInv inv=IndInv length=1 next=NextPend cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_other   pass      init=IndInv inv=IndInv length=1 next=NextOther cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_cpu     pass      init=IndInv inv=IndInv length=1 next=NextCpu cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_abort   pass      init=IndInv inv=IndInv length=1 next=NextAbort cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_prio    pass      init=IndInv inv=IndInv length=1 next=NextPrio cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_resume  pass      init=IndInv inv=IndInv length=1 next=NextResume cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_lock    pass      init=IndInv inv=IndInv length=1 next=NextLock cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_halted  pass      init=IndInv inv=IndInv length=1 next=NextHalted cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_step_wake    pass      init=IndInv inv=IndInv length=1 next=NextWake cinit=CInitDefault timeout=5400 omit=WaitQueue.Head,WaitQueue.WalkStop
-APScheduler d_ind_inv         pass      init=IndInv inv=Inv length=0 cinit=CInitDefault omit=WaitQueue.Head,WaitQueue.WalkStop
+APScheduler d_ind_init        pass      init=InitAP inv=IndInv length=0 cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_pend    pass      init=IndInv inv=IndInv length=1 next=NextPend cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_other   pass      init=IndInv inv=IndInv length=1 next=NextOther cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_cpu     pass      init=IndInv inv=IndInv length=1 next=NextCpu cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_abort   pass      init=IndInv inv=IndInv length=1 next=NextAbort cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_prio    pass      init=IndInv inv=IndInv length=1 next=NextPrio cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_resume  pass      init=IndInv inv=IndInv length=1 next=NextResume cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_lock    pass      init=IndInv inv=IndInv length=1 next=NextLock cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_halted  pass      init=IndInv inv=IndInv length=1 next=NextHalted cinit=CInitDefault omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_step_wake    pass      init=IndInv inv=IndInv length=1 next=NextWake cinit=CInitDefault timeout=5400 omit=MCScheduler.SymThreadsObjs
+APScheduler d_ind_inv         pass      init=IndInv inv=Inv length=0 cinit=CInitDefault omit=MCScheduler.SymThreadsObjs

@@ -27,7 +27,8 @@ VARIABLES
 \* The model of mc/MCWaitQueue, with its Init and Next.
 MC == INSTANCE MCWaitQueue WITH
         t1 <- "t1_OF_THREAD", t2 <- "t2_OF_THREAD", t3 <- "t3_OF_THREAD",
-        o1 <- "o1_OF_OBJ", o2 <- "o2_OF_OBJ", NoObj <- "none_OF_OBJ"
+        o1 <- "o1_OF_OBJ", o2 <- "o2_OF_OBJ", NoObj <- "none_OF_OBJ",
+        NoThr <- "none_OF_THREAD"
 
 Init == MC!Init
 Next == MC!Next

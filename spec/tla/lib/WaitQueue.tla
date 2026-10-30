@@ -22,7 +22,7 @@
 (* it (INSTANCE WaitQueue). prio belongs to the Scheduler. This module     *)
 (* reads it and does not change it.                                        *)
 (***************************************************************************)
-EXTENDS Naturals, FiniteSets
+EXTENDS Naturals, FiniteSets, Apalache
 
 CONSTANTS
     \* @type: Set(THREAD);
@@ -31,7 +31,11 @@ CONSTANTS
     Objs,
     \* The value of pendedOn for a thread that does not wait.
     \* @type: OBJ;
-    None
+    None,
+    \* The value "no thread" of Head and WalkStop, and the filler of Ordered
+    \* after the last waiter. Not a thread. Scheduler sets it to Idle.
+    \* @type: THREAD;
+    NoThread
 
 VARIABLES
     \* The object that each thread waits on, or None.
@@ -48,6 +52,7 @@ VARIABLES
     prio
 
 ASSUME None \notin Objs
+ASSUME NoThread \notin Threads
 
 -----------------------------------------------------------------------------
 (* Queries *)
@@ -78,12 +83,19 @@ Best(o) == CHOOSE t \in W(o) : Rank(o, t) = 1
 
 \* The wait queue of o as a sequence, head first. This is the view of the
 \* trace records and of the generated tests. Exactly one waiter has the
-\* rank i, for each i (invariant RanksDistinct). For TLC only: Apalache
-\* does not accept a range with a bound that depends on the state.
-Ordered(o) == [i \in 1..Cardinality(W(o)) |-> CHOOSE t \in W(o) : Rank(o, t) = i]
+\* rank i, for each i (invariant RanksDistinct). Apalache does not accept a
+\* range with a bound that depends on the state. Thus the function has the
+\* constant domain 1..Cardinality(Threads), with NoThread after the last
+\* waiter, and FunAsSeq (module Apalache) cuts it to the waiters. The value
+\* is the sequence [i \in 1..Cardinality(W(o)) |-> ...] of the ranks.
+Ordered(o) ==
+    LET n == Cardinality(W(o))
+    IN  FunAsSeq([i \in 1..Cardinality(Threads) |->
+                     IF i <= n THEN CHOOSE t \in W(o) : Rank(o, t) = i ELSE NoThread],
+                 n, Cardinality(Threads))
 
 \* z_waitq_head() and z_waitq_head_locked() (wait_q.h:50-53, 93-96,
-\* 100-117): the first waiter of o, or None if no thread waits. The two
+\* 100-117): the first waiter of o, or NoThread if no thread waits. The two
 \* functions differ only in the lock: z_waitq_head() takes the scheduler
 \* lock, which matters only on SMP. Users at Zephyr 770fdef1567:
 \*
@@ -102,10 +114,11 @@ Ordered(o) == [i \in 1..Cardinality(W(o)) |-> CHOOSE t \in W(o) : Rank(o, t) = i
 \*   needs a name for the call.
 \*
 \* The module does not extend Sequences, so that the name Head is free.
-\* Ordered builds its sequence as a function.
+\* The module Apalache instantiates Sequences as LOCAL, so it does not
+\* export Head either.
 \* @c-function z_waitq_head
 \* @c-function z_waitq_head_locked
-Head(o) == IF W(o) = {} THEN None ELSE Best(o)
+Head(o) == IF W(o) = {} THEN NoThread ELSE Best(o)
 
 \* The waiters of o that z_sched_waitq_walk() visits: the waiters in wait
 \* queue order up to the first waiter t with Stop(t) (walk_func returns a
@@ -117,13 +130,13 @@ Head(o) == IF W(o) = {} THEN None ELSE Best(o)
 Walked(o, Stop(_)) == {t \in W(o) : \A u \in W(o) : Before(u, t) => ~Stop(u)}
 
 \* The waiter at which z_sched_waitq_walk() stops: the first waiter t of o
-\* with Stop(t), or None if the walk visits all waiters (the C function
+\* with Stop(t), or NoThread if the walk visits all waiters (the C function
 \* then returns 0). Before is a total order on W(o) (invariant
 \* OrderIsTotal), so the CHOOSE has exactly one witness.
 \* @kind definition
 WalkStop(o, Stop(_)) ==
     LET X == {t \in W(o) : Stop(t)}
-    IN  IF X = {} THEN None ELSE CHOOSE t \in X : \A u \in X \ {t} : Before(t, u)
+    IN  IF X = {} THEN NoThread ELSE CHOOSE t \in X : \A u \in X \ {t} : Before(t, u)
 
 -----------------------------------------------------------------------------
 (* Stamps *)

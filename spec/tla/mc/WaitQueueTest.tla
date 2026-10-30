@@ -17,9 +17,11 @@ EXTENDS Naturals, TLC
 Threads == {"t1", "t2", "t3"}
 Objs    == {"o1", "o2"}
 NoObj   == "none"
+NoThr   == "nothread"
 
 \* WaitQueue in the state pe (pendedOn), st (stamp), pr (prio).
-At(pe, st, pr) == INSTANCE WaitQueue WITH pendedOn <- pe, stamp <- st, prio <- pr, None <- NoObj
+At(pe, st, pr) == INSTANCE WaitQueue WITH pendedOn <- pe, stamp <- st, prio <- pr, None <- NoObj,
+                                          NoThread <- NoThr
 
 \* A test: the value got must be the value want.
 Check(name, got, want) == Assert(got = want, <<name, "got", got, "want", want>>)
@@ -72,10 +74,10 @@ TestTwoObjects ==
     /\ Check("two: Waiting",   At(Two, S12, Equal)!Waiting, {"t1", "t2"})
     /\ Check("two: NextStamp", At(Two, S12, Equal)!NextStamp, 3)
 
-\* Head: z_waitq_head() and z_waitq_head_locked(). None on an empty
+\* Head: z_waitq_head() and z_waitq_head_locked(). NoThread on an empty
 \* queue, else the best waiter.
 TestHead ==
-    /\ Check("head: empty",      At(Wait({}), NoStamps, Equal)!Head("o1"), NoObj)
+    /\ Check("head: empty",      At(Wait({}), NoStamps, Equal)!Head("o1"), NoThr)
     /\ Check("head: fifo",       At(Wait(Threads), S123, Equal)!Head("o1"), "t1")
     /\ Check("head: prio",       At(Wait(Threads), S123, P1)!Head("o1"), "t2")
     /\ Check("head: other obj",  At(Two, S12, Equal)!Head("o2"), "t2")
@@ -92,7 +94,7 @@ Walked(st, pr, Stop(_)) == At(Wait(Threads), st, pr)!Walked("o1", Stop)
 WalkStop(st, pr, Stop(_)) == At(Wait(Threads), st, pr)!WalkStop("o1", Stop)
 TestWalk ==
     /\ Check("walk: no stop visits all",  Walked(S123, P1, StopNone), Threads)
-    /\ Check("walk: no stop, no thread",  WalkStop(S123, P1, StopNone), NoObj)
+    /\ Check("walk: no stop, no thread",  WalkStop(S123, P1, StopNone), NoThr)
     /\ Check("walk: stop at the head",    Walked(S123, P1, StopAll), {"t2"})
     /\ Check("walk: stop at the second",  Walked(S123, P1, StopT1), {"t2", "t1"})
     /\ Check("walk: stopper",             WalkStop(S123, P1, StopT1), "t1")

@@ -223,8 +223,9 @@ ASSUME \A a, b \in Threads : a # b /\ JoinQ[a] # None => JoinQ[a] # JoinQ[b]
 \* The world below sched.c: CPUs, actors, interrupt lock, switch.
 PF == INSTANCE Platform
 
-\* The waiters and their order.
-WQ == INSTANCE WaitQueue
+\* The waiters and their order. Idle is the value "no thread" of the wait
+\* queue (WaitQueue!Head, WalkStop), as in the call records of Waitable.
+WQ == INSTANCE WaitQueue WITH NoThread <- Idle
 
 \* The timeouts of the waiting threads.
 TO == INSTANCE Timeout WITH Entries <- Threads
@@ -632,7 +633,7 @@ UnpendAll(o) ==
 \* (WaitQueue!Walked). Each visited waiter t with P(t) stops to wait with
 \* the return value 0 and the data D(t), as by z_sched_wake_thread_locked()
 \* after the cancellation of its timeout. The return value of the C
-\* function is 0 if WaitQueue!WalkStop(o, Stop) = None, else the value of
+\* function is 0 if WaitQueue!WalkStop(o, Stop) = Idle, else the value of
 \* walk_func. Users:
 \*
 \* - k_event_post() and k_event_set() (events.c:211): P is the wait
