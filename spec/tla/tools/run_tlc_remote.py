@@ -9,7 +9,9 @@ Usage::
     run_tlc_remote.py [options] [<module>[:<config>] ...]
 
 The arguments select lines of mc/expected.txt, as for run_tlc.sh. Without
-arguments, all lines run.
+arguments, all lines run. ``--list <name>`` selects another list file,
+mc/<name>.txt (for example ``--list sensitivity``, the sensitivity set).
+A run of mc/expected.txt never runs the lines of another list.
 
 Modes:
 
@@ -193,8 +195,9 @@ fi
 if [ -n "$lines" ]; then
 	echo "== mc" >> results.txt
 	# shellcheck disable=SC2086 # the selection is a list of words
-	TLC_SUITE=mc TLC_WORKERS=$workers TLC_JOBS=$jobs TLC_HEAP=$mem TLC_MEM_BUDGET=$budget \
-		TLC_OUT=$run/out nice -n 10 "$spec/tools/run_tlc.sh" $lines >> results.txt 2>&1
+	TLC_SUITE=mc TLC_LIST=$list TLC_WORKERS=$workers TLC_JOBS=$jobs TLC_HEAP=$mem \
+		TLC_MEM_BUDGET=$budget TLC_OUT=$run/out nice -n 10 "$spec/tools/run_tlc.sh" $lines \
+		>> results.txt 2>&1
 	status=$?
 fi
 finish $status
@@ -281,10 +284,17 @@ def submit(a, lab):
             die("the worktree is not clean (commit first, or use --unpinned)")
         if not branch:
             die("HEAD is detached: check out a branch")
-        expected = git("show", f"{commit}:spec/tla/mc/expected.txt").decode()
+        r = subprocess.run(["git", "-C", str(SPEC), "show", f"{commit}:spec/tla/mc/{a.list}.txt"],
+                           capture_output=True, check=False)
+        if r.returncode != 0:
+            die(f"no list file mc/{a.list}.txt in the commit {commit[:9]}")
+        expected = r.stdout.decode()
     else:
         diff = unpinned_diff()
-        expected = (SPEC / "mc" / "expected.txt").read_text()
+        path = SPEC / "mc" / f"{a.list}.txt"
+        if not path.is_file():
+            die(f"no list file {path}")
+        expected = path.read_text()
 
     lines = [] if a.selftest_only else select(read_expected(expected), a.models)
     if not lines and not a.selftest_only:
@@ -328,7 +338,8 @@ def submit(a, lab):
     job = {
         "run_id": run_id, "mode": mode, "revision": commit, "branch": branch or None,
         "diff_sha256": hashlib.sha256(diff).hexdigest() if diff is not None else None,
-        "workers": a.workers, "jobs": a.jobs, "memory": a.mem, "mem_budget": a.mem_budget,
+        "list": a.list, "workers": a.workers, "jobs": a.jobs, "memory": a.mem,
+        "mem_budget": a.mem_budget,
         "gc_threads": GC_THREADS, "nice": 10, "selftest": not a.no_selftest,
         "selection": a.models, "order": order,
         "submitted": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
@@ -336,7 +347,7 @@ def submit(a, lab):
     head = "\n".join([
         "#!/usr/bin/env bash",
         f"root={shlex.quote(lab.root)}", f"id={run_id}", f"mode={mode}",
-        f"commit={commit}", f"branch={shlex.quote(branch)}",
+        f"commit={commit}", f"branch={shlex.quote(branch)}", f"list={a.list}",
         f"bundle={shlex.quote(bundle)}", f"mem={shlex.quote(a.mem)}",
         f"budget={shlex.quote(a.mem_budget)}", f"workers={a.workers}", f"jobs={a.jobs}",
         f"gc={GC_THREADS}", f"selftest={'no' if a.no_selftest else 'yes'}",
@@ -466,6 +477,7 @@ def collect(lab, run_id, out):
         f.write(f"- Evidence: {'yes' if evidence else 'NO (' + '; '.join(reasons) + ')'}\n")
         f.write(f"- Status: {status}\n")
         f.write(f"- Mode: {job['mode']}, revision {job['revision']}, branch {job['branch']}\n")
+        f.write(f"- List: mc/{job.get('list', 'expected')}.txt\n")
         f.write(f"- Jar: {meta.get('jar_sha256')}\n")
         f.write(f"- Java: {meta.get('java_runtime')}\n")
         f.write(f"- Workers per process: {job['workers']}, processes: {job['jobs']}, "
@@ -481,6 +493,7 @@ def collect(lab, run_id, out):
         "mode": job["mode"],
         "revision": job["revision"],
         "branch": job["branch"],
+        "list": job.get("list", "expected"),
         "diff_sha256": job["diff_sha256"],
         "evidence": evidence,
         "not_evidence_reasons": reasons,
@@ -517,6 +530,8 @@ def collect(lab, run_id, out):
 def main():
     p = argparse.ArgumentParser(description=__doc__.split("\n\n")[0])
     p.add_argument("models", nargs="*", metavar="<module>[:<config>]")
+    p.add_argument("--list", default="expected",
+                   help="the list file mc/<list>.txt (default expected; for example sensitivity)")
     p.add_argument("--workers", type=int, default=1,
                    help=f"TLC workers in each process (default 1). More than 1 (up to "
                         f"{MAX_WORKERS}) is not evidence")
@@ -542,6 +557,8 @@ def main():
                    help="wait for the job RUN_ID and copy its results")
     a = p.parse_args()
 
+    if not a.list or not all(ch.islower() or ch.isdigit() or ch in "_-" for ch in a.list):
+        die("--list must be a name like expected or sensitivity")
     if not 1 <= a.workers <= MAX_WORKERS:
         die(f"--workers must be 1..{MAX_WORKERS}")
     if not 1 <= a.jobs <= MAX_JOBS:

@@ -949,6 +949,7 @@ stops the lookup.
    spec/tla/tools/run_tlc.sh              # all models in mc/expected.txt
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
    TLC_SUITE=selftest spec/tla/tools/run_tlc.sh  # the selftest of TLC
+   TLC_LIST=sensitivity spec/tla/tools/run_tlc.sh MCScheduler:small_sens_t2
    python3 spec/tla/tools/kconfig_coverage.py  # Kconfig coverage (doc Python)
 
 Locally, ``run_tlc.sh`` runs one TLC process at a time, with one worker.
@@ -962,6 +963,16 @@ Java heap of the line) and ``repeat=`` (run the line more than once, each
 run must give the same counts). Each pass line has recorded counts. After
 a change of a model that changes a count, record the new count in the
 same commit and give the reason in the commit message.
+
+The sensitivity set is a second list file, ``mc/sensitivity.txt``, in the
+format of ``mc/expected.txt``. Each configuration ``<base>_sens_<axis>``
+changes only bounds of a base line (threads, objects, priorities,
+entries) and checks the same properties. The configurations ``*_sym`` add
+a symmetry set. ``TLC_LIST=sensitivity`` (``run_tlc.sh``) or ``--list
+sensitivity`` (``run_tlc_remote.py``) selects it. A run of
+``mc/expected.txt`` never runs these lines. The whole list takes about 47
+hours with one worker. The argument for each bound is in the workspace
+notes (``tla/small-scope.md``).
 
 ``tools/TOOLS.rst`` is the tool note: the identity of the pinned jar, its
 known defects and why they do not affect the evidence, the selftest, and
@@ -1035,6 +1046,7 @@ the same arguments as ``run_tlc.sh``:
    spec/tla/tools/run_tlc_remote.py                        # all lines, pinned
    spec/tla/tools/run_tlc_remote.py MCScheduler:default    # one line
    spec/tla/tools/run_tlc_remote.py --selftest-only        # the selftest only
+   spec/tla/tools/run_tlc_remote.py --list sensitivity     # the sensitivity set
    spec/tla/tools/run_tlc_remote.py --unpinned MCTimeout   # working tree
    spec/tla/tools/run_tlc_remote.py --detach MCScheduler   # start only
    spec/tla/tools/run_tlc_remote.py --collect <run-id>     # get results
