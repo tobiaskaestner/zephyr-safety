@@ -468,11 +468,14 @@ The grain of a module is how much code one step of the module is (decided
 on 2026-10-30; it replaces "level 1" and "level 2" of 2026-10-26).
 
 **Coarse grain.** One action is one critical section under the object
-lock. This is correct on one CPU, because the object lock also locks the
-interrupts. It is also correct on SMP if the operation holds the lock from
-the first read of the resource or the wait queue to the last scheduler
-call. Most takes and gives of the eight units satisfy this. Coarse grain
-is the grain of the trace hook and of the generated tests.
+lock. This is correct on one CPU, because each spinlock also locks the
+interrupts: no other code runs between the first read and the last write
+of the step. It is not correct on SMP. For example, ``k_sem_give()`` holds
+the object lock and takes ``_sched_spinlock`` inside it, and another CPU
+can see the state between the two locks. Thus a coarse module is for one
+CPU by construction, not only by its configurations (safety case 1 is for
+one CPU only, decision D2 of the method review). SMP needs fine modules.
+Coarse grain is the grain of the trace hook and of the generated tests.
 
 **Fine grain.** Lock acquire and lock release are separate steps. Fine
 grain is necessary only for the operations that break the coarse grain.
