@@ -288,6 +288,87 @@
 
 #include <kernel/sem.c>
 
+#ifdef CONFIG_KERNEL_UNIT_TRACE
+#include <kernel_unit_trace.h>
+
+/*
+ * The trace hook (kernel_unit_trace.h, scenarios kernel.unit.sem.trace*):
+ * each call of z_impl_k_sem_init(), z_impl_k_sem_give(), z_impl_k_sem_take()
+ * and z_impl_k_sem_reset() in this file goes through a wrapper that writes
+ * the start and the end of the call. The calls of sem.c into the fakes
+ * write their own lines. The trace module spec/tla/trace/KSemTrace.tla
+ * checks each trace against KSem.
+ */
+static struct kernel_unit_trace_obj trace_obj(struct k_sem *sem)
+{
+	return (struct kernel_unit_trace_obj){
+		.obj = sem,
+		.wait_q = &sem->wait_q,
+#ifdef CONFIG_POLL
+		.poll_events = &sem->poll_events,
+#endif
+		.count = &sem->count,
+		.limit = &sem->limit,
+	};
+}
+
+static const char *trace_timeout(k_timeout_t timeout)
+{
+	if (K_TIMEOUT_EQ(timeout, K_NO_WAIT)) {
+		return "NO_WAIT";
+	}
+	return K_TIMEOUT_EQ(timeout, K_FOREVER) ? "FOREVER" : "TICKS";
+}
+
+static int traced_k_sem_init(struct k_sem *sem, unsigned int initial_count, unsigned int limit)
+{
+	struct kernel_unit_trace_obj o = trace_obj(sem);
+	const unsigned int args[] = {initial_count, limit};
+	int ret;
+
+	kernel_unit_trace_api_enter("init", &o, &sem_lock, NULL, args, ARRAY_SIZE(args));
+	ret = z_impl_k_sem_init(sem, initial_count, limit);
+	kernel_unit_trace_api_exit("init", sem, true, ret);
+
+	return ret;
+}
+
+static void traced_k_sem_give(struct k_sem *sem)
+{
+	struct kernel_unit_trace_obj o = trace_obj(sem);
+
+	kernel_unit_trace_api_enter("give", &o, &sem_lock, NULL, NULL, 0);
+	z_impl_k_sem_give(sem);
+	kernel_unit_trace_api_exit("give", sem, false, 0);
+}
+
+static int traced_k_sem_take(struct k_sem *sem, k_timeout_t timeout)
+{
+	struct kernel_unit_trace_obj o = trace_obj(sem);
+	int ret;
+
+	kernel_unit_trace_api_enter("take", &o, &sem_lock, trace_timeout(timeout), NULL, 0);
+	ret = z_impl_k_sem_take(sem, timeout);
+	kernel_unit_trace_api_exit("take", sem, true, ret);
+
+	return ret;
+}
+
+static void traced_k_sem_reset(struct k_sem *sem)
+{
+	struct kernel_unit_trace_obj o = trace_obj(sem);
+
+	kernel_unit_trace_api_enter("reset", &o, &sem_lock, NULL, NULL, 0);
+	z_impl_k_sem_reset(sem);
+	kernel_unit_trace_api_exit("reset", sem, false, 0);
+}
+
+#define z_impl_k_sem_init  traced_k_sem_init
+#define z_impl_k_sem_give  traced_k_sem_give
+#define z_impl_k_sem_take  traced_k_sem_take
+#define z_impl_k_sem_reset traced_k_sem_reset
+#endif /* CONFIG_KERNEL_UNIT_TRACE */
+
 /* Value that fills a semaphore before a test, to show the fields that the unit writes. */
 #define SEM_FILL 0xA5
 
@@ -2159,6 +2240,9 @@ static size_t n_woken;
 
 static void record_wake(const struct kernel_unit_sched_ref_record *rec)
 {
+#ifdef CONFIG_KERNEL_UNIT_TRACE
+	kernel_unit_trace_sched_ref(rec);
+#endif
 	if ((strcmp(rec->op, "WakeFirst") == 0) && (rec->thread != NULL) &&
 	    (n_woken < ARRAY_SIZE(woken))) {
 		woken[n_woken++] = rec->thread;

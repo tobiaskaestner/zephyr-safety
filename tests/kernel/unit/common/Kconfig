@@ -27,3 +27,12 @@ config ZTEST_COVERAGE_PER_TEST
 	  Reset the gcov counters before each test and write a separate,
 	  test-tagged set of .gcda files after each test (named
 	  "<gcda-path>@@<suite>.<test>").
+
+config KERNEL_UNIT_TRACE
+	bool "Write a trace of each test for the trace check"
+	help
+	  The fake group trace writes one line of JSON for each call of the
+	  object API and for each call of the unit into the scheduler, the
+	  lock and the poll events (common/include/kernel_unit_trace.h). The
+	  lines start with "KTRACE ". The trace module of the object in
+	  spec/tla/trace/ checks each trace against the contract module.
