@@ -1,0 +1,881 @@
+{
+ "meta": {
+  "tool": "spec/tla/tools/c_function_hashes.py",
+  "tool_version": 1,
+  "commit": "770fdef15673c1f2d04a27ca0b750f75a6bec3da",
+  "scope": "kernel/; include/zephyr/ without include/zephyr/arch/<other arch>/; arch/arm/ without cortex_a_r; drivers/timer/{cortex_m_systick.c,system_timer_generic.h,sys_clock_init.c}",
+  "normalization": "comments and whitespace removed, C tokens joined by one space, preprocessor lines kept; 'core' also without SYS_PORT_TRACING_* and LOG_* statements"
+ },
+ "functions": {
+  "arch_irq_lock": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/arch/arm/asm_inline_gcc.h",
+     "line": 44,
+     "end": 73,
+     "kind": "function",
+     "hash": "1c2bba219a5ac19b",
+     "core": "1c2bba219a5ac19b"
+    }
+   ]
+  },
+  "arch_irq_unlock": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/arch/arm/asm_inline_gcc.h",
+     "line": 80,
+     "end": 100,
+     "kind": "function",
+     "hash": "08106d84a3684072",
+     "core": "08106d84a3684072"
+    }
+   ]
+  },
+  "arch_irq_unlocked": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/arch/arm/asm_inline_gcc.h",
+     "line": 102,
+     "end": 106,
+     "kind": "function",
+     "hash": "161117d4227ee9e1",
+     "core": "161117d4227ee9e1"
+    }
+   ]
+  },
+  "arch_is_in_isr": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "arch/arm/include/cortex_m/exception.h",
+     "line": 93,
+     "end": 96,
+     "kind": "function",
+     "hash": "fd2e56d38f801265",
+     "core": "fd2e56d38f801265",
+     "notes": [
+      "wrapper: one statement, calls __get_IPSR()"
+     ]
+    }
+   ]
+  },
+  "arch_swap": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "arch/arm/include/cortex_m/kernel_arch_func.h",
+     "line": 87,
+     "end": 103,
+     "kind": "function",
+     "hash": "4ec46fd9a54a41b0",
+     "core": "4ec46fd9a54a41b0"
+    }
+   ]
+  },
+  "halt_thread": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 858,
+     "end": 983,
+     "kind": "function",
+     "hash": "4d4fd45b6d7a8ef0",
+     "core": "35c3968aa24dac5d"
+    }
+   ]
+  },
+  "irq_lock": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/irq.h",
+     "line": 275,
+     "end": 275,
+     "kind": "macro",
+     "hash": "9b2aa6e0211fef99",
+     "core": "9b2aa6e0211fef99"
+    },
+    {
+     "file": "include/zephyr/irq.h",
+     "line": 277,
+     "end": 277,
+     "kind": "macro",
+     "hash": "38d55bdd53654e81",
+     "core": "38d55bdd53654e81"
+    }
+   ]
+  },
+  "irq_unlock": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/irq.h",
+     "line": 305,
+     "end": 305,
+     "kind": "macro",
+     "hash": "f2219199d4357749",
+     "core": "f2219199d4357749"
+    },
+    {
+     "file": "include/zephyr/irq.h",
+     "line": 307,
+     "end": 307,
+     "kind": "macro",
+     "hash": "ef67c58c4a5b05f6",
+     "core": "ef67c58c4a5b05f6"
+    }
+   ]
+  },
+  "k_spin_unlock": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/spinlock.h",
+     "line": 315,
+     "end": 347,
+     "kind": "function",
+     "hash": "9b3f3341647c752e",
+     "core": "9b3f3341647c752e"
+    }
+   ]
+  },
+  "k_thread_priority_set": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/thread.c",
+     "line": 1629,
+     "end": 1643,
+     "kind": "function",
+     "hash": "924fa876805b35e0",
+     "core": "924fa876805b35e0",
+     "notes": [
+      "system call: the definition is z_impl_k_thread_priority_set()"
+     ]
+    }
+   ]
+  },
+  "need_swap": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 381,
+     "end": 393,
+     "kind": "function",
+     "hash": "70ed7e6c33d112b1",
+     "core": "70ed7e6c33d112b1"
+    }
+   ]
+  },
+  "next_up": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 71,
+     "end": 152,
+     "kind": "function",
+     "hash": "c91e7ad783eeffd4",
+     "core": "c91e7ad783eeffd4"
+    }
+   ]
+  },
+  "queue_thread": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/run_q.h",
+     "line": 86,
+     "end": 98,
+     "kind": "function",
+     "hash": "f26b136d4b7871e0",
+     "core": "f26b136d4b7871e0"
+    }
+   ]
+  },
+  "ready_thread": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 212,
+     "end": 229,
+     "kind": "function",
+     "hash": "1be022e6e74c538e",
+     "core": "caab21e279110278"
+    }
+   ]
+  },
+  "resched": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 368,
+     "end": 375,
+     "kind": "function",
+     "hash": "5799c7986b4bdfc5",
+     "core": "5799c7986b4bdfc5"
+    }
+   ]
+  },
+  "runq_best": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/run_q.h",
+     "line": 72,
+     "end": 75,
+     "kind": "function",
+     "hash": "5bc74a52e8b5631d",
+     "core": "5bc74a52e8b5631d",
+     "notes": [
+      "wrapper: one statement, calls _priq_run_best(), curr_cpu_runq()"
+     ]
+    }
+   ]
+  },
+  "should_preempt": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/kthread.h",
+     "line": 242,
+     "end": 277,
+     "kind": "function",
+     "hash": "194750d38c954b30",
+     "core": "194750d38c954b30"
+    }
+   ]
+  },
+  "sys_clock_announce": {
+   "tagged_in": [
+    "lib/Timeout.tla"
+   ],
+   "defs": [
+    {
+     "file": "include/zephyr/drivers/timer/system_timer.h",
+     "line": 234,
+     "end": 237,
+     "kind": "function",
+     "hash": "ee252f82f780762e",
+     "core": "ee252f82f780762e",
+     "notes": [
+      "wrapper: one statement, calls sys_clock_announce_locked(), sys_clock_lock()"
+     ]
+    }
+   ]
+  },
+  "unpend_all": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 828,
+     "end": 843,
+     "kind": "function",
+     "hash": "43b91fca4f5acfd1",
+     "core": "43b91fca4f5acfd1"
+    }
+   ]
+  },
+  "update_cache": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 161,
+     "end": 187,
+     "kind": "function",
+     "hash": "5166290b5a2210ef",
+     "core": "5166290b5a2210ef"
+    }
+   ]
+  },
+  "z_add_timeout": {
+   "tagged_in": [
+    "lib/Timeout.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/timeout.c",
+     "line": 174,
+     "end": 235,
+     "kind": "function",
+     "hash": "0debc513d26c03e4",
+     "core": "0debc513d26c03e4"
+    }
+   ]
+  },
+  "z_arm_int_exit": {
+   "tagged_in": [
+    "lib/Platform.tla"
+   ],
+   "defs": [
+    {
+     "file": "arch/arm/core/cortex_m/exc_exit.c",
+     "line": 45,
+     "end": 45,
+     "kind": "alias",
+     "hash": "249a182e20ebb444",
+     "core": "249a182e20ebb444",
+     "notes": [
+      "alias of z_arm_exc_exit() at lines 55-66"
+     ]
+    },
+    {
+     "file": "include/zephyr/arch/arm/irq.h",
+     "line": 126,
+     "end": 129,
+     "kind": "function",
+     "hash": "3c8b07ea6b996ac7",
+     "core": "3c8b07ea6b996ac7",
+     "notes": [
+      "wrapper: one statement, calls arm_m_exc_tail()"
+     ]
+    }
+   ]
+  },
+  "z_arm_pendsv": {
+   "tagged_in": [
+    "lib/Platform.tla",
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "arch/arm/core/cortex_m/swap_helper.S",
+     "line": 48,
+     "end": 369,
+     "kind": "asm",
+     "hash": "e80295fdbcc42584",
+     "core": "e80295fdbcc42584"
+    }
+   ]
+  },
+  "z_impl_k_thread_join": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/thread.c",
+     "line": 1782,
+     "end": 1813,
+     "kind": "function",
+     "hash": "f8cc09549f67cab7",
+     "core": "aa22cae8b1f0a293"
+    }
+   ]
+  },
+  "z_pend_curr": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 531,
+     "end": 562,
+     "kind": "function",
+     "hash": "f37174abfe39657a",
+     "core": "f37174abfe39657a"
+    }
+   ]
+  },
+  "z_priq_rb_add": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 218,
+     "end": 239,
+     "kind": "function",
+     "hash": "e20925b426fbad3b",
+     "core": "e20925b426fbad3b"
+    }
+   ]
+  },
+  "z_priq_rb_best": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 258,
+     "end": 267,
+     "kind": "function",
+     "hash": "0510024bd173b635",
+     "core": "0510024bd173b635"
+    }
+   ]
+  },
+  "z_priq_rb_remove": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 241,
+     "end": 248,
+     "kind": "function",
+     "hash": "3752a25d88247fd3",
+     "core": "3752a25d88247fd3"
+    }
+   ]
+  },
+  "z_priq_simple_add": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 125,
+     "end": 137,
+     "kind": "function",
+     "hash": "dd04a3dd1ae28d33",
+     "core": "dd04a3dd1ae28d33"
+    }
+   ]
+  },
+  "z_priq_simple_best": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 177,
+     "end": 186,
+     "kind": "function",
+     "hash": "daa0a563b27ddbdb",
+     "core": "daa0a563b27ddbdb"
+    }
+   ]
+  },
+  "z_priq_simple_remove": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/priority_q.h",
+     "line": 139,
+     "end": 144,
+     "kind": "function",
+     "hash": "5a07bf7dd5956324",
+     "core": "5a07bf7dd5956324"
+    }
+   ]
+  },
+  "z_reschedule": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 652,
+     "end": 652,
+     "kind": "alias",
+     "hash": "70c756193e18d171",
+     "core": "70c756193e18d171",
+     "notes": [
+      "alias of reschedule() at lines 395-403"
+     ]
+    }
+   ]
+  },
+  "z_sched_ready_locked": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 240,
+     "end": 240,
+     "kind": "alias",
+     "hash": "166498ef083c52b4",
+     "core": "09237b6a77508993",
+     "notes": [
+      "alias of ready_thread() at lines 212-229"
+     ]
+    }
+   ]
+  },
+  "z_sched_waitq_walk": {
+   "tagged_in": [
+    "lib/Scheduler.tla",
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/scheduler.c",
+     "line": 84,
+     "end": 123,
+     "kind": "function",
+     "hash": "ab45e29dc02f18f3",
+     "core": "ab45e29dc02f18f3"
+    }
+   ]
+  },
+  "z_sched_wake": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/ksched.h",
+     "line": 295,
+     "end": 312,
+     "kind": "function",
+     "hash": "bfa5f22d735cfc7c",
+     "core": "bfa5f22d735cfc7c"
+    }
+   ]
+  },
+  "z_sched_wake_all": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/scheduler.h",
+     "line": 111,
+     "end": 122,
+     "kind": "function",
+     "hash": "40a4dbbe440675f1",
+     "core": "40a4dbbe440675f1"
+    }
+   ]
+  },
+  "z_sched_wake_thread_locked": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 476,
+     "end": 490,
+     "kind": "function",
+     "hash": "e11e140f6e19da32",
+     "core": "e11e140f6e19da32"
+    }
+   ]
+  },
+  "z_thread_abort": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/thread.c",
+     "line": 1751,
+     "end": 1767,
+     "kind": "function",
+     "hash": "d8bd252aa343902f",
+     "core": "d8bd252aa343902f"
+    }
+   ]
+  },
+  "z_thread_prio_set": {
+   "tagged_in": [
+    "lib/Scheduler.tla",
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 596,
+     "end": 650,
+     "kind": "function",
+     "hash": "43e67c68896c47d5",
+     "core": "98047e976826d036"
+    }
+   ]
+  },
+  "z_thread_timeout": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 494,
+     "end": 511,
+     "kind": "function",
+     "hash": "084836a4e5e374c6",
+     "core": "084836a4e5e374c6"
+    }
+   ]
+  },
+  "z_timeout_q_insert": {
+   "tagged_in": [
+    "lib/Timeout.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/timeout_bucket.h",
+     "line": 123,
+     "end": 151,
+     "kind": "function",
+     "hash": "36b52776243b57c8",
+     "core": "36b52776243b57c8"
+    },
+    {
+     "file": "kernel/timeout_list.h",
+     "line": 44,
+     "end": 60,
+     "kind": "function",
+     "hash": "2c418ca7d05b8d1e",
+     "core": "2c418ca7d05b8d1e"
+    },
+    {
+     "file": "kernel/timeout_minheap.h",
+     "line": 51,
+     "end": 65,
+     "kind": "function",
+     "hash": "8265afae56c93225",
+     "core": "8265afae56c93225"
+    },
+    {
+     "file": "kernel/timeout_wheel.h",
+     "line": 456,
+     "end": 462,
+     "kind": "function",
+     "hash": "95d6841884e52595",
+     "core": "95d6841884e52595"
+    }
+   ]
+  },
+  "z_timeout_q_remove": {
+   "tagged_in": [
+    "lib/Timeout.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/timeout_bucket.h",
+     "line": 167,
+     "end": 186,
+     "kind": "function",
+     "hash": "7eff26ce61fce4fb",
+     "core": "7eff26ce61fce4fb"
+    },
+    {
+     "file": "kernel/timeout_list.h",
+     "line": 66,
+     "end": 77,
+     "kind": "function",
+     "hash": "5adaadafa19730c9",
+     "core": "5adaadafa19730c9"
+    },
+    {
+     "file": "kernel/timeout_minheap.h",
+     "line": 70,
+     "end": 77,
+     "kind": "function",
+     "hash": "5966067257039444",
+     "core": "5966067257039444"
+    },
+    {
+     "file": "kernel/timeout_wheel.h",
+     "line": 464,
+     "end": 471,
+     "kind": "function",
+     "hash": "f47d917fe607dc32",
+     "core": "f47d917fe607dc32"
+    }
+   ]
+  },
+  "z_try_abort_thread_timeout": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/timeout_q.h",
+     "line": 123,
+     "end": 126,
+     "kind": "function",
+     "hash": "83abbe88911fff4f",
+     "core": "83abbe88911fff4f",
+     "notes": [
+      "wrapper: one statement, calls z_try_abort_timeout()"
+     ]
+    },
+    {
+     "file": "kernel/include/timeout_q.h",
+     "line": 136,
+     "end": 136,
+     "kind": "macro",
+     "hash": "20395f437177396a",
+     "core": "20395f437177396a"
+    }
+   ]
+  },
+  "z_try_abort_timeout": {
+   "tagged_in": [
+    "lib/Timeout.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/timeout.c",
+     "line": 237,
+     "end": 272,
+     "kind": "function",
+     "hash": "9b1c6bef120b8612",
+     "core": "9b1c6bef120b8612"
+    }
+   ]
+  },
+  "z_unpend_all": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/sched.c",
+     "line": 804,
+     "end": 826,
+     "kind": "function",
+     "hash": "5c41fb26757bb01c",
+     "core": "5c41fb26757bb01c"
+    }
+   ]
+  },
+  "z_unpend_first_thread_locked": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/ksched.h",
+     "line": 250,
+     "end": 265,
+     "kind": "function",
+     "hash": "354cb9658ed9347b",
+     "core": "354cb9658ed9347b"
+    }
+   ]
+  },
+  "z_waitq_head": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/wait_q.h",
+     "line": 100,
+     "end": 118,
+     "kind": "function",
+     "hash": "ebeaa584c9127b6e",
+     "core": "ebeaa584c9127b6e"
+    }
+   ]
+  },
+  "z_waitq_head_locked": {
+   "tagged_in": [
+    "lib/WaitQueue.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/wait_q.h",
+     "line": 50,
+     "end": 53,
+     "kind": "function",
+     "hash": "ea956122192a0b1e",
+     "core": "ea956122192a0b1e",
+     "notes": [
+      "wrapper: one statement, calls rb_get_min()"
+     ]
+    },
+    {
+     "file": "kernel/include/wait_q.h",
+     "line": 93,
+     "end": 96,
+     "kind": "function",
+     "hash": "b1f16be45b660d19",
+     "core": "b1f16be45b660d19",
+     "notes": [
+      "wrapper: one statement, calls sys_dlist_peek_head()"
+     ]
+    }
+   ]
+  },
+  "z_waitq_init": {
+   "tagged_in": [
+    "lib/Scheduler.tla"
+   ],
+   "defs": [
+    {
+     "file": "kernel/include/wait_q.h",
+     "line": 41,
+     "end": 48,
+     "kind": "function",
+     "hash": "51aa30e5ef09480b",
+     "core": "51aa30e5ef09480b"
+    },
+    {
+     "file": "kernel/include/wait_q.h",
+     "line": 88,
+     "end": 91,
+     "kind": "function",
+     "hash": "7249b8354077a71c",
+     "core": "7249b8354077a71c",
+     "notes": [
+      "wrapper: one statement, calls sys_dlist_init()"
+     ]
+    }
+   ]
+  }
+ }
+}
