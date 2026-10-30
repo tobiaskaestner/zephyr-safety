@@ -868,6 +868,24 @@ IrqUnlockCall(a) ==
     /\ UNCHANGED <<tstate, prio, cur, swapRet, swapData, panic, pendedOn, stamp, tq, tqCost>>
     /\ UNCHANGED rqVars
 
+\* The environment of an object model: the disjunction of the environment
+\* actions of this module, each with its quantifiers. A module of a kernel
+\* object (KSem and the other objects on Waitable) conjoins it with its own
+\* frame, so that its Next has the most general environment of the
+\* scheduler. P is the set of the model priorities that
+\* k_thread_priority_set() can give (a bound of the model; {} removes the
+\* call). The disjuncts have no guard of a condition of use: an object model
+\* that needs one states it as a premise or as a bound of its
+\* configuration. k_thread_join() is not in this set: it is a wait on a join
+\* queue, not a step of the environment of an object.
+\* @kind definition
+EnvNext(P) ==
+    \/ \E c \in CPUS : ThreadTimeout(c) \/ Preempt(c) \/ PendSV(c)
+    \/ \E a \in Threads \cup Isrs, t \in Threads : Abort(a, t)
+    \/ \E a \in Threads \cup Isrs, t \in Threads, p \in P : SetPrio(a, t, p)
+    \/ \E t \in Threads : Resume(t)
+    \/ \E a \in Threads : IrqLockCall(a) \/ IrqUnlockCall(a)
+
 \* The initial state: all threads ready with the priorities p0, no waiter,
 \* no outer interrupt lock, no pending PendSV.
 \* On one CPU: any run queue order, the history is the run queue order,
