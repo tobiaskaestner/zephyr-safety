@@ -114,11 +114,11 @@ MCScheduler p6_init          fail:Inv_NoUndefined
 # KSem (roadmap step 2, the k_sem slice, 2026-10-30): objects/KSem.tla on
 # lib/Waitable.tla and the scheduler contract, with Scheduler!EnvNext as
 # its environment. One CPU, CONFIG_USE_SWITCH=y, DLIST, no outer lock.
-MCKSem default         pass
-MCKSem poll            pass
-MCKSem two_sems        pass
-MCKSem nochecks        pass
-MCKSem live            pass
+MCKSem default         pass        states=261836 depth=23
+MCKSem poll            pass        states=4242 depth=16
+MCKSem two_sems        pass        states=9976 depth=16
+MCKSem nochecks        pass        states=4820 depth=18
+MCKSem live            pass        states=1747 depth=13
 MCKSem reach           probes
 MCKSem reach_poll      probes
 # Design observation 4 of the sem findings: k_sem_reset() signals
