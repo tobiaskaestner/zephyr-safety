@@ -95,6 +95,23 @@ it is the central result `ram-cost`. The log checks of `wake-code-place-q4`
 and `wake-code-place-q4-up` are acceptance checks in their `experiment.yaml`
 files.
 
+`wake-data-place-250k` and `wake-witness-bss-250k` came after the first
+run of `wake-witness-250k` (sub-study `tail-witnesses`). There, a witness
+table of 256 rows made the wake path 16 to 45 cycles slower, also with
+the code in RAM. Quick checks on the board found the cause in the data,
+not in the code: the table moved the interrupt stack and the idle stack
+from SRAM1 into SRAM2. H3 states this, before the runs of the two
+experiments:
+
+- `wake-data-place-250k` moves the data with a data pad
+  (`LATBENCH_DATA_PAD`, 0 to 32768 bytes) and nothing else. The pads 8192
+  and 24576 keep the stacks in SRAM1, the pads 26688 and 32768 move them
+  into SRAM2.
+- `wake-witness-bss-250k` repeats the points of `wake-witness-250k` at the
+  revision with the witness rows in `.bss` and without the second table.
+  The stacks then stay in SRAM1, so the witnesses must not change the
+  wake path.
+
 ## References
 
 - `hypotheses.yaml`: the hypotheses H1 and H2, and their checks.

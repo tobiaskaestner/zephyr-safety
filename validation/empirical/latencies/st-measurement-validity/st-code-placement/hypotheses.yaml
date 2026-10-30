@@ -148,3 +148,80 @@ hypotheses:
           The same image gave the same histograms bin for bin on two hosts
           (reproducibility). The checks a to e found no change for code
           shifts of 0..28 bytes in RAM.
+
+  # Written 2026-10-30, after the first run of tail-witnesses/wake-witness-250k
+  # (its H1 c was wrong) and after manual quick checks, before the runs of
+  # wake-data-place-250k and wake-witness-bss-250k.
+  - id: H3
+    type: method
+    statement: >
+      Hot code in RAM does not remove the effect of the data address. With
+      the code in the CCM SRAM, the wake path is slower when the interrupt
+      stack and the idle stack are in SRAM2 and not in SRAM1. A data move
+      that keeps the stacks in SRAM1 does not change the latency.
+    basis: >
+      tail-witnesses/wake-witness-250k (run 20261030T004109Z): with a
+      witness table of 256 rows (two tables of 13 KB at that revision),
+      isr2thr p10 was 45 cycles slower with slicing (847 -> 892) and 16
+      without. Quick checks (not data, 50000 samples, 2026-10-30): a
+      table of 1 row and a code pad of 880 bytes in CCM gave no change; the
+      build of 256 rows without the DWT enable gave the same +45. A data
+      pad of 26688 bytes without witnesses: msp 0x20014540 (SRAM2),
+      isr2thr min 893 and mean 1114 (as the witness build). A data pad of
+      8192 bytes: msp 0x2000fd00 (SRAM1), 847 and 1052 (as without a pad).
+      The quick checks did not test a pad of 24576 bytes. With it the
+      interrupt stack ends at about 0x20013d00, and the main stack crosses
+      into SRAM2.
+    wrong_if: >
+      The data address has no effect, or any data move changes the
+      latency. Then the cause of H1 c of tail-witnesses is not the SRAM of
+      the stacks.
+    checks:
+      - id: a
+        written: 2026-10-30, before the first run of wake-data-place-250k
+        experiment: wake-data-place-250k
+        select: {pad: [d8k, d24k]}
+        metric: isr2thr
+        stat: [p10, p50]
+        expect: {diff_to: {axes: {pad: d0}, range: [-2, 2]}}
+        basis: Quick check d8k 847/1052 against 847/1052 without a pad. d24k is an estimate (stacks in SRAM1).
+      - id: b
+        written: 2026-10-30, before the first run of wake-data-place-250k
+        experiment: wake-data-place-250k
+        select: {pad: [d26k, d32k], anchor: default}
+        metric: isr2thr
+        stat: [p10, p50]
+        expect: {diff_to: {axes: {pad: d0}, range: [30, 80]}}
+        basis: >
+          Quick check d26k: min +46, mean +62; wake-witness-250k: p10 +45.
+          The slow mode (p50) is about 80 % of the samples, so its change
+          is near the change of the mean.
+      - id: c
+        written: 2026-10-30, before the first run of wake-data-place-250k
+        experiment: wake-data-place-250k
+        select: {pad: [d26k, d32k], anchor: noslice}
+        metric: isr2thr
+        stat: p50
+        expect: {diff_to: {axes: {pad: d0}, range: [8, 40]}}
+        basis: wake-witness-250k without slicing, p10 and p50 +16 (mean +21).
+      - id: d
+        written: 2026-10-30, before the first run of wake-witness-bss-250k
+        experiment: wake-witness-bss-250k
+        select: {witness: with}
+        metric: [isr2thr, irq2thr]
+        stat: [p10, p50]
+        expect: {diff_to: {axes: {witness: without}, range: [-2, 2]}}
+        basis: >
+          The table now moves the stacks by about 13 KB, and they stay in
+          SRAM1. Quick check (256 rows, msp 0x20011140): min 846, mean
+          1052, as without witnesses.
+      - id: e
+        written: 2026-10-30, before the first run of wake-witness-bss-250k
+        experiment: wake-witness-bss-250k
+        select: {witness: with}
+        metric: meta.msp
+        manual: true
+        statement: >
+          The msp of the points with witnesses is below 0x20014000 (the
+          interrupt stack is in SRAM1).
+        basis: Quick check 0x20011140.

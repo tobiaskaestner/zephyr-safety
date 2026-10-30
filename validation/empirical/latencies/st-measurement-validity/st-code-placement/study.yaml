@@ -10,13 +10,15 @@
 
 name: code-placement
 question: >
-  How much does the address of the code change the latency, and which
-  placement gives numbers that a comparison between trees and options
-  can use?
+  How much does the address of the code (and of the data) change the
+  latency, and which placement gives numbers that a comparison between
+  trees and options can use?
 
 experiments:
   - wake-code-layout
   - wake-code-place-q4
+  - wake-data-place-250k
+  - wake-witness-bss-250k
 
 # The check of a code shift in the CCM SRAM (H2 k) reads the default seed
 # of wake-stim-seed-1m and compares it with baseline-t64 of wake-kconfig-1m.
@@ -82,11 +84,21 @@ central_results:
     group_by: [anchor]
     unit: cycles, cycles per wake
 
+  - id: data-place
+    statement: >
+      With the code in RAM and a data pad of {pad} (msp moves with it),
+      the isr2thr p10 is {p10:.0f} cycles and the p50 {p50:.0f} cycles
+      (anchor {anchor}).
+    from: {experiment: wake-data-place-250k, metric: isr2thr}
+    stat: [p10, p50]
+    unit: CPU cycles (170 MHz)
+
   - id: placement-choice
     statement: >
-      Comparisons between trees and options use LATBENCH_CODE_RAM.
+      Comparisons between trees and options use LATBENCH_CODE_RAM, and
+      the builds keep their stacks in the same SRAM (LAT META msp).
       Absolute numbers use a range over LATBENCH_CODE_FLASH_PAD.
     # Also the check of the old flash data: hypothesis H1 of the study
     # reproducibility (formerly H4a..c of this study).
-    from: {hypotheses: [H2]}
+    from: {hypotheses: [H2, H3]}
     stat: conclusion               # a person confirms the sentence

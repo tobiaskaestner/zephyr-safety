@@ -34,6 +34,11 @@ A witness is useful only if three things are true:
 - `wake-witness-250k`: the wake latency (semaphore) with and without
   witnesses, with and without time slicing. It tests H1 c and H4.
 
+The first run of `wake-witness-250k` found the wake path slower with the
+witnesses (H1 c wrong). The cause was the data layout of that revision,
+not the witness code: the sub-study `code-placement` (H3, experiments
+`wake-data-place-250k` and `wake-witness-bss-250k`) tests it.
+
 ## References
 
 - Explanation page of the guide: tail witnesses.

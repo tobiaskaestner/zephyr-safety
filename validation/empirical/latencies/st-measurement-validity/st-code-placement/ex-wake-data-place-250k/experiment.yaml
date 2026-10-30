@@ -1,0 +1,48 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml (H3).
+
+name: wake-data-place-250k
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 250000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_CODE_RAM: y
+
+axes:
+  # d<N>: LATBENCH_DATA_PAD with N bytes; d0 has no pad. value: the pad in
+  # bytes. Without a pad the interrupt stack ends at 0x2000dd00 (default
+  # anchor, quick-check build of 2026-10-30), so a pad of more than about
+  # 25000 bytes moves it, and the idle stack after it, into SRAM2
+  # (0x20014000..0x20017fff).
+  pad:
+    d0:
+      value: 0
+    d8k:
+      value: 8192
+      kconfig: {LATBENCH_DATA_PAD: y, LATBENCH_DATA_PAD_BYTES: 8192}
+    d24k:
+      value: 24576
+      kconfig: {LATBENCH_DATA_PAD: y, LATBENCH_DATA_PAD_BYTES: 24576}
+    d26k:
+      value: 26688
+      kconfig: {LATBENCH_DATA_PAD: y, LATBENCH_DATA_PAD_BYTES: 26688}
+    d32k:
+      value: 32768
+      kconfig: {LATBENCH_DATA_PAD: y, LATBENCH_DATA_PAD_BYTES: 32768}
+  anchor:
+    default: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: [irq, isr2thr, irq2thr], stat: invalid, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}

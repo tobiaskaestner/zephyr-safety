@@ -1,0 +1,34 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Description: experiment.md. Hypotheses: ../hypotheses.yaml (H3 d, e).
+# The same points as wake-witness-250k (tail-witnesses), at the revision
+# with the witness rows in .bss and without the scratch table.
+
+name: wake-witness-bss-250k
+app: wake_latency
+trees: [ws-up]
+repeat: 1
+timeout: 600
+
+common:
+  kconfig:
+    LATBENCH_SAMPLES: 250000
+    LATBENCH_WAKE_SEM: y
+    LATBENCH_CODE_RAM: y
+
+axes:
+  witness:
+    without: {}
+    with:
+      kconfig: {LATBENCH_TAIL: y, LATBENCH_TAIL_N: 256}
+  slicing:
+    slice: {}
+    noslice:
+      kconfig: {TIMESLICING: n}
+
+# Written 2026-10-30, before the first run.
+acceptance:
+  - {id: A1, metric: [irq, isr2thr, irq2thr], stat: invalid, expect: {equals: 0}}
+  - {id: A2, metric: meta.stim_late, stat: value, expect: {equals: 0}}
+  - {id: A3, metric: meta.spurious_edges, stat: value, expect: {equals: 0}}
