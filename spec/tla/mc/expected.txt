@@ -14,23 +14,35 @@
 #            fail:Assert   an example test (<Module>Test) fails. Not an
 #                          expected result: the line of a test is pass.
 #
+# After the expected result, a line can have fields <key>=<value>
+# (tools/run_tlc.sh gives the full list):
+#
+# states=<n>  the distinct states, and depth=<n> the depth of the state
+#             graph, of a run with one worker and -fp 0. Each pass line
+#             has them. A different value fails the line: the state space
+#             changed. Record the new value in the commit of the change,
+#             with the reason.
+# heap=<size> the Java heap of the line (default: TLC_HEAP).
+#
 # tools/run_tlc.sh runs each line and compares the result. A difference
-# fails the run.
+# fails the run. The recorded counts of 2026-10-30 come from the lab run
+# 20261030-010342-adbf86df2 (one worker in each TLC process). They are
+# equal to the counts of round B.
 
-WaitQueueTest default pass
-TimeoutTest   default pass
-PlatformTest  default pass
-SchedulerTest default pass
-MCWaitQueue default pass
+WaitQueueTest default pass           states=1 depth=1
+TimeoutTest   default pass           states=1 depth=1
+PlatformTest  default pass           states=1 depth=1
+SchedulerTest default pass           states=1 depth=1
+MCWaitQueue default pass             states=2133 depth=4
 MCWaitQueue reach   probes
-MCTimeout   dlist         pass
-MCTimeout   minheap       pass
+MCTimeout   dlist         pass       states=57 depth=5
+MCTimeout   minheap       pass       states=51 depth=5
 MCTimeout   minheap_full  fail:Inv_NoPanic
 MCTimeout   reach_dlist   probes
 MCTimeout   reach_minheap probes
-MCScheduler default        pass
-MCScheduler coop           pass
-MCScheduler smp            pass
+MCScheduler default        pass      states=556266 depth=20
+MCScheduler coop           pass      states=553614 depth=20
+MCScheduler smp            pass      states=270747 depth=17
 MCScheduler smp_rule       fail:Inv_RunRuleHolds
 MCScheduler isr_pend       fail:Inv_NoPanic
 MCScheduler missed_resched fail:Inv_RunRuleHolds
@@ -41,8 +53,8 @@ MCScheduler reach_smp      probes
 # "Two layers"). p7_rules and p7_rules_coop: ZEP-SRS-2-9 and 2-12 hold.
 # The expected failures are design findings of the pilot P7 (register:
 # claude/kernel-unit/tla/findings.md of the workspace notes).
-MCScheduler p7_rules       pass
-MCScheduler p7_rules_coop  pass
+MCScheduler p7_rules       pass      states=556266 depth=20
+MCScheduler p7_rules_coop  pass      states=553614 depth=20
 # P7-a: k_thread_priority_set() of the current thread to the same priority
 # gives the CPU to a peer that became ready later (ZEP-SRS-2-13).
 MCScheduler p7_tie         fail:Sched!TieGoesToLongestReady
@@ -65,22 +77,22 @@ MCScheduler p7_abort_pendsv  fail:Sched!CoopKeepsCpu
 MCScheduler coop_rule_pendsv fail:Inv_RunRuleHolds
 # small and small_pendsv: one object, no priority change; small_pendsv
 # also without the abort (see the comment of its .cfg file).
-MCScheduler small            pass
-MCScheduler small_pendsv     pass
+MCScheduler small            pass    states=75841 depth=23
+MCScheduler small_pendsv     pass    states=109930 depth=35
 MCScheduler reach_pendsv     probes
 # Candidate finding SW-1: with arch_swap() an ISR in the gap before PendSV
 # wakes a cooperative waiter, and PendSV gives the CPU back to it while a
 # thread with a higher priority is ready (ZEP-SRS-2-12, 2-14). gap_coop is
 # the control with CONFIG_USE_SWITCH=y.
 MCScheduler gap_coop_pendsv  fail:Sched!BlockedLosesCpu
-MCScheduler gap_coop         pass
+MCScheduler gap_coop         pass    states=44268 depth=22
 # P2-w: an outer irq_lock() defers the reschedule of z_reschedule(), and
 # irq_unlock() is not a reschedule point (ZEP-SRS-2-9). Both variants.
 MCScheduler p2_window        fail:Sched!UnlockPreempts
 MCScheduler p2_window_pendsv fail:Sched!UnlockPreempts
 MCScheduler p2_rule          fail:Inv_RunRuleHolds
-MCScheduler p2_lock          pass
-MCScheduler p2_lock_pendsv   pass
+MCScheduler p2_lock          pass    states=75650 depth=24
+MCScheduler p2_lock_pendsv   pass    states=151582 depth=35
 MCScheduler reach_lock       probes
 # Mutants: a thread waits under an outer interrupt lock.
 MCScheduler pend_locked        fail:Sched!NoSwitchWhileLocked
@@ -88,9 +100,9 @@ MCScheduler pend_locked_pendsv fail:Inv_P_PendingIsUnlocked
 # Round B (2026-10-29): proposals P1, P3-P6 of the review of the reference
 # fake, and the join queue. small_b and reach_b: the swap data in both
 # directions (P1), z_unpend_all() (P4), the walk with a stop (P5).
-MCScheduler small_b          pass
+MCScheduler small_b          pass    states=324148 depth=24
 MCScheduler reach_b          probes
-MCScheduler join             pass
+MCScheduler join             pass    states=26085 depth=11
 MCScheduler reach_join       probes
 # F14: k_thread_abort() of another thread makes a joiner with a higher
 # priority ready, and halt_thread() does not reschedule (ZEP-SRS-2-9).
