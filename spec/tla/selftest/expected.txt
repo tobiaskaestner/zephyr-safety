@@ -33,3 +33,9 @@ SelfChoose  assume  fail:Assume
 SelfNoInit  default no-states         states=0
 # -fp 0 gives the same counts in two runs. 2^6 sets x 4^3 functions.
 SelfRepro   default pass              states=4096 depth=11 repeat=2
+# A value of a definition in the .cfg file (S = {a, b, c}): 3 x 2 states.
+SelfSym     nosym   pass              states=6 depth=2
+# The same model with the symmetry set Permutations(S): 2 states.
+SelfSym     sym     pass              states=2 depth=2
+# A violation under the symmetry set: the second state.
+SelfSym     symfail fail:YIsZero      trace=2

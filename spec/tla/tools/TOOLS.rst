@@ -92,9 +92,13 @@ The features of TLC that the models use: invariants, action properties
 (``[][A]_v``), temporal properties with weak fairness (``WF``),
 ``INSTANCE ... WITH`` over more than one level, ``CHOOSE``, ``ASSUME``,
 model values, definition overrides (``<-``) in the ``.cfg`` files, and
-``CHECK_DEADLOCK FALSE`` (one configuration). The models do not use
-``CONSTRAINT``, ``ACTION_CONSTRAINT``, ``SYMMETRY``, ``VIEW``, strong
-fairness, simulation or ``-continue``.
+``CHECK_DEADLOCK FALSE`` (one configuration). The sensitivity list
+(``mc/sensitivity.txt``) also uses a value for a definition in the ``.cfg``
+file (``Threads = {t1, t2, t3, t4}``, which makes a new model value) and
+``SYMMETRY`` (the configurations ``*_sym``, safety properties only). The
+selftest model ``SelfSym`` checks both. The models do not use
+``CONSTRAINT``, ``ACTION_CONSTRAINT``, ``VIEW``, strong fairness,
+simulation or ``-continue``.
 
 Known defects and limits
 ========================
@@ -151,8 +155,10 @@ Regression tests of the tool
    known lasso under ``WF``, a liveness pass that needs the fairness, an
    ``INSTANCE ... WITH`` chain of three modules with a known state count,
    a ``CHOOSE`` with one witness and an ``ASSUME`` (true and false), a
-   model with no initial state, and two runs with ``-fp 0`` that must give
-   the same counts. The selftest also checks ``run_tlc.sh``: each kind of
+   model with no initial state, two runs with ``-fp 0`` that must give
+   the same counts, and a symmetry set with a value of a definition in the
+   ``.cfg`` file (``SelfSym``, known counts with and without the symmetry,
+   and a violation under it). The selftest also checks ``run_tlc.sh``: each kind of
    result goes through its parser. The models do not change when the specs
    change. The lab runner runs the selftest before each run, with one
    worker. If the selftest fails, no model runs.
