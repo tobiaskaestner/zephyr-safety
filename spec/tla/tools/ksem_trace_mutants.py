@@ -46,9 +46,18 @@ INC = "sem->count += (sem->count != sem->limit) ? 1U : 0U;"
 ELSE = INC + "\n\t\tresched = sem_handle_poll_events(sem);"
 GIVE_UNLOCK = "k_spin_unlock(&sem_lock, key);\n\t}\n\n\tSYS_PORT_TRACING_OBJ_FUNC_EXIT(k_sem, give"
 
+TAKE_LOCK = ("\tk_spinlock_key_t key = k_spin_lock(&sem_lock);\n\n"
+             "\tSYS_PORT_TRACING_OBJ_FUNC_ENTER(k_sem, take, sem, timeout);\n\n"
+             "\tif (likely(sem->count > 0U)) {\n\t\tsem->count--;")
+TAKE_STALE = ("\tunsigned int cnt = sem->count;\n"
+              "\tk_spinlock_key_t key = k_spin_lock(&sem_lock);\n\n"
+              "\tSYS_PORT_TRACING_OBJ_FUNC_ENTER(k_sem, take, sem, timeout);\n\n"
+              "\tif (likely(cnt > 0U)) {\n\t\tsem->count = cnt - 1U;")
+
 # name -> (origin, [(old, new), ...]). origin "unit": the mutants of the unit
 # tests (workspace notes, unit-tests/mutation/mutate_sem.py); "cbmc": the
-# new give mutants of the CBMC route (cbmc/mutants.py).
+# new give mutants of the CBMC route (cbmc/mutants.py); "spy": a stale read
+# before the lock in the take (the lock spy).
 MUTANTS = {
     "give_unlock_wrong_key": ("unit", [(GIVE_UNLOCK, "key.key++; " + GIVE_UNLOCK)]),
     "give_lt_instead_of_ne": ("unit", [("(sem->count != sem->limit)", "(sem->count < sem->limit)")]),
@@ -107,6 +116,7 @@ MUTANTS = {
     "give_poll_before_inc": ("cbmc", [(ELSE, "resched = sem_handle_poll_events(sem);\n\t\t" + INC)]),
     "give_wake_data": ("cbmc", [("z_sched_wake(&sem->wait_q, 0, NULL)",
                                  "z_sched_wake(&sem->wait_q, 0, sem)")]),
+    "take_read_before_lock": ("spy", [(TAKE_LOCK, TAKE_STALE)]),
     "give_resched_count1": ("cbmc", [("resched = sem_handle_poll_events(sem);\n\t}\n\n\tif (unlikely",
                                       "resched = sem_handle_poll_events(sem) || sem->count == 1U;"
                                       "\n\t}\n\n\tif (unlikely")]),

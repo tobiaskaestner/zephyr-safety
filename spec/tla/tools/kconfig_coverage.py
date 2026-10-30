@@ -6,7 +6,7 @@
 
 The script reads:
 
-- the ``@kconfig`` tags of ``lib/*.tla``, with the parser of the doc
+- the ``@kconfig`` tags of ``lib/*.tla`` and ``objects/*.tla``, with the parser of the doc
   extension (``doc/_extensions/tla_extract.py``). A tag on a constant names
   the symbols that the constant models. A tag on a property names the
   symbols under which the property applies.
@@ -58,14 +58,14 @@ def norm(text):
 
 
 def library_tags():
-    """The @kconfig tags of lib/*.tla.
+    """The @kconfig tags of lib/*.tla and objects/*.tla.
 
     Returns (constants, properties): constants maps a symbol to the set of
     constant names, properties maps a symbol to a list of (module, name).
     """
     constants = defaultdict(set)
     properties = defaultdict(list)
-    for path in sorted((SPEC / "lib").glob("*.tla")):
+    for path in sorted([*(SPEC / "lib").glob("*.tla"), *(SPEC / "objects").glob("*.tla")]):
         module = tla_extract.parse_file(path)
         for unit in module.units:
             symbols = [s for v in unit.tags.get("kconfig", []) for s in re.split(r"[\s,]+", v) if s]
@@ -283,7 +283,7 @@ def main():
         print()
 
     for symbol in sorted(set(values) - set(symbols)):
-        print(f"{symbol}: WARNING, lines in mc/kconfig.txt, but no @kconfig tag in lib/*.tla\n")
+        print(f"{symbol}: WARNING, lines in mc/kconfig.txt, but no @kconfig tag in lib/*.tla or objects/*.tla\n")
 
     print(f"Result: {gaps} gap(s)")
     return 1 if gaps else 0
