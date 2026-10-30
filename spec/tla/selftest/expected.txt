@@ -1,0 +1,35 @@
+# Known answers for TLC: the selftest of the tool (tools/TOOLS.rst).
+# The format is the format of mc/expected.txt:
+#
+#   <module> <config> <expected> [<key>=<value> ...]
+#
+# Each model checks one feature of TLC that the evidence runs of mc/ use.
+# Each answer follows from the model alone (see the comment of each
+# module), not from an earlier run. One exception: the depth of
+# SelfRepro is the value of the first run (2026-10-30). The selftest runs
+# with one worker and -fp 0 before each evidence run
+# (tools/run_tlc_remote.py), and after each new pin of tla2tools.jar:
+#
+#   TLC_SUITE=selftest spec/tla/tools/run_tlc.sh
+#
+# fail:Assume: TLC stops because an ASSUME is false.
+
+# An invariant violation: the shortest trace has 4 states.
+SelfSafety  inv     fail:Inv          trace=4 depth=4 states=7
+# An action-property violation: the step from x = 3 to x = 0 (5 states).
+SelfSafety  action  fail:Rises        trace=5 depth=4 states=8
+# A liveness violation under WF: the lasso 0, 1, 2, back to state 1.
+SelfLasso   wf      fail:ReachesThree trace=3 lasso=1 states=3
+# A liveness property that holds only with the fairness.
+SelfFair    wf      pass              states=4 depth=4
+SelfFair    nowf    fail:ReachesThree lasso=stutter
+# INSTANCE ... WITH through three modules: 6 x 2 = 12 states.
+SelfChain   default pass              states=12 depth=6
+# CHOOSE with exactly one witness, and the ASSUME that holds.
+SelfChoose  one     pass              states=1 depth=1
+# The ASSUME that is false.
+SelfChoose  assume  fail:Assume
+# A model with no initial state.
+SelfNoInit  default no-states         states=0
+# -fp 0 gives the same counts in two runs. 2^6 sets x 4^3 functions.
+SelfRepro   default pass              states=4096 depth=11 repeat=2
