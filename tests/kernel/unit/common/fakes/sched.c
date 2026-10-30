@@ -14,6 +14,7 @@
 #include <zephyr/sys/__assert.h>
 #include <zephyr/sys/util.h>
 #include <fakes/fatal.h>
+#include <kernel_unit_trace.h>
 
 /*
  * Data of kernel/sched.c: the scheduler spinlock. A unit locks it with
@@ -107,6 +108,9 @@ int z_pend_curr(struct k_spinlock *arg0, k_spinlock_key_t arg1, _wait_q_t *arg2,
 	REGISTER_CALL(z_pend_curr);
 
 	if (pend_refused_in_isr()) {
+#ifdef CONFIG_KERNEL_UNIT_TRACE
+		kernel_unit_trace_pend_refused();
+#endif
 		ret = KERNEL_UNIT_PEND_REFUSED;
 		SAVE_RET_HISTORY(z_pend_curr, ret);
 		return ret;
@@ -120,15 +124,23 @@ int z_pend_curr(struct k_spinlock *arg0, k_spinlock_key_t arg1, _wait_q_t *arg2,
 			z_pend_curr_fake.custom_fake_seq_idx++;
 		}
 		ret = z_pend_curr_fake.custom_fake_seq[i](arg0, arg1, arg2, arg3);
-		SAVE_RET_HISTORY(z_pend_curr, ret);
-		return ret;
-	}
-	if (z_pend_curr_fake.custom_fake != NULL) {
+	} else if (z_pend_curr_fake.custom_fake != NULL) {
 		ret = z_pend_curr_fake.custom_fake(arg0, arg1, arg2, arg3);
-		SAVE_RET_HISTORY(z_pend_curr, ret);
-		return ret;
+	} else if (z_pend_curr_fake.return_val_seq_len > 0) {
+		/* RETURN_FAKE_RESULT of FFF, with the value kept for the trace hook */
+		if (z_pend_curr_fake.return_val_seq_idx < z_pend_curr_fake.return_val_seq_len) {
+			ret = z_pend_curr_fake.return_val_seq[z_pend_curr_fake.return_val_seq_idx++];
+		} else {
+			ret = z_pend_curr_fake.return_val_seq[z_pend_curr_fake.return_val_seq_len - 1];
+		}
+	} else {
+		ret = z_pend_curr_fake.return_val;
 	}
-	RETURN_FAKE_RESULT(z_pend_curr)
+	SAVE_RET_HISTORY(z_pend_curr, ret);
+#ifdef CONFIG_KERNEL_UNIT_TRACE
+	kernel_unit_trace_pend_return(ret);
+#endif
+	return ret;
 }
 DEFINE_RESET_FUNCTION(z_pend_curr)
 

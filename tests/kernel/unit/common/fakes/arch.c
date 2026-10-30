@@ -9,6 +9,7 @@
 #include <zephyr/arch/syscall.h>
 #include <kernel_arch_interface.h>
 #include <kernel_arch_func.h>
+#include <kernel_unit_trace.h>
 
 DEFINE_FAKE_VALUE_FUNC(uint32_t, unit_arch_k_cycle_get_32);
 DEFINE_FAKE_VALUE_FUNC(uint64_t, unit_arch_k_cycle_get_64);

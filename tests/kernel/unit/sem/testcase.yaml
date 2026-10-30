@@ -38,6 +38,20 @@ tests:
       - CONFIG_ASSERT=y
       - CONFIG_ASSERT_TEST=y
       - CONFIG_ASSERT_ON_ERRORS=y
+  # The trace scenarios: the default configuration, CONFIG_POLL and
+  # CONFIG_NO_RUNTIME_CHECKS with the trace hook (CONFIG_KERNEL_UNIT_TRACE).
+  # spec/tla/tools/check_traces.py checks the traces against KSem.
+  kernel.unit.sem.trace:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_TRACE=y
+  kernel.unit.sem.trace_poll:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_TRACE=y
+      - CONFIG_POLL=y
+  kernel.unit.sem.trace_no_runtime_checks:
+    extra_configs:
+      - CONFIG_KERNEL_UNIT_TRACE=y
+      - CONFIG_NO_RUNTIME_CHECKS=y
   kernel.unit.sem.all:
     extra_configs:
       - CONFIG_POLL=y

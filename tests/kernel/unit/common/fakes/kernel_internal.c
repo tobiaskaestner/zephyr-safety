@@ -6,6 +6,7 @@
 
 #include <zephyr/ztest.h>
 #include <kernel_internal.h>
+#include <kernel_unit_trace.h>
 
 DEFINE_FAKE_VALUE_FUNC(bool, z_handle_obj_poll_events, sys_dlist_t *, uint32_t);
 

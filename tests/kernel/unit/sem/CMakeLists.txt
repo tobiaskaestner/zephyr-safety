@@ -14,5 +14,6 @@ kernel_unit_fakes_ifdef(CONFIG_OBJ_CORE obj_core)
 kernel_unit_fakes_ifdef(CONFIG_ASSERT assert)
 kernel_unit_fakes_ifdef(CONFIG_SPIN_VALIDATE spinlock)
 kernel_unit_fakes_ifdef(CONFIG_USERSPACE syscall_handler kobject)
+kernel_unit_fakes_ifdef(CONFIG_KERNEL_UNIT_TRACE trace)
 
 target_sources(testbinary PRIVATE src/test_sem.c)
