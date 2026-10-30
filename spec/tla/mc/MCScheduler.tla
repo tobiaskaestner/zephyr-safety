@@ -377,6 +377,8 @@ Inv_NoPanic         == Sched!NoPanic
 Inv_NoUndefined     == Sched!NoUndefined
 Inv_WQ_StampsNormal == Sched!WQ!StampsNormal
 Inv_WQ_RanksDistinct == Sched!WQ!RanksDistinct
+\* @expected violation (configuration arrival_same, candidate P7-w)
+Prop_WQ_KeepsArrivalOrder == Sched!WQ!KeepsArrivalOrder
 Inv_TO_ArmedOnce    == Sched!TO!ArmedOnce
 Inv_TO_CostBounded  == Sched!TO!CostBounded
 Inv_RqStampsNormal  == Sched!RqStampsNormal
