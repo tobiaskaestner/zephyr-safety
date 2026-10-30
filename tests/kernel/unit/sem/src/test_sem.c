@@ -1724,6 +1724,132 @@ ZTEST(sem_unit, test_lock_protects_count)
 	zassert_equal(sem.count, count_at_release);
 }
 
+/*
+ * The lock spy (the test of the grain assumption). In a test with one thread,
+ * no other actor changes the count between a read of the count and the
+ * lock, so a read before the lock gives the same value as a read under the
+ * lock. The spy at the lock writes a new count, as if another actor ran
+ * just before the lock. A unit that reads the count before the lock then
+ * uses the old value, and the result is wrong.
+ */
+static unsigned int count_written_at_lock;
+
+static void change_count_at_lock(void)
+{
+	spied_sem->count = count_written_at_lock;
+}
+
+/* Install the lock spy: at the lock, the count of @p sem becomes @p count. */
+static void spy_changes_count_at_lock(struct k_sem *sem, unsigned int count)
+{
+	spied_sem = sem;
+	count_written_at_lock = count;
+	kernel_unit_spy_on_lock(change_count_at_lock, NULL);
+	z_reschedule_fake.custom_fake = NULL;
+}
+
+/**
+ * @brief k_sem_give() reads the count only while it holds sem_lock.
+ *
+ * @details
+ * The coarse model of the semaphore (KSem) makes each call one step. This is
+ * correct only if the call reads the count after the lock.
+ * - Setup: count 1, limit 3, no waiting thread. The lock spy changes the
+ *   count to 2 at the lock (another actor gave just before the lock).
+ * - Action: z_impl_k_sem_give().
+ * - Expected: the count is 3: the increment of the count at the lock. A
+ *   read of the count before the lock gives 2.
+ *
+ * @ingroup kernel_unit_sem_k_sem_give
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_lock_spy_give_reads_count_under_lock)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 1U, 3U);
+	spy_changes_count_at_lock(&sem, 2U);
+
+	z_impl_k_sem_give(&sem);
+
+	zassert_equal(sem.count, 3U);
+}
+
+/**
+ * @brief k_sem_give() compares the count with the limit only while it holds sem_lock.
+ *
+ * @details
+ * - Setup: count 1, limit 3, no waiting thread. The lock spy changes the
+ *   count to 3, the limit, at the lock.
+ * - Action: z_impl_k_sem_give().
+ * - Expected: the count stays 3. A comparison with the count before the
+ *   lock gives 2 (a lost give of the other actor).
+ *
+ * @ingroup kernel_unit_sem_k_sem_give
+ * @see z_impl_k_sem_give()
+ */
+ZTEST(sem_unit, test_lock_spy_give_limit_under_lock)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 1U, 3U);
+	spy_changes_count_at_lock(&sem, 3U);
+
+	z_impl_k_sem_give(&sem);
+
+	zassert_equal(sem.count, 3U);
+}
+
+/**
+ * @brief k_sem_take() reads the count only while it holds sem_lock.
+ *
+ * @details
+ * - Setup: count 1, limit 1. The lock spy changes the count to 0 at the
+ *   lock (another actor took the semaphore just before the lock).
+ * - Action: z_impl_k_sem_take() with K_NO_WAIT.
+ * - Expected: return value -EBUSY, the count stays 0. A read of the count
+ *   before the lock takes a semaphore that is not there.
+ *
+ * @ingroup kernel_unit_sem_k_sem_take
+ * @see z_impl_k_sem_take()
+ */
+ZTEST(sem_unit, test_lock_spy_take_reads_count_under_lock)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 1U, 1U);
+	spy_changes_count_at_lock(&sem, 0U);
+
+	zassert_equal(z_impl_k_sem_take(&sem, K_NO_WAIT), -EBUSY);
+	zassert_equal(sem.count, 0U);
+}
+
+/**
+ * @brief k_sem_take() decides to wait only while it holds sem_lock.
+ *
+ * @details
+ * - Setup: count 0, limit 1. The lock spy changes the count to 1 at the
+ *   lock (another actor gave just before the lock).
+ * - Action: z_impl_k_sem_take() with K_FOREVER.
+ * - Expected: return value 0 without a wait (no call of z_pend_curr()), the
+ *   count is 0. A decision on the count before the lock waits while the
+ *   semaphore is available.
+ *
+ * @ingroup kernel_unit_sem_k_sem_take
+ * @see z_impl_k_sem_take()
+ */
+ZTEST(sem_unit, test_lock_spy_take_wait_decided_under_lock)
+{
+	struct k_sem sem;
+
+	sem_prepare(&sem, 0U, 1U);
+	spy_changes_count_at_lock(&sem, 1U);
+
+	zassert_equal(z_impl_k_sem_take(&sem, K_FOREVER), 0);
+	zassert_equal(z_pend_curr_fake.call_count, 0);
+	zassert_equal(sem.count, 0U);
+}
+
 /**
  * @brief All semaphores use the same lock, sem_lock.
  *

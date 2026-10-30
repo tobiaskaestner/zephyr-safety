@@ -1,0 +1,8 @@
+{"ev":"test","suite":"sem_unit","name":"test_lock_spy_take_wait_decided_under_lock","config":{"poll":false,"rtc":false,"assert":false}}
+{"ev":"sem","id":"s1","init":true,"count":0,"limit":1}
+{"ev":"setup","ref":false}
+{"ev":"call","op":"take","actor":"t1","obj":"s1","timeout":"FOREVER"}
+{"ev":"fake","fn":"arch_irq_lock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"fake","fn":"arch_irq_unlock","obj":"s1","arg":0,"ret":0,"res":0}
+{"ev":"ret","op":"take","actor":"t1","obj":"s1","ret":0,"count":0,"limit":1}
+{"ev":"end"}

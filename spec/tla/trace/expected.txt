@@ -20,6 +20,12 @@
 # no_runtime_checks/test_give_count_above_limit_grows: finding 1 of the sem
 # findings on a real trace. Without runtime checks, a give above the limit
 # increments the count, and the API view has no token for it.
+#
+# test_lock_spy_*: the lock spy of the tests changes the count at the lock,
+# as another actor that the trace does not show. KSem has no step for a
+# change of the count between the call and the lock, so each such trace is
+# a rejected trace by design: a reject shows that the trace check sees a
+# write to the count outside the steps of the model.
 
 default test_count_get_returns_count_without_lock empty
 default test_give_count_above_limit_grows empty
@@ -43,6 +49,10 @@ default test_lock_reset_no_ready_thread_unlocks accept
 default test_lock_reset_poll_ready_reschedules empty
 default test_lock_reset_wake_reschedules accept
 default test_lock_shared_by_all_semaphores accept
+default test_lock_spy_give_limit_under_lock reject
+default test_lock_spy_give_reads_count_under_lock reject
+default test_lock_spy_take_reads_count_under_lock reject
+default test_lock_spy_take_wait_decided_under_lock reject
 default test_lock_take_available_unlocks accept
 default test_lock_take_busy_unlocks accept
 default test_lock_take_wait_hands_lock_to_pend accept
@@ -89,6 +99,10 @@ no_runtime_checks test_lock_reset_no_ready_thread_unlocks accept
 no_runtime_checks test_lock_reset_poll_ready_reschedules empty
 no_runtime_checks test_lock_reset_wake_reschedules accept
 no_runtime_checks test_lock_shared_by_all_semaphores accept
+no_runtime_checks test_lock_spy_give_limit_under_lock reject
+no_runtime_checks test_lock_spy_give_reads_count_under_lock reject
+no_runtime_checks test_lock_spy_take_reads_count_under_lock reject
+no_runtime_checks test_lock_spy_take_wait_decided_under_lock reject
 no_runtime_checks test_lock_take_available_unlocks accept
 no_runtime_checks test_lock_take_busy_unlocks accept
 no_runtime_checks test_lock_take_wait_hands_lock_to_pend accept
@@ -136,6 +150,10 @@ poll test_lock_reset_no_ready_thread_unlocks accept
 poll test_lock_reset_poll_ready_reschedules accept
 poll test_lock_reset_wake_reschedules accept
 poll test_lock_shared_by_all_semaphores accept
+poll test_lock_spy_give_limit_under_lock reject
+poll test_lock_spy_give_reads_count_under_lock reject
+poll test_lock_spy_take_reads_count_under_lock reject
+poll test_lock_spy_take_wait_decided_under_lock reject
 poll test_lock_take_available_unlocks accept
 poll test_lock_take_busy_unlocks accept
 poll test_lock_take_wait_hands_lock_to_pend accept
