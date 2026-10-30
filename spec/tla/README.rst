@@ -8,7 +8,7 @@ TLA+ design specification of the kernel objects
 This directory holds the formal design model of the Zephyr kernel objects
 (semaphore, queue, message queue, stack, memory slab, events, condition
 variable, mutex, and more later). The model is written in TLA+ and checked
-with TLC.
+with TLC. ``GLOSSARY.rst`` defines the words of the method.
 
 Status: design note of 2026-10-21 (roadmap step 2.0). ``lib/WaitQueue``,
 ``lib/Timeout``, ``lib/Platform`` and ``lib/Scheduler`` exist and are
