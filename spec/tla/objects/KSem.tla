@@ -39,16 +39,46 @@ EXTENDS Integers, Sequences, FiniteSets
 
 CONSTANTS
     \* The parameters of Scheduler (see there). Objs are the semaphores.
-    Threads, Objs, None, Isrs, IsrCpu, MaxIrqNest, Idle, Data, NoData, JoinQ,
-    CPUS, UseSwitch, Backend, HeapCapacity,
+    \* @type: Set(THREAD);
+    Threads,
+    \* @type: Set(OBJ);
+    Objs,
+    \* @type: OBJ;
+    None,
+    \* @type: Set(THREAD);
+    Isrs,
+    \* @type: THREAD -> CPU;
+    IsrCpu,
+    \* @type: Int;
+    MaxIrqNest,
+    \* @type: THREAD;
+    Idle,
+    \* @type: Set(DATA);
+    Data,
+    \* @type: DATA;
+    NoData,
+    \* @type: THREAD -> OBJ;
+    JoinQ,
+    \* @type: Set(CPU);
+    CPUS,
+    \* @type: Bool;
+    UseSwitch,
+    \* @type: Str;
+    Backend,
+    \* @type: Int;
+    HeapCapacity,
     \* The pairs <<initial_count, limit>> that k_sem_init() can get.
+    \* @type: Set(Seq(Int));
     InitArgs,
     \* The largest value of the unsigned count (UINT_MAX, scaled down).
+    \* @type: Int;
     UMax,
     \* The model priorities of the threads in the initial state.
+    \* @type: Set(Int);
     InitPrios,
     \* The model priorities that k_thread_priority_set() can give ({}: no
     \* priority change).
+    \* @type: Set(Int);
     EnvPrios
 
 \* The argument check of k_sem_init() with CHECKIF() (Kconfig kind 5, the
@@ -56,41 +86,93 @@ CONSTANTS
 \* with CONFIG_NO_RUNTIME_CHECKS (no check). CONFIG_ASSERT_ON_ERRORS (an
 \* assertion) is not in the model.
 \* @kconfig CONFIG_RUNTIME_ERROR_CHECKS CONFIG_NO_RUNTIME_CHECKS
-CONSTANT RuntimeChecks
+CONSTANT
+    \* @type: Bool;
+    RuntimeChecks
 
 \* The poll events of the semaphore (Kconfig kind 2): with CONFIG_POLL,
 \* give and reset call z_handle_obj_poll_events().
 \* @kconfig CONFIG_POLL
-CONSTANT Poll
+CONSTANT
+    \* @type: Bool;
+    Poll
 
 \* A condition of use: FALSE if the client calls k_sem_init() only on a
 \* semaphore that no other actor uses. TRUE lets a thread initialize a
 \* semaphore again at any time (z_vrfy_k_sem_init() accepts an initialized
 \* object, finding 9 of the sem findings): with waiters, the code has
 \* undefined behavior (Scheduler!WaitqInit, finding P6-u).
-CONSTANT ReInit
+CONSTANT
+    \* @type: Bool;
+    ReInit
 
 \* A condition of use: FALSE if an ISR calls k_sem_take() only with
 \* K_NO_WAIT (ZEP-SRS-5-20, the __ASSERT() of sem.c). TRUE lets an ISR
 \* wait: the scheduler panics (Scheduler!PendCurr, detector NoPanic).
-CONSTANT IsrWaits
+CONSTANT
+    \* @type: Bool;
+    IsrWaits
 
-ASSUME InitArgs \subseteq (0..UMax) \X (0..UMax)
+\* Each element of InitArgs is a pair in (0..UMax) \X (0..UMax). The form
+\* with Len is the same set for TLC, and Apalache can type it: the
+\* observation has the arguments in the field args, which is <<>> before
+\* the first call (Waitable!NoObs), so args is a sequence and not a tuple.
+ASSUME \A x \in InitArgs : Len(x) = 2 /\ x[1] \in 0..UMax /\ x[2] \in 0..UMax
 ASSUME {RuntimeChecks, Poll, ReInit, IsrWaits} \subseteq BOOLEAN
 ASSUME \A t \in Threads : JoinQ[t] = None
 
 VARIABLES
-    tstate, prio, cur, swapRet, swapData, panic, rqStamp, preemptOk, readySince,
-    pendedOn, stamp, tq, tqCost, irqNest, pendsv,
+    \* The variables of Scheduler (see there).
+    \* @type: THREAD -> Str;
+    tstate,
+    \* @type: THREAD -> Int;
+    prio,
+    \* @type: CPU -> THREAD;
+    cur,
+    \* @type: THREAD -> Int;
+    swapRet,
+    \* @type: THREAD -> DATA;
+    swapData,
+    \* @type: Str;
+    panic,
+    \* @type: THREAD -> Int;
+    rqStamp,
+    \* @type: Bool;
+    preemptOk,
+    \* @type: THREAD -> Int;
+    readySince,
+    \* @type: THREAD -> OBJ;
+    pendedOn,
+    \* @type: THREAD -> Int;
+    stamp,
+    \* @type: Seq(THREAD);
+    tq,
+    \* @type: { op: Str, n: Int, cost: Int };
+    tqCost,
+    \* @type: CPU -> Int;
+    irqNest,
+    \* @type: CPU -> Bool;
+    pendsv,
     \* The fields of each semaphore: [init, count, limit].
+    \* @type: OBJ -> $sem;
     r,
     \* The semaphore of the wait of each thread (Waitable).
+    \* @type: THREAD -> OBJ;
     req,
     \* Ghost: the tokens that the API made available and that no take has
     \* consumed, for each semaphore (TokenConservation).
+    \* @type: OBJ -> Int;
     tokens,
     \* The observation of the last step (Waitable).
+    \* @type: $obs;
     obs
+
+\* The types of the fields of a semaphore and of the observation of a step
+\* (Waitable, with the type call of Waitable). The field args of the
+\* observation has the arguments of k_sem_init().
+\* @typeAlias: sem = { init: Bool, count: Int, limit: Int };
+\* @typeAlias: obs = { actor: THREAD, op: Str, obj: OBJ, args: Seq(Int), timeout: Str, calls: Seq($call), ret: Int, woken: Set(THREAD) };
+KSem_typedefs == TRUE
 
 \* The template, on the same variables.
 W == INSTANCE Waitable
@@ -132,12 +214,15 @@ Timeouts == {"NO_WAIT", "FOREVER", "TICKS"}
 NoSem == [init |-> FALSE, count |-> 0, limit |-> 0]
 
 \* The count: the measure of the resource in the call records.
+\* @type: ($sem) => Int;
 SemCount(x) == x.count
 
 \* A take succeeds now: count > 0 (sem.c:138).
+\* @type: ($sem) => Bool;
 SemAvail(x) == x.count > 0
 
 \* The take decrements the count (sem.c:139).
+\* @type: ($sem) => $sem;
 SemConsume(x) == [x EXCEPT !.count = @ - 1]
 
 \* Unsigned increment of the count, with wrap (count += 1U).
@@ -145,16 +230,20 @@ Inc(c) == IF c = UMax THEN 0 ELSE c + 1
 
 \* A give without a waiter: the count increments if it is not the limit
 \* (sem.c:105, the comparison is !=, not <).
+\* @type: ($sem) => $sem;
 SemSettle(x) == [x EXCEPT !.count = IF x.count # x.limit THEN Inc(x.count) ELSE x.count]
 
 \* The reset sets the count to 0 (sem.c:169).
+\* @type: ($sem) => $sem;
 SemFlushR(x) == [x EXCEPT !.count = 0]
 
 \* The argument check of k_sem_init() (sem.c:51): only with runtime
 \* checks.
+\* @type: (Seq(Int)) => Bool;
 SemValid(args) == ~(RuntimeChecks /\ (args[2] = 0 \/ args[1] > args[2]))
 
 \* The fields after k_sem_init(args).
+\* @type: (Seq(Int)) => $sem;
 SemNew(args) == [init |-> TRUE, count |-> args[1], limit |-> args[2]]
 
 \* The woken threads of a give that hold a token: they will return 0.
