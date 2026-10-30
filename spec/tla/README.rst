@@ -892,8 +892,9 @@ Layout
      mc/               model configurations, example tests, expected.txt
      trace/            trace specs and the schema of the trace records
      c-functions.json  the hashes of the tagged C functions at the pin
+     selftest/         known-answer models for TLC, expected.txt
      tools/            run_tlc.sh, run_tlc_remote.py, kconfig_coverage.py,
-                       tla2tools.sha256, apalache.sha256,
+                       tla2tools.sha256, apalache.sha256, TOOLS.rst,
                        c_function_hashes.py, uses_graph_diff.py
        unitmap/        copies of the generator scripts of the unit map
 
@@ -905,8 +906,9 @@ build of 2026-10-20 (rev ``d2e1472``). The run script stops if the hash of
 the jar is not the hash in ``tools/tla2tools.sha256``.
 
 The pre-release is a rolling release: each new build replaces the jar at
-the download URL of the tag ``v1.8.0``. Keep a copy of the pinned jar. A
-later download has a different hash, and the run script refuses it. The
+the download URL of the tag ``v1.8.0``. Keep a copy of the pinned jar
+(the archive: ``tools/TOOLS.rst``). A later download has a different
+hash, and the run script refuses it. The
 version 1.8.0 has the REPL (``java -cp tla2tools.jar tlc2.REPL``), the
 parameters of an action in the steps of a trace (``Take(t1)``), and the
 name of a violated temporal property. These features are the reasons
@@ -923,7 +925,24 @@ stops the lookup.
    export TLA2TOOLS=/path/to/tla2tools.jar
    spec/tla/tools/run_tlc.sh              # all models in mc/expected.txt
    spec/tla/tools/run_tlc.sh MCWaitQueue  # one model
+   TLC_SUITE=selftest spec/tla/tools/run_tlc.sh  # the selftest of TLC
    python3 spec/tla/tools/kconfig_coverage.py  # Kconfig coverage (doc Python)
+
+Locally, ``run_tlc.sh`` runs one TLC process at a time, with one worker.
+Do not run the large lines (``MCScheduler default``, ``coop``, ``smp``,
+``p7_rules*``, ``small*``) on a small host: use the lab host.
+
+A line of ``mc/expected.txt`` can have fields after the expected result:
+``states=`` and ``depth=`` (the recorded counts: a different count fails
+the line), ``trace=`` and ``lasso=`` (the error trace), ``heap=`` (the
+Java heap of the line) and ``repeat=`` (run the line more than once, each
+run must give the same counts). Each pass line has recorded counts. After
+a change of a model that changes a count, record the new count in the
+same commit and give the reason in the commit message.
+
+``tools/TOOLS.rst`` is the tool note: the identity of the pinned jar, its
+known defects and why they do not affect the evidence, the selftest, and
+the steps for a new pin.
 
 Apalache 0.62.4 (``tools/apalache.sha256``) needs Java 17 or later. There is
 no run script yet. The library modules type-check (``WaitQueue``,
@@ -942,13 +961,15 @@ Running on the lab host
 
 ``tools/run_tlc_remote.py`` runs ``tools/run_tlc.sh`` on the lab host
 (default ``tobias@cos-workstation``, directory ``/wrk/z/lab-tla``) and
-copies the results back. The lab host has the pinned jar and a JDK. The
-script takes the same arguments as ``run_tlc.sh``:
+copies the results back. The lab host has a JDK and the read-only archive
+of the pinned jar (``archive/tla2tools/sha256-<hash>/``). The script takes
+the same arguments as ``run_tlc.sh``:
 
 .. code-block:: console
 
    spec/tla/tools/run_tlc_remote.py                        # all lines, pinned
    spec/tla/tools/run_tlc_remote.py MCScheduler:default    # one line
+   spec/tla/tools/run_tlc_remote.py --selftest-only        # the selftest only
    spec/tla/tools/run_tlc_remote.py --unpinned MCTimeout   # working tree
    spec/tla/tools/run_tlc_remote.py --detach MCScheduler   # start only
    spec/tla/tools/run_tlc_remote.py --collect <run-id>     # get results
@@ -962,35 +983,48 @@ The two modes:
   ``spec/tla/`` to the lab host. The record has the mark ``unpinned``, the
   base commit and the SHA-256 of the diff. The output has the diff.
 
+Each job first runs the selftest of TLC (``selftest/expected.txt``) with
+one worker. If the selftest fails, no model runs. Then the job runs the
+selected lines of ``mc/expected.txt``.
+
+The worker rule: each TLC process has one worker. The pinned jar does not
+have the fix of tlaplus issue #1445: with more than one worker in one TLC
+process, TLC can miss states and violations. For speed, the job runs
+several TLC processes at the same time (``--jobs``, default 6, at most 8).
+Each process has its own ``-metadir`` and its own ``java.io.tmpdir``. The
+rule and its reason are in ``tools/TOOLS.rst``. ``--workers <n>`` with
+n > 1 stays for experiments. Its record has ``evidence: false``. On
+2026-10-29, 4 and 8 workers in one process gave the reference counts for
+each pass line, but this does not show that no state was missed.
+
+Memory: each line has its own Java heap, the field ``heap=`` of the line
+or ``--mem`` (default ``2g``). A line starts only if its heap fits in
+``--mem-budget`` (default ``20g``) together with the heaps of the lines
+that run. The lines with the most recorded states start first. Each TLC
+process also has 2 threads for the garbage collection. On 2026-10-30, all
+lines ran with 2g: the peak memory of a process was at most 2.1 GB
+(``MCScheduler default``, ``smp`` and ``small_b``, the lines with
+liveness properties), so 6 large lines at the same time need about
+13 GB of the 31 GB of the lab host. No line needs ``heap=`` today. The
+run of all 50 lines took 29 min, in place of 1 h 48 min with one
+process. The longest line (``MCScheduler default``, 1738 s) sets the
+lower limit.
+
 The output goes to ``build/lab/<run-id>/`` (option ``--out``): the logs,
-``summary.md`` with a column for the workers, ``results.txt`` and
-``record.json``. The record has the revision, the mode, the jar hash, the
-Java version, the workers, the heap, the host, the times and the results.
+``selftest/``, ``summary.md``, ``results.txt``, ``rss.txt`` and
+``record.json``. For each line, the summary and the record have the
+result, the distinct states, the depth, the trace length, the collision
+estimate of TLC, the time, the heap and the peak memory (VmHWM). The
+record also has the revision, the mode, the jar and its hash, the Java
+version, the host, the times, and ``evidence`` (true or false) with the
+reasons. A run is evidence only if it is pinned, uses the pinned jar, has
+one worker in each process, and the selftest passed.
 
 The rules of the lab host apply to each job. A job holds the lock
 ``/wrk/z/lab-tla/.lock``, so only one job runs at a time, and the next job
-waits. TLC runs with ``nice -n 10`` and at most 8 workers. The job deletes
-the TLC state directories at the end. The job continues if the connection
-stops. Then ``--collect <run-id>`` gets the results.
-
-The worker rule (``--workers auto``, the default):
-
-- A line with the expected result ``pass`` runs with 8 workers. With 4 and
-  8 workers, each pass line gave the same distinct states and depth as
-  with 1 worker (2026-10-29). ``MCScheduler default`` took 1727 s with 1
-  worker and 306 s with 8 workers.
-- All other lines (``fail:<Name>``, ``probes``) run with 1 worker. With
-  more workers, the verdict and the trace length stayed the same, but the
-  state count changed from run to run, and so did the trace for some
-  lines. With 1 worker, the count and the trace are the same in each run.
-- The pinned jar does not have the fix of tlaplus issue #1445: TLC with
-  more than one worker can miss states. If the state count of a pass line
-  changes, run this line again with ``--workers 1`` before you record the
-  new count.
-
-``--workers <n>`` sets the same number for all lines. ``--mem`` sets the
-Java heap (default ``4g``). ``run_tlc.sh`` takes the number of workers
-from ``TLC_WORKERS`` (default 1).
+waits. TLC runs with ``nice -n 10``. The job deletes the TLC state
+directories at the end. The job continues if the connection stops. Then
+``--collect <run-id>`` gets the results.
 
 Drift checks
 ************
