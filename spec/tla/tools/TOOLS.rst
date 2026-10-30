@@ -235,6 +235,14 @@ Reference runs
        lines: at most 8.5E-7 (calculated) and 2.0E-8 (actual), for
        ``MCScheduler default`` and ``p7_rules``. Peak memory at most
        2.1 GB (``MCScheduler default``).
+   * - ``20261030-013351-8b2d2f1a5``
+     - ``8b2d2f1``
+     - The reference run of the pinned jar: ``evidence: true``. Jar from
+       the archive, 1 worker, 6 processes, heap 2g. Selftest: 10 of 10
+       lines as expected. Models: 50 of 50 lines as expected, each pass
+       line with its recorded counts. Wall time 30 min. Collision
+       estimates of the pass lines: at most 8.5E-7 (calculated) and
+       2.0E-8 (actual). Peak memory at most 2.2 GB (``small_b``).
 
 Apalache
 ********
