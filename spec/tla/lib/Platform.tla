@@ -48,8 +48,9 @@ CONSTANTS
 \* This is a Kconfig option of kind 2: each model configuration fixes the
 \* set.
 \* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
-\* @type: Set(CPU);
-CONSTANT CPUS
+CONSTANT
+    \* @type: Set(CPU);
+    CPUS
 
 \* The variant of the context switch. TRUE: CONFIG_USE_SWITCH=y,
 \* z_swap() calls arch_switch() (arm_m_switch() on Cortex-M) and the exit
@@ -62,8 +63,9 @@ CONSTANT CPUS
 \* constant for it: the gap before PendSV comes from arch_swap().
 \* @kconfig CONFIG_USE_SWITCH
 \* @assumption arch/arm/core/Kconfig:34 (CONFIG_SWAP_NONATOMIC is y for each Cortex-M)
-\* @type: Bool;
-CONSTANT UseSwitch
+CONSTANT
+    \* @type: Bool;
+    UseSwitch
 
 VARIABLES
     \* The number of irq_lock() calls of the thread that runs on CPU c that

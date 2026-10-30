@@ -126,26 +126,30 @@ CONSTANTS
 
 \* The parameter of Platform: the CPUs (Kconfig kind 2, see Platform).
 \* @kconfig CONFIG_SMP CONFIG_MP_MAX_NUM_CPUS
-\* @type: Set(CPU);
-CONSTANT CPUS
+CONSTANT
+    \* @type: Set(CPU);
+    CPUS
 
 \* The parameter of Platform: the variant of the context switch (Kconfig
 \* kind 2, see Platform).
 \* @kconfig CONFIG_USE_SWITCH
-\* @type: Bool;
-CONSTANT UseSwitch
+CONSTANT
+    \* @type: Bool;
+    UseSwitch
 
 \* The parameter of Timeout: the backend of the timeout queue (Kconfig
 \* kind 2, see Timeout).
 \* @kconfig CONFIG_TIMEOUT_BACKEND_DLIST CONFIG_TIMEOUT_BACKEND_MINHEAP CONFIG_TIMEOUT_BACKEND_WHEEL
-\* @type: Str;
-CONSTANT Backend
+CONSTANT
+    \* @type: Str;
+    Backend
 
 \* The parameter of Timeout: the size of the heap of the MINHEAP backend
 \* (Kconfig kind 3, see Timeout).
 \* @kconfig CONFIG_TIMEOUT_HEAP_MAX_ENTRIES
-\* @type: Int;
-CONSTANT HeapCapacity
+CONSTANT
+    \* @type: Int;
+    HeapCapacity
 
 VARIABLES
     \* The state of each thread: "ready", "pending" or "dead". A running

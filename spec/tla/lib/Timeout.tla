@@ -41,16 +41,18 @@ CONSTANTS
 \* timeouts of one tick) and is not in the model yet. BUCKET is out of
 \* scope.
 \* @kconfig CONFIG_TIMEOUT_BACKEND_DLIST CONFIG_TIMEOUT_BACKEND_MINHEAP CONFIG_TIMEOUT_BACKEND_WHEEL
-\* @type: Str;
-CONSTANT Backend
+CONSTANT
+    \* @type: Str;
+    Backend
 
 \* CONFIG_TIMEOUT_HEAP_MAX_ENTRIES. Used only with Backend = "MINHEAP". A
 \* Kconfig option of kind 3: a heap that is too small panics, so a safe
 \* system must have enough entries (the condition of use NoPanic of
 \* mc/MCTimeout; configuration minheap_full).
 \* @kconfig CONFIG_TIMEOUT_HEAP_MAX_ENTRIES
-\* @type: Int;
-CONSTANT HeapCapacity
+CONSTANT
+    \* @type: Int;
+    HeapCapacity
 
 VARIABLES
     \* The armed entries, earliest expiry first.
