@@ -105,6 +105,17 @@ time stamps and the ``LAT META`` keys. The edge samples meet the idle
 thread in WFI. The software samples meet a running thread, so the wake
 path switches away from a preempted thread and not from the idle thread.
 
+This difference has a cost with time slicing. The trigger thread is
+preemptible, so it has a slice timeout. The wake resets the time slice:
+the scheduler aborts the slice timeout of the CPU and adds a new one for
+the woken thread. In the slow mode the slice timeout is the first
+timeout, so the abort reprograms SysTick, and the add reprograms it
+again. The idle thread has no slice timeout. On the NUCLEO-G474RE this
+costs about 470 cycles in the slow mode, and nothing in the fast mode or
+without slicing (sub-study ``measurement-validity/stimulus-path``, H3).
+The upstream benchmark does not see this cost: its spinning thread is a
+cooperative ztest thread, which has no slice.
+
 Tail witnesses
 --------------
 

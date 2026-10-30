@@ -244,12 +244,23 @@ Both stimuli end at the same time stamp in the same ISR. Thus:
 
 The offset is the time from the counter value of the ``t0`` read to the
 pend of the IRQ by the ``STIR`` store. It contains the rest of the read,
-the store of ``t0`` and the ``STIR`` store. It is more than 0 and less than
-about ``sw_read_cyc`` + 2 cycles. Thus a difference ``irq - irq_sw`` of d
-cycles gives a hardware path of d to d + ``sw_read_cyc`` + 2 cycles.
+the store of ``t0``, the ``STIR`` store and the time until the NVIC sees
+the pend. The first three take about ``sw_read_cyc`` + 2 cycles. The
+time of the last one is not known. Thus a difference ``irq - irq_sw`` of
+d cycles gives a hardware path of at least d + ``sw_read_cyc`` + 2
+cycles only if the NVIC sees the pend at once.
 
 Use ``irq`` of a busy build for the difference. An idle edge also
 contains the wake-up from WFI, and the software trigger never meets WFI.
+
+On the NUCLEO-G474RE (sub-study ``measurement-validity/stimulus-path``,
+code in RAM) the edge from a busy CPU is 2 cycles faster than the
+``STIR`` path, for the wrapped and the direct path. ``sw_read_cyc`` is 3.
+Thus the pin, the synchronizer and the EXTI line cost about as much as
+the ``STIR`` pend: a few cycles. The method cannot split the two. For a
+comparison with a benchmark that uses ``STIR``, the entry numbers of the
+study need no correction for the hardware path. The edge from an idle
+CPU is 5 cycles slower (the wake-up from WFI).
 
 The software trigger is synchronous to the software: it never meets a
 kernel lock, a system timer ISR or WFI, except when such an event comes
