@@ -16,7 +16,7 @@ revision, which the evidence rule needs.
 
     subject_tree(rev, paths, repo)   {path: object id} of the subject paths at rev
     tool_tree(rev, paths, repo)      the same for the tool paths
-    digest(tree)                     one sha256 over a tree (for a short comparison)
+    digest(tree)                     one sha256 over a tree (for a short comparison; a missing path counts as "-")
     record(rev, experiment, repo)    the dict of subject.json
     ref(experiment, utc)             refs/tlaplus/run/<experiment>/<UTC>
     pin(repo, rev, experiment, utc)  make that ref point to rev (keeps the commit alive)
@@ -48,15 +48,19 @@ def _repo(repo):
     return config.project().repo if repo is None else Path(repo)
 
 
-def tree(rev, paths, repo=None):
-    """{path: object id} for each path at rev (a tree id for a folder, a blob id for a file)."""
+def tree(rev, paths, repo=None, missing_ok=False):
+    """{path: object id} for each path at rev (a tree id for a folder, a blob id for a file). A path that does
+    not exist at rev is an error, or with missing_ok the object id None (the importer: an old run, made before the
+    path existed, has a tree that differs from every current tree)."""
     repo = _repo(repo)
     out = {}
     for p in paths:
         try:
             out[p] = _git(repo, "rev-parse", "--verify", "--quiet", f"{rev}:{p}").strip()
         except SubjectError:
-            raise SubjectError(f"{p} does not exist at the revision {rev}") from None
+            if not missing_ok:
+                raise SubjectError(f"{p} does not exist at the revision {rev}") from None
+            out[p] = None
     return out
 
 
@@ -66,7 +70,7 @@ tool_tree = tree
 
 def digest(t):
     """"sha256:" + the sha256 over the lines "<path> <object id>" of the tree, sorted by path."""
-    text = "".join(f"{p} {oid}\n" for p, oid in sorted(t.items()))
+    text = "".join(f"{p} {oid or '-'}\n" for p, oid in sorted(t.items()))
     return "sha256:" + hashlib.sha256(text.encode()).hexdigest()
 
 
@@ -75,11 +79,13 @@ def blob(rev, path, repo=None):
     return _git(_repo(repo), "show", f"{rev}:{path}")
 
 
-def record(rev, experiment, repo=None):
-    """The content of subject.json for a run of the experiment (the dict of experiment.yaml) at rev."""
+def record(rev, experiment, repo=None, missing_ok=False):
+    """The content of subject.json for a run of the experiment (the dict of experiment.yaml) at rev.
+    missing_ok: a path that does not exist at rev gets the object id None (see tree)."""
     repo = _repo(repo)
     full = _git(repo, "rev-parse", "--verify", f"{rev}^{{commit}}").strip()
-    subj, tools = subject_tree(full, experiment["subject"], repo), tool_tree(full, experiment["tools"], repo)
+    subj = subject_tree(full, experiment["subject"], repo, missing_ok)
+    tools = tool_tree(full, experiment["tools"], repo, missing_ok)
     try:
         pin = blob(full, JAR_PIN, repo).split()[0]
     except (SubjectError, IndexError):

@@ -191,6 +191,17 @@ def selftest_summary(raw):
             "unexpected": [point_id(r) for r in raw.self_rows if r["verdict"] != "as expected"]}
 
 
+def copied_from(run_dir, run_id):
+    """Where an imported run comes from: the field copied_from of its entry in the run list (the instance.json
+    two folders above the run folder, <instance>/ex-<experiment>/<UTC>), or None."""
+    try:
+        data = json.loads((Path(run_dir).resolve().parent.parent / "instance.json").read_text())
+    except (OSError, ValueError):
+        return None
+    entry = next((r for r in data.get("runs", []) if r.get("id") == run_id), None)
+    return entry.get("copied_from") if entry else None
+
+
 def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
     """The data of <UTC>.run.json (the arguments are those of Kind.run_json)."""
     from probatrix.tlaplus import kind
@@ -215,6 +226,9 @@ def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
            "mem_total_kb": meta.get("mem_total_kb"), "mem_available_kb": meta.get("mem_available_kb"),
            "evidence": ev, "not_evidence_reasons": reasons, "selftest": selftest_summary(raw),
            "subject": raw.subject}
+    copied = copied_from(run_dir, run_id)
+    if copied is not None:
+        run["copied_from"] = copied
     if experiment_file is not None and Path(experiment_file).is_file():
         run["experiment_sha256"] = seal.file_sha256(experiment_file)
     return {"format": kind.KIND.format_id(*RUN_FORMAT), "made_by": made_by, "run": run, "points": points}

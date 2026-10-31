@@ -36,6 +36,9 @@ repository that has only the older launcher
    * - ``analysis``
      - ``build``, ``check``, ``show``, ``missing``, ``notebooks``,
        ``html``: the aggregates, the verdicts and the pages.
+   * - ``import-lab``
+     - Copies a TLC run of a lab folder into a results tree (kind
+       ``tlaplus``).
 
 The exit code is 0 for success and 1 for a failure or a refusal. It is 2
 for a ``lab hwcheck`` that cannot run, and for a command line that
@@ -457,20 +460,49 @@ a campaign makes the instances and ``run.py`` adds each run.
 :doc:`../../howto/run-without-a-campaign` gives the steps to use these
 commands without a campaign.
 
+TLC runs
+--------
+
+.. code-block:: console
+
+   study.py import-lab LAB-RUN-FOLDER --results DIR [--experiment E]
+                       [--study PATH] [--rev REV] [--copied-from TEXT]
+                       [--no-pin]
+
+``import-lab`` copies a finished TLC run of a lab host into the results
+tree ``DIR``. It does not change the lab folder. It copies ``job.json``,
+``meta.env``, ``results.txt``, ``job.log``, ``job.sh``, ``rss.txt``,
+``out/`` and ``selftest/``. It leaves out ``pid``, ``state`` and the
+folders ``states`` and ``tmp``. The run name is the start time of the run
+in UTC. The lab name stays in ``run.json`` as ``lab_id``.
+
+The command writes ``subject.json`` into the copy, then it writes the
+:term:`seal`. The role is ``evidence`` if the subject tree and the tool
+tree of the run are the trees of the design at ``--rev`` (default
+``HEAD``), the conditions of an evidence run hold and the lines of the
+run are the lines of the list. Any other run gets the role
+``historical`` and a reason. The command prints each difference between
+the lines of the run and the list. A second import of the same lab folder
+changes nothing. ``--no-pin`` does not make the git ref
+``refs/tlaplus/run/<experiment>/<UTC>`` for the commit of the run.
+``analysis build`` then makes the aggregates.
+
 Analysis
 --------
 
 .. code-block:: console
 
-   study.py analysis build ROOT
-   study.py analysis check ROOT
+   study.py analysis build ROOT [--design FOLDER]
+   study.py analysis check ROOT [--design FOLDER]
    study.py analysis show FOLDER [--details] [--explain [ID ...]]
    study.py analysis missing [FOLDER]
    study.py analysis notebooks FOLDER [--force]
    study.py analysis html FOLDER
 
 ``ROOT`` and ``FOLDER`` are folders of a results tree. ``build`` and
-``check`` always work on the whole tree of ``ROOT``.
+``check`` always work on the whole tree of ``ROOT``. They read the
+design that the field ``design.folder`` of the ``instance.json`` of
+``ROOT`` names. ``--design`` names another design folder.
 
 ``analysis build`` writes only derived files. It does not change a raw
 run or ``instance.json``. The same inputs and the same revision of the

@@ -22,7 +22,8 @@ Folders
 ``tlaplus/``
    The kind ``tlaplus``: TLA+ model checks of ``spec/tla``. It has the list
    parser, the subject trees of a run and the adapter for TLC runs (model
-   checking and simulation). Its design root is ``validation/formal/kernel-spec``.
+   checking and simulation) and the importer of lab runs (``import-lab``).
+   Its design root is ``validation/formal/kernel-spec``.
 
 Start the tools
 ---------------

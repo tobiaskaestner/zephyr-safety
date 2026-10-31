@@ -88,3 +88,14 @@ def test_the_ref_of_a_run_comes_from_the_kind(repo):
     ref = subject.pin(repo, rev, "mc-expected", "20261031T013824Z")
     assert ref == "refs/tlaplus/run/mc-expected/20261031T013824Z"
     assert git(repo, "rev-parse", ref) == rev
+
+
+def test_a_missing_path_is_an_error_or_with_missing_ok_the_id_none(repo):
+    paths = ["spec/tla/lib", "spec/tla/objects"]
+    with pytest.raises(subject.SubjectError, match="objects does not exist at the revision"):
+        subject.tree("HEAD", paths, repo)
+    t = subject.tree("HEAD", paths, repo, missing_ok=True)
+    assert t["spec/tla/objects"] is None and t["spec/tla/lib"] == git(repo, "rev-parse", "HEAD:spec/tla/lib")
+    assert subject.digest(t) != subject.digest({"spec/tla/lib": t["spec/tla/lib"]})
+    exp = {"subject": paths, "tools": EXP["tools"]}
+    assert subject.record("HEAD", exp, repo, missing_ok=True)["subject"]["spec/tla/objects"] is None

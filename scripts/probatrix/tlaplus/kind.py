@@ -117,6 +117,17 @@ class TlaplusKind(kinds.BaseKind):
     def stat_needed(self, metric):
         return False
 
+    # ---------------------------------------------------------------- commands
+    def commands(self):
+        """The CLI commands of the kind (importer.py): import-lab."""
+        from probatrix.tlaplus import importer
+        return dict(importer.COMMANDS)
+
+    @property
+    def cli_errors(self):
+        from probatrix.tlaplus import importer
+        return importer.ERRORS
+
     # ---------------------------------------------------------------- lint
     def lint_experiment(self, e):
         """The generic lint (folder, experiment.md, points) and the rules between the keys: the tool has an
