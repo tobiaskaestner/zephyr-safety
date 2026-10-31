@@ -33,10 +33,11 @@ configure(
 if "committee" in intersphinx_mapping:
     tags.add("committee")
 
-# The TLA+ spec library (formal-model.rst). The source_file field of a model
-# property is relative to the safety repository, the repository of the spec.
+# The TLA+ spec library and the object modules (formal-model.rst). The
+# source_file field of a model property is relative to the safety
+# repository, the repository of the spec.
 tla_spec_dir = Path(os.environ["SAFETY_TLA_SPEC_DIR"])
-tla_spec_paths = [str(tla_spec_dir / "lib")]
+tla_spec_paths = [str(tla_spec_dir / "lib"), str(tla_spec_dir / "objects")]
 tla_source_root = str(tla_spec_dir.parents[1])
 
 # The zdocs card for the model properties: the needtable of formal-model.rst

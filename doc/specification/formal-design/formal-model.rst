@@ -9,7 +9,8 @@ with ``spec/tla/mc/expected.txt``. The design note
 conventions of the model.
 
 The model is work in progress. This page shows the modules of the library
-(``spec/tla/lib``). The models of the kernel objects come later.
+(``spec/tla/lib``) and the contract modules of the kernel objects
+(``spec/tla/objects``). Today the only object module is ``KSem``.
 
 The model has two parts. The operators are the behavior part: they
 follow the C code, also where the code is surprising. The properties with a
@@ -90,5 +91,19 @@ models ``z_waitq_init()`` on a wait queue with waiters, which is undefined
 behavior in the code; ``NoUndefined`` shows the path (finding P6-u).
 
 .. tla:module:: Scheduler
+   :body:
+   :property-needs:
+
+Semaphore (``k_sem``)
+---------------------
+
+``KSem`` is the contract module of ``kernel/sem.c``, the first object of the
+library. It instantiates the template module ``Waitable`` (``spec/tla/lib``)
+on the scheduler contract, at coarse grain. Its property part expresses
+requirements ``ZEP-SRS-5-*``. The guards ``IsrWaits`` and ``ReInit`` are
+assumptions of use. By decision D27 they move into a client module
+(``clients/KSemClient.tla``), which does not exist yet.
+
+.. tla:module:: KSem
    :body:
    :property-needs:
