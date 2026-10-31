@@ -18,9 +18,9 @@ from pathlib import Path
 
 import yaml
 
-import trees
+from probatrix.benchmarks import trees
 
-from . import checks, layout, schema
+from . import checks, kindhooks, layout, schema
 from .design import Design, DesignError
 
 ERROR, WARNING = "error", "warning"
@@ -41,16 +41,14 @@ class Problem:
 
 def expand(exp):
     """The points of an experiment, or (None, message) if the file has an error."""
-    import run
     try:
-        return run.expand_points(exp), None
+        return kindhooks.expand_points(exp), None
     except SystemExit as e:
         return None, str(e).removeprefix("error: ")
 
 
 def is_y(kconfig, sym):
-    import run
-    return run.kconfig_value(kconfig.get(sym, "n")) == "y"
+    return kindhooks.kconfig_value(kconfig.get(sym, "n")) == "y"
 
 
 def lint_todo(root, out):

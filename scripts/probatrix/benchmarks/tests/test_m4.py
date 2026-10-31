@@ -10,16 +10,14 @@ values that do not come from the code under test.
 """
 
 import argparse
-import sys
 from pathlib import Path
 
 import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
-sys.path.insert(0, str(SCRIPTS))
 
-import m4  # noqa: E402
+from probatrix.benchmarks import m4  # noqa: E402
 
 # The sites of test_emit_fixture() in unit/irqmask/src/main.c: pc, ipsr, kind, span.
 FIX_SITES = [

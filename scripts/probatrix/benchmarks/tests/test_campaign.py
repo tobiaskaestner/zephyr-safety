@@ -5,21 +5,18 @@
 
 import os
 import platform
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import trees  # noqa: E402
-from studylib import campaign, jsonout  # noqa: E402
-from studylib import lab as labmod  # noqa: E402
-from studylib.design import Design  # noqa: E402
-from test_studylib import make_design  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import campaign, jsonout  # noqa: E402
+from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
+from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from .test_studylib import make_design  # noqa: E402
 
 
 @pytest.fixture
@@ -121,8 +118,8 @@ FAKE_RUN = '''
 import json, sys, time
 from pathlib import Path
 sys.path.insert(0, {scripts!r})
-from studylib import instance, seal
-from studylib.design import Design
+from probatrix.benchmarks.studylib import instance, seal
+from probatrix.benchmarks.studylib.design import Design
 exp = Path(sys.argv[1]).parent.name[3:]
 arg = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
 out = Path(arg("--out"))
@@ -156,7 +153,7 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     (root / "st-sub" / "study.yaml").write_text(yaml.safe_dump(d))
     design = Design(root)
     fake = tmp_path / "fake_run.py"
-    fake.write_text(FAKE_RUN.format(scripts=str(SCRIPTS), root=str(root)))
+    fake.write_text(FAKE_RUN.format(scripts=str(SCRIPTS.parents[1]), root=str(root)))
     monkeypatch.setattr(campaign, "run_py", lambda: fake)
     monkeypatch.setattr(campaign, "preflight", lambda *a, **k: [("ok", "fake", "")])
     monkeypatch.setattr(campaign.Post, "kick", lambda self: None)
@@ -176,7 +173,7 @@ def test_run_campaign_with_a_fake_run(setup, monkeypatch, tmp_path):
     states = [(e["experiment"], e["state"]) for e in data["experiments"]]
     assert states == [("exp-fail", "failed"), ("exp1", "done"), ("exp2", "skipped")]
     assert data["status"] == "done" and campaign.lock_holder(lab) is None
-    from studylib import instance
+    from probatrix.benchmarks.studylib import instance
     folder = lab.results / data["experiments"][1]["instance"]
     runs = instance.load(folder)["runs"]
     assert [r["id"] for r in runs] == [data["experiments"][1]["run"]]

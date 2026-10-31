@@ -3,13 +3,11 @@
 
 """Unit tests of the build cache (studylib/buildcache.py)."""
 
-import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-from studylib import buildcache  # noqa: E402
+from probatrix.benchmarks.studylib import buildcache  # noqa: E402
 
 POINT = {"kconfig": {"A": "y"}, "conf_files": [], "dtc_overlays": []}
 
@@ -47,7 +45,7 @@ def test_put_keeps_the_first_entry_and_replaces_a_broken_one(tmp_path):
 
 
 def test_built_by_uses_and_the_names_in_a_point_folder(tmp_path):
-    from studylib import images
+    from probatrix.benchmarks.studylib import images
     c = buildcache.Cache(tmp_path / "cache")
     key = "cd" * 32
     b, log = fake_build(tmp_path, "b")

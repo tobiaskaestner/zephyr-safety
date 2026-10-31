@@ -29,10 +29,12 @@ import argparse
 import sys
 from pathlib import Path
 
+# A launcher: the folder scripts/ holds the package probatrix.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
+
 if __name__ == "__main__":
     # in a lab space: the Python of the lab space (it has matplotlib)
-    sys.path.insert(0, str(Path(__file__).resolve().parent))
-    from studylib import lab as _lab  # noqa: E402
+    from probatrix.benchmarks.studylib import lab as _lab  # noqa: E402
     _lab.restart_with_lab_python(Path(__file__).resolve(), sys.argv[1:])
 
 import matplotlib  # noqa: E402
@@ -41,8 +43,7 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import matplotlib.ticker  # noqa: E402
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import latbench  # noqa: E402
+from probatrix.benchmarks import latbench  # noqa: E402
 
 # Categorical slots in fixed order (validated: dataviz reference palette,
 # light mode). Slots 3 and 4 are below 3:1 contrast, so every chart has a

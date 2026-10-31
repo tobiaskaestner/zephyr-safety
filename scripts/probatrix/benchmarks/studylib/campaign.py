@@ -45,7 +45,7 @@ from pathlib import Path
 
 import yaml
 
-import trees
+from probatrix.benchmarks import trees
 
 from . import instance, jsonout, layout, seal
 from . import lab as labmod
@@ -458,11 +458,13 @@ def estimate(lab, design, exp):
 
 def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, locked=False):
     """The pre-flight check: [(status, what, text)] with status ok / warn / fail."""
-    import hwmap
-    import run
+    from probatrix.benchmarks import hwmap
 
     from . import hwcheck as hwc
+    from . import kindhooks
     from . import lint as lintmod
+
+    run = kindhooks.run_module()
     out = []
 
     def add(status, what, text=""):

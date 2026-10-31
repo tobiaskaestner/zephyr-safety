@@ -4,18 +4,16 @@
 """Unit tests for the hardware map (scripts/probatrix/benchmarks/hwmap.py) and its use in run.py (no board)."""
 
 import argparse
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-import hwmap  # noqa: E402
-import run  # noqa: E402
-import trees  # noqa: E402
+from probatrix.benchmarks import hwmap  # noqa: E402
+from probatrix.benchmarks import run  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
 
 G4 = {
     "connected": True,

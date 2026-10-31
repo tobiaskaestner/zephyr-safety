@@ -3,15 +3,13 @@
 
 """Unit tests for scripts/probatrix/benchmarks/loadmodel.py (the model of the periodic load timers)."""
 
-import sys
 from pathlib import Path
 
 import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-import loadmodel  # noqa: E402
+from probatrix.benchmarks import loadmodel  # noqa: E402
 
 
 def test_xorshift32_reference_values():

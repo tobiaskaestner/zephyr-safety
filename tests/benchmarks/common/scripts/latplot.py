@@ -33,14 +33,14 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "scripts" / "probatrix" / "benchmarks"))
+sys.path.insert(0, str(REPO / "scripts"))
 
 import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-import plot as base  # noqa: E402  (the style and the colours of scripts/probatrix/benchmarks/plot.py)
+from probatrix.benchmarks import plot as base  # noqa: E402  (the style and the colours of scripts/probatrix/benchmarks/plot.py)
 
 FORMAT = "latbench-plots/1"
 PER_CHART = len(base.SERIES)

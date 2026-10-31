@@ -260,11 +260,7 @@ def point_value(rep, stat):
 
 def tail_value(rep, metric, stat):
     """A stat of the witness table of a histogram (metric tail.<hist>)."""
-    import sys
-    from pathlib import Path
-
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # scripts/probatrix/benchmarks: tails.py
-    import tails
+    from probatrix.benchmarks import tails
 
     t = (rep.get("tails") or {}).get(metric[5:])
     if t is None:

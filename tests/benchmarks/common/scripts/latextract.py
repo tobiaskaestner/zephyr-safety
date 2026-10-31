@@ -34,11 +34,11 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "scripts" / "probatrix" / "benchmarks"))
+sys.path.insert(0, str(REPO / "scripts"))
 
-import latbench  # noqa: E402
-import m4  # noqa: E402
-import trees  # noqa: E402
+from probatrix.benchmarks import latbench  # noqa: E402
+from probatrix.benchmarks import m4  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
 
 
 def valid_max(h, ovf):
@@ -110,7 +110,7 @@ def cfg_check(cfg, config):
 def binutils_prefix(run_dir):
     """The binutils of the Zephyr SDK: of the lab space that owns the run (not of the current
     folder), else ~/zephyr-sdk-<version>; or None."""
-    from studylib import lab as labmod
+    from probatrix.benchmarks.studylib import lab as labmod
     try:
         sdk = Path(os.path.expanduser(str(trees.load(lab=labmod.owner(run_dir), find_lab=False)["toolchain"]["zephyr_sdk"]["path"])))
     except Exception:

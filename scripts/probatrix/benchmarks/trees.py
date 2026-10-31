@@ -34,7 +34,7 @@ from pathlib import Path
 
 import yaml
 
-from studylib import lab as labmod
+from probatrix.benchmarks.studylib import lab as labmod
 
 # The safety repo, the folder of the benchmark apps and the folder of the
 # latency studies. Each experiment is a folder ex-<name>/ with
@@ -134,7 +134,7 @@ def load(trees_root=None, lab=None, find_lab=True):
 
 
 def load_boards():
-    from studylib import schema
+    from probatrix.benchmarks.studylib import schema
     try:
         return schema.check("boards", yaml.safe_load(BOARDS_FILE.read_text()), BOARDS_FILE)
     except schema.SchemaError as e:

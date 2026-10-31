@@ -3,17 +3,14 @@
 
 """Unit tests of the design lint (studylib/lint.py) on small designs."""
 
-import sys
 from pathlib import Path
 
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-from studylib import lint  # noqa: E402
-from test_studylib import make_design  # noqa: E402
+from probatrix.benchmarks.studylib import lint  # noqa: E402
+from .test_studylib import make_design  # noqa: E402
 
 
 def texts(root, severity=None):
@@ -81,8 +78,8 @@ def test_only_filters_by_folder(tmp_path):
 
 def test_scaffold_study_and_experiment_pass_the_lint(tmp_path):
     import pytest
-    from studylib import scaffold
-    from studylib.design import Design
+    from probatrix.benchmarks.studylib import scaffold
+    from probatrix.benchmarks.studylib.design import Design
     make_design(tmp_path)
     root = tmp_path / "design"
     top_before = (root / "study.yaml").read_text()
@@ -138,7 +135,7 @@ def test_grouping_rules_of_central_results(tmp_path):
 
 def test_schema_errors_name_the_key(tmp_path):
     import pytest
-    from studylib.design import Design, DesignError
+    from probatrix.benchmarks.studylib.design import Design, DesignError
     make_design(tmp_path)
     root = tmp_path / "design"
     edit(root / "st-sub" / "ex-exp1" / "experiment.yaml", lambda d: d.update(repat=2))

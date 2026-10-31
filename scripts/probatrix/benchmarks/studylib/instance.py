@@ -26,7 +26,7 @@ import shutil
 import subprocess
 from pathlib import Path
 
-import trees
+from probatrix.benchmarks import trees
 
 from . import jsonout, layout, seal
 from .design import repo_rel, repo_rev

@@ -4,13 +4,11 @@
 """Unit tests for trees.py setup with local git repos (no network)."""
 
 import subprocess
-import sys
 from pathlib import Path
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-import trees  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
 
 
 def git(*args, cwd):
@@ -124,7 +122,7 @@ def test_the_pins_of_the_repo_load():
 
 
 def test_lab_space_gives_the_paths(tmp_path, monkeypatch):
-    from studylib import lab as labmod
+    from probatrix.benchmarks.studylib import lab as labmod
     repo = tmp_path / "safety"
     (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
     (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
@@ -144,7 +142,7 @@ def test_lab_space_gives_the_paths(tmp_path, monkeypatch):
 
 
 def test_owner_of_a_results_root_outside_the_lab(tmp_path, monkeypatch):
-    from studylib import lab as labmod
+    from probatrix.benchmarks.studylib import lab as labmod
     repo = tmp_path / "safety"
     (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
     (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
@@ -159,7 +157,7 @@ def test_owner_of_a_results_root_outside_the_lab(tmp_path, monkeypatch):
 
 def test_lab_init_records_the_venv_and_checks_the_packages(tmp_path, monkeypatch):
     import sys as _sys
-    from studylib import lab as labmod
+    from probatrix.benchmarks.studylib import lab as labmod
     repo = tmp_path / "lab" / "safety"
     (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
     (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")

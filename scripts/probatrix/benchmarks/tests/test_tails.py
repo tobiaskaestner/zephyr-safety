@@ -15,13 +15,12 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 REPO = SCRIPTS.parents[2]
-sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(REPO / "tests" / "benchmarks" / "common" / "scripts"))
 
-import latbench  # noqa: E402
-import tails  # noqa: E402
-from studylib import checks, stats  # noqa: E402
-from studylib.stats import NoValue  # noqa: E402
+from probatrix.benchmarks import latbench  # noqa: E402
+from probatrix.benchmarks import tails  # noqa: E402
+from probatrix.benchmarks.studylib import checks, stats  # noqa: E402
+from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
 
 META = {"sys_timer_hz": "170000000", "stim_timer_hz": "170000000", "tick_period_cyc": "17000"}
 
@@ -187,7 +186,7 @@ def test_a_check_reads_the_tail_metric(tmp_path):
 # ------------------------------------------------------------------ data.py
 def test_data_tables_of_the_witnesses(tmp_path):
     pytest.importorskip("pandas")
-    import data
+    from probatrix.benchmarks import data
 
     class Fake:
         def points(self, experiment):
@@ -211,8 +210,8 @@ def test_data_tables_of_the_witnesses(tmp_path):
 def test_notebook_figure_of_the_witnesses(tmp_path):
     pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import data
-    import nbfig
+    from probatrix.benchmarks import data
+    from probatrix.benchmarks import nbfig
 
     class Fake:
         def points(self, experiment):
@@ -237,7 +236,7 @@ DIS_A = """
 
 
 def test_prestamp_masks_registers_and_literal_offsets():
-    import prestamp
+    from probatrix.benchmarks import prestamp
     a = prestamp.parse(DIS_A)
     assert a[0] == (2, "mov", "r0, sp") and a[1][0] == 4
     b = prestamp.parse(DIS_A.replace("ldr\tr2, [pc, #264]", "ldr\tr6, [pc, #276]").replace("r0, [r3, #36]",

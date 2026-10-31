@@ -54,7 +54,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
-import trees
+from probatrix.benchmarks import trees
 
 from . import instance, jsonout, layout, seal
 from .design import Design, repo_rel

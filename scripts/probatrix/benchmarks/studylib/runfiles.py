@@ -20,10 +20,9 @@ from pathlib import Path
 
 import yaml
 
-import run as runpy
-import trees
+from probatrix.benchmarks import trees
 
-from . import images, seal
+from . import images, kindhooks, seal
 from .design import repo_rel
 
 POINT_FILES = (".config", "zephyr.dts", "build.log")
@@ -77,7 +76,7 @@ def design_axes(experiment_file):
     if experiment_file is None or not Path(experiment_file).is_file():
         return {}
     try:
-        return {p["id"]: p["axes"] for p in runpy.expand_points(yaml.safe_load(Path(experiment_file).read_text()))}
+        return {p["id"]: p["axes"] for p in kindhooks.expand_points(yaml.safe_load(Path(experiment_file).read_text()))}
     except SystemExit:
         return {}
 

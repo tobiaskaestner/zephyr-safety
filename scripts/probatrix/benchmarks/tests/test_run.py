@@ -11,9 +11,8 @@ from pathlib import Path
 import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-import run  # noqa: E402
+from probatrix.benchmarks import run  # noqa: E402
 
 
 def make_run(tmp_path, points):

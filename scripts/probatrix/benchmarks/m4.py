@@ -42,8 +42,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-import latbench  # noqa: E402
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))   # scripts/: the package probatrix
+from probatrix.benchmarks import latbench  # noqa: E402
 
 EXC_NAMES = {0: "thread", 2: "NMI", 3: "HardFault", 11: "SVC", 14: "PendSV", 15: "SysTick"}
 
@@ -217,7 +217,7 @@ def find_prefix(log, given=None):
 
 def symbolizer_for(log, elf=None, prefix=None):
     if not elf:
-        from studylib import images
+        from probatrix.benchmarks.studylib import images
         elf = images.find(Path(log).parent, ".elf") or Path(log).parent / "zephyr.elf"
     elf = Path(elf)
     prefix = find_prefix(log, prefix)

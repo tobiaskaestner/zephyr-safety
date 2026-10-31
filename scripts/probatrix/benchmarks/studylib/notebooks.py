@@ -34,7 +34,7 @@ import os
 import re
 from pathlib import Path
 
-import trees
+from probatrix.benchmarks import trees
 import yaml
 
 from . import layout

@@ -19,7 +19,7 @@ from pathlib import Path
 
 import yaml
 
-from trees import BENCH_DIR
+from probatrix.benchmarks.trees import BENCH_DIR
 
 DEFAULT = BENCH_DIR / "hw-map.yml"
 SCHEMA = "scripts/schemas/twister/hwmap-schema.yaml"  # in a Zephyr tree

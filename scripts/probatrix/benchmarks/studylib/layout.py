@@ -15,7 +15,7 @@ tree (validation/empirical/latencies, results/<top>).
 import re
 from pathlib import Path
 
-from trees import EXPERIMENT_PREFIX, STUDY_PREFIX  # noqa: F401
+from probatrix.benchmarks.trees import EXPERIMENT_PREFIX, STUDY_PREFIX  # noqa: F401
 
 UTC_RE = re.compile(r"^\d{8}T\d{6}Z$")
 

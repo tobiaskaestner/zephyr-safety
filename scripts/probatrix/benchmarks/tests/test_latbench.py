@@ -21,9 +21,8 @@ import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
-sys.path.insert(0, str(SCRIPTS))
 
-import latbench  # noqa: E402
+from probatrix.benchmarks import latbench  # noqa: E402
 
 
 def write_log(tmp_path, text, name="run.log"):
@@ -280,7 +279,7 @@ def test_mean():
 
 # ----------------------------------------------------------------------- plot
 
-plot = pytest.importorskip("plot")
+plot = pytest.importorskip("probatrix.benchmarks.plot")
 
 
 def test_values_and_invalid():

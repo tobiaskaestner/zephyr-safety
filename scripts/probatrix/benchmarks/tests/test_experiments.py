@@ -8,17 +8,15 @@ only after the build. The lint (studylib/lint.py) finds such errors in the
 design files before a run.
 """
 
-import sys
 from pathlib import Path
 
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-import run  # noqa: E402
-import trees  # noqa: E402
-from studylib import lint  # noqa: E402
+from probatrix.benchmarks import run  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import lint  # noqa: E402
 
 
 def test_repo_design_has_no_lint_errors():

@@ -88,19 +88,20 @@ import subprocess
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# A launcher: the folder scripts/ holds the package probatrix.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 if __name__ == "__main__":
     # in a lab space: the Python of the lab space (before PyYAML and the other packages)
-    from studylib import lab as _lab  # noqa: E402
+    from probatrix.benchmarks.studylib import lab as _lab  # noqa: E402
     _lab.restart_with_lab_python(Path(__file__).resolve(), sys.argv[1:])
 
 import yaml  # noqa: E402
 
-import hwmap  # noqa: E402
-import latbench  # noqa: E402
-import trees  # noqa: E402
-from studylib import lab as labmod  # noqa: E402
-from studylib import lint, schema, seal  # noqa: E402
+from probatrix.benchmarks import hwmap  # noqa: E402
+from probatrix.benchmarks import latbench  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
+from probatrix.benchmarks.studylib import lint, schema, seal  # noqa: E402
 
 BENCH_DIR = trees.BENCH_DIR
 
@@ -218,7 +219,7 @@ def bench_hash(repo_root, rev, kind):
 
 def flash_command(board_cfg, zephyr, pdir, probe):
     """Return one command that runs the flash commands of the board in order."""
-    from studylib import images
+    from probatrix.benchmarks.studylib import images
     fields = {"zephyr": str(zephyr), "elf": str(images.find(pdir, ".elf") or pdir / "zephyr.elf"),
               "hex": str(images.find(pdir, ".hex") or pdir / "zephyr.hex"), "probe": probe}
     cmds = [[arg.format(**fields) for arg in cmd] for cmd in board_cfg["flash"]]
@@ -380,7 +381,7 @@ class Builder:
         return {"repo": str(self.repo_root), "trees_root": str(self.tree_cfg["root"])}
 
     def key(self, tree, pt):
-        from studylib import buildcache
+        from probatrix.benchmarks.studylib import buildcache
         pins = {r: self.tree_cfg["trees"][tree]["repos"][r]["rev"] for r in self.repos}
         inputs = buildcache.key_inputs(self.board, self.exp["app"], pins,
                                        self.tree_cfg["toolchain"]["zephyr_sdk"]["version"],
@@ -398,7 +399,7 @@ class Builder:
 
         The images get the names <app>-<tree>-<point>.elf/.hex in pdir (studylib/images.py).
         """
-        from studylib import images
+        from probatrix.benchmarks.studylib import images
         check_repo_unchanged(self.repo_root, self.repo_rev)
         name = f"{tree}/{pt['id']}"
         rename = images.names(self.exp["app"], tree, pt["id"])
@@ -453,7 +454,7 @@ class Builder:
 
 def cache_state(exp_path, lab):
     """(points, points with an image in the build cache of the lab space) of an experiment."""
-    from studylib import buildcache
+    from probatrix.benchmarks.studylib import buildcache
     exp = yaml.safe_load(Path(exp_path).read_text())
     tree_cfg = trees.load(lab=lab)
     boards = trees.load_boards()
@@ -539,7 +540,7 @@ def compare_point(pdir, bdir, elf_sha256, objcopy=None, tmp=None):
     objcopy is given, "ELF image" compares the loadable sections of the two ELFs.
     .config and zephyr.dts are compared without their comments (paths of the host).
     """
-    from studylib import images
+    from probatrix.benchmarks.studylib import images
     same, diff = [], []
     elf = bdir / "zephyr" / "zephyr.elf"
     old_elf = images.find(pdir, ".elf")
@@ -689,7 +690,7 @@ def rebuild(args):
             run_build(cmake, build_env(trees.repo_dir(cfg, e["tree"], "zephyr"), sdk), bdir,
                       tmp / f"{e['tree']}-{e['id']}.log", name, cwd=cfg["root"] / e["tree"])
             same, diff = compare_point(pdir, bdir, e["elf_sha256"], cmake_cache_value(bdir, "CMAKE_OBJCOPY"), tmp)
-            from studylib import images
+            from probatrix.benchmarks.studylib import images
             if images.find(pdir, ".hex") is not None:
                 image_same = "zephyr.hex" in same
             else:
@@ -818,8 +819,8 @@ def main():
         fail("no points to run")
     # the run list of an instance: check the role and the target now, not after hours of capture
     if args.out and (Path(args.out) / "instance.json").is_file() and not args.build_only:
-        from studylib import instance as instmod
-        from studylib.design import Design
+        from probatrix.benchmarks.studylib import instance as instmod
+        from probatrix.benchmarks.studylib.design import Design
         if args.only and args.role is None:
             fail("a run of some points (--only) into an instance needs --role (adjustment or excluded with "
                  "--reason, or evidence)")
@@ -839,7 +840,7 @@ def main():
     if not args.build_only:
         if lab and not args.campaign:
             # a run by hand takes the board lock (a campaign holds it already and gives it to run.py)
-            from studylib import campaign as campmod
+            from probatrix.benchmarks.studylib import campaign as campmod
             try:
                 campmod.take_lock(lab, f"run.py-{os.getpid()}", [board])
             except campmod.CampaignError as e:
@@ -847,7 +848,7 @@ def main():
         hw = select_hardware(args, board, trees.repo_dir(tree_cfg, exp["trees"][0], "zephyr"))
         port = hw["serial"]
         print(f"board {board}: probe {hw['probe']} ({hw['product']}), console {port}")
-    from studylib import buildcache
+    from probatrix.benchmarks.studylib import buildcache
     cache = buildcache.Cache(lab.build_cache) if lab and not args.no_cache else None
     builder = Builder(exp, tree_cfg, repos, board, board_cfg, sdk, repo_root, repo_rev, cache,
                       log=lambda m: print(m, flush=True))
@@ -955,8 +956,8 @@ def main():
     digest = seal.write(run_dir)
     print(f"results in {run_dir}  ({digest})")
     if (out / "instance.json").is_file():
-        from studylib import instance
-        from studylib.design import Design
+        from probatrix.benchmarks.studylib import instance
+        from probatrix.benchmarks.studylib.design import Design
         try:
             rid = instance.add(Design(), out, run_dir, role=args.role, reason=args.reason, campaign=args.campaign)
         except instance.InstanceError as e:

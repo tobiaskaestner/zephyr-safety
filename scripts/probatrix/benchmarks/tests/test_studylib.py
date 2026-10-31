@@ -4,18 +4,16 @@
 """Unit tests of studylib: seals, values, check forms, central results and a build (no board)."""
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
 
-from studylib import build, central, checks, instance, jsonout, layout, seal, stats  # noqa: E402
-from studylib.design import Design  # noqa: E402
-from studylib.stats import NoValue  # noqa: E402
+from probatrix.benchmarks.studylib import build, central, checks, instance, jsonout, layout, seal, stats  # noqa: E402
+from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
 
 
 # ------------------------------------------------------------------ helpers
@@ -337,7 +335,7 @@ def test_build_small_tree(tmp_path, monkeypatch):
     assert sj["hypotheses"][0]["verdict"] == "confirmed"
     t, w = build.build(res / "top", dry=True, log=lambda *a: None)
     assert w.differ == []
-    from studylib import html
+    from probatrix.benchmarks.studylib import html
     (inst / "ex-exp1" / "plots").mkdir(exist_ok=True)          # the overview plot and the report on the study page
     (inst / "ex-exp1" / "plots" / "plots.json").write_text(json.dumps({"runs": [], "app": "wake_latency", "plots": [
         {"kind": "overview", "metric": "isr2thr", "file": "overview-isr2thr.svg"}]}))
@@ -384,7 +382,7 @@ def tiny_elf(payload):
 
 
 def test_image_and_code_digest(tmp_path):
-    from studylib import runfiles
+    from probatrix.benchmarks.studylib import runfiles
     rev_a, rev_b = "a" * 40, "b" * 40
     (tmp_path / "a.elf").write_bytes(tiny_elf(b"code" + rev_a.encode() + b"more"))
     (tmp_path / "b.elf").write_bytes(tiny_elf(b"code" + rev_b.encode() + b"more"))
@@ -551,7 +549,7 @@ def test_reference_digest_and_manual_verdict_are_checked(tmp_path, monkeypatch):
 
 def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     pytest.importorskip("pandas")
-    import data
+    from probatrix.benchmarks import data
     design = make_design(tmp_path)
     monkeypatch.setattr(build, "Design", lambda: design)
     res = tmp_path / "results"
@@ -584,7 +582,7 @@ def test_notebook_figures(monkeypatch):
     """The figures of nbfig: one trace per series and metric, a menu for the metrics, colours by series."""
     pd = pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import nbfig
+    from probatrix.benchmarks import nbfig
     h = {"irq": hist([(50, 9), (60, 1)]), "isr2thr": hist([(700, 10)])}
     series = {"a": h, "b": h}
     fig = nbfig.ccdf(series, "t")
@@ -650,7 +648,7 @@ def test_notebook_diffs_and_check_limits():
     """nbfig.diffs: each point minus the reference of the same load; check_limits: the checks as differences."""
     pd = pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import nbfig
+    from probatrix.benchmarks import nbfig
     hyp = {"H1": {"id": "H1", "checks": [
         {"id": "a", "experiment": "e", "metric": "isr2thr", "stat": "p50", "select": {"point": "v1"},
          "expect": {"range": [705, 720]}},
@@ -684,7 +682,7 @@ def test_notebook_diff_fig_legend_and_menu():
     """diff_fig: the reference points are left out; a legend entry per group and metric; the menu shows one metric."""
     pd = pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import nbfig
+    from probatrix.benchmarks import nbfig
     d = nbfig.diffs(FakeInst(kconfig_rows(pd)), "e")
     lim = pd.DataFrame([{"check": "H1 a", "point": "v1", "metric": "isr2thr", "stat": "p50", "lo": 0, "hi": nbfig.INF,
                          "expect": "x"}])
@@ -713,7 +711,7 @@ def test_notebook_modes_and_tables():
     """nbfig.modes counts the modes as the checks do (fine bins); coarse=True adds the coarse bins."""
     pd = pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import nbfig
+    from probatrix.benchmarks import nbfig
     h = hist([(100, 200), (101, 100), (103, 50), (110, 1), (300, 300)], coarse=[(2048, 349, 32)], n=2000)
     assert nbfig.modes(h) == [(a, b, c / 2000) for a, b, c in stats.modes(h)] == [(100, 103, 0.175), (300, 300, 0.15)]
     assert nbfig.modes(h, coarse=True)[-1] == (2048, 2079, 0.1745)
@@ -734,8 +732,8 @@ def test_notebook_modes_and_tables():
 def test_notebook_limits_distinct_and_sites():
     pd = pytest.importorskip("pandas")
     pytest.importorskip("plotly")
-    import data
-    import nbfig
+    from probatrix.benchmarks import data
+    from probatrix.benchmarks import nbfig
     df = pd.DataFrame([{"check": "H1 a", "series": "s1", "value": 5, "lo": 0, "hi": 10},
                        {"check": "H1 a", "series": "s2", "value": 5, "lo": 0, "hi": 10},
                        {"check": "H1 b", "series": "s1", "value": 30, "lo": 0, "hi": 20}])
@@ -828,7 +826,7 @@ def test_a_check_with_a_todo_text_is_a_draft(tmp_path, monkeypatch):
 
 
 def test_missing_runs_and_the_summary(tmp_path, monkeypatch):
-    import study
+    from probatrix.benchmarks import study
     design = make_design(tmp_path)
     res = tmp_path / "results"
     monkeypatch.setattr(build, "Design", lambda: design)
@@ -852,7 +850,7 @@ def test_a_long_measured_text_is_short():
 
 def test_the_executed_copy_has_the_study_text(tmp_path, monkeypatch):
     """The copy in the results tree: the place in the study tree, study.md, the experiment.md files."""
-    from studylib import notebooks
+    from probatrix.benchmarks.studylib import notebooks
     design = make_design(tmp_path)
     nb = '{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}\n'
     (tmp_path / "design" / "report.ipynb").write_text(nb)
@@ -880,7 +878,7 @@ def test_the_executed_copy_has_the_study_text(tmp_path, monkeypatch):
 
 
 def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
-    from studylib import notebooks
+    from probatrix.benchmarks.studylib import notebooks
     design = make_design(tmp_path)
     nb = tmp_path / "design" / "st-sub" / "report.ipynb"
     nb.write_text('{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}\n')

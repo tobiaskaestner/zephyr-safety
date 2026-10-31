@@ -102,12 +102,13 @@ import os
 import sys
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
+# A launcher: the folder scripts/ holds the package probatrix.
+sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 
 # The lab space and the restart come first: studylib.lab needs no package outside the standard
 # library, so a study.py that the system Python starts can restart with the Python of the lab
 # space before it imports PyYAML and the other packages.
-from studylib import lab as labmod  # noqa: E402
+from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
 
@@ -139,10 +140,10 @@ def reexec_in_lab_repo(argv):
 if __name__ == "__main__":
     reexec_in_lab_repo(sys.argv[1:])
 
-import trees  # noqa: E402
-from studylib import build, html, instance, layout, seal  # noqa: E402
-from studylib import campaign, lint, scaffold  # noqa: E402
-from studylib.design import Design, DesignError  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import build, html, instance, layout, seal  # noqa: E402
+from probatrix.benchmarks.studylib import campaign, lint, scaffold  # noqa: E402
+from probatrix.benchmarks.studylib.design import Design, DesignError  # noqa: E402
 
 # ------------------------------------------------------------ design
 def cmd_lint(args):
@@ -186,7 +187,7 @@ def cmd_lab_init(args):
 
 
 def cmd_lab_status(args):
-    import hwmap
+    from probatrix.benchmarks import hwmap
     lab = labmod.require()
     rev, dirty = trees.repo_state(lab.repo)
     print(f"lab space {lab.id} in {lab.folder}")
@@ -220,9 +221,9 @@ def cmd_lab_status(args):
 
 
 def cmd_lab_hwcheck(args):
-    from studylib import hwcheck
+    from probatrix.benchmarks.studylib import hwcheck
     lab = labmod.require()
-    import hwmap
+    from probatrix.benchmarks import hwmap
     try:
         ok, lines, path = hwcheck.check(lab, args.board, tree=args.tree)
     except (hwcheck.HwCheckError, trees.TreeError, hwmap.HwMapError, OSError) as e:
@@ -238,12 +239,12 @@ def cmd_lab_hwcheck(args):
 
 
 def cmd_lab_export(args):
-    from studylib import exchange
+    from probatrix.benchmarks.studylib import exchange
     exchange.export(labmod.require(), args.out, args.folder, args.campaign, args.all)
 
 
 def cmd_lab_import(args):
-    from studylib import exchange
+    from probatrix.benchmarks.studylib import exchange
     lab = labmod.require()
     if args.close:
         exchange.close_import(lab, args.close)
@@ -606,7 +607,7 @@ def cmd_missing(args):
 
 
 def cmd_notebooks(args):
-    from studylib import notebooks
+    from probatrix.benchmarks.studylib import notebooks
     res = notebooks.run(args.root, force=args.force)
     bad = [r for r in res if r[2].startswith("FAILED")]
     print(f"{len(res)} notebooks: {sum(r[2] == 'ran' for r in res)} ran, "
@@ -781,7 +782,7 @@ def parser():
     return p
 
 
-from studylib.exchange import ExchangeError  # noqa: E402
+from probatrix.benchmarks.studylib.exchange import ExchangeError  # noqa: E402
 
 ERRORS = (ExchangeError, campaign.CampaignError, scaffold.ScaffoldError, DesignError, instance.InstanceError, seal.SealError, build.BuildError, labmod.LabError,
           trees.TreeError, ValueError)

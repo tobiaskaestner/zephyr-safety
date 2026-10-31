@@ -3,7 +3,7 @@
 
 """Load a built study instance for a notebook (needs pandas).
 
-    import data
+    from probatrix.benchmarks import data
     inst = data.load_instance("/wrk/z/lab-benchmarks/results/kernel-latency/st-.../st-...@nucleo_g474re")
     inst.hypotheses()            one row per hypothesis
     inst.checks()                one row per check, with the basis from the design
@@ -26,16 +26,13 @@ in the results tree by its name and run id.
 """
 
 import json
-import sys
 from pathlib import Path
 
 import yaml
 
-sys.path.insert(0, str(Path(__file__).resolve().parent))
-
-import tails as tailmod  # noqa: E402
-import trees  # noqa: E402
-from studylib import layout, stats  # noqa: E402
+from probatrix.benchmarks import tails as tailmod  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import layout, stats  # noqa: E402
 
 
 # The columns of Instance.tails.

@@ -3,7 +3,7 @@
 
 """Interactive figures for the study notebooks (needs pandas and plotly).
 
-    import data, nbfig
+    from probatrix.benchmarks import data, nbfig
     inst = data.load_instance(INSTANCE)
     nbfig.intro(inst)                          the instance, the tools, the question
     nbfig.ccdf({label: hists}, "title")        CCDF, a menu selects the metric
@@ -55,8 +55,8 @@ import plotly.graph_objects as go
 import plotly.io as pio
 from plotly.subplots import make_subplots
 
-import data
-from studylib import stats as _stats
+from probatrix.benchmarks import data
+from probatrix.benchmarks.studylib import stats as _stats
 
 # Each figure gives the plotly data (Jupyter) and HTML that loads plotly.js
 # from its CDN: nbconvert can only show the HTML.
@@ -618,7 +618,7 @@ def tails(df, title, x="phase"):
     """Each row of inst.tails() as a dot: x the tick phase of its stimulus (or another column), y its latency,
     the colour its cause (tails.CAUSES order), the symbol its point. The hover gives the labels, the function of
     the interrupted code and the sample number."""
-    import tails as tailmod
+    from probatrix.benchmarks import tails as tailmod
     fig = go.Figure()
     points = list(dict.fromkeys(df.point)) if len(df) else []
     for i, c in enumerate(tailmod.CAUSES):

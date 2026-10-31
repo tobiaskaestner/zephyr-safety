@@ -22,8 +22,8 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 REPO = HERE.parents[2]
-sys.path.insert(0, str(REPO / "scripts" / "probatrix" / "benchmarks"))
-from latbench import parse_log, quantile  # noqa: E402
+sys.path.insert(0, str(REPO / "scripts"))
+from probatrix.benchmarks.latbench import parse_log, quantile  # noqa: E402
 
 sys.path.insert(0, str(HERE.parent))
 import tdl  # noqa: E402

@@ -14,7 +14,7 @@ from pathlib import Path
 
 import yaml
 
-import trees
+from probatrix.benchmarks import trees
 
 from . import layout, schema
 from .seal import file_sha256

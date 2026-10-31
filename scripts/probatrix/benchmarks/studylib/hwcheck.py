@@ -24,8 +24,8 @@ import platform
 import subprocess
 import time
 
-import hwmap
-import trees
+from probatrix.benchmarks import hwmap
+from probatrix.benchmarks import trees
 
 TIMEOUT = 60
 
@@ -95,8 +95,9 @@ def _write(lab, board, started, rec):
 def _check(lab, board, log, tree, rec):
     import serial
 
-    import run
+    from . import kindhooks
 
+    run = kindhooks.run_module()
     cfg = trees.load(lab=lab)
     boards = trees.load_boards()
     repos = trees.board_repos(boards, board)

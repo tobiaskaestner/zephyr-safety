@@ -4,21 +4,18 @@
 """Unit tests of the export and import of runs between two lab spaces."""
 
 import json
-import sys
 from pathlib import Path
 
 import pytest
 import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-sys.path.insert(0, str(SCRIPTS))
-sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import trees  # noqa: E402
-from studylib import exchange, instance  # noqa: E402
-from studylib import lab as labmod  # noqa: E402
-from studylib.design import Design  # noqa: E402
-from test_studylib import make_design, make_run  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.benchmarks.studylib import exchange, instance  # noqa: E402
+from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
+from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from .test_studylib import make_design, make_run  # noqa: E402
 
 
 def make_lab(tmp_path, name, repo):
@@ -170,7 +167,7 @@ def test_import_refuses_only_a_damaged_run(two_labs, monkeypatch):
 
 
 def test_an_imported_running_campaign_can_be_closed(two_labs):
-    from studylib import campaign, jsonout
+    from probatrix.benchmarks.studylib import campaign, jsonout
     a, b, root, tmp = two_labs
     rid = instance.load(a.results / "top" / "st-sub@nucleo_g474re")["runs"][0]["id"]
     jsonout.write(a.campaigns / "20260101T000000Z.json", {

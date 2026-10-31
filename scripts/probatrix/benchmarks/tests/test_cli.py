@@ -3,14 +3,12 @@
 
 """The command line of study.py: each command is in a namespace."""
 
-import sys
 from pathlib import Path
 
 import pytest
 
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
-import study  # noqa: E402
+from probatrix.benchmarks import study  # noqa: E402
 
 COMMANDS = [
     ["design", "lint"],
