@@ -361,7 +361,7 @@ Source: the second method review (workspace notes), sections 2 to 6, and the rea
 user. Where the decision of the user differs from the review, the decision applies.
 
 D19. Records of the evidence: studies and experiments (review 2, question 4, sections 3.1 and 3.3)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Decision:** the formal runs are **studies and experiments**, as the runs of the latency
 benchmarks are. The tool is **probatrix** (planned). It has two kinds of study: ``tlaplus`` (TLC
@@ -470,7 +470,7 @@ Effects:
   ``HiddenMax = 3``.
 
 D24. The place of the tag ``@grain`` (review 2, section 1 item 3, section 3.5)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Decision:** the header of each module states its grain (``@grain coarse`` or ``@grain fine``).
 An action has the tag only where its grain differs from the grain of its module.
@@ -633,7 +633,7 @@ Effects:
   experiment of a design study of the model of time. It runs when the work on time starts.
 
 D33. The assumption of use ``AoU-H`` and its detector (review 2, section 6.4)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Decision:** "the client releases the interrupt lock within ``H`` ticks" is a named assumption of
 use, ``AoU-H``, with a detector.
@@ -678,7 +678,7 @@ Effects:
 - ``TimedWaitEnds`` and ``SelectionHappens`` stay design exploration.
 
 D36. The text of this document (review 2, sections 3.5 and 3.8)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 **Decision:** draft 4 of the methodology applies the decisions to the text directly, without the
 marker "(changed by Dn)". Also:

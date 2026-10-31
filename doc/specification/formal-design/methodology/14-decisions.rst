@@ -1,7 +1,7 @@
 14. Decisions
 =============
 
-This section records the reading of draft 3. Since 2026-10-30, the chapter :doc:`/decisions`
+This section records the reading of 2026-10-29. Since 2026-10-30, the chapter :doc:`/decisions`
 records each decision with an id (D1 to D37). Draft 4 applies them. Where a later decision changes
 an item below, the item names it.
 
