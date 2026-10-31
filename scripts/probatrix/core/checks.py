@@ -12,14 +12,14 @@ select:
     {point: id | [ids]}, {axes: {axis: value | [values]}}, {axis: value | [values]}
     A point that a select names must be in the data.
 stat:
-    a stat of stats.py; for a histogram metric, max(<stat>) / min(<stat>) is
+    a stat of the kind (kind.value); for a histogram metric, max(<stat>) / min(<stat>) is
     the largest / smallest value over the selected points.
 expect (exactly one form):
     range: [lo, hi]                each value in lo..hi (null: no limit); a
-                                   quantile in a coarse bin is in the range
-                                   only if the whole bin is
-    equals: x                      each value is x (for top_place: x is the
-                                   start function or one of its inlined functions)
+                                   value with a width (kind.width: a quantile in a coarse bin) is
+                                   in the range only if the whole interval is
+    equals: x                      each value is x (a number, a text or a boolean; for top_place:
+                                   x is the start function or one of its inlined functions)
     spread_le: x                   (max - min) / min over the points <= x (2 points or more, min > 0)
     spread_abs_le: x               max - min over the points <= x (2 points or more)
     order: [p1, p2, ...]           the values increase in this point order (all points in each series)
@@ -32,12 +32,15 @@ expect (exactly one form):
     ratio_to: {REF, stat} + range  value / the value of the reference
     diff_change: {point: P, of: [Q, R], range}
                                    (value - P) - (Q - R), in the same series
+Forms of a kind (kind.extra_forms(); the latency kind has these, see benchmarks/checks_hist.py):
     within: {experiment: E, stat: range} + tolerance_bins: k
                                    value in min..max of all points of E,
                                    +- k coarse bins
     hist_identical_to: {run | experiment, point[, tree]}
                                    the same histogram, bin for bin, on the same tree
                                    (experiment: its one evidence run)
+All forms except equals (and the forms of a kind that say otherwise) need numbers: a value that is
+a boolean or a text makes the check "not evaluated" with the reason (NoValue), never a TypeError.
 REF: point: P | axes: {axis: v} (the point with this axis value and the
 same other axes) | run: <study path>/<experiment>/<UTC> with point: P,
 points: {selected: reference} or the same point id, and tree: T |
@@ -49,29 +52,42 @@ never confirmed or wrong.
 
 import re
 
-from . import stats
-from .stats import NoValue
+from probatrix.core import kinds
+from probatrix.core.errors import NoValue
 
 AGG = re.compile(r"^(max|min)\((.+)\)$")
-FORMS = ("range", "equals", "spread_le", "spread_abs_le", "order", "diff_to", "ratio_to", "diff_change",
-         "within", "hist_identical_to")
-EXPECT = set(FORMS) | {"tolerance_bins"}
+FORMS = ("range", "equals", "spread_le", "spread_abs_le", "order", "diff_to", "ratio_to", "diff_change")
 
 
-def form_of(expect):
-    """The one comparison form of an expect (ratio_to takes range, within takes tolerance_bins)."""
+def kind_for(kind):
+    """The Kind to use: the one given, else the default kind of the Project."""
+    return kind if kind is not None else kinds.kind_of({})
+
+
+def forms_of(kind):
+    """{name: form} of the check forms that only this kind has (kind.extra_forms(), {} if the kind has none)."""
+    f = getattr(kind, "extra_forms", None)
+    return dict(f()) if f else {}
+
+
+def form_of(expect, kind=None):
+    """The one comparison form of an expect (ratio_to takes range, a form of a kind takes its companion keys,
+    e.g. within takes tolerance_bins)."""
+    extra = forms_of(kind_for(kind))
+    all_forms = (*FORMS, *extra)
     keys = set(expect)
     if "ratio_to" in keys:
         keys -= {"range"}
-    if "within" in keys:
-        keys -= {"tolerance_bins"}
-    forms = [k for k in FORMS if k in keys]
-    if len(forms) != 1 or keys - set(FORMS):
-        raise NoValue(f"expect {sorted(expect)}: give exactly one form of {', '.join(FORMS)}")
+    for name, f in extra.items():
+        if name in keys:
+            keys -= set(f.companions)
+    forms = [k for k in all_forms if k in keys]
+    if len(forms) != 1 or keys - set(all_forms):
+        raise NoValue(f"expect {sorted(expect)}: give exactly one form of {', '.join(all_forms)}")
     return forms[0]
 
 
-def problems(check):
+def problems(check, kind=None):
     """Forms of a check that the tools do not know (an empty list if all are known)."""
     if check.get("manual"):
         return [] if check.get("statement") else ["a manual check needs a statement"]
@@ -81,15 +97,16 @@ def problems(check):
         out.append("no expect")
     else:
         try:
-            form = form_of(expect)
+            form = form_of(expect, kind)
         except NoValue as e:
             out.append(str(e))
             form = None
-        if check.get("stat") is None and form not in ("hist_identical_to", None) \
+        extra = forms_of(kind_for(kind))
+        if check.get("stat") is None and form is not None and (form not in extra or extra[form].needs_stat) \
                 and not all((m or "").startswith("meta.") for m in as_list(check.get("metric"))):
             out.append("no stat")
     for m in as_list(check.get("metric")):
-        if not stats.known(m, check.get("stat")):
+        if not kind_for(kind).known(m, check.get("stat")):
             out.append(f"metric {m!r} with stat {check.get('stat')!r}")
     return out
 
@@ -145,27 +162,36 @@ def by_series(obs):
     return groups
 
 
-def is_point_agg(metric, stat):
-    """max(x) / min(x) of a histogram metric: over the selected points."""
-    return isinstance(stat, str) and bool(AGG.match(stat)) and not (metric or "").startswith("m4.")
+def number(v, what):
+    """v if it is a number. A boolean is not one here (in Python True is 1, so it would pass range [0, 2]),
+    and a text is not. The check is "not evaluated" with the reason (NoValue)."""
+    if isinstance(v, bool):
+        raise NoValue(f"{what}: the value is the boolean {v}; this form needs a number")
+    if isinstance(v, str):
+        raise NoValue(f"{what}: the value is the text {v!r}; this form needs a number")
+    return v
 
 
-def value(o, metric, stat):
-    return stats.value(o.rep, metric, stat)
+def value(kind, o, metric, stat, numeric=True):
+    """The value of one point (kind.value). numeric: a boolean or a text is an error (see number)."""
+    v = kind.value(o.rep, metric, stat)
+    return number(v, f"{o.point} {metric or ''} {stat or ''}".replace("  ", " ").rstrip()) if numeric else v
 
 
-def series_values(points, metric, stat):
+def series_values(kind, points, metric, stat, numeric=True):
     """[(name, value, obs, width)] for the points of one series; one entry for a point aggregate.
 
-    width is the bin width of a quantile value (1 for an exact value).
+    width is the width of the interval of a value (kind.width: the bin of a quantile; 1 for an exact value).
     """
-    m = AGG.match(stat) if is_point_agg(metric, stat) else None
+    pa = getattr(kind, "is_point_agg", None)
+    agg = pa(metric, stat) if pa else (isinstance(stat, str) and bool(AGG.match(stat)))
+    m = AGG.match(stat) if agg else None
     if m:
         f, inner = m.groups()
-        vals = [(o, value(o, metric, inner)) for o in points]
+        vals = [(o, value(kind, o, metric, inner, numeric)) for o in points]
         o, v = (max if f == "max" else min)(vals, key=lambda x: x[1])
-        return [(f"{f} over {len(vals)} points ({o.point})", v, o, stats.value_width(o.rep, metric, inner))]
-    return [(o.point, value(o, metric, stat), o, stats.value_width(o.rep, metric, stat)) for o in points]
+        return [(f"{f} over {len(vals)} points ({o.point})", v, o, kind.width(o.rep, metric, inner))]
+    return [(o.point, value(kind, o, metric, stat, numeric), o, kind.width(o.rep, metric, stat)) for o in points]
 
 
 def in_range(v, rng):
@@ -202,7 +228,8 @@ def rng_text(rng):
 
 
 class Result:
-    def __init__(self):
+    def __init__(self, kind=None):
+        self.kind = kind_for(kind)
         self.ok = True
         self.lines = []
         self.values = []
@@ -224,46 +251,36 @@ def label(series, metric, stat, with_run=False):
     return " ".join(parts)
 
 
-def check_functions(src, exp, metrics):
-    """An M4 metric with [function]: the function must be in the data (else it is a typo or another build)."""
+def check_functions(src, exp, metrics, kind):
+    """A metric that names a part of the data (M4: [function]): it must be in the data (else it is a typo
+    or another build). The kind says: kind.seen(rep, metric) for each point; True if no rule."""
     for m in metrics:
-        if m and m.startswith("m4.") and "[" in m:
-            if not any(stats.function_seen(o.rep, m) for o in src.observations(exp)):
+        if m and "[" in m:
+            if not any(kind.seen(o.rep, m) for o in src.observations(exp)):
                 raise NoValue(f"{m}: no M4 site of this function in any point of {exp}")
 
 
-def evaluate(check, src):
-    """Return {verdict, measured, limit, values} for a check that is not manual."""
+def evaluate(check, src, kind=None):
+    """Return {verdict, measured, limit, values} for a check that is not manual.
+
+    kind: the Kind that reads the values; else src.kind, else the default kind of the Project."""
+    kind = kind if kind is not None else (getattr(src, "kind", None) or kind_for(None))
     exp = check.get("experiment")
     expect = dict(check.get("expect") or {})
-    form = form_of(expect)
+    form = form_of(expect, kind)
+    extra = forms_of(kind)
     obs = select(src.observations(exp), check.get("select"))
     if not obs:
         raise NoValue(f"no points of {exp} for select {check.get('select')}")
     metrics = as_list(check.get("metric"))
     stat_list = as_list(check.get("stat"))
-    check_functions(src, exp, metrics)
-    res = Result()
+    check_functions(src, exp, metrics, kind)
+    res = Result(kind)
     series = by_series(obs)
 
-    if form == "hist_identical_to":
-        ref = expect["hist_identical_to"]
-        name = ref.get("run") or ref.get("experiment")
-        for s, pts in series.items():
-            tree = ref.get("tree", s[1])
-            cands = src.run_obs(ref["run"]) if "run" in ref else src.observations(ref["experiment"])
-            ref_obs = [r for r in cands if r.point == ref["point"] and r.tree == tree]
-            if not ref_obs:
-                raise NoValue(f"reference {name} has no point {tree}/{ref['point']}")
-            if len(ref_obs) > 1:
-                raise NoValue(f"reference {name} {ref['point']}: {len(ref_obs)} runs, the reference is not clear")
-            for o in pts:
-                for m in metrics:
-                    same = stats.hist_identical(o.rep["hists"][m], ref_obs[0].rep["hists"][m])
-                    res.add(same, f"{label(o.series, None, None, len(series) > 1)}/{o.point} {m}: "
-                                  f"{'same' if same else 'differs'}",
-                            {"point": o.point, "metric": m, "identical": same})
-        return finish(res, "the same histogram, bin for bin as " + f"{name} {ref['point']}")
+    if form in extra:
+        return finish(res, extra[form].evaluate(res, src, expect, series, metrics, stat_list,
+                                                len({o.run for o in obs}) > 1))
 
     with_run = len({o.run for o in obs}) > 1
     undecided = []
@@ -272,7 +289,7 @@ def evaluate(check, src):
             for st in stat_list:
                 lab = label(s, m, st, with_run)
                 if form == "range":
-                    for name, v, _, w in series_values(pts, m, st):
+                    for name, v, _, w in series_values(kind, pts, m, st):
                         ok = range_verdict(v, w, expect["range"])
                         if ok is None:
                             undecided.append(f"{lab} {name}: {fmt(v)}..{fmt(v + w - 1)} (coarse bin)")
@@ -281,12 +298,12 @@ def evaluate(check, src):
                         res.add(ok, f"{lab} {name}: {fmt(v)}{bin_text}", {"series": lab, "point": name, "value": v})
                 elif form == "equals":
                     want = expect["equals"]
-                    for name, v, _, _ in series_values(pts, m, st):
+                    for name, v, _, _ in series_values(kind, pts, m, st, numeric=False):
                         ok = v == want or (isinstance(v, str) and st == "top_place"
                                            and want in re.split(r"[ ()<]+|via ", v))
                         res.add(ok, f"{lab} {name}: {fmt(v)}", {"series": lab, "point": name, "value": v})
                 elif form in ("spread_le", "spread_abs_le"):
-                    nums = [v for _, v, _, _ in series_values(pts, m, st)]
+                    nums = [v for _, v, _, _ in series_values(kind, pts, m, st)]
                     if len(nums) < 2:
                         raise NoValue(f"{lab}: a spread needs two points or more, the series has {len(nums)}")
                     if form == "spread_le":
@@ -303,11 +320,9 @@ def evaluate(check, src):
                     order_check(res, lab, pts, m, st, expect["order"])
                 elif form in ("diff_to", "ratio_to", "diff_change"):
                     ref_check(res, lab, pts, m, st, expect, src)
-                elif form == "within":
-                    within_check(res, lab, pts, m, st, expect, src, s)
     if undecided and res.ok:
         raise NoValue("the limit is inside the coarse bin of the value: " + "; ".join(undecided))
-    out = finish(res, limit_text(expect))
+    out = finish(res, limit_text(expect, kind))
     if undecided:
         out["measured"] += "; undecided (coarse bin): " + "; ".join(undecided)
     return out
@@ -336,7 +351,7 @@ def order_check(res, lab, pts, m, st, order):
         raise NoValue(f"{lab}: order {order}: no group of two points or more")
     for other, g in sorted(groups.items()):
         g = sorted(g, key=rank)
-        vals = [(o.point, value(o, m, st)) for o in g]
+        vals = [(o.point, value(res.kind, o, m, st)) for o in g]
         ok = all(a[1] < b[1] for a, b in zip(vals, vals[1:]))
         where = (" " + ",".join(f"{a}={v}" for a, v in other)) if other else ""
         res.add(ok, f"{lab}{where}: " + " < ".join(f"{p} {fmt(v)}" for p, v in vals),
@@ -390,7 +405,8 @@ def ref_check(res, lab, pts, m, st, expect, src):
             for p in (spec["point"], q, r):
                 if p not in same:
                     raise NoValue(f"diff_change: no point {p} in {o.series}")
-            v = (value(o, m, st) - value(same[spec["point"]], m, st)) - (value(same[q], m, st) - value(same[r], m, st))
+            k = res.kind
+            v = (value(k, o, m, st) - value(k, same[spec["point"]], m, st)) - (value(k, same[q], m, st) - value(k, same[r], m, st))
             res.add(in_range(v, spec["range"]), f"{lab} {o.point}: ({o.point} - {spec['point']}) - ({q} - {r}) = {fmt(v)}",
                     {"series": lab, "point": o.point, "value": v})
         return
@@ -399,9 +415,9 @@ def ref_check(res, lab, pts, m, st, expect, src):
     ref_metric = spec.get("metric", m)
     ref_stat = spec.get("stat", st)
     pairs = []
-    for name, v, o, _ in series_values(pts, m, st):
+    for name, v, o, _ in series_values(res.kind, pts, m, st):
         r = ref_obs_for(o, spec, src)  # for a point aggregate: the reference of the point that gave it
-        pairs.append((name, v, r, value(r, ref_metric, ref_stat)))
+        pairs.append((name, v, r, value(res.kind, r, ref_metric, ref_stat)))
     diffs = []
     for name, v, r, rv in pairs:
         what = f"{r.point}" if r.run == pts[0].run else f"{r.run} {r.tree}/{r.point}"
@@ -430,26 +446,9 @@ def ref_check(res, lab, pts, m, st, expect, src):
                                              f"differ by {fmt(sp)}", {"series": lab, "diff_spread": sp})
 
 
-def within_check(res, lab, pts, m, st, expect, src, series):
-    spec = expect["within"]
-    ref = [r for r in src.observations(spec["experiment"]) if r.tree == series[1]]
-    if not ref:
-        raise NoValue(f"no points of {spec['experiment']} on tree {series[1]}")
-    rv = [value(r, m, st) for r in ref]
-    # one coarse bin: the width of the coarse bins of this metric (in the point or in the reference)
-    widths = [stats.coarse_width(x.rep["hists"][m]) for x in [*pts, *ref] if m in x.rep["hists"]]
-    width = max(widths) if widths else 1
-    for o in pts:
-        v = value(o, m, st)
-        tol = expect.get("tolerance_bins", 0) * width
-        ok = min(rv) - tol <= v <= max(rv) + tol
-        res.add(ok, f"{lab} {o.point}: {fmt(v)} ({spec['experiment']} {fmt(min(rv))}..{fmt(max(rv))}, +-{tol})",
-                {"series": lab, "point": o.point, "value": v, "range": [min(rv), max(rv)], "tolerance": tol})
-
-
-def limit_text(expect):
+def limit_text(expect, kind=None):
     e = dict(expect)
-    form = form_of(e)
+    form = form_of(e, kind)
     if form == "range":
         return rng_text(e["range"])
     if form == "equals":
@@ -470,9 +469,7 @@ def limit_text(expect):
             f"the differences differ by <= {fmt(d['spread_abs_le'])}"
     if form == "diff_change":
         return f"change {rng_text(e['diff_change']['range'])}"
-    if form == "within":
-        return f"within {e['within']['experiment']} +- {e.get('tolerance_bins', 0)} coarse bins"
-    return "the same histogram, bin for bin"
+    return forms_of(kind_for(kind))[form].limit(e)
 
 
 # Up to this number of lines, "measured" has them all; with more, it has a short form (the

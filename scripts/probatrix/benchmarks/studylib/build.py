@@ -31,7 +31,8 @@ from pathlib import Path
 from probatrix.benchmarks import kind as benchkind
 from probatrix.core import config
 
-from . import boardaxis, central, checks, instance, runfiles, stats
+from probatrix.core import checks
+from . import boardaxis, central, instance, runfiles, stats
 
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import Design, repo_rel, repo_rev

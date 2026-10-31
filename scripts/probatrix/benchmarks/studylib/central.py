@@ -33,7 +33,8 @@ import math
 import re
 import statistics
 
-from . import checks, stats
+from probatrix.core import checks
+from . import stats
 from .stats import MissingRun, NoValue
 
 PLACEHOLDER = re.compile(r"\{([\w.\-]+)(?::([^}]*))?\}")

@@ -58,3 +58,41 @@ def test_instance_axis_owns_the_three_rules(tmp_path):
 def test_format_and_ref_names():
     assert benchkind.KIND.format_id("run", 2) == "latbench-run/2"
     assert config.project().default_kind == "latbench"
+
+
+def test_lock_key_is_the_old_file_name_rule():
+    # old and new clones share the lab lock files: the key must not change
+    assert boardaxis.lock_key("nucleo_g474re") == "nucleo_g474re"
+    assert boardaxis.lock_key("a/b@c") == "a_b_c"
+    old = lambda board: board.replace("/", "_").replace("@", "_")      # noqa: E731  (campaign.lock_file, hwcheck.board_tag of 54c0180)
+    for b in ("nucleo_g474re", "nrf54l15dk", "a/b@c", "x@y/z@w", ""):
+        assert boardaxis.lock_key(b) == old(b) == hwcheck.board_tag(b)
+
+
+def test_bin_forms_reject_a_bool_and_a_text():
+    import pytest
+    from probatrix.core import checks
+    from probatrix.core.errors import NoValue
+
+    class Src:
+        kind = benchkind.KIND
+
+        def __init__(self, rep):
+            self.rep = rep
+
+        def observations(self, exp, series=None):
+            return [checks.Obs("e/1", "t", "p", {}, self.rep)]
+
+    for v in (True, "x"):
+        c = {"experiment": "e", "metric": None, "stat": "drift_per_wake",
+             "expect": {"within": {"experiment": "e"}, "tolerance_bins": 1}}
+        s = Src({"hists": {}, "meta": {}})
+        s.rep["meta"].update(clock_drift_cyc=1, samples=1)
+        # the reference value is read like the point value: both go through checks.value
+        k = benchkind.KIND
+        k.value = lambda rep, m, st, v=v: v
+        try:
+            with pytest.raises(NoValue, match="boolean|text"):
+                checks.evaluate(c, s)
+        finally:
+            del k.value                                     # back to the class method

@@ -82,8 +82,10 @@ class Kind(Protocol):
     # tails (as the run data has them). metric is a name ("<hist>", "meta.<key>", "m4.mask...",
     # "tail.<hist>") or None (a value of the whole point, e.g. the clock drift). stat is the
     # name of the statistic ("p99", "max", "n", "count_ge(100)", "drift_ppm", ...) or None.
-    def value(self, rep: dict, metric: str | None, stat: str | None) -> float:
-        """The value of metric and stat for one repetition. It raises core.errors.NoValue (with the
+    def value(self, rep: dict, metric: str | None, stat: str | None) -> float | str | bool:
+        """The value of metric and stat for one repetition: a number, a text or a boolean (a formal
+        kind has verdict "pass" and evidence true). The forms equals and in take any of them; all
+        numeric forms reject a boolean and a text with a NoValue (checks.number). It raises core.errors.NoValue (with the
         reason) if the point has no such value or the tools have none."""
 
     def known(self, metric: str | None, stat: str | list | None) -> bool:
@@ -100,11 +102,19 @@ class Kind(Protocol):
 
     # 5. extra check forms ----------------------------------------------------------
     def extra_forms(self) -> dict:
-        """{form name: function} of the check forms that only this kind has (benchmarks: the
-        bin-aware range, within and tolerance_bins, hist_identical_to). The function takes
-        (result, label, points, metric, stat, expect, source, series) like today's
-        checks.within_check and adds to the result. {} if there are none. R5a: still {}; the code
-        moves with checks.py in R5b."""
+        """{form name: form} of the check forms that only this kind has (benchmarks: within with
+        tolerance_bins, hist_identical_to; see benchmarks/checks_hist.py). {} if there are none.
+        A form object has:
+          companions: tuple of the keys of expect that go with it (within: ("tolerance_bins",))
+          needs_stat: whether the check needs a stat
+          limit(expect) -> str: the text of the limit
+          evaluate(res, src, expect, series, metrics, stat_list, with_run) -> str: adds its lines to the
+            checks.Result res (values only through res.kind and checks.value, which reject a boolean
+            or a text) and returns the limit text. It raises NoValue if the data cannot give a verdict."""
+
+    def is_point_agg(self, metric: str | None, stat: str | None) -> bool:
+        """Optional. Whether max(x) / min(x) as stat means the largest / smallest value over the
+        selected points (benchmarks: yes, except for M4 metrics). Without the hook: yes if the stat has that form."""
 
     # 6. generated checks -----------------------------------------------------------
     def generated_checks(self, experiment: dict) -> list:

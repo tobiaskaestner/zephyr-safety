@@ -19,7 +19,8 @@ sys.path.insert(0, str(REPO / "tests" / "benchmarks" / "common" / "scripts"))
 
 from probatrix.benchmarks import latbench  # noqa: E402
 from probatrix.benchmarks import tails  # noqa: E402
-from probatrix.benchmarks.studylib import checks, stats  # noqa: E402
+from probatrix.benchmarks.studylib import stats
+from probatrix.core import checks  # noqa: E402
 from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
 
 META = {"sys_timer_hz": "170000000", "stim_timer_hz": "170000000", "tick_period_cyc": "17000"}

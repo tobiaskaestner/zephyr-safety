@@ -101,7 +101,16 @@ class LatbenchKind:
         return stats.function_seen(rep, metric)
 
     def extra_forms(self):
-        return {}
+        from probatrix.benchmarks import checks_hist
+        return checks_hist.FORMS
+
+    @staticmethod
+    def is_point_agg(metric, stat):
+        """max(x) / min(x) of a metric is an aggregate over the selected points, but not for an M4 metric
+        (there it is inside the value)."""
+        import re
+        return isinstance(stat, str) and bool(re.match(r"^(max|min)\((.+)\)$", stat)) \
+            and not (metric or "").startswith("m4.")
 
     def generated_checks(self, experiment):
         return []

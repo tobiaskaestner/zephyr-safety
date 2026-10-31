@@ -23,7 +23,8 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import checks, kindhooks
+from probatrix.core import checks
+from . import kindhooks
 
 from probatrix.core import layout, schema
 from probatrix.core.design import Design, DesignError

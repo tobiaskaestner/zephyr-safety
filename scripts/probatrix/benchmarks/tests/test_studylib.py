@@ -14,7 +14,8 @@ import yaml
 SCRIPTS = Path(__file__).resolve().parent.parent
 
 from probatrix.benchmarks.studylib import boardaxis  # noqa: E402
-from probatrix.benchmarks.studylib import build, central, checks, instance, stats  # noqa: E402
+from probatrix.benchmarks.studylib import build, central, instance, stats
+from probatrix.core import checks  # noqa: E402
 
 from probatrix.core import seal  # noqa: E402
 from probatrix.core.design import Design  # noqa: E402
