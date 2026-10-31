@@ -10,9 +10,15 @@
  * for the contract. One CPU (CPUS = {c1}).
  *
  * Each fake function of a scheduler call is the custom fake of the FFF fake
- * with the same C name. Its comment names the operator of the contract. Where
- * the C code and the contract differ, the fake follows the C code, and the
- * comment says so.
+ * with the same C name. Its comment names the operator of the contract.
+ *
+ * The fake implements the module Scheduler (decision D11 of the formal
+ * design document). A contract test that passes on the fake and fails on the
+ * real sched.c is a candidate finding. Not applied yet: where the C code and
+ * the module differ (RF-2 to RF-6), the fake still follows the C code, and
+ * the comment says so. The check NoLostThread is in the fake and not yet in
+ * the module. The fake does not record the version of Scheduler.tla that it
+ * implements yet. That version pin waits for the drift tooling (D37).
  *
  * Check points: the fake evaluates the invariants only at the end of a
  * critical section that it sees (z_reschedule(), the selection in
