@@ -10,6 +10,11 @@ For each instance (the deepest first):
     ex-<experiment>/experiment.json for each experiment of the instance;
     study.json: the hypotheses with their checks, the central results.
 
+The generic part of the build: everything that the Kind does not know. The Kind gives the values of a run
+(run_json, app_json, value), the experiment.json and the plots (experiment_json, plot), the central results
+(central_result), the pending runs of a lab (pending) and the rules of the instance axis. This module
+does not import a kind.
+
 The build reads instance.json and the raw runs and does not change them.
 The same inputs and the same tools give the same bytes, so `check` can
 build again and compare. A build (not `check`) takes the run.json and the
@@ -22,31 +27,22 @@ reads an experiment that a running campaign has still to run is
 provisional: study.json says so in the entry and in "state".
 """
 
+import hashlib
 import json
-import subprocess
-import sys
 from pathlib import Path
 
-
-from probatrix.benchmarks import kind as benchkind
-from probatrix.core import config
-
-from probatrix.core import checks
-from . import boardaxis, central, instance, runfiles, stats
-
-from probatrix.core import jsonout, layout, seal
+from probatrix.core import checks, config, jsonout, kinds, layout, seal
 from probatrix.core.design import Design, repo_rel, repo_rev
-from .stats import MissingRun, NoValue
+from probatrix.core.errors import MissingRun, NoValue
 
-STATS = ["n", "invalid", "min", "p50", "p90", "p99", "p99.9", "p99.99", "max", "mean"]
 # Errors of the tools (not of the data): the check gets the verdict "tool error".
 TOOL_ERRORS = (KeyError, IndexError, TypeError, ZeroDivisionError, StopIteration, ValueError,
                AttributeError, RuntimeError, FileNotFoundError)
 
 
-def safe_limit(check):
+def safe_limit(check, kind=None):
     try:
-        return checks.limit_text(check.get("expect") or {})
+        return checks.limit_text(check.get("expect") or {}, kind)
     except NoValue:
         return str(check.get("expect"))
 
@@ -71,22 +67,23 @@ class Writer:
         else:
             jsonout.write(path, obj)
             self.written += 1
-        import hashlib
         return hashlib.sha256(data).hexdigest()
 
 
 class Tree:
-    def __init__(self, root, design=None, writer=None, log=print, pending=None):
+    def __init__(self, root, design=None, writer=None, log=print, pending=None, kind=None):
         self.root = Path(root).resolve()
         self.design = design or Design()
+        self.kind = kind or kinds.kind_of(self.design.top, config.project().root_of(self.design.root))
+        self.axis = self.kind.instance_axis
         self.writer = writer or Writer()
         self.log = log
-        rev, dirty = repo_rev()
-        self.made_by = {"tool": "scripts/probatrix/benchmarks/study.py", "safety_rev": rev}
+        rev, dirty = repo_rev(kind=self.kind)
+        self.made_by = {"tool": self.kind.tool, "safety_rev": rev}
         if dirty:
             self.made_by["dirty"] = True
         self.folders = layout.instance_folders(self.root)
-        self.data = {f: instance.load(f) for f in self.folders}
+        self.data = {f: layout.load_instance(f) for f in self.folders}
         self.ipath = {f: layout.instance_path_of(f, self.root) for f in self.folders}
         self.runs = {}        # run id -> (folder, entry)
         self.loaded = {}      # (folder, run id) -> (run.json, app.json, run sha, app sha)
@@ -102,12 +99,7 @@ class Tree:
 
     def find_pending(self):
         """{(instance folder, experiment): campaign id} of the running campaigns of the lab space."""
-        from . import campaign
-        from . import lab as labmod
-        lab = labmod.owner(self.root)
-        if lab is None:
-            return {}
-        return {(Path(f).resolve(), e): c for (f, e), c in campaign.pending(lab, self.design).items()}
+        return self.kind.pending(self.root, self.design)
 
     def waits_for(self, folder, experiments):
         """The reason why a result of the instance that reads these experiments is provisional, or None."""
@@ -130,14 +122,19 @@ class Tree:
         return "; ".join(dict.fromkeys(out)) or None
 
     # ------------------------------------------------------------ lookups
+    def strip(self, instance_path):
+        """The study path of an instance path (the kind's instance axis; no axis: the path itself)."""
+        return self.axis.strip(instance_path) if self.axis else instance_path
+
     def study(self, folder):
-        return self.design.study(boardaxis.strip_board(self.ipath[folder]))
+        return self.design.study(self.strip(self.ipath[folder]))
 
     def board(self, folder):
-        return instance.board_of(folder)
+        """The value of the instance axis that the instance fixes (the board), or None."""
+        return self.axis.of(folder) if self.axis else None
 
     def find_instance(self, study_path, board):
-        hits = [f for f in self.folders if boardaxis.strip_board(self.ipath[f]) == study_path
+        hits = [f for f in self.folders if self.strip(self.ipath[f]) == study_path
                 and (board is None or self.board(f) == board)]
         if len(hits) != 1:
             raise NoValue(f"instance of study {study_path} for board {board}: {len(hits)} found")
@@ -160,8 +157,8 @@ class Tree:
             efile = self.design.experiment(exp).folder / "experiment.yaml"
         rj, aj = self.earlier_files(run_dir, digest)
         if rj is None:
-            rj = runfiles.run_json(run_dir, run_id, digest, self.made_by, efile)
-            aj = runfiles.app_json(run_dir, rj["run"]["app"], run_id, digest, self.made_by)
+            rj = self.kind.run_json(run_dir, run_id, digest, self.made_by, efile)
+            aj = self.kind.app_json(run_dir, rj["run"]["app"], run_id, digest, self.made_by)
         app = rj["run"]["app"]
         rsha = self.writer.write(run_dir.parent / f"{run_dir.name}.run.json", rj)
         asha = self.writer.write(run_dir.parent / f"{run_dir.name}.{app}.json", aj)
@@ -248,11 +245,11 @@ class Tree:
                     res.append({"id": a["id"], "verdict": "open (manual)", "statement": a.get("statement")})
                     continue
                 try:
-                    out = checks.evaluate(chk, src)
+                    out = checks.evaluate(chk, src, self.kind)
                 except NoValue as e:
-                    out = {"verdict": "not evaluated", "measured": str(e), "limit": safe_limit(a)}
+                    out = {"verdict": "not evaluated", "measured": str(e), "limit": safe_limit(a, self.kind)}
                 except TOOL_ERRORS as e:
-                    out = {"verdict": "tool error", "measured": f"{type(e).__name__}: {e}", "limit": safe_limit(a)}
+                    out = {"verdict": "tool error", "measured": f"{type(e).__name__}: {e}", "limit": safe_limit(a, self.kind)}
                 res.append({"id": a["id"], **{k: out[k] for k in ("verdict", "measured", "limit")}})
             self.acceptance[(folder, r["id"])] = res
 
@@ -269,13 +266,13 @@ class Tree:
                     and (folder, r["id"]) in self.loaded]
             if not runs:
                 continue
-            ej = self.experiment_json(folder, exp, runs)
+            ej = self.kind.experiment_json(self, folder, exp, runs)
             sha = self.writer.write(folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "experiment.json", ej)
             experiments.append({"name": exp, "file": f"{layout.EXPERIMENT_PREFIX}{exp}/experiment.json", "sha256": sha})
             if not self.writer.dry:
                 # not a note of study.json: "analysis check" (a dry build without plots) must give the
                 # same bytes; the experiment page shows the error (plots/plots.json)
-                why = self.plot(folder, exp, runs)
+                why = self.kind.plot(self, folder, exp, runs)
                 if why:
                     self.log(f"warning: {layout.ipath_display(self.ipath[folder])}: {exp}: the plots failed: {why}")
             if ej.get("code_differs"):
@@ -292,7 +289,7 @@ class Tree:
                     entry["formerly"] = c["formerly"]
                 m = manual.get((h["id"], c["id"]))
                 if has_todo(c) or has_todo(h.get("statement")):
-                    entry.update(verdict=DRAFT, by=None, limit=safe_limit(c),
+                    entry.update(verdict=DRAFT, by=None, limit=safe_limit(c, self.kind),
                                  measured="the check or its hypothesis has a TODO text of a template")
                 elif c.get("manual"):
                     if m and m["verdict"] not in ("confirmed", "wrong"):
@@ -305,17 +302,17 @@ class Tree:
                                      statement=" ".join(str(c.get("statement", "")).split()))
                 else:
                     try:
-                        out = checks.evaluate(c, src)
+                        out = checks.evaluate(c, src, self.kind)
                         entry.update(verdict=out["verdict"], by="auto", measured=out["measured"],
                                      limit=out["limit"], values=out["values"],
                                      **({"measured_lines": out["measured_lines"]} if "measured_lines" in out else {}))
                     except NoValue as e:
-                        entry.update(verdict="not evaluated", by="auto", measured=str(e), limit=safe_limit(c))
+                        entry.update(verdict="not evaluated", by="auto", measured=str(e), limit=safe_limit(c, self.kind))
                         if isinstance(e, MissingRun):
                             entry["missing_run"] = {"experiment": e.experiment, "in": e.where}
                     except TOOL_ERRORS as e:
                         entry.update(verdict="tool error", by="auto", measured=f"{type(e).__name__}: {e}",
-                                     limit=safe_limit(c))
+                                     limit=safe_limit(c, self.kind))
                     if m:
                         notes.append(f"{h['id']} {c['id']}: the manual verdict is not used, the check is automatic")
                 why = self.waits_for(folder, [c.get("experiment")] + reads_experiments(c))
@@ -330,7 +327,7 @@ class Tree:
         results = []
         for cr in study.central_results:
             try:
-                results.append(central.evaluate(cr, src, ctx))
+                results.append(self.kind.central_result(cr, src, ctx))
             except NoValue as e:
                 results.append({"id": cr["id"], "stat": cr.get("stat"), "texts": [], "rows": [],
                                 "by": "auto", "not_evaluated": str(e),
@@ -359,8 +356,7 @@ class Tree:
                                  "different": [f"{p['tree']}/{p['point']}" for p in d.get("points", [])
                                                if p.get("verdict") != "same"]})
         ishas = jsonout.dumps(data)
-        import hashlib
-        sj = {"format": benchkind.KIND.format_id("study", 2), "made_by": self.made_by,
+        sj = {"format": self.kind.format_id("study", 2), "made_by": self.made_by,
               "instance": data["instance"],
               "design": {"folder": repo_rel(study.folder),
                          "safety_rev": self.made_by["safety_rev"], "files": study.files()},
@@ -379,84 +375,6 @@ class Tree:
                              for c in self.folders if c.parent == folder]}
         self.results[folder] = sj
         self.writer.write(folder / "study.json", sj)
-
-    def plot(self, folder, exp, runs):
-        """The standard plots of an experiment of an instance (the plot.py of its app), from the app data
-        of the runs that are not excluded (evidence and adjustment: a smoke campaign shows its graphs
-        too), in ex-<exp>/plots/; None, or the reason why they failed."""
-        ev = sorted((r for r in runs if r["role"] != "excluded"), key=lambda r: r["id"].split("/")[-1])
-        if not ev:
-            return None
-        app = self.loaded[(folder, ev[0]["id"])][0]["run"]["app"]
-        script = plot_script(app)
-        if not script.is_file():
-            return None
-        args = []
-        for r in ev:
-            run_dir = folder / layout.run_folder(r["id"])
-            tags = ([] if r["role"] == "evidence" else [r["role"]]) + \
-                (["acceptance failed"] if self.failed_acceptance(folder, r["id"]) else [])
-            label = r["id"] + (f" ({', '.join(tags)})" if tags else "")
-            args.append(f"{label}={run_dir.parent / f'{run_dir.name}.{app}.json'}")
-        out = folder / f"{layout.EXPERIMENT_PREFIX}{exp}" / "plots"
-        res = subprocess.run([sys.executable, str(script), str(out), *args], capture_output=True, text=True)
-        err = out / "error.txt"
-        if res.returncode == 0:
-            err.unlink(missing_ok=True)
-            return None
-        why = (res.stderr.strip().splitlines() or ["?"])[-1][:300]
-        out.mkdir(parents=True, exist_ok=True)
-        err.write_text(f"{script.relative_to(config.project().repo)}: {why}\n")
-        return why
-
-    def experiment_json(self, folder, exp, runs):
-        rows, axes_all, core = [], set(), set()
-        for r in runs:
-            rj, aj, _, _ = self.loaded[(folder, r["id"])]
-            for p in rj["points"]:
-                axes_all |= set(p["axes"])
-        axes_all = sorted(axes_all)
-        out_runs = []
-        for r in runs:
-            rj, aj, rsha, asha = self.loaded[(folder, r["id"])]
-            core.add(aj.get("core_hz"))
-            utc = r["id"].split("/")[1]
-            out_runs.append({"id": r["id"], "digest": r["digest"], "role": r["role"],
-                             "excluded_by_acceptance": self.failed_acceptance(folder, r["id"]),
-                             "run_json": f"{utc}.run.json", "run_json_sha256": rsha,
-                             "app_json": f"{utc}.{aj['app']}.json", "app_json_sha256": asha})
-            for p, ap in zip(rj["points"], aj["points"]):
-                for rep in ap["reps"]:
-                    for metric, h in rep["hists"].items():
-                        vals = []
-                        for s in STATS:
-                            try:
-                                vals.append(stats.hist_value(h, s))
-                            except NoValue:
-                                vals.append(None)
-                        coarse = (h["coarse"][0][0], h["coarse"][0][2]) if h["coarse"] else (None, None)
-                        rows.append([r["id"], r["role"], p["tree"], p["point"], rep["rep"],
-                                     *[p["axes"].get(a) for a in axes_all], metric, *vals, *coarse,
-                                     p["image_sha256"], p.get("code_sha256")])
-        # points whose code differs between the evidence runs (other app or kernel code)
-        codes = {}
-        for r in runs:
-            if r["role"] != "evidence":
-                continue
-            for p in self.loaded[(folder, r["id"])][0]["points"]:
-                codes.setdefault((p["tree"], p["point"]), set()).add(p.get("code_sha256"))
-        differ = sorted(f"{t}/{pt}" for (t, pt), c in codes.items() if len(c) > 1)
-        efile = self.design.experiments.get(exp)
-        out = {"format": benchkind.KIND.format_id("experiment", 2), "made_by": self.made_by, "experiment": exp,
-               "design": efile.file_ref() if efile else None,
-               "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
-               "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
-                           "coarse_from", "coarse_width", "image_sha256", "code_sha256"],
-               "rows": rows}
-        if differ:
-            out["code_differs"] = differ
-        return out
-
 
 def reads_experiments(check):
     """The other experiments that a check reads (diff_to, within)."""
@@ -479,10 +397,6 @@ def has_todo(x):
     if isinstance(x, list):
         return any(has_todo(v) for v in x)
     return False
-
-
-def plot_script(app):
-    return benchkind.KIND.bench_dir / app / "scripts" / "plot.py"
 
 
 def hypothesis_entry(h, out_checks):
@@ -513,6 +427,7 @@ class Source:
 
     def __init__(self, tree, folder, only_run=None):
         self.tree, self.folder, self.only_run = tree, folder, only_run
+        self.kind = tree.kind
         self.notes = []
 
     def observations(self, exp, series=None):
@@ -575,7 +490,7 @@ class Context:
         """The central result cr_id of the instance of the sub-study name below this instance; NoValue
         if this results tree has no such instance (often: no run of it on this board yet)."""
         for c in self.tree.folders:
-            if c.parent == self.folder and boardaxis.strip_board(self.tree.ipath[c]).rsplit("/", 1)[-1] == name:
+            if c.parent == self.folder and self.tree.strip(self.tree.ipath[c]).rsplit("/", 1)[-1] == name:
                 sj = self.tree.results.get(c)
                 if sj:
                     r = next((r for r in sj["central_results"] if r["id"] == cr_id), None)

@@ -130,6 +130,25 @@ class Kind(Protocol):
          of(folder) -> value or None              the axis value an instance folder (or a parent) fixes
          lock_key(value) -> str                   the file-name part of the lock of this value"""
 
+    # 9. build (core/build.py calls these; the kind owns the files of its format) ----------
+    tool: str
+    """The text of made_by.tool in the aggregates ("scripts/probatrix/benchmarks/study.py")."""
+
+    def experiment_json(self, tree, folder: Any, experiment: str, runs: list) -> dict:
+        """The data of ex-<experiment>/experiment.json of an instance folder. tree is the core Tree
+        (tree.loaded, tree.design, tree.made_by, tree.failed_acceptance); runs are the run-list entries."""
+
+    def plot(self, tree, folder: Any, experiment: str, runs: list) -> str | None:
+        """Make the standard plots of an experiment. None, or the reason why they failed."""
+
+    def central_result(self, central_result: dict, source, context) -> dict:
+        """The central result of a study (core.build.Source, core.build.Context); NoValue if the data
+        cannot give it."""
+
+    def pending(self, root, design) -> dict:
+        """{(instance folder, experiment): campaign id} of the runs that a campaign has still to do for the
+        results tree root (provisional results). {} if the kind has no campaigns."""
+
     # 8. commands -------------------------------------------------------------------
     def commands(self) -> dict:
         """{command name: function} of CLI subcommands that only this kind has. {} if none.
@@ -183,9 +202,10 @@ def kind_of(design, *parents):
     return get(config.project().default_kind)
 
 
-def dirt_paths():
-    """The paths whose changes make a build dirty: the Project's and those of all kinds."""
+def dirt_paths(kind=None):
+    """The paths whose changes make a build dirty: the Project's and those of one kind (the given one,
+    else the default kind of the Project). Not those of the other kinds: an uncommitted edit of the
+    spec of one kind must not make a build of another kind dirty."""
     out = list(config.project().dirt_paths)
-    for name in names():
-        out += [p for p in get(name).dirt_paths if p not in out]
-    return tuple(out)
+    kind = kind if kind is not None else get(config.project().default_kind)
+    return tuple(out + [p for p in kind.dirt_paths if p not in out])

@@ -54,6 +54,7 @@ class LatbenchKind:
     format_prefix = "latbench"             # latbench-study/2, latbench-run/2, ...
     ref_prefix = "refs/latbench"           # refs/latbench/run/..., refs/latbench/campaign/...
     dirt_paths = ("tests/benchmarks",)
+    tool = "scripts/probatrix/benchmarks/study.py"
     instance_axis = BoardAxis()
 
     def __init__(self, repo=None):
@@ -99,6 +100,22 @@ class LatbenchKind:
     def seen(self, rep, metric):
         from probatrix.benchmarks.studylib import stats
         return stats.function_seen(rep, metric)
+
+    def experiment_json(self, tree, folder, experiment, runs):
+        from probatrix.benchmarks.studylib import experimentjson
+        return experimentjson.experiment_json(tree, folder, experiment, runs)
+
+    def plot(self, tree, folder, experiment, runs):
+        from probatrix.benchmarks.studylib import experimentjson
+        return experimentjson.plot(tree, folder, experiment, runs)
+
+    def central_result(self, central_result, source, context):
+        from probatrix.benchmarks.studylib import central
+        return central.evaluate(central_result, source, context)
+
+    def pending(self, root, design):
+        from probatrix.benchmarks.studylib import experimentjson
+        return experimentjson.pending(root, design)
 
     def extra_forms(self):
         from probatrix.benchmarks import checks_hist

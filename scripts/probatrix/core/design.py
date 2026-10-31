@@ -37,12 +37,14 @@ def repo_rel(path):
     return str(path.relative_to(repo)) if path.is_relative_to(repo) else str(path)
 
 
-def repo_rev(repo=None):
-    """(rev, dirty) of the safety repo that holds the design and the tools."""
+def repo_rev(repo=None, kind=None):
+    """(rev, dirty) of the safety repo that holds the design and the tools. A change below the dirt paths
+    of the Project or of the kind of the design (default: the Project's default kind) makes it dirty;
+    a change below the paths of another kind does not."""
     project = config.project()
     repo = project.repo if repo is None else repo
     rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *kinds.dirt_paths()],
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *kinds.dirt_paths(kind)],
                                 cwd=repo, capture_output=True, text=True).stdout.strip())
     return rev, dirty
 

@@ -14,8 +14,8 @@ import yaml
 SCRIPTS = Path(__file__).resolve().parent.parent
 
 from probatrix.benchmarks.studylib import boardaxis  # noqa: E402
-from probatrix.benchmarks.studylib import build, central, instance, stats
-from probatrix.core import checks  # noqa: E402
+from probatrix.benchmarks.studylib import central, instance, runfiles, stats
+from probatrix.core import build, checks  # noqa: E402
 
 from probatrix.core import seal  # noqa: E402
 from probatrix.core.design import Design  # noqa: E402
@@ -778,10 +778,10 @@ def test_provisional_while_a_campaign_runs_and_reuse(tmp_path, monkeypatch):
     assert sj["state"] == {"final": True, "waits": []} and "provisional" not in sj["hypotheses"][0]
     # a second build takes the app data of the first one (no extractor), unless the tool is dirty
     monkeypatch.setattr(build.Tree, "find_pending", lambda self: {})
-    monkeypatch.setattr(build, "repo_rev", lambda: ("c" * 40, False))
+    monkeypatch.setattr(build, "repo_rev", lambda kind=None: ("c" * 40, False))
     build.build(res / "top", log=lambda *a: None)
     calls = []
-    monkeypatch.setattr(build.runfiles, "app_json", lambda *a: calls.append(a) or (_ for _ in ()).throw(RuntimeError))
+    monkeypatch.setattr(runfiles, "app_json", lambda *a: calls.append(a) or (_ for _ in ()).throw(RuntimeError))
     build.build(res / "top", log=lambda *a: None)
     assert calls == []
 

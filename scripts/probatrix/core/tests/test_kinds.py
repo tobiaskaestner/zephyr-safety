@@ -38,7 +38,8 @@ def test_get_loads_a_plugin_module_by_name(empty, monkeypatch, tmp_path):
     monkeypatch.syspath_prepend(str(tmp_path))
     monkeypatch.setattr(kinds, "PLUGINS", {"p": "fakekindmod"})
     assert kinds.get("p").name == "p"
-    assert kinds.dirt_paths()[-1] == "x"
+    with config.use(config.project().with_(default_kind="p")):
+        assert kinds.dirt_paths()[-1] == "x"
 
 
 def test_kind_of_order(empty):
@@ -70,3 +71,31 @@ def test_project_roots(tmp_path):
     assert two.root_of(tmp_path / "other") is None
     assert two.with_(design_root=tmp_path / "z").roots[1].kind == "formal"
     assert two.with_(design_root=tmp_path / "z").design_root == tmp_path / "z"
+
+
+def test_dirt_paths_are_those_of_one_kind(empty, tmp_path):
+    """An edit below the path of kind B does not make a build of kind A dirty."""
+    import subprocess
+    from probatrix.core import design
+
+    def git(*a):
+        subprocess.run(["git", "-c", "user.name=t", "-c", "user.email=t@t", *a], cwd=tmp_path, check=True,
+                       capture_output=True)
+    a, b = kinds.register(fake("a", ("spec/a",))), kinds.register(fake("b", ("spec/b",)))
+    git("init", "-q")
+    for d in ("spec/a", "spec/b", "core"):
+        (tmp_path / d).mkdir(parents=True)
+        (tmp_path / d / "f").write_text("1")
+    git("add", "-A")
+    git("commit", "-qm", "x")
+    proj = config.Project.at(tmp_path, dirt_paths=("core",), default_kind="a")
+    with config.use(proj):
+        assert kinds.dirt_paths(a) == ("core", "spec/a") and kinds.dirt_paths() == ("core", "spec/a")
+        assert design.repo_rev(kind=a)[1] is False and design.repo_rev(kind=b)[1] is False
+        (tmp_path / "spec" / "b" / "f").write_text("2")
+        assert design.repo_rev(kind=a)[1] is False          # kind B's spec: not dirty for A
+        assert design.repo_rev()[1] is False                # default kind is A
+        assert design.repo_rev(kind=b)[1] is True
+        git("checkout", "--", ".")
+        (tmp_path / "core" / "f").write_text("2")
+        assert design.repo_rev(kind=a)[1] is True and design.repo_rev(kind=b)[1] is True   # the Project's path

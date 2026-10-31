@@ -40,8 +40,7 @@ class InstanceError(Exception):
     pass
 
 
-def load(folder):
-    return json.loads((Path(folder) / "instance.json").read_text())
+load = layout.load_instance           # the reader is generic (core/layout.py)
 
 
 @contextlib.contextmanager

@@ -77,6 +77,12 @@ def find_root(path):
     raise ValueError(f"{path} is not in a results tree (no top instance.json above it)")
 
 
+def load_instance(folder):
+    """The data of instance.json in an instance folder."""
+    import json
+    return json.loads((Path(folder) / "instance.json").read_text())
+
+
 def instance_folders(root):
     """All instance folders of a results tree, the root first, then sorted by path."""
     root = Path(root)
