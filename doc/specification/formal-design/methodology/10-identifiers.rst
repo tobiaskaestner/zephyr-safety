@@ -10,18 +10,21 @@ have several meanings (inventory conflict 5).
    * - Prefix
      - Record
      - Example
-   * - ``F-``
+   * - (none)
      - finding (register)
-     - Old names keep their link: ``F-`` plus the old name without its inner hyphen (F-P7a, F-P2w, F-SW1, F-14, F-D1). A new finding gets F-<next number>.
+     - Each existing id stays (F1 to F14, P7-a, P2-w, SW-1, P6-u, D1 to D3, TS-1), because app names, commits and tests use them (D13). A new finding gets a short topic id, as TS-1. The fields of D7 carry the source and the method.
+   * - ``OC-``, ``SEM-``, ``MUTEX-`` and others
+     - finding of a unit test app
+     - The prefix names the unit (D13). The old ``F-1`` of ``obj_core`` becomes ``OC-1``.
    * - ``RD-``
      - reading of a requirement
      - RD-2-9-a, RD-2-9-b. The register notes the old names (L1, G1).
    * - ``WA-``
      - world assumption
      - WA-1. The tag in the module gives the ID, so a renamed operator keeps it.
-   * - ``CU-``
-     - condition of use
-     - CU-1. The tag in the module gives the ID, as for ``WA-``.
+   * - ``AoU-``
+     - assumption of use (D26, replaces ``CU-``)
+     - AoU-1, AoU-H. The tag in the module gives the ID, as for ``WA-``.
    * - ``RF-``
      - divergence of the reference fake from the code
      - RF-6

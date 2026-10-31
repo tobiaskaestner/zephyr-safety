@@ -6,7 +6,8 @@
 
   - **invisible**: no effect on the specification, only a comment.
   - **behavior**: a constant and a guarded branch. Example: the ``Backend`` of ``Timeout``.
-  - **condition of use**: an ``ASSUME`` or a premise, and a configuration that shows the failure.
+  - **assumption of use**: an ``ASSUME``, a constant or a premise, and a configuration that shows
+    the failure (section 6).
   - **initial value**: the initial value of a variable.
   - **fault model**: the option selects panic, error code or undefined behavior. (Proposal. The
     decision of 2026-10-28 named it "check". That word collides with the checks of section 9.)

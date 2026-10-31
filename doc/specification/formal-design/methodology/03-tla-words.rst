@@ -28,7 +28,11 @@
   instance of a module. A **configuration** (``.cfg`` file) fixes the constants, the bounds and the
   properties to check. A **TLC run** checks one configuration. A **counterexample** is a behavior
   that violates a property.
-- **Model-check module** (``mc/MC<Module>.tla``): a module that sets the constants and the bounds of
-  another module for TLC. It uses the ``Spec`` of that module and does not define a ``Next`` of its
-  own. One model-check module has one or more configurations.
+- **Model-check module** (``mc/MC<Module>.tla``): a module that sets the constants, the selectors
+  and the bounds of another module for TLC, and adds probes (section 9.1). It instantiates the
+  client module of that module, if one exists (section 5.1). It adds no step of the code and no
+  assumption of use. One model-check module has one or more configurations.
+- **History variable**: a variable that a module adds only to record the past of a behavior. It
+  does not change the behaviors of the other variables. Examples: ``readySince`` of ``Scheduler``,
+  ``bad`` of the open form (section 9.5).
 - **Model**: only in "model checking" and "model-check module". C code is never a model.

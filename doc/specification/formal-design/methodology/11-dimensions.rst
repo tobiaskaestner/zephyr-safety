@@ -45,7 +45,7 @@ dimension applies to one kind of piece, and no word serves two dimensions.
    * - Kconfig option
      - variability
      - **Kconfig category** (7)
-     - invisible, behavior, condition of use, initial value, fault model
+     - invisible, behavior, assumption of use, initial value, fault model
      - "Kconfig kind 1..5"
 
 "Level" leaves the method. It stays only in Zephyr's own meanings (init level, interrupt priority

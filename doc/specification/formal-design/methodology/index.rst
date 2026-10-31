@@ -3,18 +3,20 @@ Methodology
 
 .. note::
 
-   This is draft 3 of the methodology. The decisions D1 to D18 of
-   2026-10-30 and 2026-10-31 are not applied to this text yet. See the
-   chapter :doc:`/decisions`.
+   This is draft 4 of the methodology (2026-10-31). It applies the
+   decisions D1 to D37 of the chapter :doc:`/decisions` to the text.
+   Section 15 lists the changes of the specs, the tools and the tests that
+   are still to do.
 
-This chapter is the architecture of the formal specification, draft 3 of
-2026-10-29. It describes the method: the words, the pieces of the
+This chapter is the architecture of the formal specification, draft 4 of
+2026-10-31. It describes the method: the words, the pieces of the
 specification, their relations and the evidence. Its sections keep their
 numbers, because the text refers to them by number.
 
-Status: proposal for a decision by the user. Nothing in the specs, the roadmap or the README is
-changed yet. Inputs: the term inventory (workspace notes, references such as TR:481 point into
-it), the unit map and the module map (both in the workspace notes).
+Status: the user decided the questions of draft 3 and of two method reviews (chapter
+:doc:`/decisions`). The specs do not follow all of this text yet. Inputs: the term inventory
+(workspace notes, references such as TR:481 point into it), the unit map and the module map (both
+in the workspace notes).
 
 Rule of this document: each term is defined before its first use. A word in **bold** is defined at
 that place. Section 11 collects the dimensions of the method in a summary. It defines nothing new.

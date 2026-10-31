@@ -27,7 +27,7 @@
    * - Properties in the "descriptive layer" (SC:904)
      - They are behavior invariants (section 6), in the behavior part, with ``@source code``
    * - The contract modules have no ``Next``. The model-check module builds ``Next`` from their actions, client wrappers, mutants and restrictions (``MCSetPrioBy``, ``NoOuterLock``).
-     - Each module defines ``Init``, ``Next`` and ``Spec`` with the most general environment. The restrictions become conditions of use in the module (section 6).
+     - Each kernel module defines ``Init``, ``Next`` and ``Spec`` with the most general environment. A restriction is an assumption of use in a client module, or a selector or a bound of the model-check module (sections 6, 9.1).
    * - ``@kind assumption`` is planned, ``@assumption`` exists
      - ``@assumption`` stays as the tag. The role table lists it.
    * - ``@kind action`` on definitions that are not steps

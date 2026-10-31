@@ -9,13 +9,15 @@
   - behavior half: parameters, variables, queries, helpers, step actions, sub-actions, environment
     actions, world assumptions,
     behavior invariants, code lines.
-  - property half: requirement properties (with the number of ``@source`` ids), conditions of use.
+  - property half: requirement properties (with the number of ``@source`` ids), assumptions of use.
 
 - Below each box: its model-check modules with their configurations, probes and model mutants.
 - Right column: the requirements by chapter. Edges *expresses* come from the property half.
-- Behind a contract module, offset: its fine module, if planned, with an edge *refines*.
-- Edges between modules: *uses* (``INSTANCE``, ``EXTENDS``), *hook* (dashed, up), *instantiates*
-  (from an object module to the template module).
+- Behind a contract module, offset: its fine module, if planned, with an edge *refines*. Above it,
+  offset: its abstract module, if one exists.
+- Edges between modules: *uses* (``INSTANCE``, ``EXTENDS``), *hook* (dashed, up, through ``obs``),
+  *instantiates* (from an object module to the template module, and from a model-check module to
+  a client module).
 - Below each module: its configurations, example tests, contract tests, board apps, and the
   findings that they show.
 - Status by the border, grain by the fill color.
