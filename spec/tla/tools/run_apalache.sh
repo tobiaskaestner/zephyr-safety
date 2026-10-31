@@ -205,10 +205,14 @@ for i in "${!L_MOD[@]}"; do
 	rm -rf "$run_dir" "$out/tmp"
 	mkdir -p "$run_dir" "$out/tmp"
 	scope=()
+	# The peak memory comes from GNU time, if the host has it (the lab host
+	# has not; the summary then gives 0 MB).
+	meter=()
+	[ -x /usr/bin/time ] && meter=(/usr/bin/time -f '%M' -o "$out/tmp/maxrss")
 	[ "$mem" != none ] && scope=(systemd-run --user --scope --quiet -p "MemoryMax=$mem" -p MemorySwapMax=0)
 	# TMPDIR: the launcher writes its SANY files there (not to /tmp).
 	start=$(date +%s.%N)
-	(cd "$out/src" && /usr/bin/time -f '%M' -o "$out/tmp/maxrss" \
+	(cd "$out/src" && "${meter[@]}" \
 		"${scope[@]}" env TMPDIR="$out/tmp" JVM_ARGS="-Xmx$heap" \
 		timeout "$limit" "$home/bin/apalache-mc" --out-dir="$run_dir" "${args[0]}" "${args[@]:1}" "$module.tla") \
 		> "$log" 2>&1
