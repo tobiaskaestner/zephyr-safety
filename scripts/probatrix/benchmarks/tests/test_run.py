@@ -175,3 +175,77 @@ def test_firmware_hash_leaves_out_the_documentation(tmp_path, monkeypatch):
     (bench / "app" / "src" / "main.c").write_text("int main(void) { return 1; }\n")
     git("-c", "user.name=t", "-c", "user.email=t@t", "commit", "-qam", "c")
     assert run.firmware_hash(tmp_path, "HEAD") != first
+
+
+def _build_point_call(tmp_path, monkeypatch, builder):
+    """Call build_point() for one point with subprocess.run mocked; return (args, the commands run, env, cwd)."""
+    from probatrix.benchmarks import trees
+
+    root = tmp_path / "trees"
+    tree_cfg = {"root": root, "trees": {"ws": {"repos": {"zephyr": {"path": "zephyr"}, "hal": {"path": "mods/hal"}}}}}
+    bench = tmp_path / "safety" / "tests" / "benchmarks"
+    bdir = tmp_path / "bdir"
+    (bdir / "zephyr").mkdir(parents=True)
+    (bdir / "zephyr" / ".config").write_text("CONFIG_LATBENCH_SAMPLES=100\n# CONFIG_LATBENCH_X is not set\n")
+    log = tmp_path / "build.log"
+    point = {"id": "p1", "axes": {}, "kconfig": {"LATBENCH_SAMPLES": 100, "LATBENCH_X": False},
+             "conf_files": ["common/conf/a.conf", "common/conf/b.conf"], "dtc_overlays": ["common/o.overlay"]}
+    calls = []
+
+    def fake_run(cmd, **kw):
+        calls.append((cmd, kw))
+        return type("R", (), {"returncode": 0})()
+
+    monkeypatch.setattr(run.subprocess, "run", fake_run)
+    monkeypatch.setattr(trees, "west_topdir", lambda cwd: None)
+    monkeypatch.setattr(trees, "west_config_problems", lambda cwd: [])
+    monkeypatch.setenv("ZEPHYR_BASE", "/caller/zephyr")
+    monkeypatch.setenv("KEEP_ME", "1")
+    args = run.build_point(tree_cfg, "ws", point, bench, "irq_latency", "a" * 40, "nucleo_g474re",
+                           {"modules": ["hal"]}, Path("/opt/sdk"), bdir, log, build_version="v4.2.0-1-gabc",
+                           builder=builder)
+    return args, calls, bench, root, bdir
+
+
+def test_build_point_command_line_cmake(tmp_path, monkeypatch):
+    """The CMake argument list of one point is pinned: same args, same order, same env."""
+    args, calls, bench, root, bdir = _build_point_call(tmp_path, monkeypatch, "cmake")
+    assert args == [
+        "cmake", "-GNinja", "-S", str(bench / "irq_latency"), "-B", str(bdir), "-DBOARD=nucleo_g474re",
+        f"-DZEPHYR_MODULES={root / 'ws' / 'mods/hal'};{bench.parents[1]}",
+        f"-DWEST_TOPDIR={root / 'ws'}",
+        f"-DEXTRA_CONF_FILE={bench / 'common/conf/a.conf'};{bench / 'common/conf/b.conf'}",
+        f"-DEXTRA_DTC_OVERLAY_FILE={bench / 'common/o.overlay'}",
+        "-DLATBENCH_SRC_REV=" + "a" * 40,
+        "-DBUILD_VERSION=v4.2.0-1-gabc",
+        "-DCONFIG_LATBENCH_SAMPLES=100",
+        "-DCONFIG_LATBENCH_X=n",
+    ]
+    assert [c for c, _ in calls] == [args, ["ninja", "-C", str(bdir)]]
+    for _, kw in calls:
+        assert kw["cwd"] == root / "ws"
+        assert kw["env"]["ZEPHYR_BASE"] == str(root / "ws" / "zephyr")
+        assert kw["env"]["ZEPHYR_TOOLCHAIN_VARIANT"] == "zephyr"
+        assert kw["env"]["ZEPHYR_SDK_INSTALL_DIR"] == "/opt/sdk"
+        assert kw["env"]["KEEP_ME"] == "1"
+
+
+def test_build_point_command_line_west(tmp_path, monkeypatch):
+    """The west head of the argument list, and the command that runs (python -m west, no user config)."""
+    args, calls, bench, root, bdir = _build_point_call(tmp_path, monkeypatch, "west")
+    assert args[:10] == ["west", "build", "--no-sysbuild", "-d", str(bdir), "-b", "nucleo_g474re",
+                         str(bench / "irq_latency"), "--",
+                         f"-DZEPHYR_MODULES={root / 'ws' / 'mods/hal'};{bench.parents[1]}"]
+    assert args[10] == f"-DWEST_TOPDIR={root / 'ws'}"
+    assert args[11:] == [
+        f"-DEXTRA_CONF_FILE={bench / 'common/conf/a.conf'};{bench / 'common/conf/b.conf'}",
+        f"-DEXTRA_DTC_OVERLAY_FILE={bench / 'common/o.overlay'}",
+        "-DLATBENCH_SRC_REV=" + "a" * 40,
+        "-DBUILD_VERSION=v4.2.0-1-gabc",
+        "-DCONFIG_LATBENCH_SAMPLES=100",
+        "-DCONFIG_LATBENCH_X=n",
+    ]
+    assert [c for c, _ in calls] == [[sys.executable, "-m", "west", *args[1:]]]
+    env = calls[0][1]["env"]
+    assert env["WEST_CONFIG_GLOBAL"] == env["WEST_CONFIG_SYSTEM"] == "/dev/null"
+    assert env["ZEPHYR_BASE"] == str(root / "ws" / "zephyr")
