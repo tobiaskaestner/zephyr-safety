@@ -962,7 +962,7 @@ ZTEST_SUITE(lat_print, NULL, NULL, NULL, NULL, NULL);
 
 /*
  * Print a full run of pseudo-random samples to the console. The Python
- * tests (scripts/benchmarks/tests/test_latbench.py) parse a saved copy of this output
+ * tests (scripts/probatrix/benchmarks/tests/test_latbench.py) parse a saved copy of this output
  * and compute the same samples with the same generator.
  */
 #define FIX_SEED    0x2545f491U

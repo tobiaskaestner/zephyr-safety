@@ -32,8 +32,8 @@ def two_labs(tmp_path, monkeypatch):
     monkeypatch.setattr(trees, "STUDIES_DIR", root)
     monkeypatch.setattr(exchange, "Design", lambda: Design(root))
     repo = tmp_path / "safety"
-    (repo / "scripts" / "benchmarks").mkdir(parents=True)
-    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
     a, b = make_lab(tmp_path, "lab-a", repo), make_lab(tmp_path, "lab-b", repo)
     instance.new(design, a.results, "top", "sub", "nucleo_g474re")
     inst = a.results / "top" / "st-sub@nucleo_g474re"

@@ -903,7 +903,7 @@ def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
     assert (inst / "notebooks" / "report.html").read_text() == "<html>ok</html>"
     assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["the same inputs"]
     assert len(calls) == 1
-    helper = tmp_path / "scripts" / "benchmarks" / "nbfig.py"     # a changed helper module runs it again
+    helper = tmp_path / "scripts" / "probatrix" / "benchmarks" / "nbfig.py"     # a changed helper module runs it again
     helper.parent.mkdir(parents=True)
     helper.write_text("# changed\n")
     assert [x[2] for x in notebooks.run(res / "top", log=lambda *a: None, executor=fake)] == ["ran"]

@@ -33,7 +33,7 @@ The seal
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py instance verify results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
+   $ safety/scripts/probatrix/benchmarks/study.py instance verify results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
    sha256:a219a528a03a43489deec81a62d511811d49800c2b030a38d2108210729352c7 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
    $ head -3 results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z.sha256
    cd52e47c5e9feb387e2184149d79a6d32a882c5b2f083d70198f7c0621b0501b  manifest.json
@@ -63,7 +63,7 @@ images:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/run.py --rebuild results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
+   $ safety/scripts/probatrix/benchmarks/run.py --rebuild results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z
    rebuild /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z  5 points
    [ws-up/stock-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
    [ws-up/wrapped-idle] same: same ELF image, zephyr.hex, .config, zephyr.dts; different zephyr.elf
@@ -88,7 +88,7 @@ now:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py analysis check results/kernel-latency
+   $ safety/scripts/probatrix/benchmarks/study.py analysis check results/kernel-latency
    FAIL: 1 files differ from a new build:
       /wrk/z/lab-tutorial/results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry/study.json
    note: 1 inputs are newer than the last build (for example st-default-latencies@nucleo_g474re/st-irq-entry/ex-irq-smoke/20261029T131938Z.rebuild-20261029T132753Z.json); after 'study.py analysis build' the check compares again
@@ -98,9 +98,9 @@ The note names the new input. Build the results, then check again:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py analysis build results/kernel-latency | head -1
+   $ safety/scripts/probatrix/benchmarks/study.py analysis build results/kernel-latency | head -1
    built 6 instances, 2 runs; 12 files written
-   $ safety/scripts/benchmarks/study.py analysis check results/kernel-latency
+   $ safety/scripts/probatrix/benchmarks/study.py analysis check results/kernel-latency
    ok: 2 runs agree with their seals; the build gives the same 6 study.json files
 
 ``analysis check`` checks each seal and builds all aggregates again in

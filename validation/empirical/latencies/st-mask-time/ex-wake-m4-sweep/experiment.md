@@ -15,7 +15,7 @@ sleeper threads and time slicing.
 - 200000 samples per point. Latency histograms of 1024 fine bins and
   1024 coarse bins of 64 cycles. All values are in cycles at 170 MHz.
 - The latency histograms are not data (`LAT META m4=1`). The analysis
-  uses the M4 tables (`scripts/benchmarks/m4.py`) only.
+  uses the M4 tables (`scripts/probatrix/benchmarks/m4.py`) only.
 - The three axes give 24 points. The point id is
   `<timers>-<sleepers>-<slice>`.
 

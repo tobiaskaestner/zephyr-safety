@@ -33,14 +33,14 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "scripts" / "benchmarks"))
+sys.path.insert(0, str(REPO / "scripts" / "probatrix" / "benchmarks"))
 
 import matplotlib  # noqa: E402
 
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 
-import plot as base  # noqa: E402  (the style and the colours of scripts/benchmarks/plot.py)
+import plot as base  # noqa: E402  (the style and the colours of scripts/probatrix/benchmarks/plot.py)
 
 FORMAT = "latbench-plots/1"
 PER_CHART = len(base.SERIES)
@@ -170,6 +170,6 @@ def main(app, metrics):
     if len(sys.argv) < 3:
         sys.exit(f"usage: plot.py OUT_DIR RUN_ID=APP_JSON ...  (the plots of an experiment of {app})")
     runs = [tuple(a.split("=", 1)) for a in sys.argv[2:]]
-    scripts = [Path(sys.modules["__main__"].__file__), Path(__file__), REPO / "scripts" / "benchmarks" / "plot.py"]
+    scripts = [Path(sys.modules["__main__"].__file__), Path(__file__), REPO / "scripts" / "probatrix" / "benchmarks" / "plot.py"]
     res = plot_experiment(app, metrics, sys.argv[1], runs, scripts)
     print(f"{len(res['plots'])} plots in {sys.argv[1]}")

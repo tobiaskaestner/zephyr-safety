@@ -41,7 +41,7 @@ from studylib import lab as labmod
 # experiment.yaml and experiment.md, in the folder of the study that owns
 # it. Each sub-study is a folder st-<name>/ with study.yaml. The prefixes
 # are only in the folder names: names and references have none.
-REPO_DIR = Path(__file__).resolve().parents[2]
+REPO_DIR = Path(__file__).resolve().parents[3]
 BENCH_DIR = REPO_DIR / "tests" / "benchmarks"
 STUDIES_DIR = REPO_DIR / "validation" / "empirical" / "latencies"
 EXPERIMENT_FILE = "experiment.yaml"
@@ -369,4 +369,4 @@ def main(args, log=print):
 
 
 if __name__ == "__main__":
-    sys.exit("trees.py has no commands of its own: use scripts/benchmarks/study.py trees setup|check|show")
+    sys.exit("trees.py has no commands of its own: use scripts/probatrix/benchmarks/study.py trees setup|check|show")

@@ -1,7 +1,7 @@
 # The exact versions of the Python packages of a lab space (the venv of
 # cos-workstation, 2026-10-28, Python 3.14). Make the venv of a lab space
 # with: python3 -m venv .venv && .venv/bin/pip install -r
-# safety/scripts/benchmarks/requirements.lock
+# safety/scripts/probatrix/benchmarks/requirements.lock
 #
 # The scripts (requirements.txt):
 pyserial==3.5

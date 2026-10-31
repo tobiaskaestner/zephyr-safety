@@ -68,11 +68,11 @@ def utc_id(t=None):
 
 
 def study_py():
-    return trees.REPO_DIR / "scripts" / "benchmarks" / "study.py"
+    return trees.REPO_DIR / "scripts" / "probatrix" / "benchmarks" / "study.py"
 
 
 def run_py():
-    return trees.REPO_DIR / "scripts" / "benchmarks" / "run.py"
+    return trees.REPO_DIR / "scripts" / "probatrix" / "benchmarks" / "run.py"
 
 
 # ------------------------------------------------------------ plan

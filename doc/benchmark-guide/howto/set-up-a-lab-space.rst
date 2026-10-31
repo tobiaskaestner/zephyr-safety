@@ -19,7 +19,7 @@ A :term:`lab space` holds everything of one host that a study needs.
 
    .. code-block:: console
 
-      .venv/bin/pip install -r safety/scripts/benchmarks/requirements.lock
+      .venv/bin/pip install -r safety/scripts/probatrix/benchmarks/requirements.lock
 
 #. If the host has boards, write the hardware map ``hw-map.yml`` in the
    lab folder (see :doc:`make-a-hardware-map` and
@@ -38,7 +38,7 @@ A :term:`lab space` holds everything of one host that a study needs.
 
    .. code-block:: console
 
-      .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety [--trees-source <folder>]
+      .venv/bin/python safety/scripts/probatrix/benchmarks/study.py lab init --repo safety [--trees-source <folder>]
 
 #. Set up the trees that the studies of the lab space need (see
    :doc:`../reference/files/trees-yaml`). A lab space for analysis only
@@ -46,19 +46,19 @@ A :term:`lab space` holds everything of one host that a study needs.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
 
 #. Make sure that the lab space is complete:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab status
+      safety/scripts/probatrix/benchmarks/study.py lab status
 
 #. For each board, do the :term:`wire check`:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab hwcheck <board>
+      safety/scripts/probatrix/benchmarks/study.py lab hwcheck <board>
 
    If the result is ``RESULT: FAIL``, see :doc:`troubleshoot-a-run`.
 

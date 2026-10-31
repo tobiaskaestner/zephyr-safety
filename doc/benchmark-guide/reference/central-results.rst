@@ -185,7 +185,7 @@ confirms the sentence)``. A person sets the verdict ``confirmed`` or
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py instance verdict <instance folder> --central-result <id> \
+   scripts/probatrix/benchmarks/study.py instance verdict <instance folder> --central-result <id> \
        --verdict confirmed --by "<name>"
 
 ``from: {substudy: <name>}`` shows the central result with the same

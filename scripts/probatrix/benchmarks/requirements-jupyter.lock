@@ -4,7 +4,7 @@
 # requirements-notebooks.lock, 2026-10-29, Python 3.14.8, in the venv of
 # the lab space /wrk/z/lab-latency. It changes no version of the two other
 # lock files.
-#   .venv/bin/pip install -r safety/scripts/benchmarks/requirements-jupyter.lock
+#   .venv/bin/pip install -r safety/scripts/probatrix/benchmarks/requirements-jupyter.lock
 anyio==4.15.1
 argon2-cffi==25.1.0
 argon2-cffi-bindings==26.1.0

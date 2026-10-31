@@ -66,7 +66,7 @@ time, not system timer interrupts.
 The causes
 ----------
 
-``scripts/benchmarks/tails.py`` gives each row its labels (the witnesses
+``scripts/probatrix/benchmarks/tails.py`` gives each row its labels (the witnesses
 that the counters show) and one cause. The module text has the exact
 rules. In short:
 
@@ -110,7 +110,7 @@ describes. Three properties make sure of this:
 #. ``lat_tail_add()`` runs after the end time stamp, in a function that is
    not inline. In ``irq_latency``, the ISR calls a small wrapper with two
    arguments, so the compiler needs no more registers before the time
-   stamp. ``scripts/benchmarks/prestamp.py`` compares the instructions of
+   stamp. ``scripts/probatrix/benchmarks/prestamp.py`` compares the instructions of
    the ISR up to the time stamp in two images (register names and literal
    offsets masked). For ``resp_isr`` of the wrapped and the direct path,
    the instructions are the same with and without the witnesses.

@@ -9,9 +9,9 @@ the root of the repo.
 |---|---|
 | `hist/` | Zephyr ztest app for `common/include/latbench/hist.h` and `common/src/hist.c` |
 | `code_place/` | Zephyr ztest app for the code placement (`LATBENCH_CODE_PLACE`), on `mps2/an385` |
-| `scripts/benchmarks/tests/test_experiments.py` | pytest module that checks the experiment files below `validation/empirical/latencies/` |
-| `scripts/benchmarks/tests/test_latbench.py` | pytest module for `scripts/benchmarks/latbench.py` and `scripts/benchmarks/plot.py` |
-| `scripts/benchmarks/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
+| `scripts/probatrix/benchmarks/tests/test_experiments.py` | pytest module that checks the experiment files below `validation/empirical/latencies/` |
+| `scripts/probatrix/benchmarks/tests/test_latbench.py` | pytest module for `scripts/probatrix/benchmarks/latbench.py` and `scripts/probatrix/benchmarks/plot.py` |
+| `scripts/probatrix/benchmarks/tests/fixtures/hist_*.log` | Console output of the ztest app, one log for each scenario |
 
 ## Scenarios of the ztest app
 
@@ -76,15 +76,15 @@ skipped test cases are the known gaps.
 
 ## Run the pytest module
 
-Run pytest from the `scripts/benchmarks` folder:
+Run pytest from the `scripts/probatrix/benchmarks` folder:
 
 ```sh
-cd scripts/benchmarks
+cd scripts/probatrix/benchmarks
 python3 -m pytest tests
 ```
 
 All test cases pass. The packages in
-`scripts/benchmarks/requirements.txt` and `pytest` are necessary.
+`scripts/probatrix/benchmarks/requirements.txt` and `pytest` are necessary.
 
 ## Make the fixtures again
 
@@ -98,7 +98,7 @@ generator `fixture_sample()` in `hist/src/main.c`.
    B=/wrk/z/ws-safety/build-hist-tests/twister-out/native_sim_native_64/host_gnu
    for s in fine coarse experiment; do
      $(find $B -path "*latbench.unit.hist.$s/zephyr/zephyr.exe") \
-       > scripts/benchmarks/tests/fixtures/hist_$s.log
+       > scripts/probatrix/benchmarks/tests/fixtures/hist_$s.log
    done
    ```
 

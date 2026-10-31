@@ -12,7 +12,7 @@ this named the cause of each outlier of the PR runs.
 The option `LATBENCH_TAIL` adds such witnesses to our apps: a table of
 the largest samples, with the counters of a window from the arm of the
 stimulus to the end of the sample (explanation page of the guide, tail
-witnesses). `scripts/benchmarks/tails.py` gives the cause of each row.
+witnesses). `scripts/probatrix/benchmarks/tails.py` gives the cause of each row.
 
 A witness is useful only if three things are true:
 

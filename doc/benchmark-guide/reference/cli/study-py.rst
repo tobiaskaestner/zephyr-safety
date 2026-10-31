@@ -1,7 +1,7 @@
 The tool study.py
 =================
 
-``study.py`` (``<repo>/scripts/benchmarks/study.py``) has all commands of
+``study.py`` (``<repo>/scripts/probatrix/benchmarks/study.py``) has all commands of
 the :term:`studies <study>`, the :term:`lab spaces <lab space>` and the
 results, in six namespaces. In a lab space, each ``study.py`` runs the
 ``study.py`` of the :term:`design repository` with the Python of the lab
@@ -45,7 +45,7 @@ Design
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
+   scripts/probatrix/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
 
 The lint reads the design files below ``validation/empirical/latencies/``.
 It needs no build and no board. It prints one line for each problem,
@@ -64,8 +64,8 @@ The rules are in :doc:`../lint-rules`.
 
 .. code-block:: console
 
-   scripts/benchmarks/study.py design scaffold study PARENT/st-NAME
-   scripts/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
+   scripts/probatrix/benchmarks/study.py design scaffold study PARENT/st-NAME
+   scripts/probatrix/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
 
 ``scaffold study`` makes a new sub-study ``st-NAME/`` of the study
 ``PARENT``, with these files:
@@ -129,7 +129,7 @@ Lab space
 ``lab init`` makes ``FOLDER/.lab/config``, the results folder and the
 trees root. ``FOLDER`` is the current folder by default. ``REPO`` is the
 design repository, a clone of the :term:`safety repository`. It must
-have ``scripts/benchmarks/study.py``. The options set these keys of
+have ``scripts/probatrix/benchmarks/study.py``. The options set these keys of
 ``.lab/config`` (see :doc:`../files/lab-config`): ``--name`` sets
 ``[lab] name``, ``--trees-root`` and ``--trees-source`` set ``[trees]
 root`` and ``[trees] source``, ``--sdk`` sets ``[toolchain] zephyr_sdk``,
@@ -541,7 +541,7 @@ committed without outputs). They are for the questions that the standard
 plots cannot answer: comparisons over experiments, trees and boards. Each
 notebook runs (nbclient) in the safety repository, with the environment
 variables ``LATBENCH_INSTANCE`` (the instance folder) and
-``LATBENCH_REPO`` (the safety repository). ``scripts/benchmarks/data.py``
+``LATBENCH_REPO`` (the safety repository). ``scripts/probatrix/benchmarks/data.py``
 loads the instance. The output goes to
 ``<instance>/notebooks/<name>.html``, and the executed notebook (with its
 outputs) to ``<instance>/notebooks/<name>.ipynb``: JupyterLab can open it
@@ -551,5 +551,5 @@ of the inputs (the notebook, ``study.json``, ``data.py`` and
 the notebook does not run again. The instance page links to the
 notebooks. The output is not byte-stable, so ``analysis check`` does not
 compare it. The packages are in
-``scripts/benchmarks/requirements-notebooks.lock``. The other commands do
+``scripts/probatrix/benchmarks/requirements-notebooks.lock``. The other commands do
 not need them.

@@ -21,14 +21,14 @@ The image
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
 
 #. Build all points of the run again, or one point:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/run.py --rebuild <run>
-      safety/scripts/benchmarks/run.py --rebuild <run>/<tree>/<point>
+      safety/scripts/probatrix/benchmarks/run.py --rebuild <run>
+      safety/scripts/probatrix/benchmarks/run.py --rebuild <run>/<tree>/<point>
 
 #. Read the last lines. ``run.py`` prints one line for each point and
    exits with 1 if a point is not the same. The record
@@ -48,13 +48,13 @@ The measurement
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
 
 #. Run the experiment again:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/run.py safety/validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
+      safety/scripts/probatrix/benchmarks/run.py safety/validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
 
 #. Compare the summaries of the old and the new logs with
    ``latbench.py summary`` (see :doc:`../reference/cli/scripts`).

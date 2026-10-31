@@ -126,8 +126,8 @@ def test_the_pins_of_the_repo_load():
 def test_lab_space_gives_the_paths(tmp_path, monkeypatch):
     from studylib import lab as labmod
     repo = tmp_path / "safety"
-    (repo / "scripts" / "benchmarks").mkdir(parents=True)
-    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
     lab = labmod.init(tmp_path / "lab", repo, trees_source=tmp_path / "other", sdk="~/sdk-x")
     assert lab.id.startswith("lab-") and len(lab.id) == len("lab-") + 8
     assert lab.repo == repo.resolve() and lab.trees_root == tmp_path / "lab" / "trees"
@@ -146,8 +146,8 @@ def test_lab_space_gives_the_paths(tmp_path, monkeypatch):
 def test_owner_of_a_results_root_outside_the_lab(tmp_path, monkeypatch):
     from studylib import lab as labmod
     repo = tmp_path / "safety"
-    (repo / "scripts" / "benchmarks").mkdir(parents=True)
-    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
     lab = labmod.init(tmp_path / "lab", repo, results=tmp_path / "data" / "results")
     deep = tmp_path / "data" / "results" / "top" / "st-a"
     deep.mkdir(parents=True)
@@ -161,9 +161,9 @@ def test_lab_init_records_the_venv_and_checks_the_packages(tmp_path, monkeypatch
     import sys as _sys
     from studylib import lab as labmod
     repo = tmp_path / "lab" / "safety"
-    (repo / "scripts" / "benchmarks").mkdir(parents=True)
-    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
-    (repo / "scripts" / "benchmarks" / "requirements.txt").write_text(
+    (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "probatrix" / "benchmarks" / "requirements.txt").write_text(
         "PyYAML>=6.0   # yaml\nno-such-package-x>=1\npackaging>=999\n")
     venv = tmp_path / "lab" / ".venv"
     venv.mkdir()

@@ -62,7 +62,7 @@ def lint_todo(root, out):
 
 
 def lint_schemas(root, out):
-    """Each design file against its schema (scripts/benchmarks/schemas/): all violations."""
+    """Each design file against its schema (scripts/probatrix/benchmarks/schemas/): all violations."""
     files = [(kind, f) for kind in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{kind}.yaml"))]
     if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
         files.append(("boards", trees.BOARDS_FILE))

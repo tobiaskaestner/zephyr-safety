@@ -10,7 +10,7 @@ gives the content of an export and the checks of an import.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab export [FOLDER] -o <file>.tar.gz [--campaign ID ...] [--all]
+      safety/scripts/probatrix/benchmarks/study.py lab export [FOLDER] -o <file>.tar.gz [--campaign ID ...] [--all]
 
    Without options, the export has the runs that A made. ``--campaign``
    selects the runs of some campaigns. ``--all`` also adds the runs that A
@@ -21,7 +21,7 @@ gives the content of an export and the checks of an import.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab import <file>.tar.gz --dry-run
+      safety/scripts/probatrix/benchmarks/study.py lab import <file>.tar.gz --dry-run
 
 #. Read each warning and each refused run. A refused run of an experiment
    that is not in the design of B, or that differs there, stays refused.
@@ -30,13 +30,13 @@ gives the content of an export and the checks of an import.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab import <file>.tar.gz
+      safety/scripts/probatrix/benchmarks/study.py lab import <file>.tar.gz
 
 #. Build the results tree of B:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py analysis build results/kernel-latency
+      safety/scripts/probatrix/benchmarks/study.py analysis build results/kernel-latency
 
 #. A campaign of A can be incomplete at the time of the export. If A
    exports no more, close the record of this campaign in B. Then its
@@ -44,7 +44,7 @@ gives the content of an export and the checks of an import.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab import --close <id>@<lab id of A>
+      safety/scripts/probatrix/benchmarks/study.py lab import --close <id>@<lab id of A>
 
 :doc:`../reference/cli/study-py` gives the options of ``lab export`` and
 ``lab import``.

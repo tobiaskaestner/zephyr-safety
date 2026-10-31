@@ -238,7 +238,7 @@ config LATBENCH_TAIL
 	  Keep a table of the largest samples of the main histograms, with
 	  the counters of a window around each sample: DWT EXCCNT, SysTick
 	  VAL, the load counters and the interrupted PC. The host names the
-	  cause of each sample from them (scripts/benchmarks/tails.py). The
+	  cause of each sample from them (scripts/probatrix/benchmarks/tails.py). The
 	  witness code runs after the end time stamp of the sample. See
 	  latbench/tail.h.
 
@@ -349,7 +349,7 @@ config LATBENCH_LOAD_TIMER_SEED
 	  the first expiry of each load timer. The default is the seed of all
 	  runs before this option. The seed sets which ticks have many
 	  expiries, and thus the long system timer ISRs of the run.
-	  scripts/benchmarks/loadmodel.py calculates these ticks for a seed.
+	  scripts/probatrix/benchmarks/loadmodel.py calculates these ticks for a seed.
 
 config LATBENCH_SYSTICK_PRIO
 	int "IRQ priority of SysTick (-1: the driver default)"

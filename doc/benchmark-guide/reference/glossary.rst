@@ -50,7 +50,7 @@ This guide uses these terms with one meaning each:
       One flash and one capture of the serial output of a point.
 
    Run
-      One execution of ``scripts/benchmarks/run.py`` for one experiment,
+      One execution of ``scripts/probatrix/benchmarks/run.py`` for one experiment,
       and the raw run folder that it makes: ``ex-<experiment>/<UTC>/`` in
       the folder of its instance. The run id is ``<experiment>/<UTC>``. The
       run folder does not change after its seal.

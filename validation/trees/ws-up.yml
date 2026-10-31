@@ -4,7 +4,7 @@
 # The pinned tree ws-up: a west manifest. "study.py trees setup ws-up"
 # copies it to <trees root>/ws-up/manifest/west.yml and makes the west
 # workspace <trees root>/ws-up/ with exactly these projects at these
-# revisions (scripts/benchmarks/trees.py). Do not change a revision: old
+# revisions (scripts/probatrix/benchmarks/trees.py). Do not change a revision: old
 # results refer to it. Pin a new commit as a new tree (a new file).
 # userdata of self: the description and the Zephyr SDK version of the
 # tree; userdata of a project: the branch that has the commit.

@@ -18,7 +18,7 @@ tail.
   and 1024 coarse bins of 64 cycles, 0..66559 cycles. The site table
   needs the RAM (64 sites x 488 bytes).
 - The latency histograms are not data (`LAT META m4=1`). The analysis
-  uses the M4 tables (`scripts/benchmarks/m4.py`) only.
+  uses the M4 tables (`scripts/probatrix/benchmarks/m4.py`) only.
 - No cube: seven explicit points that change several factors. The axis
   names are the names of `wake-timers-1m`, `wake-systick-prio-1m` and
   `wake-timeout-backends-1m`.

@@ -18,7 +18,7 @@ Rules (a run stops before it builds anything if one is broken):
   modules of a west workspace.
 - The hardware map of the host (hw-map.yml, twister format, not checked in)
   has one connected entry for the board, with the fixture
-  "latbench_loopback". It gives the probe and the console (scripts/benchmarks/hwmap.py).
+  "latbench_loopback". It gives the probe and the console (scripts/probatrix/benchmarks/hwmap.py).
 
 Output: <out>/<experiment>/<UTC time>/ with manifest.json (all revs, tool
 versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the

@@ -2,7 +2,7 @@
 # the other commands do not need them), for a lab space venv: the resolution of
 # pip (dry run) for nbclient nbconvert ipykernel pandas plotly in the venv of
 # cos-workstation, 2026-10-28, Python 3.14, on top of requirements.lock.
-#   .venv/bin/pip install -r safety/scripts/benchmarks/requirements-notebooks.lock
+#   .venv/bin/pip install -r safety/scripts/probatrix/benchmarks/requirements-notebooks.lock
 asttokens==3.0.2
 beautifulsoup4==4.15.0
 bleach==6.4.0

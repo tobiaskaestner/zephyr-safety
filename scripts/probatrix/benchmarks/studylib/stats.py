@@ -15,7 +15,7 @@ A metric is one of:
                                          (the start function or one of the
                                          inlined functions of the site)
     tail.<hist>                          the witness table of a histogram
-                                         (LATBENCH_TAIL, scripts/benchmarks/tails.py)
+                                         (LATBENCH_TAIL, scripts/probatrix/benchmarks/tails.py)
     None                                 the point itself (drift_per_wake,
                                          drift_ppm)
 
@@ -263,7 +263,7 @@ def tail_value(rep, metric, stat):
     import sys
     from pathlib import Path
 
-    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # scripts/benchmarks: tails.py
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))   # scripts/probatrix/benchmarks: tails.py
     import tails
 
     t = (rep.get("tails") or {}).get(metric[5:])

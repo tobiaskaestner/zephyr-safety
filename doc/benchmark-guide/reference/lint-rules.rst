@@ -10,7 +10,7 @@ error. With ``--warn-as-error``, a warning also gives exit code 1.
 Errors:
 
 - A key or a type that the schema of the file does not allow. The
-  schemas are in ``scripts/benchmarks/schemas/`` (JSON Schema, written in
+  schemas are in ``scripts/probatrix/benchmarks/schemas/`` (JSON Schema, written in
   YAML): ``experiment``, ``study``, ``hypotheses`` and ``boards``. For an
   unknown key, the lint names the nearest known key, for example
   ``schema: (top): unknown key 'repat' (did you mean 'repeat'?)``. The
@@ -65,5 +65,5 @@ Warnings:
 it before it builds. It prints each problem and continues. With
 ``--warn-as-error``, each problem (error or warning) stops the run. The
 :term:`pre-flight check` of a :term:`campaign` fails on a lint error (see :doc:`cli/study-py`).
-The tests in ``scripts/benchmarks/tests/`` fail if the design of the
+The tests in ``scripts/probatrix/benchmarks/tests/`` fail if the design of the
 repository has a lint error.

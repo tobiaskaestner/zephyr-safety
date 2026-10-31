@@ -3,8 +3,8 @@ The tool run.py
 
 .. code-block:: console
 
-   scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
-   scripts/benchmarks/run.py --rebuild <run>[/<tree>/<point>] [--only ID ...]
+   scripts/probatrix/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --out <dir>
+   scripts/probatrix/benchmarks/run.py --rebuild <run>[/<tree>/<point>] [--only ID ...]
 
 ``run.py`` runs one :term:`experiment`: it builds the :term:`points
 <point>` from the pinned :term:`trees <tree>`, flashes the board, and

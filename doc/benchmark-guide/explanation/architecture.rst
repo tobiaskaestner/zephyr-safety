@@ -20,7 +20,7 @@ design repository is a clone in it.
        design [label="study designs\nvalidation/empirical/latencies/"];
        pins [label="tree pins\nvalidation/trees/<tree>.yml"];
        apps [label="apps, ports, extractors,\nplot scripts\ntests/benchmarks/"];
-       tools [label="tools\nscripts/benchmarks/\n(study.py, run.py)"];
+       tools [label="tools\nscripts/probatrix/benchmarks/\n(study.py, run.py)"];
      }
 
      subgraph cluster_lab {

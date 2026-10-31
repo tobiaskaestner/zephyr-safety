@@ -13,7 +13,7 @@ study has notebooks, this module runs each notebook (nbclient) with the
 environment
 
     LATBENCH_INSTANCE   the instance folder
-    LATBENCH_REPO       the safety repo (the design and scripts/benchmarks/data.py)
+    LATBENCH_REPO       the safety repo (the design and scripts/probatrix/benchmarks/data.py)
 
 and the safety repo as the current folder, and writes
 <instance>/notebooks/<name>.html (nbconvert), the executed notebook
@@ -24,7 +24,7 @@ notebook the digest of its inputs (the notebook file, the study.json of
 the instance and the helper modules data.py and nbfig.py). With the same
 digest, the notebook does not run again (--force runs it). The output of a notebook is not byte-stable (time
 stamps, ids), so "analysis check" does not compare it. The packages are
-in scripts/benchmarks/requirements-notebooks.lock (not needed for the other
+in scripts/probatrix/benchmarks/requirements-notebooks.lock (not needed for the other
 commands).
 """
 
@@ -54,7 +54,7 @@ def notebooks_of(design_folder):
 
 # The helper modules of the notebooks and this module (it adds the study text): a change of them
 # changes the output too.
-HELPERS = ("scripts/benchmarks/data.py", "scripts/benchmarks/nbfig.py", "scripts/benchmarks/studylib/notebooks.py")
+HELPERS = ("scripts/probatrix/benchmarks/data.py", "scripts/probatrix/benchmarks/nbfig.py", "scripts/probatrix/benchmarks/studylib/notebooks.py")
 
 
 def inputs_digest(nb, study_json, repo=None, extra=()):
@@ -187,7 +187,7 @@ def execute(nb_file, instance_folder, repo):
         import nbformat
         from nbconvert import HTMLExporter
     except ImportError as e:
-        raise NotebookError(f"{e}: install scripts/benchmarks/requirements-notebooks.lock into the venv "
+        raise NotebookError(f"{e}: install scripts/probatrix/benchmarks/requirements-notebooks.lock into the venv "
                             "of the lab space") from None
     nb = nbformat.read(str(nb_file), as_version=4)
     compose(nb, Path(instance_folder), layout.find_root(instance_folder))

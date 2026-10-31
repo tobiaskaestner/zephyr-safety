@@ -77,7 +77,7 @@ class Tree:
         self.writer = writer or Writer()
         self.log = log
         rev, dirty = repo_rev()
-        self.made_by = {"tool": "scripts/benchmarks/study.py", "safety_rev": rev}
+        self.made_by = {"tool": "scripts/probatrix/benchmarks/study.py", "safety_rev": rev}
         if dirty:
             self.made_by["dirty"] = True
         self.folders = layout.instance_folders(self.root)

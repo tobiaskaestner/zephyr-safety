@@ -14,7 +14,7 @@ The hooks must not change the code when they are off
 When the hooks are on, the latency histograms are not data. The hooks
 make each mask section longer, and they add time to the wake path. Each
 log says so (`LAT META m4=1`, `m4_note`). The analysis uses the M4
-tables (`scripts/benchmarks/m4.py`) only. The IRQ tail of the same run
+tables (`scripts/probatrix/benchmarks/m4.py`) only. The IRQ tail of the same run
 is only a cross check.
 
 This study checks the instrument only. The predictions of `wake-m4-validate`

@@ -16,13 +16,13 @@ does these steps with real output. The commands run in the lab folder.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py design scaffold study <PARENT>/st-<name>
+      safety/scripts/probatrix/benchmarks/study.py design scaffold study <PARENT>/st-<name>
 
 #. Make each experiment of the study:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py design scaffold experiment <PARENT>/st-<name>/ex-<experiment> --app <app>
+      safety/scripts/probatrix/benchmarks/study.py design scaffold experiment <PARENT>/st-<name>/ex-<experiment> --app <app>
 
 #. Write each ``experiment.yaml``: the axes, the points and the
    acceptance checks (see :doc:`../reference/files/experiment-yaml` and
@@ -39,7 +39,7 @@ does these steps with real output. The commands run in the lab folder.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies
+      safety/scripts/probatrix/benchmarks/study.py design lint safety/validation/empirical/latencies
 
 #. Commit the files on the branch. ``run.py`` refuses a design repository
    that is not clean.
@@ -47,19 +47,19 @@ does these steps with real output. The commands run in the lab folder.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py campaign check <PARENT>/st-<name>
+      safety/scripts/probatrix/benchmarks/study.py campaign check <PARENT>/st-<name>
 
 #. Run the campaign:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py campaign run <PARENT>/st-<name> --detach
+      safety/scripts/probatrix/benchmarks/study.py campaign run <PARENT>/st-<name> --detach
 
 #. When the campaign is done, read the verdicts and the central results:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py analysis show results/kernel-latency/<instance> --details
-      safety/scripts/benchmarks/study.py analysis show results/kernel-latency/<instance> --explain
+      safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/<instance> --details
+      safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/<instance> --explain
 
 :doc:`../reference/cli/study-py` gives the options of each command.

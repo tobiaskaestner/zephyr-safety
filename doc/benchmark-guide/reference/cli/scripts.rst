@@ -1,7 +1,7 @@
 Host scripts
 ============
 
-The folder ``scripts/benchmarks/`` has the host tools.
+The folder ``scripts/probatrix/benchmarks/`` has the host tools.
 
 .. list-table::
    :header-rows: 1
@@ -48,17 +48,17 @@ Python packages
 ---------------
 
 The tools need Python 3 and the packages of
-``scripts/benchmarks/requirements.txt``. This file gives the ranges of
+``scripts/probatrix/benchmarks/requirements.txt``. This file gives the ranges of
 ``pyserial``, ``PyYAML``, ``matplotlib``, ``jsonschema``, ``packaging``
-and ``west``. ``scripts/benchmarks/requirements.lock`` gives the exact
+and ``west``. ``scripts/probatrix/benchmarks/requirements.lock`` gives the exact
 versions. It also has the Python packages of the Zephyr build
 (``pyelftools`` and others) and ``pyocd``. A :term:`lab space` installs
 the versions of ``requirements.lock`` (see :doc:`../files/lab-config`).
 
 The study notebooks need the packages of
-``scripts/benchmarks/requirements-notebooks.lock`` (see ``study.py
+``scripts/probatrix/benchmarks/requirements-notebooks.lock`` (see ``study.py
 analysis notebooks``). To open a notebook in a browser, also install
-``scripts/benchmarks/requirements-jupyter.lock`` (JupyterLab). Both are
+``scripts/probatrix/benchmarks/requirements-jupyter.lock`` (JupyterLab). Both are
 optional: the other tools do not need them.
 
 ``latbench.py summary``, ``latbench.py parse``, ``m4.py`` and
@@ -70,9 +70,9 @@ Summary and parse (``latbench.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
-   scripts/benchmarks/latbench.py parse LOG
-   scripts/benchmarks/latbench.py capture --port P [--baud B] [--timeout S] [--flash BUILD_DIR] [--runner R] [--echo] OUT
+   scripts/probatrix/benchmarks/latbench.py summary [--json | --md] [--hist H]... [--meta KEY]... LOG ...
+   scripts/probatrix/benchmarks/latbench.py parse LOG
+   scripts/probatrix/benchmarks/latbench.py capture --port P [--baud B] [--timeout S] [--flash BUILD_DIR] [--runner R] [--echo] OUT
 
 ``summary``
    Prints one row for each histogram of each log. The columns are
@@ -118,10 +118,10 @@ Plots (``plot.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/plot.py ccdf  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
-   scripts/benchmarks/plot.py hist  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
-   scripts/benchmarks/plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
-   scripts/benchmarks/plot.py sweep --out f.svg --x KEY [--series KEY]... [--title T] [--hist H] LOG ...
+   scripts/probatrix/benchmarks/plot.py ccdf  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/probatrix/benchmarks/plot.py hist  --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/probatrix/benchmarks/plot.py phase --out f.svg [--title T] [--label L]... [--hist H] LOG ...
+   scripts/probatrix/benchmarks/plot.py sweep --out f.svg --x KEY [--series KEY]... [--title T] [--hist H] LOG ...
 
 ``ccdf``
    The exceedance probability P(latency > x), on log scales, with one line
@@ -156,10 +156,10 @@ Load timer model (``loadmodel.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/loadmodel.py run  [--seed S] [--timers N] [--min-ms A] [--max-ms B] [--ticks-per-sec F]
+   scripts/probatrix/benchmarks/loadmodel.py run  [--seed S] [--timers N] [--min-ms A] [--max-ms B] [--ticks-per-sec F]
                                         [--seconds T] [--parts P] [--json]
-   scripts/benchmarks/loadmodel.py scan [--timers N] [--min-ms A] [--max-ms B] [--ticks-per-sec F] [--seconds T] [SEED ...]
-   scripts/benchmarks/loadmodel.py log  [--parts P] LOG
+   scripts/probatrix/benchmarks/loadmodel.py scan [--timers N] [--min-ms A] [--max-ms B] [--ticks-per-sec F] [--seconds T] [SEED ...]
+   scripts/probatrix/benchmarks/loadmodel.py log  [--parts P] LOG
 
 The periodic load timers of ``common/src/load.c`` get their periods and
 first expiries from the seed ``LATBENCH_LOAD_TIMER_SEED``. They do not
@@ -190,8 +190,8 @@ M4 tables (``m4.py``)
 
 .. code-block:: console
 
-   scripts/benchmarks/m4.py table [--elf ELF] [--binutils PREFIX] [--no-names] [--top N] [--md | --json] LOG
-   scripts/benchmarks/m4.py sweep [--md | --json] LOG ...
+   scripts/probatrix/benchmarks/m4.py table [--elf ELF] [--binutils PREFIX] [--no-names] [--top N] [--md | --json] LOG
+   scripts/probatrix/benchmarks/m4.py sweep [--md | --json] LOG ...
 
 ``table``
    Prints one table for the mask sections and one for the ISR bodies,
@@ -217,7 +217,7 @@ Example:
 
 .. code-block:: console
 
-   python3 scripts/benchmarks/m4.py table <run>/ws-up-irqoff/<point>/rep1.log --top 20
-   python3 scripts/benchmarks/m4.py sweep <run>/ws-up-irqoff/*/rep1.log --md
+   python3 scripts/probatrix/benchmarks/m4.py table <run>/ws-up-irqoff/<point>/rep1.log --top 20
+   python3 scripts/probatrix/benchmarks/m4.py sweep <run>/ws-up-irqoff/*/rep1.log --md
 
 :doc:`../../explanation/mask-time` describes the M4 method.

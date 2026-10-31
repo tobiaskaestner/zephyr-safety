@@ -120,7 +120,7 @@ def reexec_in_lab_repo(argv):
     lab = labmod.find()
     if lab is None:
         return
-    target = lab.repo / "scripts" / "benchmarks" / "study.py"
+    target = lab.repo / "scripts" / "probatrix" / "benchmarks" / "study.py"
     python = lab.python
     same_script = target.resolve() == Path(__file__).resolve()
     # a venv Python is a link to the base Python: compare the environments, not the files
@@ -176,13 +176,13 @@ def cmd_lab_init(args):
         print(f"  python       {lab.venv} (the Python of lab init)")
     else:
         print(f"  python       WARNING: lab init runs without a virtual environment ({sys.executable}); "
-              f"make one with {lab.repo}/scripts/benchmarks/requirements.lock and run lab init with its Python")
+              f"make one with {lab.repo}/scripts/probatrix/benchmarks/requirements.lock and run lab init with its Python")
     for p in labmod.package_problems(lab.repo):
         print(f"  WARNING      {p}")
     print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
     print(f"  results      {lab.results}")
     print(f"  hardware map {lab.hw_map}" + ("" if lab.hw_map.is_file() else " (missing: see \"Make a hardware map\" in the benchmark guide)"))
-    print(f"next: cd {lab.folder} && {lab.repo}/scripts/benchmarks/study.py trees setup <tree>")
+    print(f"next: cd {lab.folder} && {lab.repo}/scripts/probatrix/benchmarks/study.py trees setup <tree>")
 
 
 def cmd_lab_status(args):

@@ -12,7 +12,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/study.py design scaffold experiment <study folder>/ex-<name> --app <app>
+      scripts/probatrix/benchmarks/study.py design scaffold experiment <study folder>/ex-<name> --app <app>
 
    The command also adds the name to ``experiments`` of ``study.yaml``,
    and a line to the section Experiments of ``study.md``.
@@ -39,7 +39,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/study.py design lint validation/empirical/latencies/st-<study>
+      scripts/probatrix/benchmarks/study.py design lint validation/empirical/latencies/st-<study>
 
 #. Commit the files. ``run.py`` refuses a safety repository that is not
    clean.
@@ -47,14 +47,14 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --dry-run
+      scripts/probatrix/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --dry-run
 
 #. Make sure that all points build. This step also does the Kconfig
    comparison of each point:
 
    .. code-block:: console
 
-      scripts/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --build-only
+      scripts/probatrix/benchmarks/run.py validation/empirical/latencies/st-<study>/ex-<name>/experiment.yaml --build-only
 
 #. In a lab space, run the experiment with a campaign (see
    :doc:`../reference/cli/study-py`). The campaign adds the run to the
@@ -62,7 +62,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/benchmarks/study.py campaign run <experiment folder>
+      scripts/probatrix/benchmarks/study.py campaign run <experiment folder>
 
 #. Without a campaign, see :doc:`run-without-a-campaign`.
 

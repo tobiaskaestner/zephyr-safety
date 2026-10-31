@@ -38,7 +38,7 @@ Make the Python environment
 
 .. code-block:: console
 
-   $ python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/benchmarks/requirements.lock && echo installed
+   $ python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/probatrix/benchmarks/requirements.lock && echo installed
    installed
 
 ``requirements.lock`` has the exact versions of the packages: those of
@@ -88,14 +88,14 @@ Run ``lab init`` in the lab folder with the Python of the environment:
 
 .. code-block:: console
 
-   $ .venv/bin/python safety/scripts/benchmarks/study.py lab init --repo safety --trees-source /wrk/z/latency-trees-src
+   $ .venv/bin/python safety/scripts/probatrix/benchmarks/study.py lab init --repo safety --trees-source /wrk/z/latency-trees-src
    lab space lab-tutorial-332eb106 in /wrk/z/lab-tutorial
      design repo  /wrk/z/lab-tutorial/safety
      python       /wrk/z/lab-tutorial/.venv (the Python of lab init)
      trees        /wrk/z/lab-tutorial/trees (clone from /wrk/z/latency-trees-src)
      results      /wrk/z/lab-tutorial/results
      hardware map /wrk/z/lab-tutorial/hw-map.yml
-   next: cd /wrk/z/lab-tutorial && /wrk/z/lab-tutorial/safety/scripts/benchmarks/study.py trees setup <tree>
+   next: cd /wrk/z/lab-tutorial && /wrk/z/lab-tutorial/safety/scripts/probatrix/benchmarks/study.py trees setup <tree>
 
 ``lab init`` writes ``.lab/config``. It records the Python environment.
 From now on, each ``study.py`` in the lab folder runs with that Python.
@@ -110,7 +110,7 @@ The experiments of this tutorial use the tree ``ws-up``:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py trees setup ws-up
+   $ safety/scripts/probatrix/benchmarks/study.py trees setup ws-up
    ws-up: west workspace /wrk/z/lab-tutorial/trees/ws-up
    ws-up/zephyr: ec98918869ca (from /wrk/z/latency-trees-src/ws-up)
    ws-up/cmsis_6: 1c1840af7a7e (from https://github.com/zephyrproject-rtos/CMSIS_6)
@@ -126,7 +126,7 @@ Look at the lab space
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py lab status
+   $ safety/scripts/probatrix/benchmarks/study.py lab status
    lab space lab-tutorial-332eb106 in /wrk/z/lab-tutorial
      design repo  /wrk/z/lab-tutorial/safety at df1a5d8c69ad
      python       /wrk/z/lab-tutorial/.venv/bin/python (/wrk/z/lab-tutorial/.venv)
@@ -147,7 +147,7 @@ the wire:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py lab hwcheck nucleo_g474re
+   $ safety/scripts/probatrix/benchmarks/study.py lab hwcheck nucleo_g474re
    nucleo_g474re: build loopback_check (ws-up)
    nucleo_g474re: flash, probe 0042003F3433510A37363934, console /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
      *** Booting Zephyr OS build v4.5.0-rc3-40-gec98918869ca ***

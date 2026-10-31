@@ -6,7 +6,7 @@ Experiment file
 An :term:`experiment` folder ``ex-<name>/`` holds the experiment file
 ``experiment.yaml`` and the description ``experiment.md`` (see
 :ref:`benchguide-experiment-md`). The schema
-``scripts/benchmarks/schemas/experiment.schema.yaml`` gives the keys and
+``scripts/probatrix/benchmarks/schemas/experiment.schema.yaml`` gives the keys and
 their types. ``run.py`` stops on a key that it does not know. The keys of
 the experiment file are:
 

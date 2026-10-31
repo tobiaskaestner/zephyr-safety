@@ -18,9 +18,9 @@ do not use the board. ``unit/README.md`` gives the full commands.
      - A ztest app for the code placement (``LATBENCH_CODE_PLACE``)
    * - ``unit/irqmask/``
      - A ztest app for the M4 site table
-   * - ``scripts/benchmarks/tests/test_*.py``
+   * - ``scripts/probatrix/benchmarks/tests/test_*.py``
      - The pytest modules of the host tools (list below)
-   * - ``scripts/benchmarks/tests/fixtures/``
+   * - ``scripts/probatrix/benchmarks/tests/fixtures/``
      - The console output of the ztest apps, one log for each scenario
 
 The ztest app
@@ -104,15 +104,15 @@ The pytest modules
 ------------------
 
 #. Install ``pytest`` into the Python environment that has the packages
-   of ``scripts/benchmarks/requirements.txt``. In a lab space, this is the
+   of ``scripts/probatrix/benchmarks/requirements.txt``. In a lab space, this is the
    environment of the lab space.
 #. In the root folder of the safety repository, run pytest:
 
    .. code-block:: console
 
-      python3 -m pytest scripts/benchmarks/tests -q
+      python3 -m pytest scripts/probatrix/benchmarks/tests -q
 
-The folder ``scripts/benchmarks/tests/`` has these modules:
+The folder ``scripts/probatrix/benchmarks/tests/`` has these modules:
 
 - ``test_buildcache.py``: the build cache (``studylib/buildcache.py``).
 - ``test_campaign.py``: the plan of a campaign, the instances that it

@@ -113,7 +113,7 @@ def experiment_files(folder, name, app, board=None):
     exp.mkdir(parents=True)
     board_line = f"board: {board}\n" if board else ""
     (exp / "experiment.yaml").write_text(f"""{header()}
-# The experiment {name}. Keys: scripts/benchmarks/schemas/experiment.schema.yaml
+# The experiment {name}. Keys: scripts/probatrix/benchmarks/schemas/experiment.schema.yaml
 # and the benchmark guide ("Experiment file"). experiment.md describes what
 # it measures and what each axis is for.
 

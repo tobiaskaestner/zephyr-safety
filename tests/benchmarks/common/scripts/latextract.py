@@ -21,7 +21,7 @@ of this module with its name. The output is one JSON object on stdout
 - tails: the witness tables (LATBENCH_TAIL): {name: {n, seen, min_cyc,
   exc_min, exc_max, fields, rows}}. Each row has the fields of the table,
   pc as "0x..", and "function" (the function of pc, or null) if the ELF
-  and the binutils are there. scripts/benchmarks/tails.py gives the
+  and the binutils are there. scripts/probatrix/benchmarks/tails.py gives the
   causes.
 
 The extractor reads only the run folder; the run folder does not change.
@@ -34,7 +34,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[4]
-sys.path.insert(0, str(REPO / "scripts" / "benchmarks"))
+sys.path.insert(0, str(REPO / "scripts" / "probatrix" / "benchmarks"))
 
 import latbench  # noqa: E402
 import m4  # noqa: E402

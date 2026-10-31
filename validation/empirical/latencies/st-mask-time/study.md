@@ -11,7 +11,7 @@ The study uses the M4 method (`doc/benchmark-guide/explanation/mask-time.rst`). 
 `CONFIG_ARM_IRQ_MASK_HOOKS_ISR`. The hooks record each mask section and
 each ISR body. The latency histograms of these runs are not data
 (`LAT META m4=1`). The analysis uses the M4 tables
-(`scripts/benchmarks/m4.py`) only. All values are in cycles at 170 MHz.
+(`scripts/probatrix/benchmarks/m4.py`) only. All values are in cycles at 170 MHz.
 `st-measurement-validity/st-mask-instrumentation` checks the method.
 
 The study uses these mechanisms:

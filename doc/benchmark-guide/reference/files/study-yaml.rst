@@ -4,7 +4,7 @@ Design files
 A :term:`study` folder has ``study.yaml``, ``study.md`` and
 ``hypotheses.yaml``. ``study.py design scaffold study`` makes them from
 templates (see :ref:`benchguide-scaffold`). The schema
-``scripts/benchmarks/schemas/study.schema.yaml`` gives the keys and
+``scripts/probatrix/benchmarks/schemas/study.schema.yaml`` gives the keys and
 their types.
 
 ``study.yaml``
@@ -84,8 +84,8 @@ A study can have notebooks, committed without outputs. Each study has
 all studies: the instance, the question, the central results, the
 hypotheses and the checks. Then it shows the data of the study as
 interactive figures, each with a table of its values. A notebook reads a
-built instance with ``scripts/benchmarks/data.py`` and makes its figures
-with ``scripts/benchmarks/nbfig.py``. In the figures, you can hover for
+built instance with ``scripts/probatrix/benchmarks/data.py`` and makes its figures
+with ``scripts/probatrix/benchmarks/nbfig.py``. In the figures, you can hover for
 values, drag to zoom, click a legend entry to hide a series, and select
 the metric in the menu above a figure. ``study.py analysis notebooks``
 runs the notebooks (see :doc:`../cli/study-py`). The HTML of a report
@@ -103,7 +103,7 @@ owns each imported experiment. These cells have the metadata
 ``latbench: from the design``. A study without hypotheses, for example
 a study that has only sub-studies, also has a report.
 To open the reports in a browser, install JupyterLab into the venv of the
-lab space (``scripts/benchmarks/requirements-jupyter.lock``) and start it
+lab space (``scripts/probatrix/benchmarks/requirements-jupyter.lock``) and start it
 at the results root:
 
 .. code-block:: console

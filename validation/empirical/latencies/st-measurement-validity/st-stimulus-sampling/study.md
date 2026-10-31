@@ -23,7 +23,7 @@ The study has two parts:
    sequence. The load timers keep their own seed
    (`LATBENCH_LOAD_TIMER_SEED`).
 
-The model of the load timers (`scripts/benchmarks/loadmodel.py`) says
+The model of the load timers (`scripts/probatrix/benchmarks/loadmodel.py`) says
 that the long SysTick ISRs come from the ticks on which several load
 timers expire. `LATBENCH_LOAD_TIMER_SEED` sets these ticks. The stimulus
 seed does not. Thus a new stimulus seed gives new edges on the same
@@ -109,7 +109,7 @@ H3. `report.ipynb` is the report template of the study.
   the tick phase.
 - `ex-wake-stim-seed-1m/experiment.md`: the 8 stimulus seeds.
 - `ex-wake-load-seed-tail/experiment.md`: the run length and the load seeds.
-- `scripts/benchmarks/loadmodel.py`: the model of the load timer
+- `scripts/probatrix/benchmarks/loadmodel.py`: the model of the load timer
   expiries.
 - `st-default-latencies/st-isr-to-thread/ex-wake-isr-1m/experiment.md`:
   the two modes.

@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-# Boards for the latency benchmarks. scripts/benchmarks/run.py reads this file.
+# Boards for the latency benchmarks. scripts/probatrix/benchmarks/run.py reads this file.
 #
 # For each board target:
 #   port      folder of the board port in common/boards/ (C code, overlays)
@@ -15,7 +15,7 @@
 # An experiment selects a board with "board:"; without it, run.py uses
 # "default". The probe and the console of a board are host data: they are
 # in the hardware map of the host (hw-map.yml, twister format, not checked
-# in; see scripts/benchmarks/hwmap.py).
+# in; see scripts/probatrix/benchmarks/hwmap.py).
 
 default: nucleo_g474re
 

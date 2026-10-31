@@ -28,7 +28,7 @@ lab folder:
     venv = .venv                    the virtual environment that study.py runs in
 
 The setup order: make the lab folder, clone the safety repo into it, make
-a virtual environment with scripts/benchmarks/requirements.lock of that
+a virtual environment with scripts/probatrix/benchmarks/requirements.lock of that
 repo (the exact versions; requirements.txt has the ranges), then run "study.py lab init --repo <clone>" with the Python of that
 environment, in the lab folder. lab init records the environment; every
 study.py of the lab space then runs with its Python (see study.py).
@@ -181,9 +181,9 @@ def in_venv():
 
 
 def requirements(repo, name="requirements.txt"):
-    """[(name, specifier text)] of scripts/benchmarks/<name> of a repo (no comments)."""
+    """[(name, specifier text)] of scripts/probatrix/benchmarks/<name> of a repo (no comments)."""
     import re
-    f = Path(repo) / "scripts" / "benchmarks" / name
+    f = Path(repo) / "scripts" / "probatrix" / "benchmarks" / name
     out = []
     for ln in f.read_text().splitlines() if f.is_file() else []:
         ln = ln.split("#", 1)[0].strip()
@@ -236,8 +236,8 @@ def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, 
     if (folder / CONFIG).exists():
         raise LabError(f"{folder} is a lab space already ({folder / CONFIG})")
     repo = Path(repo).expanduser().resolve()
-    if not (repo / "scripts" / "benchmarks" / "study.py").is_file():
-        raise LabError(f"{repo} is not a safety repo (no scripts/benchmarks/study.py)")
+    if not (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").is_file():
+        raise LabError(f"{repo} is not a safety repo (no scripts/probatrix/benchmarks/study.py)")
     name = name or folder.name
     cfg = configparser.ConfigParser()
 
@@ -258,7 +258,7 @@ def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, 
         cfg["python"] = {"venv": rel(sys.prefix)}
     (folder / ".lab").mkdir(parents=True)
     with open(folder / CONFIG, "w") as f:
-        f.write("# The lab space (scripts/benchmarks/studylib/lab.py). Made by study.py lab init.\n")
+        f.write("# The lab space (scripts/probatrix/benchmarks/studylib/lab.py). Made by study.py lab init.\n")
         cfg.write(f)
     lab = Lab(folder)
     lab.results.mkdir(parents=True, exist_ok=True)

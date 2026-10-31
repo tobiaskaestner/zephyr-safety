@@ -56,7 +56,7 @@ def subcommands(parser, prefix=()):
 
 def test_the_reference_names_each_command():
     """doc/benchmark-guide/reference/cli/study-py.rst has a synopsis line for each command of study.py."""
-    page = (Path(study.__file__).resolve().parents[2] / "doc" / "benchmark-guide" / "reference" / "cli"
+    page = (Path(study.__file__).resolve().parents[3] / "doc" / "benchmark-guide" / "reference" / "cli"
             / "study-py.rst").read_text()
     cmds = subcommands(study.parser())
     assert len(cmds) > 25

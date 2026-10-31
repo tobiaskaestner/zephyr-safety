@@ -14,7 +14,7 @@ from pathlib import Path
 import pytest
 
 SCRIPTS = Path(__file__).resolve().parent.parent
-REPO = SCRIPTS.parents[1]
+REPO = SCRIPTS.parents[2]
 sys.path.insert(0, str(SCRIPTS))
 sys.path.insert(0, str(REPO / "tests" / "benchmarks" / "common" / "scripts"))
 

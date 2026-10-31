@@ -461,7 +461,7 @@ def test_roundtrip_summary(fixture_run, capsys):
 
 
 def test_extract_hist_without_negative():
-    sys.path.insert(0, str(SCRIPTS.parents[1] / "tests" / "benchmarks" / "common" / "scripts"))
+    sys.path.insert(0, str(SCRIPTS.parents[2] / "tests" / "benchmarks" / "common" / "scripts"))
     import latextract
     # An old log: the negative difference is in n, max and overflow bin 31.
     h = latextract.hist_out(hist(bins={49: 9, 785: 1}, ovf={31: 1}, vmax=4294948032, mean=49.0))

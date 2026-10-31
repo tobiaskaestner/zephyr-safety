@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for scripts/benchmarks/loadmodel.py (the model of the periodic load timers)."""
+"""Unit tests for scripts/probatrix/benchmarks/loadmodel.py (the model of the periodic load timers)."""
 
 import sys
 from pathlib import Path

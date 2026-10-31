@@ -44,7 +44,7 @@ The three measurement apps have the same frame:
 
 Each ``testcase.yaml`` of a measurement app is a build check only
 (``build_only: true``). A data point comes only from
-``scripts/benchmarks/run.py`` (see :doc:`../reference/cli/run-py`).
+``scripts/probatrix/benchmarks/run.py`` (see :doc:`../reference/cli/run-py`).
 
 Each app has its own page beside its code, in
 ``tests/benchmarks/<app>/doc/``: what it measures, with a timing diagram,

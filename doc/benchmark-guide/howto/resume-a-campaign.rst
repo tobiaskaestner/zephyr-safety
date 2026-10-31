@@ -10,14 +10,14 @@ tells what ``resume`` does with each experiment.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py lab status
-      safety/scripts/benchmarks/study.py campaign status
+      safety/scripts/probatrix/benchmarks/study.py lab status
+      safety/scripts/probatrix/benchmarks/study.py campaign status
 
 #. Read the states and the notes of the experiments:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py campaign status <id>
+      safety/scripts/probatrix/benchmarks/study.py campaign status <id>
 
 #. If a note names a problem of the host or the board (the wire, the
    console, the disk), correct it first (see :doc:`troubleshoot-a-run`).
@@ -32,13 +32,13 @@ tells what ``resume`` does with each experiment.
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py campaign resume <id> [--detach]
+      safety/scripts/probatrix/benchmarks/study.py campaign resume <id> [--detach]
 
 #. When the campaign is done, read the verdicts:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py campaign status <id> --verdicts
+      safety/scripts/probatrix/benchmarks/study.py campaign status <id> --verdicts
 
 #. If you checked out the ref in step 4, go back to your branch:
 

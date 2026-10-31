@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""The schemas of the hand-written YAML files (scripts/benchmarks/schemas/).
+"""The schemas of the hand-written YAML files (scripts/probatrix/benchmarks/schemas/).
 
     problems(kind, data)    all violations, as "<key path>: <text>"
     check(kind, data, file) raise SchemaError at the first violation

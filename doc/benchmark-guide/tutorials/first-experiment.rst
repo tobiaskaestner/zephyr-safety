@@ -19,7 +19,7 @@ It builds nothing:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --dry-run
+   $ safety/scripts/probatrix/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --dry-run
    safety df1a5d8c69ad  trees ws-up  5 points x 1
      stock-idle: {'LATBENCH_IRQ_PATH_STOCK': 'y'} [] []
      wrapped-idle: {'LATBENCH_IRQ_PATH_WRAPPED': 'y'} [] []
@@ -39,7 +39,7 @@ builds each point, flashes the board and reads 100000 samples:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --out tryout
+   $ safety/scripts/probatrix/benchmarks/run.py safety/validation/empirical/latencies/st-default-latencies/st-irq-entry/ex-irq-smoke/experiment.yaml --out tryout
    safety df1a5d8c69ad  trees ws-up  5 points x 1
    [...]
    board nucleo_g474re: probe 0042003F3433510A37363934 (STLINK-V3), console /dev/serial/by-id/usb-STMicroelectronics_STLINK-V3_0042003F3433510A37363934-if02
@@ -112,7 +112,7 @@ Plot the distributions
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/plot.py ccdf --out irq-smoke-ccdf.svg --title 'irq-smoke: IRQ entry latency' tryout/irq-smoke/20261029T131326Z/ws-up/*/rep1.log
+   $ safety/scripts/probatrix/benchmarks/plot.py ccdf --out irq-smoke-ccdf.svg --title 'irq-smoke: IRQ entry latency' tryout/irq-smoke/20261029T131326Z/ws-up/*/rep1.log
    saved irq-smoke-ccdf.svg
 
 .. figure:: irq-smoke-ccdf.svg

@@ -127,10 +127,10 @@ static inline void lat_phase_add(struct lat_phase *p, uint32_t phase, uint32_t v
 	p->sum[b] += v;
 }
 
-/** Print the phase histogram in the LAT line format (see scripts/benchmarks/latbench.py). */
+/** Print the phase histogram in the LAT line format (see scripts/probatrix/benchmarks/latbench.py). */
 void lat_phase_print(const struct lat_phase *p);
 
-/** Print the histogram in the LAT line format (see scripts/benchmarks/latbench.py). */
+/** Print the histogram in the LAT line format (see scripts/probatrix/benchmarks/latbench.py). */
 void lat_hist_print(const struct lat_hist *h);
 
 #endif /* LATBENCH_HIST_H_ */

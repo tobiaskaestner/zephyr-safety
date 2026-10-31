@@ -21,16 +21,16 @@ Make a branch and the files
 
    $ git -C safety switch -c tutorial/irq-opt
    Switched to a new branch 'tutorial/irq-opt'
-   $ safety/scripts/benchmarks/study.py design scaffold study safety/validation/empirical/latencies/st-tutorial
+   $ safety/scripts/probatrix/benchmarks/study.py design scaffold study safety/validation/empirical/latencies/st-tutorial
    new /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-tutorial/hypotheses.yaml
    new /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-tutorial/study.md
    new /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-tutorial/study.yaml
    replace the TODO texts; 'study.py design lint' lists them
-   $ safety/scripts/benchmarks/study.py design scaffold experiment safety/validation/empirical/latencies/st-tutorial/ex-irq-opt --app irq_latency
+   $ safety/scripts/probatrix/benchmarks/study.py design scaffold experiment safety/validation/empirical/latencies/st-tutorial/ex-irq-opt --app irq_latency
    new /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.md
    new /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.yaml
    replace the TODO texts; 'study.py design lint' lists them
-   $ safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
+   $ safety/scripts/probatrix/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
    warning: validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.md: 3 TODO texts of a template
    warning: validation/empirical/latencies/st-tutorial/ex-irq-opt/experiment.yaml: 1 TODO texts of a template
    warning: validation/empirical/latencies/st-tutorial/hypotheses.yaml: 4 TODO texts of a template
@@ -133,7 +133,7 @@ Lint and commit
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
+   $ safety/scripts/probatrix/benchmarks/study.py design lint safety/validation/empirical/latencies/st-tutorial
    0 errors, 0 warnings
    $ git -C safety add -A && git -C safety commit -q -m 'tutorial: a study of the optimization level' && git -C safety log --oneline -1
    637f52f tutorial: a study of the optimization level
@@ -147,12 +147,12 @@ Run it
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-tutorial
+   $ safety/scripts/probatrix/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-tutorial
      planned  irq-opt (tutorial, nucleo_g474re) -> kernel-latency/st-tutorial@nucleo_g474re (will be made)
      ok   design repo: /wrk/z/lab-tutorial/safety at 637f52f18ee0
      [...]
    pre-flight check: ok
-   $ safety/scripts/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-tutorial --detach
+   $ safety/scripts/probatrix/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-tutorial --detach
    campaign 20261029T132506Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261029T132506Z.json
    runs in the background (pid 1912267); log /wrk/z/lab-tutorial/.lab/campaigns/20261029T132506Z/campaign.log; 'study.py campaign status 20261029T132506Z'
 
@@ -160,7 +160,7 @@ After about three minutes:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py analysis show results/kernel-latency/st-tutorial@nucleo_g474re --details
+   $ safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/st-tutorial@nucleo_g474re --details
 
    == kernel-latency/st-tutorial@nucleo_g474re
       H1 wrong (0 of 1)
@@ -180,7 +180,7 @@ result:
 
 .. code-block:: console
 
-   $ safety/scripts/benchmarks/study.py analysis show results/kernel-latency/st-tutorial@nucleo_g474re --explain opt-p50
+   $ safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/st-tutorial@nucleo_g474re --explain opt-p50
 
    == kernel-latency/st-tutorial@nucleo_g474re [opt-p50]
       statement: With {opt} optimizations, the direct path has a p50 of {p50:.0f} cycles.

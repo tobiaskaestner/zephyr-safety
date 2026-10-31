@@ -82,5 +82,5 @@ Add an app
 #. Add an experiment for the app (see :doc:`add-an-experiment`).
 
 If the app prints a new ``LAT`` line type, add it to ``parse_log()`` in
-``scripts/benchmarks/latbench.py``. Also add it to
+``scripts/probatrix/benchmarks/latbench.py``. Also add it to
 :doc:`../reference/log-format` in this guide.

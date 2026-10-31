@@ -15,20 +15,20 @@ Write a central result
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py design lint safety/validation/empirical/latencies/st-<study>
+      safety/scripts/probatrix/benchmarks/study.py design lint safety/validation/empirical/latencies/st-<study>
 
 #. Commit the change on your branch.
 #. Build the results tree:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py analysis build results/kernel-latency
+      safety/scripts/probatrix/benchmarks/study.py analysis build results/kernel-latency
 
 #. Show the rows and the sentences of the result:
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py analysis show results/kernel-latency --explain <id>
+      safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency --explain <id>
 
    :ref:`benchguide-explain-form` gives the form of the output.
 #. If the output has the line ``unfilled placeholders``, a placeholder
@@ -42,5 +42,5 @@ Write a central result
 
    .. code-block:: console
 
-      safety/scripts/benchmarks/study.py instance verdict <instance folder> --central-result <id> \
+      safety/scripts/probatrix/benchmarks/study.py instance verdict <instance folder> --central-result <id> \
           --verdict confirmed --by "<name>"

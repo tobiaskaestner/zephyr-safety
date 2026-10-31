@@ -1,7 +1,7 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests for scripts/benchmarks/m4.py (the M4 site tables).
+"""Unit tests for scripts/probatrix/benchmarks/m4.py (the M4 site tables).
 
 The fixtures m4_*.log are the console output of the ztest app
 unit/irqmask (one log for each scenario). ref_values() makes the same

@@ -37,8 +37,8 @@ def setup(tmp_path, monkeypatch):
     (sub / "study.yaml").write_text(yaml.safe_dump(d))
     monkeypatch.setattr(trees, "STUDIES_DIR", root)
     repo = tmp_path / "safety"
-    (repo / "scripts" / "benchmarks").mkdir(parents=True)
-    (repo / "scripts" / "benchmarks" / "study.py").write_text("")
+    (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
+    (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")
     lab = labmod.init(tmp_path / "lab", repo)
     return lab, Design(root), root
 

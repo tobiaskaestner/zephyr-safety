@@ -4,7 +4,7 @@ Output format
 The measurement :term:`apps <App>` print their results on the console as text lines
 that start with ``LAT``. The functions in ``common/src/hist.c`` and
 ``common/src/meta.c`` print most of the lines.
-``scripts/benchmarks/latbench.py`` parses them. Lines without the
+``scripts/probatrix/benchmarks/latbench.py`` parses them. Lines without the
 ``LAT`` prefix (for example the Zephyr boot banner) are ignored.
 
 Line types

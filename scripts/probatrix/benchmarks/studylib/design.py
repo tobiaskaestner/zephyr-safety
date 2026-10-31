@@ -42,7 +42,7 @@ def repo_rel(path):
 def repo_rev(repo=trees.REPO_DIR):
     """(rev, dirty) of the safety repo that holds the design and the tools."""
     rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "validation", "scripts/benchmarks",
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "validation", "scripts/probatrix",
                                  "tests/benchmarks"], cwd=repo, capture_output=True, text=True).stdout.strip())
     return rev, dirty
 
