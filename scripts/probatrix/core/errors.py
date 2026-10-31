@@ -5,7 +5,8 @@
 
 NoValue and MissingRun: the data do not give a value (a check or a central result
 waits or has no verdict). DesignError: a design file is wrong. SchemaError: a file
-breaks its schema. SealError: a raw run does not agree with its seal.
+breaks its schema. SealError: a raw run does not agree with its seal. RunError and CampaignError:
+the runner and the campaign engine stop.
 """
 
 
@@ -31,3 +32,11 @@ class SchemaError(ValueError):
 
 class SealError(Exception):
     pass
+
+
+class RunError(Exception):
+    """A run stops before or while it is made: the repo is dirty, it changed, the run list refuses the run."""
+
+
+class CampaignError(Exception):
+    """A campaign cannot start or go on (a lock, a dirty repo, a wrong folder)."""

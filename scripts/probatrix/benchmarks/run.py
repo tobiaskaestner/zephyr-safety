@@ -83,7 +83,6 @@ import platform
 import re
 import shlex
 import shutil
-import signal
 import subprocess
 import sys
 from pathlib import Path
@@ -104,7 +103,7 @@ from probatrix.benchmarks import trees  # noqa: E402
 from probatrix.core import config
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 from probatrix.benchmarks.studylib import lint  # noqa: E402
-from probatrix.core import schema, seal
+from probatrix.core import runner, schema, seal
 
 BENCH_DIR = benchkind.KIND.bench_dir
 
@@ -177,12 +176,17 @@ def safety_repo_state():
     return root, rev, dirty
 
 
+def stop_on_run_error(call, *args, **kw):
+    """call(...); a RunError of core/runner.py becomes the stop of this tool (fail)."""
+    try:
+        return call(*args, **kw)
+    except runner.RunError as e:
+        fail(str(e))
+
+
 def check_repo_unchanged(repo_root, rev):
     """Stop if the safety repo is not clean at rev any more (a change during the run)."""
-    now, dirty = trees.repo_state(repo_root)
-    if now != rev or dirty:
-        fail(f"the safety repo {repo_root} changed during the run (was {rev[:12]}, now {now[:12]}"
-             f"{', dirty' if dirty else ''})")
+    stop_on_run_error(runner.check_unchanged, repo_root, rev, state=trees.repo_state)
 
 
 def tree_hash(repo_root, rev, path):
@@ -786,10 +790,8 @@ def main():
 
     # 1. Provenance checks, before anything is built.
     repo_root, repo_rev, repo_dirty = safety_repo_state()
-    if repo_dirty:
-        fail(f"safety repo {repo_root} is dirty, commit first:\n{repo_dirty}")
-    if not exp_path.is_relative_to(repo_root):
-        fail(f"{exp_path} is not in the safety repo {repo_root}")
+    stop_on_run_error(runner.check_clean, repo_root, repo_dirty)
+    stop_on_run_error(runner.check_inside, exp_path, repo_root)
     lab = labmod.find()
     if lab and lab.repo.resolve() != repo_root.resolve():
         fail(f"this is run.py of {repo_root}; the lab space {lab.folder} uses the design repo {lab.repo}")
@@ -882,15 +884,11 @@ def main():
     # 2. Output folder and manifest.
     started = datetime.datetime.now(datetime.timezone.utc)
     out = Path(args.out).resolve()
-    exp_folder = trees.EXPERIMENT_PREFIX + exp["name"] if (out / "instance.json").is_file() else exp["name"]
-    run_dir = out / exp_folder / started.strftime("%Y%m%dT%H%M%SZ")
-    run_dir.mkdir(parents=True)
-    print(f"run folder {run_dir}", flush=True)       # the campaign reads this line
+    run_dir = runner.run_folder(out, exp["name"], started)
     builder.run_id = f"{exp['name']}/{run_dir.name}"
     # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
     # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
-    run_ref = benchkind.KIND.ref("run", exp["name"], run_dir.name)
-    trees.git("update-ref", run_ref, repo_rev, cwd=repo_root)
+    run_ref = runner.pin_run(benchkind.KIND, repo_root, repo_rev, exp["name"], run_dir.name)
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", port], capture_output=True, text=True
     ).stdout
@@ -945,51 +943,16 @@ def main():
     # 3. Build, flash and capture each point; 4. summary, seal and run list. A stop before the
     # seal leaves <UTC>.failed.json (the step, the error, the end of the last log).
     state = {"step": "start", "log": None}
-
-    def on_term(signum, frame):
-        raise SystemExit(f"error: stopped by signal {signum}")
-
-    signal.signal(signal.SIGTERM, on_term)
-    try:
-        capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manifest, save_manifest, args, state)
-    except BaseException as x:
-        if not seal.seal_path(run_dir).exists():
-            write_failed(run_dir, exp, state, x)
-        raise
-    digest = seal.write(run_dir)
-    print(f"results in {run_dir}  ({digest})")
-    if (out / "instance.json").is_file():
+    runner.guarded(benchkind.KIND, run_dir, exp["name"], state,
+                   lambda: capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manifest,
+                                   save_manifest, args, state))
+    runner.finish(run_dir)
+    if runner.in_instance(out):
         from probatrix.benchmarks.studylib import instance
         from probatrix.core.design import Design
-        try:
-            rid = instance.add(Design(), out, run_dir, role=args.role, reason=args.reason, campaign=args.campaign)
-        except instance.InstanceError as e:
-            fail(f"the run is sealed, but not in the run list of {out}: {e}")
-        print(f"run {rid} added to the instance {out}")
-
-
-def write_failed(run_dir, exp, state, x):
-    """<UTC>.failed.json beside a run folder that has no seal."""
-    if isinstance(x, SystemExit):
-        error = str(x.code).removeprefix("error: ") if x.code not in (None, 0) else "exit"
-    elif isinstance(x, KeyboardInterrupt):
-        error = "interrupt"
-    else:
-        error = f"{type(x).__name__}: {x}"
-    if state.get("log") is None and state.get("builder") is not None:
-        state["log"] = state["builder"].last_log          # a build failure: the build log
-    tail = []
-    if state.get("log") and Path(state["log"]).is_file():
-        tail = Path(state["log"]).read_text(errors="replace").splitlines()[-20:]
-    rec = {"format": "latbench-failed/1", "run": f"{exp['name']}/{run_dir.name}", "step": state["step"],
-           "error": error, "time": datetime.datetime.now(datetime.timezone.utc).isoformat(),
-           "host": platform.node(),
-           "log": state.get("log") and (str(Path(state["log"]).relative_to(run_dir))
-                                        if Path(state["log"]).is_relative_to(run_dir) else str(state["log"])),
-           "log_tail": tail}
-    f = run_dir.parent / f"{run_dir.name}.failed.json"
-    f.write_text(json.dumps(rec, indent=2) + "\n")
-    print(f"the run failed ({error}); record {f}", file=sys.stderr)
+        stop_on_run_error(runner.add_to_run_list, out, run_dir,
+                          lambda folder, rdir, **entry: instance.add(Design(), folder, rdir, **entry),
+                          instance.InstanceError, role=args.role, reason=args.reason, campaign=args.campaign)
 
 
 def capture(exp, points, tree_cfg, builder, board_cfg, hw, port, run_dir, manifest, save_manifest, args, state):
