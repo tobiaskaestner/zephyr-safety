@@ -24,9 +24,10 @@ import platform
 import subprocess
 import time
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import hwmap
+from probatrix.benchmarks.studylib import boardaxis
 from probatrix.benchmarks import trees
-from probatrix.core import config
 
 TIMEOUT = 60
 
@@ -46,7 +47,7 @@ def tree_for(cfg, repos):
 
 
 def board_tag(board):
-    return board.replace("/", "_").replace("@", "_")
+    return boardaxis.lock_key(board)
 
 
 def record_path(lab, board):
@@ -131,7 +132,7 @@ def _check(lab, board, log, tree, rec):
         else:
             b = run.Builder(exp, cfg, repos, board, bcfg, sdk, repo_root, repo_rev, None, log=lambda m: None)
             b.bench_tree = "dirty"
-            cmake = run.build_point(cfg, tree, point, config.project().bench_dir, "loopback_check", "dirty", board, bcfg, sdk,
+            cmake = run.build_point(cfg, tree, point, benchkind.KIND.bench_dir, "loopback_check", "dirty", board, bcfg, sdk,
                                     pdir / "build", pdir / "build.log", b.build_version(tree), b.builder)
             built = {"cmake": cmake, "build": {"from": "build (dirty repo, no cache)"}}
             from . import images

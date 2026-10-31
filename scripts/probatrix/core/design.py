@@ -14,7 +14,7 @@ from pathlib import Path
 
 import yaml
 
-from probatrix.core import config, layout, schema
+from probatrix.core import config, kinds, layout, schema
 from probatrix.core.seal import file_sha256
 
 
@@ -42,7 +42,7 @@ def repo_rev(repo=None):
     project = config.project()
     repo = project.repo if repo is None else repo
     rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *project.dirt_paths],
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *kinds.dirt_paths()],
                                 cwd=repo, capture_output=True, text=True).stdout.strip())
     return rev, dirty
 

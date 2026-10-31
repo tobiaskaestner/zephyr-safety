@@ -34,6 +34,7 @@ from pathlib import Path
 
 import yaml
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks.studylib import lab as labmod
 from probatrix.core import config
 
@@ -46,13 +47,13 @@ from probatrix.core import config
 # default Project, kept for one more step; the code reads project() instead.
 _DEFAULT = config.Project.default()
 REPO_DIR = _DEFAULT.repo
-BENCH_DIR = _DEFAULT.bench_dir
+BENCH_DIR = benchkind.KIND.bench_dir
 STUDIES_DIR = _DEFAULT.design_root
 EXPERIMENT_FILE = _DEFAULT.experiment_file
 EXPERIMENT_PREFIX = _DEFAULT.experiment_prefix
 STUDY_PREFIX = _DEFAULT.study_prefix
-TREES_DIR = _DEFAULT.trees_dir
-BOARDS_FILE = _DEFAULT.boards_file
+TREES_DIR = benchkind.KIND.trees_dir
+BOARDS_FILE = benchkind.KIND.boards_file
 
 
 class TreeError(Exception):
@@ -87,7 +88,7 @@ def git(*args, cwd=None, check=True):
 
 
 def manifest_file(tree):
-    return config.project().trees_dir / f"{tree}.yml"
+    return benchkind.KIND.trees_dir / f"{tree}.yml"
 
 
 def read_manifest(path):
@@ -120,10 +121,10 @@ def load(trees_root=None, lab=None, find_lab=True):
     the [toolchain] of the lab space, else ~/zephyr-sdk-<version>. All trees
     must have the same SDK version (a lab space has one SDK).
     """
-    trees_ = {f.stem: read_manifest(f) for f in sorted(config.project().trees_dir.glob("*.yml"), key=lambda f: f.stem)}
+    trees_ = {f.stem: read_manifest(f) for f in sorted(benchkind.KIND.trees_dir.glob("*.yml"), key=lambda f: f.stem)}
     versions = sorted({t["zephyr_sdk"] for t in trees_.values()})
     if len(versions) > 1:
-        raise TreeError(f"the trees of {config.project().trees_dir} need the SDK versions {versions}; a lab space has one SDK")
+        raise TreeError(f"the trees of {benchkind.KIND.trees_dir} need the SDK versions {versions}; a lab space has one SDK")
     cfg = {"toolchain": {"zephyr_sdk": {"version": versions[0] if versions else None}}, "trees": trees_}
     if lab is None and find_lab:
         lab = labmod.find()
@@ -142,7 +143,7 @@ def load(trees_root=None, lab=None, find_lab=True):
 def load_boards():
     from probatrix.core import schema
     try:
-        return schema.check("boards", yaml.safe_load(config.project().boards_file.read_text()), config.project().boards_file)
+        return schema.check("boards", yaml.safe_load(benchkind.KIND.boards_file.read_text()), benchkind.KIND.boards_file)
     except schema.SchemaError as e:
         raise TreeError(str(e)) from None
 
@@ -150,7 +151,7 @@ def load_boards():
 def board_repos(boards, board):
     """Return the repos of a tree that a build for board needs: zephyr and the board modules."""
     if board not in boards["boards"]:
-        raise TreeError(f"unknown board '{board}', see {config.project().boards_file}")
+        raise TreeError(f"unknown board '{board}', see {benchkind.KIND.boards_file}")
     return ["zephyr", *boards["boards"][board]["modules"]]
 
 
@@ -158,7 +159,7 @@ def check_tree_has(cfg, tree, repos):
     """Raise TreeError if the tree does not pin all of repos."""
     missing = [r for r in repos if r not in cfg["trees"][tree]["repos"]]
     if missing:
-        raise TreeError(f"tree '{tree}' does not pin {missing}; pin them in a new tree in {config.project().trees_dir}")
+        raise TreeError(f"tree '{tree}' does not pin {missing}; pin them in a new tree in {benchkind.KIND.trees_dir}")
 
 
 def repo_dir(cfg, tree, repo):

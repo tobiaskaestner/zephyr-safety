@@ -119,8 +119,8 @@ def new(design, results, top_name, study_path, board=None):
     if names:
         n = names[-1]
         spath = f"{spath}/{n}" if spath else n
-        ipath = f"{ipath}/{n}@{port}" if ipath else f"{n}@{port}"
-        folder = folder / f"{layout.STUDY_PREFIX}{n}@{port}"
+        ipath = f"{ipath}/{boardaxis.folder_name(n, port)}" if ipath else boardaxis.folder_name(n, port)
+        folder = folder / boardaxis.folder_name(n, port, layout.STUDY_PREFIX)
         make(folder, spath, ipath, board, False)
     top_folder = folder
 
@@ -162,17 +162,7 @@ def link_parents(root):
                 save(f, data)
 
 
-def board_of(folder):
-    """The board that this instance or a parent instance fixes, or None."""
-    folder = Path(folder).resolve()
-    for p in [folder, *folder.parents]:
-        f = p / "instance.json"
-        if not f.is_file():
-            break
-        b = json.loads(f.read_text()).get("board")
-        if b:
-            return b
-    return None
+board_of = boardaxis.board_of          # the rule is in boardaxis.py (the instance axis of the kind)
 
 
 def check_role(role, reason):

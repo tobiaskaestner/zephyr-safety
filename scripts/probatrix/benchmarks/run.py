@@ -97,6 +97,7 @@ if __name__ == "__main__":
 
 import yaml  # noqa: E402
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import hwmap  # noqa: E402
 from probatrix.benchmarks import latbench  # noqa: E402
 from probatrix.benchmarks import trees  # noqa: E402
@@ -105,7 +106,7 @@ from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 from probatrix.benchmarks.studylib import lint  # noqa: E402
 from probatrix.core import schema, seal
 
-BENCH_DIR = config.project().bench_dir
+BENCH_DIR = benchkind.KIND.bench_dir
 
 
 def fail(msg):
@@ -888,7 +889,7 @@ def main():
     builder.run_id = f"{exp['name']}/{run_dir.name}"
     # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
     # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
-    run_ref = config.project().ref("run", exp["name"], run_dir.name)
+    run_ref = benchkind.KIND.ref("run", exp["name"], run_dir.name)
     trees.git("update-ref", run_ref, repo_rev, cwd=repo_root)
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", port], capture_output=True, text=True

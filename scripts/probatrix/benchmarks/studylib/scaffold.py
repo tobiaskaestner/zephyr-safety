@@ -23,9 +23,9 @@ from pathlib import Path
 
 import yaml
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import trees
 
-from probatrix.core import config
 
 from probatrix.core import layout
 
@@ -48,7 +48,7 @@ def check_name(name):
 
 
 def app_metric(app):
-    if not (config.project().bench_dir / app).is_dir():
+    if not (benchkind.KIND.bench_dir / app).is_dir():
         raise ScaffoldError(f"app {app!r} is not a folder of tests/benchmarks")
     return APP_METRIC.get(app, "irq")
 

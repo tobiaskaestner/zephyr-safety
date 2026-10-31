@@ -54,6 +54,7 @@ import subprocess
 import tarfile
 from pathlib import Path
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import trees
 
 from probatrix.core import config
@@ -220,7 +221,7 @@ def fetch_bundle(lab, bundle, other_id, log=print):
     r = subprocess.run(["git", "bundle", "verify", "-q", str(bundle)], cwd=repo, capture_output=True, text=True)
     if r.returncode != 0:
         raise ExchangeError(f"the bundle of the export does not verify: {r.stderr.strip()}")
-    trees.git("fetch", "-q", str(bundle), f"+{BUNDLE_NS}/*:{config.project().ref('import', other_id)}/*", cwd=repo)
+    trees.git("fetch", "-q", str(bundle), f"+{BUNDLE_NS}/*:{benchkind.KIND.ref('import', other_id)}/*", cwd=repo)
     revs = [ln.split()[0] for ln in trees.git("bundle", "list-heads", str(bundle), cwd=repo).splitlines() if ln]
     log(f"{len(revs)} commits of the runs in refs/latbench/import/{other_id}/ of {repo}")
     return revs

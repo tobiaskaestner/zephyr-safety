@@ -45,6 +45,7 @@ from pathlib import Path
 
 import yaml
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import trees
 
 from probatrix.core import config
@@ -180,7 +181,7 @@ def planned_instance(lab, design, study_path, board):
     names = study_path.split("/")
     k = len(level.split("/"))
     rel = layout.study_folder("/".join(names[:k]))
-    rel = rel.parent / f"{rel.name}@{instance.board_port(board)}"
+    rel = rel.parent / boardaxis.folder_name(rel.name, instance.board_port(board))
     return lab.results / design.top.name / rel / layout.study_folder("/".join(names[k:])), False
 
 
@@ -231,7 +232,7 @@ def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hw
     rec = Record(lab, cid)
     rec.data = {"format": FORMAT, "id": cid, "lab": lab.describe(), "host": platform.node(),
                 "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
-                "repo": {"path": str(config.project().repo), "rev": rev}, "ref": config.project().ref("campaign", cid),
+                "repo": {"path": str(config.project().repo), "rev": rev}, "ref": benchkind.KIND.ref("campaign", cid),
                 "python": {"executable": sys.executable, "prefix": sys.prefix,
                            "version": platform.python_version(), "packages": labmod.packages(config.project().repo)},
                 "role": role, **({"reason": reason} if reason else {}),
@@ -302,7 +303,7 @@ _LOCKS = {}
 
 
 def lock_file(lab, board):
-    return lab.locks / f"board-{board.replace('/', '_').replace('@', '_')}.lock"
+    return lab.locks / f"board-{boardaxis.lock_key(board)}.lock"
 
 
 def _holder(path):

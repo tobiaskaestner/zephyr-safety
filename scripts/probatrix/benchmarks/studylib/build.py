@@ -28,6 +28,7 @@ import sys
 from pathlib import Path
 
 
+from probatrix.benchmarks import kind as benchkind
 from probatrix.core import config
 
 from . import boardaxis, central, checks, instance, runfiles, stats
@@ -358,7 +359,7 @@ class Tree:
                                                if p.get("verdict") != "same"]})
         ishas = jsonout.dumps(data)
         import hashlib
-        sj = {"format": config.project().format_id("study", 2), "made_by": self.made_by,
+        sj = {"format": benchkind.KIND.format_id("study", 2), "made_by": self.made_by,
               "instance": data["instance"],
               "design": {"folder": repo_rel(study.folder),
                          "safety_rev": self.made_by["safety_rev"], "files": study.files()},
@@ -445,7 +446,7 @@ class Tree:
                 codes.setdefault((p["tree"], p["point"]), set()).add(p.get("code_sha256"))
         differ = sorted(f"{t}/{pt}" for (t, pt), c in codes.items() if len(c) > 1)
         efile = self.design.experiments.get(exp)
-        out = {"format": config.project().format_id("experiment", 2), "made_by": self.made_by, "experiment": exp,
+        out = {"format": benchkind.KIND.format_id("experiment", 2), "made_by": self.made_by, "experiment": exp,
                "design": efile.file_ref() if efile else None,
                "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
                "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
@@ -480,7 +481,7 @@ def has_todo(x):
 
 
 def plot_script(app):
-    return config.project().bench_dir / app / "scripts" / "plot.py"
+    return benchkind.KIND.bench_dir / app / "scripts" / "plot.py"
 
 
 def hypothesis_entry(h, out_checks):
