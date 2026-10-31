@@ -50,7 +50,7 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import boardaxis, instance
+from . import instance
 
 from probatrix.core import jsonout, layout, seal
 from . import lab as labmod
@@ -58,6 +58,9 @@ from probatrix.core.design import Design, repo_rel
 
 FORMAT = "latbench-campaign/1"
 DONE, FAILED, PLANNED, RUNNING, SKIPPED = "done", "failed", "planned", "running", "skipped"
+
+
+AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
 
 
 class CampaignError(Exception):
@@ -96,7 +99,7 @@ def resolve(lab, folder, design):
     root = lab.results / design.top.name
     if folder.is_relative_to(root) and (folder / "instance.json").is_file():
         ipath = layout.instance_path_of(folder, root)
-        return boardaxis.strip_board(ipath), exp, instance.board_of(folder)
+        return AXIS.strip(ipath), exp, instance.board_of(folder)
     raise CampaignError(f"{folder} is not a study or experiment folder of the design {config.project().design_root}, "
                         f"and not an instance folder of {root}")
 
@@ -153,7 +156,7 @@ def find_instance(lab, design, study_path, board):
     if not root.is_dir():
         return None
     for f in layout.instance_folders(root):
-        if boardaxis.strip_board(layout.instance_path_of(f, root)) == study_path and instance.board_of(f) == board:
+        if AXIS.strip(layout.instance_path_of(f, root)) == study_path and instance.board_of(f) == board:
             return f
     return None
 
@@ -181,7 +184,7 @@ def planned_instance(lab, design, study_path, board):
     names = study_path.split("/")
     k = len(level.split("/"))
     rel = layout.study_folder("/".join(names[:k]))
-    rel = rel.parent / boardaxis.folder_name(rel.name, instance.board_port(board))
+    rel = rel.parent / AXIS.folder_name(rel.name, instance.board_port(board))
     return lab.results / design.top.name / rel / layout.study_folder("/".join(names[k:])), False
 
 
@@ -303,7 +306,7 @@ _LOCKS = {}
 
 
 def lock_file(lab, board):
-    return lab.locks / f"board-{boardaxis.lock_key(board)}.lock"
+    return lab.locks / f"board-{AXIS.lock_key(board)}.lock"
 
 
 def _holder(path):

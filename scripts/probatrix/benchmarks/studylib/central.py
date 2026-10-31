@@ -3,6 +3,10 @@
 
 """The central results of a study: characterisation with measured values.
 
+This module is latency code and stays in benchmarks (the Kind reaches it with central_result). Its
+stats of histograms, M4 sites and phase tables are the latency data model; only the value reads go
+through the Kind (src.kind.value).
+
 A central result has a statement with {placeholders}, the data (from) and
 a stat. The build fills the statement once for each row of values: for
 each point, or for each group of points of an aggregate stat. A
@@ -148,6 +152,7 @@ def from_obs(cr, src):
 def evaluate(cr, src, ctx):
     """Return the central result: {id, stat, texts, rows, by[, verdict]} (or raises NoValue)."""
     st = cr.get("stat")
+    value = src.kind.value               # every value read goes through the Kind
     f = cr.get("from") or {}
     template = cr.get("statement", "")
     metrics = checks.as_list(f.get("metric"))
@@ -184,7 +189,7 @@ def evaluate(cr, src, ctx):
                 for key, g in sorted(groups(obs, group_by).items(), key=lambda x: str(x[0])):
                     row = {**group_row(g, m, group_by), "points": len(g)}
                     for s in arg:
-                        vals = [stats.value(o.rep, None if s.startswith("drift") else m, s) for o in g]
+                        vals = [value(o.rep, None if s.startswith("drift") else m, s) for o in g]
                         if len(vals) < 2:
                             raise NoValue(f"{kind}: fewer than two points in a group")
                         if kind == "spread":
@@ -216,7 +221,7 @@ def evaluate(cr, src, ctx):
                         nums = [ctx.axis_number(o, a) for a in axes]
                         if None in nums:
                             continue
-                        pts.append((sum(nums), stats.value(o.rep, m, stat)))
+                        pts.append((sum(nums), value(o.rep, m, stat)))
                     if len(pts) < 2:
                         continue
                     slope, icept = lstsq(*zip(*pts))
@@ -236,7 +241,7 @@ def evaluate(cr, src, ctx):
                             if not ref:
                                 continue
                             try:
-                                diffs.append((o.point, stats.value(o.rep, m, s) - stats.value(ref[0].rep, m, s)))
+                                diffs.append((o.point, value(o.rep, m, s) - value(ref[0].rep, m, s)))
                             except NoValue as e:
                                 skipped.append(f"{o.point}: {e}")
                         if not diffs:
@@ -261,7 +266,7 @@ def evaluate(cr, src, ctx):
                         raise NoValue(f"tree_diff {p}: {len(pairs)} pairs of runs, the pair is not clear")
                     for u, x in pairs:
                         rows.append({"point": p, "metric": m, **u.axes,
-                                     "tree_diff": stats.value(u.rep, m, arg) - stats.value(x.rep, m, arg)})
+                                     "tree_diff": value(u.rep, m, arg) - value(x.rep, m, arg)})
         elif kind == "ram_cost":
             for m in metrics:
                 for key, g in sorted(groups(obs, group_by).items(), key=lambda x: str(x[0])):
@@ -272,8 +277,8 @@ def evaluate(cr, src, ctx):
                     row = group_row(g, m, group_by)
                     for s in arg:
                         mm = None if s.startswith("drift") else m
-                        row[s] = statistics.median(stats.value(o.rep, mm, s) for o in ram) - \
-                            statistics.median(stats.value(o.rep, mm, s) for o in flash)
+                        row[s] = statistics.median(value(o.rep, mm, s) for o in ram) - \
+                            statistics.median(value(o.rep, mm, s) for o in flash)
                     rows.append(row)
         else:
             raise NoValue(f"stat {kind} has no tool")
@@ -314,7 +319,7 @@ def evaluate(cr, src, ctx):
             if all(m is not None and m.startswith("meta.") for m in metrics) and metrics != [None]:
                 row = base_row(o)
                 for m in metrics:
-                    v = stats.value(o.rep, m, "value")
+                    v = value(o.rep, m, "value")
                     row[m[5:]] = v
                     row["value"] = v
                 rows.append(row)
@@ -322,7 +327,7 @@ def evaluate(cr, src, ctx):
             for m in metrics:
                 row = base_row(o, m)
                 for s in stat_list:
-                    row[s] = stats.value(o.rep, m, s)
+                    row[s] = value(o.rep, m, s)
                 rows.append(row)
 
     # name the run and the tree if the rows have more than one and the statement does not name them

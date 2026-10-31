@@ -59,7 +59,7 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import boardaxis, instance
+from . import instance
 
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import Design, repo_rel
@@ -68,6 +68,9 @@ from probatrix.core.seal import file_sha256
 FORMAT = "latbench-export/2"
 FORMATS = ("latbench-export/1", FORMAT)     # format 1: no parsed experiments, no bundle
 BUNDLE_NS = "refs/latbench/export"
+
+
+AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
 
 
 def comparable(exp_data):
@@ -100,7 +103,7 @@ def instance_rel(ipath):
 
 def study_path(ipath):
     """The study path of an instance path with the top name ("kernel-latency/a@b/c" gives "a/c")."""
-    return boardaxis.strip_board(ipath.split("/", 1)[1]) if "/" in ipath else ""
+    return AXIS.strip(ipath.split("/", 1)[1]) if "/" in ipath else ""
 
 
 def runs_to_export(lab, root, campaigns=None, all_runs=False):
@@ -349,10 +352,10 @@ def import_(lab, in_file, log=print, dry=False):
             folder = lab.results / instance_rel(item["instance"])
             if not (folder / "instance.json").is_file():
                 names = item["instance"].split("/")[1:]
-                level = next((i for i, n in enumerate(names) if "@" in n), None)
+                level = next((i for i, n in enumerate(names) if AXIS.fixes(n)), None)
                 if level is None:
                     raise ExchangeError(f"{item['instance']}: no level of the instance path fixes the board")
-                instance.new(design, lab.results, design.top.name, boardaxis.strip_board("/".join(names[:level + 1])),
+                instance.new(design, lab.results, design.top.name, AXIS.strip("/".join(names[:level + 1])),
                              item["board"])
                 if not (folder / "instance.json").is_file():
                     raise ExchangeError(f"the instance {item['instance']} was not made here")

@@ -26,10 +26,12 @@ import time
 
 from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import hwmap
-from probatrix.benchmarks.studylib import boardaxis
 from probatrix.benchmarks import trees
 
 TIMEOUT = 60
+
+
+AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
 
 
 class HwCheckError(Exception):
@@ -47,7 +49,7 @@ def tree_for(cfg, repos):
 
 
 def board_tag(board):
-    return boardaxis.lock_key(board)
+    return AXIS.lock_key(board)
 
 
 def record_path(lab, board):

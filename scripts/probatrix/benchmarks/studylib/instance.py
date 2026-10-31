@@ -28,12 +28,15 @@ from pathlib import Path
 
 from probatrix.benchmarks import trees
 
-from . import boardaxis
+from probatrix.benchmarks import kind as benchkind
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import repo_rel, repo_rev
 
 FORMAT = "latbench-instance/2"
 ROLES = ("evidence", "adjustment", "excluded")
+
+
+AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
 
 
 class InstanceError(Exception):
@@ -118,8 +121,8 @@ def new(design, results, top_name, study_path, board=None):
     if names:
         n = names[-1]
         spath = f"{spath}/{n}" if spath else n
-        ipath = f"{ipath}/{boardaxis.folder_name(n, port)}" if ipath else boardaxis.folder_name(n, port)
-        folder = folder / boardaxis.folder_name(n, port, layout.STUDY_PREFIX)
+        ipath = f"{ipath}/{AXIS.folder_name(n, port)}" if ipath else AXIS.folder_name(n, port)
+        folder = folder / AXIS.folder_name(n, port, layout.STUDY_PREFIX)
         make(folder, spath, ipath, board, False)
     top_folder = folder
 
@@ -161,7 +164,7 @@ def link_parents(root):
                 save(f, data)
 
 
-board_of = boardaxis.board_of          # the rule is in boardaxis.py (the instance axis of the kind)
+board_of = AXIS.of          # the rule is in boardaxis.py (the instance axis of the kind)
 
 
 def check_role(role, reason):
@@ -177,7 +180,7 @@ def check_target(design, folder, experiment, board):
     folder = Path(folder).resolve()
     exp = design.canonical(experiment)
     root = layout.find_root(folder)
-    study = design.study(boardaxis.strip_board(layout.instance_path_of(folder, root)))
+    study = design.study(AXIS.strip(layout.instance_path_of(folder, root)))
     rerun = {i["experiment"] for i in study.imports if i.get("mode") == "rerun"}
     if exp not in study.experiments and exp not in rerun:
         raise InstanceError(f"study {study.path}: {exp} is not one of its experiments, and it does not re-run it")
@@ -205,7 +208,7 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campa
     exp = design.canonical(manifest["experiment"])      # an earlier name of a renamed experiment
     data = load(folder)
     root = layout.find_root(folder)
-    study = design.study(boardaxis.strip_board(layout.instance_path_of(folder, root)))
+    study = design.study(AXIS.strip(layout.instance_path_of(folder, root)))
     rerun = {i["experiment"] for i in study.imports if i.get("mode") == "rerun"}
     if exp not in study.experiments and exp not in rerun:
         raise InstanceError(f"study {study.path}: {exp} is not one of its experiments, and it does not re-run it")

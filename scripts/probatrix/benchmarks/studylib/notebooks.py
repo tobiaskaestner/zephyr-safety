@@ -35,7 +35,7 @@ import re
 from pathlib import Path
 
 
-from . import boardaxis
+from probatrix.benchmarks import kind as benchkind
 from probatrix.core import config
 import yaml
 
@@ -43,6 +43,9 @@ from probatrix.core import layout
 
 FORMAT = "latbench-notebooks/1"
 TIMEOUT = 900
+
+
+AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
 
 
 class NotebookError(Exception):
@@ -117,7 +120,7 @@ def study_cells(inst, root):
     parent = inst.parent
     if inst != root and (parent / "study.json").is_file() and _report_of(parent):
         psj = json.loads((parent / "study.json").read_text())
-        pname = parent.name[len(layout.STUDY_PREFIX):].split("@")[0] if parent != root else parent.name
+        pname = AXIS.base_name(parent.name[len(layout.STUDY_PREFIX):]) if parent != root else parent.name
         nav.append(f"Part of **{pname}** ({_link(inst, parent, _report_of(parent))}): {psj['question'].strip()}\n")
         files.append(parent / "study.json")
     subs = sorted(d for d in inst.iterdir() if d.is_dir() and d.name.startswith(layout.STUDY_PREFIX)
@@ -126,7 +129,7 @@ def study_cells(inst, root):
         nav.append("Sub-studies:\n")
         for d in subs:
             dsj = json.loads((d / "study.json").read_text())
-            name = d.name[len(layout.STUDY_PREFIX):].split("@")[0]
+            name = AXIS.base_name(d.name[len(layout.STUDY_PREFIX):])
             report = _report_of(d)
             ref = f"**{name}** ({_link(inst, d, report)})" if report else f"**{name}**"
             nav.append(f"- {ref}: {dsj['question'].strip()} *{_verdicts(dsj)}.*")
@@ -149,7 +152,7 @@ def study_cells(inst, root):
     imports = (yaml.safe_load(sy.read_text()) or {}).get("imports") or [] if sy.is_file() else []
     if imports:
         board = sj.get("board")
-        owners = {boardaxis.strip_board(layout.instance_path_of(f, root)): f for f in layout.instance_folders(root)
+        owners = {AXIS.strip(layout.instance_path_of(f, root)): f for f in layout.instance_folders(root)
                   if f != root and json.loads((f / "instance.json").read_text()).get("board") in (None, board)}
         lines = []
         for imp in imports:

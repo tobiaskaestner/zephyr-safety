@@ -48,7 +48,7 @@ class Problem:
 def expand(exp):
     """The points of an experiment, or (None, message) if the file has an error."""
     try:
-        return kindhooks.expand_points(exp), None
+        return benchkind.KIND.points(exp), None
     except SystemExit as e:
         return None, str(e).removeprefix("error: ")
 
@@ -133,7 +133,7 @@ def lint_experiment(e, out):
                 out.append(Problem(ERROR, f, f"axis {axis}.{name}: value must be a number"))
     lint_code_place(f, exp, pts, out)
     for a in e.acceptance:
-        for p in checks.problems(a):
+        for p in checks.problems(a, benchkind.KIND):
             out.append(Problem(ERROR, f, f"acceptance {a.get('id')}: {p}"))
         lint_select(f, f"acceptance {a.get('id')}", a.get("select"), pts, out)
     if md.is_file():
@@ -224,7 +224,7 @@ def lint_study(d, path, st, points, out):
             out.append(Problem(WARNING, f, f"{h.get('id')} has no checks: it stays open"))
         for c in h.get("checks") or []:
             what = f"{h.get('id')} {c.get('id')}"
-            for p in checks.problems(c):
+            for p in checks.problems(c, benchkind.KIND):
                 out.append(Problem(ERROR, f, f"{what}: {p}"))
             exp = c.get("experiment")
             if c.get("manual") and exp is None:
