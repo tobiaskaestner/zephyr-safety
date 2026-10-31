@@ -25,54 +25,41 @@ the campaign, so the commit stays reachable (never pushed). Before each
 experiment the repo must be clean and at that commit; if not, the campaign
 stops. A failed experiment does not stop the campaign: the next one starts.
 
+The engine (record, resume, order, locks, results build) is core/campaign.py; what only the
+benchmarks have (the board lock rule, the pre-flight check, the wire check, the command of run.py)
+is in campaign_hooks.py. This module keeps the plan and the names that study.py and the tests use.
+
 After each run, a background process (low priority) builds the results
 tree (extractors, run.json, experiment.json, study.json) and writes
 index.html, while the next experiment runs. study.json marks the verdicts
 that wait for an experiment of a running campaign as provisional.
 """
 
-import datetime
-import json
-import os
 import platform
 import shlex
-import shutil
-import signal
 import subprocess
 import sys
-import time
 from pathlib import Path
-
-import yaml
 
 from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import trees
-
-from probatrix.core import config
-
-from . import instance
-
-from probatrix.core import jsonout, layout, seal
-from . import lab as labmod
+from probatrix.core import campaign as engine
+from probatrix.core import config, layout
 from probatrix.core.design import Design, repo_rel
 
-FORMAT = "latbench-campaign/1"
-DONE, FAILED, PLANNED, RUNNING, SKIPPED = "done", "failed", "planned", "running", "skipped"
+from . import instance
+from .campaign_hooks import (BOARD, CampaignHooks, estimate, images_note,  # noqa: F401  (the names of the tools)
+                             preflight, run_of_campaign, wire_check)
 
+# The engine is core/campaign.py; these names are the ones that study.py, hwcheck.py and the tests use.
+from probatrix.core.campaign import (DONE, FAILED, PLANNED, RUNNING, SKIPPED, CampaignError, Record,  # noqa: F401
+                                     alive, drop_lock, drop_one, failed_note, final_build, latest, lock_fds,
+                                     minutes, records, results_lock, run_subprocess, status_lines, stop_group,
+                                     utc_id, utc_now)
+
+FORMAT = "latbench-campaign/1"
 
 AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the kind
-
-
-class CampaignError(Exception):
-    pass
-
-
-def utc_now():
-    return datetime.datetime.now(datetime.timezone.utc)
-
-
-def utc_id(t=None):
-    return (t or utc_now()).strftime("%Y%m%dT%H%M%SZ")
 
 
 def study_py():
@@ -202,71 +189,6 @@ def ensure_instance(lab, design, study_path, board, log=print):
     return f
 
 
-# ------------------------------------------------------------ record
-class Record:
-    def __init__(self, lab, cid):
-        self.lab, self.id = lab, cid
-        self.path = lab.campaigns / f"{cid}.json"
-        self.data = json.loads(self.path.read_text()) if self.path.is_file() else None
-
-    @property
-    def log_dir(self):
-        return self.lab.campaigns / self.id
-
-    def save(self):
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        tmp = self.path.with_suffix(".tmp")
-        jsonout.write(tmp, self.data)
-        tmp.rename(self.path)
-
-    def set(self, **kw):
-        self.data.update(kw)
-        self.save()
-
-
-def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hwcheck_each=False):
-    cid = utc_id()
-    while (lab.campaigns / f"{cid}.json").exists():
-        time.sleep(1)
-        cid = utc_id()
-    rev, dirty = trees.repo_state(config.project().repo)
-    if dirty:
-        raise CampaignError(f"the design repo {config.project().repo} is dirty, commit first:\n{dirty}")
-    rec = Record(lab, cid)
-    rec.data = {"format": FORMAT, "id": cid, "lab": lab.describe(), "host": platform.node(),
-                "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
-                "repo": {"path": str(config.project().repo), "rev": rev}, "ref": benchkind.KIND.ref("campaign", cid),
-                "python": {"executable": sys.executable, "prefix": sys.prefix,
-                           "version": platform.python_version(), "packages": labmod.packages(config.project().repo)},
-                "role": role, **({"reason": reason} if reason else {}),
-                **({"hwcheck_each": True} if hwcheck_each else {}),
-                "status": PLANNED, "created": utc_now().isoformat(), "experiments": items}
-    if role != "evidence" and not reason:
-        raise CampaignError(f"role {role} needs a reason (--reason)")
-    rec.save()
-    return rec
-
-
-def latest(lab):
-    """The latest campaign of this lab space (not an imported one, <id>@<lab>)."""
-    files = sorted(f for f in lab.campaigns.glob("*.json") if "@" not in f.stem) if lab.campaigns.is_dir() else []
-    return Record(lab, files[-1].stem) if files else None
-
-
-def records(lab):
-    return [Record(lab, f.stem) for f in sorted(lab.campaigns.glob("*.json"))] if lab.campaigns.is_dir() else []
-
-
-def alive(pid):
-    try:
-        os.kill(pid, 0)
-    except (ProcessLookupError, TypeError):
-        return False
-    except PermissionError:
-        return True
-    return True
-
-
 def pending(lab, design=None):
     """{(instance folder, experiment)} that a running campaign of the lab space has still to run.
 
@@ -296,512 +218,46 @@ def pending(lab, design=None):
     return out
 
 
-# ------------------------------------------------------------ lock
-# A campaign holds one lock for each board of its plan: .lab/locks/board-<board>.lock, an flock
-# (the kernel drops it when the process ends, so a crash or a kill leaves no stale lock). Two
-# campaigns on different boards run at the same time; two on one board do not. The file has the
-# id and pid of the holder (information). The results build has a lock of its own
-# (results_lock), so the builds of two campaigns run one after the other.
-_LOCKS = {}
-
-
+# ------------------------------------------------------------ board lock
+# A campaign holds one lock for each board of its plan: .lab/locks/board-<key>.lock (core/campaign.py;
+# the key rule is the lock_key of the instance axis, BOARD in campaign_hooks.py).
 def lock_file(lab, board):
-    return lab.locks / f"board-{AXIS.lock_key(board)}.lock"
-
-
-def _holder(path):
-    import fcntl
-    if not path.exists():
-        return None
-    with open(path) as f:
-        try:
-            fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-        except BlockingIOError:
-            try:
-                return json.loads(f.read() or "{}").get("id") or "?"
-            except ValueError:
-                return "?"
-        fcntl.flock(f, fcntl.LOCK_UN)
-    return None
+    return BOARD.lock_file(lab, board)
 
 
 def lock_holders(lab):
     """{board lock file name: campaign id} of the locks that a campaign holds now."""
-    out = {}
-    for f in sorted(lab.locks.glob("board-*.lock")) if lab.locks.is_dir() else []:
-        h = _holder(f)
-        if h:
-            out[f.stem[len("board-"):]] = h
-    return out
+    return engine.lock_holders(lab, BOARD)
 
 
 def lock_holder(lab, board=None):
     """The campaign that holds the lock of the board (any board: None), or None."""
-    if board is not None:
-        return _holder(lock_file(lab, board))
-    return next(iter(lock_holders(lab).values()), None)
+    return engine.lock_holder(lab, BOARD, board)
 
 
 def take_lock(lab, cid, boards):
     """Take the locks of the boards (all or none); CampaignError if a campaign holds one."""
-    import fcntl
-    lab.locks.mkdir(parents=True, exist_ok=True)
-    taken = []
-    for b in sorted(set(boards)):
-        path = lock_file(lab, b)
-        f = open(path, "a+")
-        d = None
-        for _ in range(20):
-            try:
-                fcntl.flock(f, fcntl.LOCK_EX | fcntl.LOCK_NB)
-                d = None
-                break
-            except BlockingIOError:
-                f.seek(0)
-                text = f.read()
-                try:
-                    d = json.loads(text or "{}")
-                except ValueError:
-                    d = {}
-                if text:
-                    break                   # a holder (it writes its id at once)
-                time.sleep(0.05)            # no holder text: a short probe of lock_holder()
-        if d is not None:
-            f.close()
-            for t in taken:
-                drop_one(t)
-            raise CampaignError(f"the campaign {d.get('id', '?')} runs on {b} (pid {d.get('pid', '?')}, "
-                                f"lock {path})") from None
-        f.seek(0)
-        f.truncate()
-        json.dump({"id": cid, "pid": os.getpid(), "host": platform.node(), "board": b}, f)
-        f.flush()
-        _LOCKS[(str(path), cid)] = f
-        taken.append((str(path), cid))
+    engine.take_lock(lab, cid, boards, BOARD)
 
 
-def lock_fds(cid):
-    """The file descriptors of the board locks that the campaign cid holds."""
-    return [f.fileno() for (path, c), f in _LOCKS.items() if c == cid]
+# ------------------------------------------------------------ record, run
+def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hwcheck_each=False):
+    return engine.new_record(lab, folder, board, items, argv, CampaignHooks(), role=role, reason=reason,
+                             extra={"hwcheck_each": True} if hwcheck_each else None)
 
 
-def drop_one(key):
-    f = _LOCKS.pop(key, None)
-    if f is not None:
-        f.seek(0)
-        f.truncate()
-        f.close()
+class Post(engine.Post):
+    """The results build after each run: study.py analysis build, then html."""
 
-
-def drop_lock(lab, cid):
-    for key in [k for k in _LOCKS if k[1] == cid]:
-        drop_one(key)
-
-
-class results_lock:
-    """The lock of the results build of a lab space (with: wait for it)."""
-
-    def __init__(self, lab):
-        self.path = lab.locks / "results.lock"
-
-    def __enter__(self):
-        import fcntl
-        self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.f = open(self.path, "a+")
-        fcntl.flock(self.f, fcntl.LOCK_EX)
-        return self
-
-    def __exit__(self, *exc):
-        self.f.close()
-
-
-# ------------------------------------------------------------ check
-def run_subprocess(cmd, log, cwd, nice=False, pass_fds=()):
-    """Run cmd in a session of its own; on an interrupt, stop its whole process group (run.py and
-    its flash tools, which hold the probe), then raise again. pass_fds: the board locks of the
-    campaign: the child holds them too, so a board stays locked while a run.py of a dead campaign
-    still runs."""
-    with open(log, "a") as f:
-        f.write(f"$ {' '.join(map(str, cmd))}\n")
-        f.flush()
-        p = subprocess.Popen([str(c) for c in cmd], cwd=cwd, stdout=f, stderr=subprocess.STDOUT,
-                             start_new_session=True, preexec_fn=(lambda: os.nice(10)) if nice else None,
-                             pass_fds=tuple(pass_fds))
-        try:
-            return p.wait()
-        except BaseException:
-            stop_group(p)
-            raise
-
-
-def stop_group(p, grace=20):
-    for sig, wait in ((signal.SIGTERM, grace), (signal.SIGKILL, 5)):
-        try:
-            os.killpg(p.pid, sig)
-        except ProcessLookupError:
-            return
-        try:
-            p.wait(timeout=wait)
-            return
-        except subprocess.TimeoutExpired:
-            continue
-
-
-def estimate(lab, design, exp):
-    """(seconds, bytes) of the last run of an experiment in the lab space, or (None, None)."""
-    root = lab.results / design.top.name
-    best = None
-    found = [m for name in design.names(exp) for m in root.glob(f"**/{layout.EXPERIMENT_PREFIX}{name}/*/manifest.json")]
-    for m in sorted(found, key=lambda m: m.parent.name) if root.is_dir() else []:
-        try:
-            d = json.loads(m.read_text())
-        except (OSError, ValueError):
-            continue
-        if d.get("started") and d.get("finished"):
-            t = (datetime.datetime.fromisoformat(d["finished"]) - datetime.datetime.fromisoformat(d["started"]))
-            size = sum(f.stat().st_size for f in m.parent.rglob("*") if f.is_file())
-            best = (t.total_seconds(), size)
-    return best or (None, None)
-
-
-def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, locked=False):
-    """The pre-flight check: [(status, what, text)] with status ok / warn / fail."""
-    from probatrix.benchmarks import hwmap
-
-    from . import hwcheck as hwc
-    from . import kindhooks
-    from . import lint as lintmod
-
-    run = kindhooks.run_module()
-    out = []
-
-    def add(status, what, text=""):
-        out.append((status, what, text))
-        log(f"  {status:4} {what}{': ' + text if text else ''}")
-
-    todo = [e for e in items if e["state"] in (PLANNED, FAILED, RUNNING)]
-    rev, dirty = trees.repo_state(config.project().repo)
-    add("fail" if dirty else "ok", "design repo", f"{config.project().repo} at {rev[:12]}" + (" is dirty" if dirty else ""))
-    problems = lintmod.lint()
-    mine = list({str(p): p for e in todo
-                 for p in lintmod.lint_for_experiment(config.project().repo / e["design"], problems)}.values())
-    errors = [p for p in mine if p.severity == lintmod.ERROR]
-    if errors:
-        add("fail", "lint", f"{len(errors)} errors, first: {errors[0]}")
-    elif mine:
-        add("fail" if warn_as_error else "warn", "lint", f"{len(mine)} warnings (study.py design lint)")
-    else:
-        add("ok", "lint")
-    cfg = trees.load(lab=lab)
-    try:
-        add("ok", "zephyr sdk", str(trees.check_toolchain(cfg)))
-    except trees.TreeError as e:
-        add("fail", "zephyr sdk", str(e))
-    need_trees = sorted({t for e in todo for t in yaml.safe_load((config.project().repo / e["design"]).read_text())["trees"]})
-    for t in need_trees:
-        try:
-            trees.check_tree(cfg, t)
-            add("ok", f"tree {t}")
-        except trees.TreeError as e:
-            add("fail", f"tree {t}", str(e).splitlines()[0])
-    total = cached = 0
-    secs, size, unknown = 0.0, 0, []
-    for e in todo:
-        try:
-            n, c = run.cache_state(config.project().repo / e["design"], lab)
-            total, cached = total + n, cached + c
-        except (SystemExit, Exception) as x:
-            add("fail", f"images of {e['experiment']}", f"{type(x).__name__}: {x}")
-        s, b = estimate(lab, design, e["experiment"])
-        if s is None:
-            unknown.append(e["experiment"])
-        else:
-            secs, size = secs + s, size + b
-    add("ok" if cached == total else "warn", "images",
-        f"{cached} of {total} in the build cache" + ("" if cached == total else
-                                                     f"; 'campaign prepare' or the run builds {total - cached}"))
-    boards = sorted({e["board"] for e in todo})
-    try:
-        entries = hwmap.load(lab.hw_map)
-    except hwmap.HwMapError as x:
-        entries = None
-        add("fail", "hardware map", str(x))
-    for b in boards:
-        if entries is None:
-            break
-        try:
-            hw = hwmap.hardware(hwmap.select(entries, b, path=str(lab.hw_map)))
-        except hwmap.HwMapError as x:
-            add("fail", f"board {b}", str(x))
-            continue
-        add("ok" if Path(hw["serial"]).exists() else "fail", f"board {b}",
-            f"probe {hw['probe']}, console {hw['serial']}" + ("" if Path(hw["serial"]).exists() else " is missing"))
-        try:
-            import serial
-            serial.Serial(hw["serial"], hw["baud"], timeout=0.1, exclusive=True).close()
-            add("ok", f"console of {b}", "free")
-        except (OSError, ValueError) as x:
-            add("fail", f"console of {b}", f"not free: {x}")
-        if hwcheck:
-            try:
-                ok, lines, path = hwc.check(lab, b, log=lambda m: None, locked=locked)
-                add("ok" if ok else "fail", f"loopback wire of {b}",
-                    (lines[-1] if lines else "") + f" (record {path.relative_to(lab.folder)})")
-            except Exception as x:
-                where = f" (record {x.record.relative_to(lab.folder)})" if getattr(x, "record", None) else ""
-                add("fail", f"loopback wire of {b}", f"{type(x).__name__}: {(str(x).splitlines() or [''])[0]}{where}")
-    free = shutil.disk_usage(lab.results if lab.results.exists() else lab.folder).free
-    add("ok" if free > 2 * size else "fail", "disk", f"{free / 2**30:.0f} GiB free, the runs need about {size / 2**20:.0f} MiB")
-    dur = f"about {secs / 3600:.1f} h" if secs else "unknown"
-    add("ok", "duration", dur + (f" (no earlier run of {', '.join(unknown)})" if unknown else ""))
-    return out
-
-
-# ------------------------------------------------------------ run
-class Post:
-    """The background build of the results tree after each run: one process at a time, low priority.
-
-    kick() asks for a build; if one runs, the next build starts after it (only one more, however
-    many runs end in the meantime). poll() notes an ended build and starts the next one.
-    """
-
-    def __init__(self, rec, root):
-        self.rec, self.root, self.proc, self.again, self.n = rec, root, None, False, 0
-
-    def _start(self):
-        self.n += 1
-        log = self.rec.log_dir / "post.log"
-        with open(log, "a") as f:
-            f.write(f"=== build {self.n} at {utc_now().isoformat()}\n")
-            f.flush()
-            cmd = " && ".join(shlex.join([sys.executable, str(study_py()), "analysis", step, str(self.root)])
-                              for step in ("build", "html"))
-            self.proc = subprocess.Popen(["sh", "-c", cmd], stdout=f, stderr=subprocess.STDOUT,
-                                         cwd=self.rec.lab.folder, preexec_fn=lambda: os.nice(10))
-        self.again = False
-
-    def poll(self):
-        if self.proc is not None and self.proc.poll() is not None:
-            # "noticed": the time when the campaign saw the end (after a run), not the end itself
-            self.rec.data.setdefault("post", []).append({"n": self.n, "rc": self.proc.returncode,
-                                                         "noticed": utc_now().isoformat()})
-            self.rec.save()
-            self.proc = None
-        if self.proc is None and self.again:
-            self._start()
-
-    def kick(self):
-        self.poll()
-        if self.proc is None:
-            self._start()
-        else:
-            self.again = True
-
-    def wait(self):
-        while self.proc is not None or self.again:
-            if self.proc is not None:
-                self.proc.wait()
-            self.poll()
+    def command(self):
+        return " && ".join(shlex.join([sys.executable, str(study_py()), "analysis", step, str(self.root)])
+                           for step in ("build", "html"))
 
 
 def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print):
     """Run the experiments of a record that are not done; return the number of failed experiments."""
-    lab = rec.lab
-    design = design or Design()
-    d = rec.data
-    rev, dirty = trees.repo_state(config.project().repo)
-    if rev != d["repo"]["rev"] or dirty:
-        raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
-                            f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
-    try:
-        take_lock(lab, rec.id, [e["board"] for e in d["experiments"] if e["state"] != SKIPPED] or [d.get("board") or "-"])
-    except CampaignError as x:
-        if d.get("status") == PLANNED and not d.get("started"):
-            rec.set(status=FAILED, finished=utc_now().isoformat(), stopped=f"not started: {x}")
-        raise
-    # a resume runs the failed experiments again (and one that a crash left in running), unless
-    # the run.py of the dead campaign ended and added its run (it holds the board lock to its end)
-    for e in d["experiments"]:
-        if e["state"] in (FAILED, RUNNING):
-            done = run_of_campaign(lab, e, rec.id)
-            if done:
-                e.update(state=DONE, run=done, note="the run.py of the stopped campaign added this run")
-            else:
-                e.update(state=PLANNED, attempts=e.get("attempts", 1) + 1)
-    rec.set(pid=os.getpid())
-    rec.log_dir.mkdir(parents=True, exist_ok=True)
-    stop = {"why": None}
-
-    def on_term(signum, frame):
-        stop["why"] = f"signal {signum}"
-        raise KeyboardInterrupt
-
-    old = signal.signal(signal.SIGTERM, on_term)
-    old_hup = signal.signal(signal.SIGHUP, on_term)      # the ssh connection of a campaign without --detach
-    try:
-        trees.git("update-ref", d["ref"], d["repo"]["rev"], cwd=config.project().repo)
-        log(f"campaign {rec.id}: pre-flight check")
-        res = preflight(lab, d["experiments"], design, hwcheck=hwcheck, warn_as_error=warn_as_error, log=log,
-                        locked=True)
-        d["preflight"] = [{"status": s, "what": w, "text": t} for s, w, t in res]
-        if any(s == "fail" for s, _, _ in res):
-            rec.set(status=FAILED, finished=utc_now().isoformat(), stopped="the pre-flight check failed")
-            log("the pre-flight check failed; nothing runs")
-            return len([e for e in d["experiments"] if e["state"] != SKIPPED])
-        rec.set(status=RUNNING, pid=os.getpid(), started=d.get("started") or utc_now().isoformat())
-        root = lab.results / design.top.name
-        post = Post(rec, root)
-        failed = 0
-        for e in d["experiments"]:
-            if e["state"] in (DONE, SKIPPED):
-                continue
-            now, dirty = trees.repo_state(config.project().repo)
-            if now != d["repo"]["rev"] or dirty:
-                rec.set(stopped=f"the design repo changed before {e['experiment']} ({now[:12]}"
-                                f"{', dirty' if dirty else ''})")
-                log(d["stopped"])
-                break
-            folder = ensure_instance(lab, design, e["study"], e["board"], log=log)
-            e.update(instance=str(folder.relative_to(lab.results)), state=RUNNING, started=utc_now().isoformat(),
-                     log=str((rec.log_dir / f"{e['experiment']}.log").relative_to(lab.folder)))
-            e.pop("note", None)
-            rec.save()
-            log(f"=== {e['experiment']} ({e['instance']})")
-            if d.get("hwcheck_each") and hwcheck:
-                why = wire_check(lab, e["board"], e)
-                if why:
-                    e.update(state=FAILED, finished=utc_now().isoformat(), note=why)
-                    failed += 1
-                    rec.save()
-                    log(f"    {e['state']}: {why}")
-                    continue
-            # run.py adds the run to the run list of the instance, with the role and the campaign
-            cmd = [sys.executable, run_py(), config.project().repo / e["design"], "--out", folder,
-                   "--campaign", rec.id, "--role", d.get("role", "evidence"),
-                   *(["--reason", d["reason"]] if d.get("reason") else [])]
-            if warn_as_error:
-                cmd.append("--warn-as-error")
-            t0 = time.monotonic()
-            rc = run_subprocess(cmd, lab.folder / e["log"], cwd=lab.folder, pass_fds=lock_fds(rec.id))
-            e.update(rc=rc, finished=utc_now().isoformat())
-            added, run_dir = None, None
-            for line in (lab.folder / e["log"]).read_text().splitlines():
-                if line.startswith("run folder "):          # printed by run.py when it makes it
-                    run_dir = Path(line.split(maxsplit=2)[2])
-                elif line.startswith("results in "):
-                    run_dir = Path(line.split()[2])
-                elif line.startswith("run ") and " added to the instance " in line:
-                    added = line.split()[1]
-            if rc == 0 and added is not None:
-                e.update(run=added, state=DONE)
-            else:
-                e["state"] = FAILED
-                e["note"] = failed_note(folder, e["experiment"], run_dir, lab)
-            failed += e["state"] == FAILED
-            rec.save()
-            log(f"    {e['state']} (rc {rc}) in {minutes(time.monotonic() - t0)}"
-                + (f", {images_note(folder, e['run'])}, run {e['run']}" if e.get("run") else "")
-                + (f": {e['note']}" if e.get("note") else ""))
-            if e["state"] == DONE:
-                post.kick()
-            post.poll()
-        rec.set(status=DONE if not d.get("stopped") else FAILED, finished=utc_now().isoformat())
-        # A build that started while the campaign ran marks its verdicts provisional: one more
-        # build after the end makes them final (kick: after the build that runs now, if any).
-        log("waiting for the last build of the results (it makes the verdicts final)")
-        post.kick()
-        post.wait()
-        log(f"campaign {rec.id}: {d['status']}, {failed} experiments failed; results {root}/index.html")
-        return failed
-    except KeyboardInterrupt:
-        for e in d["experiments"]:
-            if e["state"] == RUNNING:
-                e.update(state=FAILED, note=f"stopped ({stop['why'] or 'interrupt'})")
-        rec.set(status="aborted", finished=utc_now().isoformat(), stopped=stop["why"] or "interrupt")
-        final_build(locals().get("post"), log)
-        raise CampaignError(f"campaign {rec.id} aborted") from None
-    except Exception as x:
-        for e in d["experiments"]:
-            if e["state"] == RUNNING:
-                e.update(state=FAILED, note=f"stopped ({type(x).__name__})")
-        rec.set(status="aborted", finished=utc_now().isoformat(), stopped=f"{type(x).__name__}: {x}")
-        final_build(locals().get("post"), log)
-        raise
-    finally:
-        signal.signal(signal.SIGTERM, old)
-        signal.signal(signal.SIGHUP, old_hup)
-        drop_lock(lab, rec.id)
-
-
-def run_of_campaign(lab, e, cid):
-    """The id of a run of the experiment e that the campaign cid added to the run list of its
-    instance after e started, or None."""
-    if not e.get("instance"):
-        return None
-    folder = lab.results / e["instance"]
-    if not (folder / "instance.json").is_file():
-        return None
-    started = (e.get("started") or "")[:19].replace("-", "").replace(":", "")
-    for r in instance.load(folder).get("runs", []):
-        exp, utc = r["id"].split("/")
-        if r.get("campaign") == cid and exp == e["experiment"] and utc[:15] >= started[:15]:
-            return r["id"]
-    return None
-
-
-def final_build(post, log):
-    """After an abort: one more results build, so that no verdict stays provisional."""
-    if post is None:
-        return
-    try:
-        log("one more build of the results (the campaign is aborted: the verdicts become final)")
-        post.kick()
-        post.wait()
-    except BaseException as x:          # a second Ctrl-C: the next build does it
-        log(f"no final build ({type(x).__name__})")
-
-
-def wire_check(lab, board, e):
-    """None if the loopback wire of the board is good, else the reason (for --hwcheck-each); the
-    experiment e gets the record of the check."""
-    from . import hwcheck as hwc
-    try:
-        ok, lines, path = hwc.check(lab, board, log=lambda m: None, locked=True)
-    except Exception as x:
-        if getattr(x, "record", None):
-            e["hwcheck"] = str(x.record.relative_to(lab.folder))
-        return f"the loopback wire check could not run: {type(x).__name__}: {(str(x).splitlines() or [''])[0]}"
-    e["hwcheck"] = str(path.relative_to(lab.folder))
-    return None if ok else f"the loopback wire check failed: {lines[-1] if lines else ''}"
-
-
-def minutes(secs):
-    return f"{secs / 60:.0f} min" if secs >= 90 else f"{secs:.0f} s"
-
-
-def images_note(folder, run_id):
-    """'5/5 images from the build cache' for a run (from its manifest)."""
-    try:
-        m = json.loads((Path(folder) / layout.run_folder(run_id) / "manifest.json").read_text())
-    except (OSError, ValueError):
-        return "images: no manifest"
-    pts = m.get("points", [])
-    n = sum(p.get("build", {}).get("from") == "cache" or p.get("build", {}).get("cached") is True for p in pts)
-    return f"{n}/{len(pts)} images from the build cache"
-
-
-def failed_note(folder, exp, run_dir, lab):
-    """Why an experiment failed: the <UTC>.failed.json of its run, or the newest run folder without a seal."""
-    if run_dir is None:
-        return "run.py stopped before it made a run folder (see the log)"
-    rel = run_dir.relative_to(lab.results) if run_dir.is_relative_to(lab.results) else run_dir
-    f = run_dir.parent / f"{run_dir.name}.failed.json"
-    if f.is_file():
-        rec = json.loads(f.read_text())
-        return f"the run {rel} failed at '{rec.get('step')}': {rec.get('error')} (not in the run list)"
-    if seal.seal_path(run_dir).exists():
-        return f"the run {rel} is sealed, but not in the run list (see the log)"
-    return f"a part of a run is left in {rel} (not in the run list)"
+    return engine.run_campaign(rec, CampaignHooks(), design=design, hwcheck=hwcheck,
+                               warn_as_error=warn_as_error, log=log)
 
 
 def detach(rec, extra):
@@ -815,20 +271,3 @@ def detach(rec, extra):
     return p.pid, log
 
 
-def status_lines(rec):
-    d = rec.data
-    status = d["status"]
-    if "@" in rec.id and status in (PLANNED, RUNNING):
-        status = f"imported, not complete ({status} at the export of {d.get('running_at_export', '?')})"
-    elif status in (PLANNED, RUNNING) and d.get("host") == platform.node() and d.get("pid") and not alive(d["pid"]):
-        status = f"{status}, but its process {d['pid']} is gone ('campaign resume {rec.id}' goes on)"
-    elif "@" in rec.id and status == "closed":
-        status = f"imported, closed here at {d.get('closed', '?')} (it was {d.get('status_at_import')})"
-    out = [f"campaign {rec.id}: {status}" + (f" ({d['stopped']})" if d.get("stopped") else ""),
-           f"  lab {d['lab']['id']} on {d['host']}, repo {d['repo']['rev'][:12]}, folder {d['folder']}"]
-    for e in d["experiments"]:
-        extra = f"run {e['run']}" if e.get("run") else e.get("note", "")
-        out.append(f"  {e['state']:8} {e['experiment']:28} {e.get('instance', '-'):60} {extra}")
-    for p in d.get("post", [])[-1:]:
-        out.append(f"  last results build: rc {p['rc']} (seen at {p.get('noticed', p.get('finished'))})")
-    return out
