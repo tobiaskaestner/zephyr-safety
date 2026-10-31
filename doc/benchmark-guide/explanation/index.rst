@@ -9,6 +9,7 @@ work in this way.
 
    purpose
    architecture
+   probatrix
    method
    timing-diagrams
    apps

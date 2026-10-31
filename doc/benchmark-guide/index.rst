@@ -8,6 +8,8 @@ to run a reproducible experiment and how to extend the suite.
 
 :doc:`explanation/purpose` tells what the suite measures, and
 :doc:`explanation/architecture` shows its parts and the flow of the data.
+:doc:`explanation/probatrix` explains the Python package behind ``study.py``:
+the core, the kinds of study and the launchers.
 
 The guide describes the code. It does not give measurement results,
 because results change with each tree and each experiment. The results of
