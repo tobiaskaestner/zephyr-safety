@@ -18,7 +18,7 @@ To use another revision of a repository, add a new tree:
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py trees setup <tree>
+      scripts/probatrix/study.py trees setup <tree>
 
 To add a module repository that a new board needs to an existing tree:
 

@@ -10,7 +10,7 @@ commands, and :doc:`../reference/cli/run-py` the options of ``run.py``.
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py instance new <results> <study> --board <board>
+      scripts/probatrix/study.py instance new <results> <study> --board <board>
 
 #. Run the experiment with ``--out <instance folder>``. ``run.py`` puts
    the run into the instance folder and adds it to the run list:
@@ -24,18 +24,18 @@ commands, and :doc:`../reference/cli/run-py` the options of ``run.py``.
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py instance add <instance folder> <old run folder> --copy
+      scripts/probatrix/study.py instance add <instance folder> <old run folder> --copy
 
 #. Build the results:
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py analysis build <results>/kernel-latency
+      scripts/probatrix/study.py analysis build <results>/kernel-latency
 
 #. If a check is manual, give its verdict. ``--by`` names the person, or
    a proposal that says so:
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py instance verdict <instance folder> --hypothesis H3 --check a \
+      scripts/probatrix/study.py instance verdict <instance folder> --hypothesis H3 --check a \
           --verdict wrong --by "<name>" --text "<why>"

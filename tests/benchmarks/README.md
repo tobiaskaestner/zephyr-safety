@@ -44,8 +44,8 @@ paths are relative to the root of the repo:
 | `scripts/probatrix/benchmarks/hwmap.py` | Reads the hardware map and selects the entry of a board |
 | `scripts/probatrix/benchmarks/latbench.py` | Parses logs and prints percentiles |
 | `scripts/probatrix/benchmarks/plot.py` | Plots the exceedance probability and the histograms |
-| `scripts/probatrix/benchmarks/study.py` | Design lint and templates, lab spaces, pinned trees, campaigns, study instances (run lists, seals), and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide pages "The tool study.py", "Studies and their results" and "Lab spaces and campaigns") |
-| `scripts/probatrix/benchmarks/data.py` | Loads a built instance for a notebook |
+| `scripts/probatrix/study.py` | Design lint and templates, lab spaces, pinned trees, campaigns, study instances (run lists, seals), and the aggregates `run.json`, `experiment.json`, `study.json` (see the guide pages "The tool study.py", "Studies and their results" and "Lab spaces and campaigns") |
+| `scripts/probatrix/benchmarks/data.py` | Loads a built instance for a notebook: the latency tables (the generic part is `scripts/probatrix/core/data.py`) |
 | `tests/benchmarks/<app>/scripts/extract.py` | The data of a run of the app as JSON (common part: `common/scripts/latextract.py`) |
 | `tests/benchmarks/<app>/scripts/plot.py` | The standard plots of an experiment of the app (common part: `common/scripts/latplot.py`) |
 | `scripts/probatrix/benchmarks/requirements.txt` | Python packages for the scripts |
@@ -63,7 +63,7 @@ the experiment file, and the revs of all trees.
    mkdir <lab folder> && cd <lab folder>
    git clone <safety repo> safety
    python3 -m venv .venv && .venv/bin/pip install -r safety/scripts/probatrix/benchmarks/requirements.lock
-   .venv/bin/python safety/scripts/probatrix/benchmarks/study.py lab init --repo safety
+   .venv/bin/python safety/scripts/probatrix/study.py lab init --repo safety
    ```
 
 2. Check out the safety repo of the lab space at the rev in
@@ -71,7 +71,7 @@ the experiment file, and the revs of all trees.
 3. In the lab folder, create the pinned trees that the run used (once):
 
    ```sh
-   safety/scripts/probatrix/benchmarks/study.py trees setup <tree>
+   safety/scripts/probatrix/study.py trees setup <tree>
    ```
 
 4. Run the experiment again:

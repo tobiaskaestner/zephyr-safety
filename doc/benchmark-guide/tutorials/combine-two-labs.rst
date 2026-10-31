@@ -18,7 +18,7 @@ In the first lab folder:
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py lab export -o ../lab-tutorial-runs.tar.gz
+   $ safety/scripts/probatrix/study.py lab export -o ../lab-tutorial-runs.tar.gz
    2 runs of 2 instances to /wrk/z/lab-tutorial-runs.tar.gz (sha256 866105262b04)
    $ /bin/ls -l ../lab-tutorial-runs.tar.gz*
    -rw-r--r-- 1 tobias tobias 5552504 Oct 29 14:28 ../lab-tutorial-runs.tar.gz
@@ -44,14 +44,14 @@ Make the second lab space there:
 
 .. code-block:: console
 
-   $ mkdir lab-tutorial-b && cd lab-tutorial-b && git clone -q <safety repository> safety && python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/probatrix/benchmarks/requirements.lock && .venv/bin/python safety/scripts/probatrix/benchmarks/study.py lab init --repo safety
+   $ mkdir lab-tutorial-b && cd lab-tutorial-b && git clone -q <safety repository> safety && python3 -m venv .venv && .venv/bin/pip install -q --disable-pip-version-check -r safety/scripts/probatrix/benchmarks/requirements.lock && .venv/bin/python safety/scripts/probatrix/study.py lab init --repo safety
    lab space lab-tutorial-b-cc46d57b in /wrk/z/lab-tutorial-b
      design repo  /wrk/z/lab-tutorial-b/safety
      python       /wrk/z/lab-tutorial-b/.venv (the Python of lab init)
      trees        /wrk/z/lab-tutorial-b/trees
      results      /wrk/z/lab-tutorial-b/results
      hardware map /wrk/z/lab-tutorial-b/hw-map.yml (missing: see "Make a hardware map" in the benchmark guide)
-   next: cd /wrk/z/lab-tutorial-b && /wrk/z/lab-tutorial-b/safety/scripts/probatrix/benchmarks/study.py trees setup <tree>
+   next: cd /wrk/z/lab-tutorial-b && /wrk/z/lab-tutorial-b/safety/scripts/probatrix/study.py trees setup <tree>
 
 A lab space for analysis only needs no trees and no hardware map.
 
@@ -62,7 +62,7 @@ Import
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py lab import ../lab-tutorial-runs.tar.gz --dry-run
+   $ safety/scripts/probatrix/study.py lab import ../lab-tutorial-runs.tar.gz --dry-run
    warning: kernel-latency/tutorial@nucleo_g474re: the study is not in the design here
    refused: irq-opt/20261029T132512Z: the experiment is not in the design here
    1 runs to add, 0 already here, 1 refused (from lab lab-tutorial-332eb106 on cos-workstation)
@@ -74,7 +74,7 @@ rename do not count). The run of ``irq-smoke`` is good:
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py lab import ../lab-tutorial-runs.tar.gz
+   $ safety/scripts/probatrix/study.py lab import ../lab-tutorial-runs.tar.gz
    2 commits of the runs in refs/latbench/import/lab-tutorial-332eb106/ of /wrk/z/lab-tutorial-b/safety
    warning: kernel-latency/tutorial@nucleo_g474re: the study is not in the design here
    refused: irq-opt/20261029T132512Z: the experiment is not in the design here
@@ -89,12 +89,12 @@ The same verdicts
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py analysis build results/kernel-latency
+   $ safety/scripts/probatrix/study.py analysis build results/kernel-latency
    built 5 instances, 1 runs; 8 files written
    [...]
    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry: H 1 confirmed, 0 wrong, 2 open; central 0 of 1
    [...]
-   $ safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry --details
+   $ safety/scripts/probatrix/study.py analysis show results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry --details
 
    == kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry
       H1 confirmed (1 of 1)

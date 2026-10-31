@@ -21,7 +21,7 @@ The image
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/study.py trees setup <tree> ...
 
 #. Build all points of the run again, or one point:
 
@@ -48,7 +48,7 @@ The measurement
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/study.py trees setup <tree> ...
 
 #. Run the experiment again:
 

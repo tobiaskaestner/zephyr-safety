@@ -17,7 +17,7 @@ Check before you run
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py campaign check safety/validation/empirical/latencies/st-default-latencies --only irq-smoke
+   $ safety/scripts/probatrix/study.py campaign check safety/validation/empirical/latencies/st-default-latencies --only irq-smoke
      planned  irq-smoke (default-latencies/irq-entry, nucleo_g474re) -> kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry (will be made)
      ok   design repo: /wrk/z/lab-tutorial/safety at df1a5d8c69ad
      ok   lint
@@ -41,10 +41,10 @@ Run it in the background
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py campaign run safety/validation/empirical/latencies/st-default-latencies --only irq-smoke --detach
+   $ safety/scripts/probatrix/study.py campaign run safety/validation/empirical/latencies/st-default-latencies --only irq-smoke --detach
    campaign 20261029T131933Z: 1 experiments, record /wrk/z/lab-tutorial/.lab/campaigns/20261029T131933Z.json
    runs in the background (pid 1910104); log /wrk/z/lab-tutorial/.lab/campaigns/20261029T131933Z/campaign.log; 'study.py campaign status 20261029T131933Z'
-   $ safety/scripts/probatrix/benchmarks/study.py campaign status
+   $ safety/scripts/probatrix/study.py campaign status
    campaign 20261029T131933Z: running
      lab lab-tutorial-332eb106 on cos-workstation, repo df1a5d8c69ad, folder /wrk/z/lab-tutorial/safety/validation/empirical/latencies/st-default-latencies
      running  irq-smoke                    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry
@@ -72,7 +72,7 @@ One line for each instance:
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency
+   $ safety/scripts/probatrix/study.py analysis show results/kernel-latency
    kernel-latency: central 0 of 8
    kernel-latency/st-default-latencies@nucleo_g474re: central 0 of 3
    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry: H 1 confirmed, 0 wrong, 2 open; central 0 of 1
@@ -83,7 +83,7 @@ The details of one instance:
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py analysis show results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry --details
+   $ safety/scripts/probatrix/study.py analysis show results/kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry --details
 
    == kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry
       H1 confirmed (1 of 1)
@@ -106,7 +106,7 @@ What is missing
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py analysis missing results/kernel-latency
+   $ safety/scripts/probatrix/study.py analysis missing results/kernel-latency
    kernel-latency/st-default-latencies@nucleo_g474re/st-irq-entry: irq-checks-1m: no evidence run; waits: 2 checks (H2 a, H2 b)
    kernel-latency/st-default-latencies@nucleo_g474re/st-isr-to-thread: wake-isr-1m: no evidence run; waits: 1 central result ([isr2thr-p99-sem])
    2 experiments to run; 'study.py campaign check <folder> --only EXP ...'
@@ -121,7 +121,7 @@ The pages
 
 .. code-block:: console
 
-   $ safety/scripts/probatrix/benchmarks/study.py analysis html results/kernel-latency
+   $ safety/scripts/probatrix/study.py analysis html results/kernel-latency
    6 pages, top: /wrk/z/lab-tutorial/results/kernel-latency/index.html
 
 Open ``results/kernel-latency/index.html`` in a browser. Each study level

@@ -38,7 +38,7 @@ A :term:`lab space` holds everything of one host that a study needs.
 
    .. code-block:: console
 
-      .venv/bin/python safety/scripts/probatrix/benchmarks/study.py lab init --repo safety [--trees-source <folder>]
+      .venv/bin/python safety/scripts/probatrix/study.py lab init --repo safety [--trees-source <folder>]
 
 #. Set up the trees that the studies of the lab space need (see
    :doc:`../reference/files/trees-yaml`). A lab space for analysis only
@@ -46,19 +46,19 @@ A :term:`lab space` holds everything of one host that a study needs.
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py trees setup <tree> ...
+      safety/scripts/probatrix/study.py trees setup <tree> ...
 
 #. Make sure that the lab space is complete:
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py lab status
+      safety/scripts/probatrix/study.py lab status
 
 #. For each board, do the :term:`wire check`:
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py lab hwcheck <board>
+      safety/scripts/probatrix/study.py lab hwcheck <board>
 
    If the result is ``RESULT: FAIL``, see :doc:`troubleshoot-a-run`.
 

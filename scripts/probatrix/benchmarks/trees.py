@@ -376,4 +376,4 @@ def main(args, log=print):
 
 
 if __name__ == "__main__":
-    sys.exit("trees.py has no commands of its own: use scripts/probatrix/benchmarks/study.py trees setup|check|show")
+    sys.exit("trees.py has no commands of its own: use scripts/probatrix/study.py trees setup|check|show")

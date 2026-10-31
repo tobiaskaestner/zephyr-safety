@@ -12,7 +12,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py design scaffold experiment <study folder>/ex-<name> --app <app>
+      scripts/probatrix/study.py design scaffold experiment <study folder>/ex-<name> --app <app>
 
    The command also adds the name to ``experiments`` of ``study.yaml``,
    and a line to the section Experiments of ``study.md``.
@@ -39,7 +39,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py design lint validation/empirical/latencies/st-<study>
+      scripts/probatrix/study.py design lint validation/empirical/latencies/st-<study>
 
 #. Commit the files. ``run.py`` refuses a safety repository that is not
    clean.
@@ -62,7 +62,7 @@ Add an experiment
 
    .. code-block:: console
 
-      scripts/probatrix/benchmarks/study.py campaign run <experiment folder>
+      scripts/probatrix/study.py campaign run <experiment folder>
 
 #. Without a campaign, see :doc:`run-without-a-campaign`.
 

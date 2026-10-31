@@ -1,12 +1,17 @@
 The tool study.py
 =================
 
-``study.py`` (``<repo>/scripts/probatrix/benchmarks/study.py``) has all commands of
+``study.py`` (``<repo>/scripts/probatrix/study.py``) has all commands of
 the :term:`studies <study>`, the :term:`lab spaces <lab space>` and the
 results, in six namespaces. In a lab space, each ``study.py`` runs the
 ``study.py`` of the :term:`design repository` with the Python of the lab
 space (see :doc:`../files/lab-config`). ``study.py --help`` and
 ``study.py <namespace> <command> --help`` give the options.
+
+The old launcher ``scripts/probatrix/benchmarks/study.py`` still works.
+It starts the same command line. A lab space can also use a design
+repository that has only the older launcher
+``scripts/benchmarks/study.py``.
 
 .. list-table::
    :header-rows: 1
@@ -45,7 +50,7 @@ Design
 
 .. code-block:: console
 
-   scripts/probatrix/benchmarks/study.py design lint [FOLDER] [--warn-as-error]
+   scripts/probatrix/study.py design lint [FOLDER] [--warn-as-error]
 
 The lint reads the design files below ``validation/empirical/latencies/``.
 It needs no build and no board. It prints one line for each problem,
@@ -64,8 +69,8 @@ The rules are in :doc:`../lint-rules`.
 
 .. code-block:: console
 
-   scripts/probatrix/benchmarks/study.py design scaffold study PARENT/st-NAME
-   scripts/probatrix/benchmarks/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
+   scripts/probatrix/study.py design scaffold study PARENT/st-NAME
+   scripts/probatrix/study.py design scaffold experiment STUDY/ex-NAME --app APP [--board B]
 
 ``scaffold study`` makes a new sub-study ``st-NAME/`` of the study
 ``PARENT``, with these files:
@@ -129,7 +134,8 @@ Lab space
 ``lab init`` makes ``FOLDER/.lab/config``, the results folder and the
 trees root. ``FOLDER`` is the current folder by default. ``REPO`` is the
 design repository, a clone of the :term:`safety repository`. It must
-have ``scripts/probatrix/benchmarks/study.py``. The options set these keys of
+have ``scripts/probatrix/study.py`` (or one of the two older launchers).
+The options set these keys of
 ``.lab/config`` (see :doc:`../files/lab-config`): ``--name`` sets
 ``[lab] name``, ``--trees-root`` and ``--trees-source`` set ``[trees]
 root`` and ``[trees] source``, ``--sdk`` sets ``[toolchain] zephyr_sdk``,

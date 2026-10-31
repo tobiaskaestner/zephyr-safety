@@ -8,7 +8,7 @@ A :term:`study` asks one verification question. It names the
 <hypothesis>` that were written before the runs, and the :term:`central
 results <central result>` that state the answer. The reference describes the files of
 a study design (:doc:`../reference/files/study-yaml`), the results tree
-(:doc:`../reference/files/results-tree`), the tool ``scripts/probatrix/benchmarks/study.py``
+(:doc:`../reference/files/results-tree`), the tool ``scripts/probatrix/study.py``
 (:doc:`../reference/cli/study-py`) and the forms that a :term:`check` can use
 (:doc:`../reference/check-forms`).
 

@@ -153,7 +153,7 @@ def cmd_lab_init(args):
     print(f"  trees        {lab.trees_root}" + (f" (clone from {lab.trees_source})" if lab.trees_source else ""))
     print(f"  results      {lab.results}")
     print(f"  hardware map {lab.hw_map}" + ("" if lab.hw_map.is_file() else " (missing: see \"Make a hardware map\" in the benchmark guide)"))
-    print(f"next: cd {lab.folder} && {lab.repo}/scripts/probatrix/benchmarks/study.py trees setup <tree>")
+    print(f"next: cd {lab.folder} && {lab.repo}/scripts/probatrix/study.py trees setup <tree>")
 
 
 def cmd_lab_status(args):

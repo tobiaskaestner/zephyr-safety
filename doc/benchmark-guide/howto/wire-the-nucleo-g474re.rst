@@ -27,7 +27,7 @@ other facts of the board port.
 
    .. code-block:: console
 
-      safety/scripts/probatrix/benchmarks/study.py lab hwcheck nucleo_g474re
+      safety/scripts/probatrix/study.py lab hwcheck nucleo_g474re
 
    If the wire is good, the console shows ``RESULT: OK``.
 
