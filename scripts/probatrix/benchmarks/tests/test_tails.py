@@ -19,6 +19,7 @@ sys.path.insert(0, str(REPO / "tests" / "benchmarks" / "common" / "scripts"))
 
 from probatrix.benchmarks import latbench  # noqa: E402
 from probatrix.benchmarks import tails  # noqa: E402
+from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks.studylib import stats
 from probatrix.core import checks  # noqa: E402
 from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
@@ -176,6 +177,8 @@ def test_a_check_reads_the_tail_metric(tmp_path):
     o = [checks.Obs("e/1", "ws-up", "a", {}, r)]
 
     class S:
+        kind = benchkind.KIND
+
         def observations(self, exp, series=None):
             return o
 

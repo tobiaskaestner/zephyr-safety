@@ -1,0 +1,16 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The study.yaml of the fake kind of core/tests/test_generic_kind.py.
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: fake/study.schema.yaml
+type: object
+additionalProperties: false
+required: [name]
+properties:
+  name: {type: string}
+  question: {type: string}
+  experiments: {type: array, items: {type: string}}
+  substudies: {type: array, items: {type: string}}
+  imports: {type: array}
+  central_results: {type: array}

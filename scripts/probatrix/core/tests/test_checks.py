@@ -5,28 +5,18 @@
 
 import pytest
 
-from probatrix.core import checks
+from probatrix.core import checks, kinds
 from probatrix.core.errors import NoValue
 
 
-class FakeKind:
+class FakeKind(kinds.BaseKind):
     name = "fake"
-    dirt_paths = ()
 
     def value(self, rep, metric, stat):
         return rep[metric]
 
     def known(self, metric, stat):
         return True
-
-    def width(self, rep, metric, stat):
-        return 1
-
-    def seen(self, rep, metric):
-        return True
-
-    def extra_forms(self):
-        return {}
 
 
 class Src:

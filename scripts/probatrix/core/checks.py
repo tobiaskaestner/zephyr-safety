@@ -66,8 +66,7 @@ def kind_for(kind):
 
 def forms_of(kind):
     """{name: form} of the check forms that only this kind has (kind.extra_forms(), {} if the kind has none)."""
-    f = getattr(kind, "extra_forms", None)
-    return dict(f()) if f else {}
+    return dict(kind.extra_forms())
 
 
 def form_of(expect, kind=None):
@@ -183,8 +182,7 @@ def series_values(kind, points, metric, stat, numeric=True):
 
     width is the width of the interval of a value (kind.width: the bin of a quantile; 1 for an exact value).
     """
-    pa = getattr(kind, "is_point_agg", None)
-    agg = pa(metric, stat) if pa else (isinstance(stat, str) and bool(AGG.match(stat)))
+    agg = kind.is_point_agg(metric, stat)
     m = AGG.match(stat) if agg else None
     if m:
         f, inner = m.groups()
@@ -264,7 +262,7 @@ def evaluate(check, src, kind=None):
     """Return {verdict, measured, limit, values} for a check that is not manual.
 
     kind: the Kind that reads the values; else src.kind, else the default kind of the Project."""
-    kind = kind if kind is not None else (getattr(src, "kind", None) or kind_for(None))
+    kind = kind if kind is not None else src.kind
     exp = check.get("experiment")
     expect = dict(check.get("expect") or {})
     form = form_of(expect, kind)

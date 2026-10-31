@@ -21,11 +21,12 @@ from probatrix.core.seal import file_sha256
 from probatrix.core.errors import DesignError  # noqa: F401  (design.DesignError)
 
 
-def load(kind, path):
-    """A design file, checked against its schema; DesignError at the first violation."""
+def load(kind, path, prefix=None):
+    """A design file, checked against its schema (prefix: the $id prefix of the schemas of the kind of
+    the design; None: the default one); DesignError at the first violation."""
     data = yaml.safe_load(path.read_text())
     try:
-        return schema.check(kind, data, path)
+        return schema.check(kind, data, path, prefix)
     except schema.SchemaError as e:
         raise DesignError(str(e)) from None
 
@@ -50,12 +51,12 @@ def repo_rev(repo=None, kind=None):
 
 
 class Study:
-    def __init__(self, path, folder):
+    def __init__(self, path, folder, prefix=None):
         self.path = path
         self.folder = folder
-        self.data = load("study", folder / "study.yaml")
+        self.data = load("study", folder / "study.yaml", prefix)
         h = folder / "hypotheses.yaml"
-        self.hypotheses = load("hypotheses", h)["hypotheses"] if h.is_file() else []
+        self.hypotheses = load("hypotheses", h, prefix)["hypotheses"] if h.is_file() else []
         self.experiments = list(self.data.get("experiments") or [])
         self.imports = list(self.data.get("imports") or [])
         self.central_results = list(self.data.get("central_results") or [])
@@ -79,10 +80,10 @@ class Study:
 
 
 class Experiment:
-    def __init__(self, folder, study):
+    def __init__(self, folder, study, prefix=None):
         self.folder = folder
         self.study = study
-        self.data = load("experiment", folder / "experiment.yaml")
+        self.data = load("experiment", folder / "experiment.yaml", prefix)
         self.name = self.data["name"]
         self.acceptance = list(self.data.get("acceptance") or [])
         rf = self.data.get("renamed_from") or []
@@ -96,8 +97,14 @@ class Experiment:
 class Design:
     """All studies and experiments of the design tree."""
 
-    def __init__(self, root=None):
+    def __init__(self, root=None, kind=None):
+        """kind: the Kind whose schemas check the files. Without it: the kind that the Project names for
+        this root (Root.kind), else the default schema prefix (the one registered first)."""
         self.root = Path(config.project().design_root if root is None else root)
+        if kind is None:
+            r = config.project().root_of(self.root)
+            kind = kinds.get(r.kind) if r is not None and r.kind else None
+        self.prefix = kind.schema_prefix if kind is not None else None
         self.studies = {}
         self.experiments = {}
         self._load("", self.root)
@@ -108,7 +115,7 @@ class Design:
                     raise DesignError(f"study {path or '(top)'}: no experiment folder {folder}")
                 if e in self.experiments:
                     raise DesignError(f"experiment {e}: owned by {self.experiments[e].study} and {path}")
-                self.experiments[e] = Experiment(folder, path)
+                self.experiments[e] = Experiment(folder, path, self.prefix)
         # the earlier names of renamed experiments: runs, refs and imports with these names stay valid
         self.aliases = {}
         for name, e in self.experiments.items():
@@ -127,7 +134,7 @@ class Design:
     def _load(self, path, folder):
         if not (folder / "study.yaml").is_file():
             raise DesignError(f"{folder}: no study.yaml")
-        st = Study(path, folder)
+        st = Study(path, folder, self.prefix)
         self.studies[path] = st
         for sub in st.substudies:
             name = sub.rsplit("/", 1)[-1]

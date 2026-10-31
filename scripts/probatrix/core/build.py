@@ -73,7 +73,7 @@ class Writer:
 class Tree:
     def __init__(self, root, design=None, writer=None, log=print, pending=None, kind=None):
         self.root = Path(root).resolve()
-        self.design = design or Design()
+        self.design = design or (Design(kind=kind) if kind else Design())
         self.kind = kind or kinds.kind_of(self.design.top, config.project().root_of(self.design.root))
         self.axis = self.kind.instance_axis
         self.writer = writer or Writer()
@@ -100,6 +100,19 @@ class Tree:
     def find_pending(self):
         """{(instance folder, experiment): campaign id} of the running campaigns of the lab space."""
         return self.kind.pending(self.root, self.design)
+
+    def generated_hypotheses(self, study):
+        """One hypothesis for each experiment of the study whose kind generates checks (kind.generated_checks,
+        e.g. the expected verdict of each line of a list file). Its id is "<experiment>-generated"; a check
+        without an experiment reads the experiment it comes from."""
+        out = []
+        for exp in study.experiments:
+            chks = self.kind.generated_checks(self.design.experiment(exp).data)
+            if chks:
+                out.append({"id": f"{exp}-generated", "type": "generated",
+                            "statement": f"The checks that the kind {self.kind.name!r} generates for {exp} hold.",
+                            "checks": [{"experiment": exp, **c} for c in chks]})
+        return out
 
     def waits_for(self, folder, experiments):
         """The reason why a result of the instance that reads these experiments is provisional, or None."""
@@ -281,7 +294,7 @@ class Tree:
 
         # hypotheses
         hyps = []
-        for h in study.hypotheses:
+        for h in [*study.hypotheses, *self.generated_hypotheses(study)]:
             out_checks = []
             for c in h.get("checks") or []:
                 entry = {"id": c["id"]}

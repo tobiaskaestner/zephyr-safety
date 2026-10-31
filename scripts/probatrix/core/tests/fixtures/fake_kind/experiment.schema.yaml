@@ -1,0 +1,14 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The experiment.yaml of the fake kind: a list of "<point>: <expected verdict>" lines.
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: fake/experiment.schema.yaml
+type: object
+additionalProperties: false
+required: [name, list]
+properties:
+  name: {type: string}
+  list: {type: array, items: {type: string}}
+  acceptance: {type: array}
+  renamed_from: {type: [string, array]}

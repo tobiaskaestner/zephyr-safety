@@ -37,6 +37,16 @@ class BoardAxis:
         return boardaxis.folder_name(study_name, value, prefix)
 
     @staticmethod
+    def base_name(name):
+        from probatrix.benchmarks.studylib import boardaxis
+        return boardaxis.base_name(name)
+
+    @staticmethod
+    def fixes(name):
+        from probatrix.benchmarks.studylib import boardaxis
+        return boardaxis.fixes_board(name)
+
+    @staticmethod
     def of(folder):
         from probatrix.benchmarks.studylib import boardaxis
         return boardaxis.board_of(folder)
@@ -47,7 +57,7 @@ class BoardAxis:
         return boardaxis.lock_key(value)
 
 
-class LatbenchKind:
+class LatbenchKind(kinds.BaseKind):
     name = "latbench"
     schema_prefix = "latbench"
     schema_folder = HERE / "schemas"
@@ -64,14 +74,6 @@ class LatbenchKind:
         self.bench_dir = repo / "tests" / "benchmarks"
         self.trees_dir = repo / "validation" / "trees"
         self.boards_file = self.bench_dir / "boards.yaml"
-
-    def format_id(self, name, version):
-        """The id of a file format, e.g. "latbench-study/2"."""
-        return f"{self.format_prefix}-{name}/{version}"
-
-    def ref(self, *parts):
-        """A git ref below the prefix, e.g. refs/latbench/run/<exp>/<id>."""
-        return "/".join([self.ref_prefix, *map(str, parts)])
 
     def points(self, experiment):
         from probatrix.benchmarks.studylib import kindhooks
@@ -125,15 +127,8 @@ class LatbenchKind:
     def is_point_agg(metric, stat):
         """max(x) / min(x) of a metric is an aggregate over the selected points, but not for an M4 metric
         (there it is inside the value)."""
-        import re
-        return isinstance(stat, str) and bool(re.match(r"^(max|min)\((.+)\)$", stat)) \
-            and not (metric or "").startswith("m4.")
-
-    def generated_checks(self, experiment):
-        return []
-
-    def commands(self):
-        return {}
+        from probatrix.core import checks
+        return isinstance(stat, str) and bool(checks.AGG.match(stat)) and not (metric or "").startswith("m4.")
 
 
 KIND = LatbenchKind()

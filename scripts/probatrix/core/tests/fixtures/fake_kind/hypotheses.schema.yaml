@@ -1,0 +1,11 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The hypotheses.yaml of the fake kind.
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: fake/hypotheses.schema.yaml
+type: object
+additionalProperties: false
+required: [hypotheses]
+properties:
+  hypotheses: {type: array, items: {type: object}}

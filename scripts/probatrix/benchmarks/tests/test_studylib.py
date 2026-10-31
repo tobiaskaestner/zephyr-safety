@@ -13,6 +13,7 @@ import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 
+from probatrix.benchmarks import kind as benchkind  # noqa: E402
 from probatrix.benchmarks.studylib import boardaxis  # noqa: E402
 from probatrix.benchmarks.studylib import central, instance, runfiles, stats
 from probatrix.core import build, checks  # noqa: E402
@@ -42,6 +43,8 @@ def obs(point, value, tree="ws-up", run="e/20260101T000000Z", axes=None, metric=
 
 class Src:
     """A check source over a fixed list of points."""
+
+    kind = benchkind.KIND
 
     def __init__(self, points, runs=None):
         self.points, self.runs = points, runs or {}

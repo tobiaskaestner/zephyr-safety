@@ -14,15 +14,25 @@ import json
 from pathlib import Path
 
 
+def base_name(name):
+    """One folder or path name without the board: "x@board" gives "x" (a "st-" prefix stays)."""
+    return name.split("@")[0]
+
+
+def fixes_board(name):
+    """Whether this name of an instance path (or folder) fixes a board."""
+    return "@" in name
+
+
 def strip_board(instance_path):
     """The study path of an instance path."""
-    return "/".join(n.split("@")[0] for n in instance_path.split("/") if n)
+    return "/".join(base_name(n) for n in instance_path.split("/") if n)
 
 
 def board_suffix(instance_path):
     """The board name in the path ('' if no level of the path fixes a board)."""
     for n in instance_path.split("/"):
-        if "@" in n:
+        if fixes_board(n):
             return n.split("@", 1)[1]
     return ""
 
