@@ -21,7 +21,7 @@ from pathlib import Path
 
 import yaml
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent / "schemas"
+SCHEMA_DIR = Path(__file__).resolve().parent.parent / "benchmarks" / "schemas"   # until the registry of the next commit
 KINDS = ("experiment", "study", "hypotheses", "boards")
 
 

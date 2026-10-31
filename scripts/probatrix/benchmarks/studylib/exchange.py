@@ -58,9 +58,11 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import instance, jsonout, layout, seal
-from .design import Design, repo_rel
-from .seal import file_sha256
+from . import instance
+
+from probatrix.core import jsonout, layout, seal
+from probatrix.core.design import Design, repo_rel
+from probatrix.core.seal import file_sha256
 
 FORMAT = "latbench-export/2"
 FORMATS = ("latbench-export/1", FORMAT)     # format 1: no parsed experiments, no bundle
@@ -70,7 +72,7 @@ BUNDLE_NS = "refs/latbench/export"
 def comparable(exp_data):
     """The content of an experiment file that the two labs must share: the parsed YAML (no
     comments) without its name and earlier names (a rename is not a change of the experiment)."""
-    from . import schema
+    from probatrix.core import schema
     d = schema.plain(dict(exp_data or {}))
     d.pop("name", None)
     d.pop("renamed_from", None)

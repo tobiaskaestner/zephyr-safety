@@ -79,7 +79,7 @@ def test_only_filters_by_folder(tmp_path):
 def test_scaffold_study_and_experiment_pass_the_lint(tmp_path):
     import pytest
     from probatrix.benchmarks.studylib import scaffold
-    from probatrix.benchmarks.studylib.design import Design
+    from probatrix.core.design import Design
     make_design(tmp_path)
     root = tmp_path / "design"
     top_before = (root / "study.yaml").read_text()
@@ -135,7 +135,7 @@ def test_grouping_rules_of_central_results(tmp_path):
 
 def test_schema_errors_name_the_key(tmp_path):
     import pytest
-    from probatrix.benchmarks.studylib.design import Design, DesignError
+    from probatrix.core.design import Design, DesignError
     make_design(tmp_path)
     root = tmp_path / "design"
     edit(root / "st-sub" / "ex-exp1" / "experiment.yaml", lambda d: d.update(repat=2))

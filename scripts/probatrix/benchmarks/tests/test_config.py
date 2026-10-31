@@ -8,8 +8,8 @@ from pathlib import Path
 import pytest
 
 from probatrix.benchmarks import trees
-from probatrix.benchmarks.studylib import design as designmod
-from probatrix.benchmarks.studylib import layout
+from probatrix.core import design as designmod
+from probatrix.core import layout
 from probatrix.core import config
 
 HERE = Path(__file__).resolve()

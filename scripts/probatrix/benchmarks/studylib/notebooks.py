@@ -38,7 +38,7 @@ from pathlib import Path
 from probatrix.core import config
 import yaml
 
-from . import layout
+from probatrix.core import layout
 
 FORMAT = "latbench-notebooks/1"
 TIMEOUT = 900

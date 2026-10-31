@@ -27,7 +27,7 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import layout
+from probatrix.core import layout
 
 HEADER = "# Copyright (c) {year} inovex GmbH\n# SPDX-License-Identifier: Apache-2.0\n"
 # The main metric of each app, for the template check and the acceptance check.

@@ -22,8 +22,10 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import checks, kindhooks, layout, schema
-from .design import Design, DesignError
+from . import checks, kindhooks
+
+from probatrix.core import layout, schema
+from probatrix.core.design import Design, DesignError
 
 ERROR, WARNING = "error", "warning"
 PLACES = ("LATBENCH_CODE_FLASH", "LATBENCH_CODE_FLASH_PAD", "LATBENCH_CODE_RAM")

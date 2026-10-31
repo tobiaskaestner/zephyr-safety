@@ -31,7 +31,8 @@ from pathlib import Path
 import yaml
 
 from probatrix.benchmarks import tails as tailmod  # noqa: E402
-from probatrix.benchmarks.studylib import layout, stats  # noqa: E402
+from probatrix.benchmarks.studylib import stats  # noqa: E402
+from probatrix.core import layout
 from probatrix.core import config  # noqa: E402
 
 

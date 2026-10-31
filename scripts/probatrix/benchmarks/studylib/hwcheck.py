@@ -86,7 +86,7 @@ def check(lab, board, log=print, tree=None, locked=False):
 
 
 def _write(lab, board, started, rec):
-    from . import jsonout
+    from probatrix.core import jsonout
     path = history_path(lab, board, started)
     jsonout.write(path, rec)
     jsonout.write(record_path(lab, board), rec)

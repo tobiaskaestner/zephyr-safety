@@ -11,8 +11,10 @@ import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 
-from probatrix.benchmarks.studylib import build, central, checks, instance, jsonout, layout, seal, stats  # noqa: E402
-from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.benchmarks.studylib import build, central, checks, instance, stats  # noqa: E402
+
+from probatrix.core import jsonout, layout, seal
+from probatrix.core.design import Design  # noqa: E402
 from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
 from probatrix.core import config  # noqa: E402
 

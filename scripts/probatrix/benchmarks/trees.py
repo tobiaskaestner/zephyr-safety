@@ -140,7 +140,7 @@ def load(trees_root=None, lab=None, find_lab=True):
 
 
 def load_boards():
-    from probatrix.benchmarks.studylib import schema
+    from probatrix.core import schema
     try:
         return schema.check("boards", yaml.safe_load(config.project().boards_file.read_text()), config.project().boards_file)
     except schema.SchemaError as e:

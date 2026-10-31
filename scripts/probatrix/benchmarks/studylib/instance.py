@@ -28,8 +28,8 @@ from pathlib import Path
 
 from probatrix.benchmarks import trees
 
-from . import jsonout, layout, seal
-from .design import repo_rel, repo_rev
+from probatrix.core import jsonout, layout, seal
+from probatrix.core.design import repo_rel, repo_rev
 
 FORMAT = "latbench-instance/2"
 ROLES = ("evidence", "adjustment", "excluded")

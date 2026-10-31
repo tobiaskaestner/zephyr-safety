@@ -13,7 +13,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent
 
 from probatrix.benchmarks.studylib import exchange, instance  # noqa: E402
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
-from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.core.design import Design  # noqa: E402
 from probatrix.core import config  # noqa: E402
 from .test_studylib import make_design, make_run  # noqa: E402
 
@@ -167,7 +167,8 @@ def test_import_refuses_only_a_damaged_run(two_labs, monkeypatch):
 
 
 def test_an_imported_running_campaign_can_be_closed(two_labs):
-    from probatrix.benchmarks.studylib import campaign, jsonout
+    from probatrix.benchmarks.studylib import campaign
+    from probatrix.core import jsonout
     a, b, root, tmp = two_labs
     rid = instance.load(a.results / "top" / "st-sub@nucleo_g474re")["runs"][0]["id"]
     jsonout.write(a.campaigns / "20260101T000000Z.json", {

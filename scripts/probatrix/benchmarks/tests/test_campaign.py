@@ -13,9 +13,10 @@ import yaml
 SCRIPTS = Path(__file__).resolve().parent.parent
 
 from probatrix.benchmarks import trees  # noqa: E402
-from probatrix.benchmarks.studylib import campaign, jsonout  # noqa: E402
+from probatrix.benchmarks.studylib import campaign  # noqa: E402
+from probatrix.core import jsonout
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
-from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.core.design import Design  # noqa: E402
 from probatrix.core import config  # noqa: E402
 from .test_studylib import make_design  # noqa: E402
 
@@ -119,8 +120,9 @@ FAKE_RUN = '''
 import json, sys, time
 from pathlib import Path
 sys.path.insert(0, {scripts!r})
-from probatrix.benchmarks.studylib import instance, seal
-from probatrix.benchmarks.studylib.design import Design
+from probatrix.benchmarks.studylib import instance
+from probatrix.core import seal
+from probatrix.core.design import Design
 exp = Path(sys.argv[1]).parent.name[3:]
 arg = lambda k: sys.argv[sys.argv.index(k) + 1] if k in sys.argv else None
 out = Path(arg("--out"))

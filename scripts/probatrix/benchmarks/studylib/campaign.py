@@ -49,9 +49,11 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import instance, jsonout, layout, seal
+from . import instance
+
+from probatrix.core import jsonout, layout, seal
 from . import lab as labmod
-from .design import Design, repo_rel
+from probatrix.core.design import Design, repo_rel
 
 FORMAT = "latbench-campaign/1"
 DONE, FAILED, PLANNED, RUNNING, SKIPPED = "done", "failed", "planned", "running", "skipped"

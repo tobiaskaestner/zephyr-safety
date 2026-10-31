@@ -30,8 +30,10 @@ from pathlib import Path
 
 from probatrix.core import config
 
-from . import central, checks, instance, jsonout, layout, runfiles, seal, stats
-from .design import Design, repo_rel, repo_rev
+from . import central, checks, instance, runfiles, stats
+
+from probatrix.core import jsonout, layout, seal
+from probatrix.core.design import Design, repo_rel, repo_rev
 from .stats import MissingRun, NoValue
 
 STATS = ["n", "invalid", "min", "p50", "p90", "p99", "p99.9", "p99.99", "max", "mean"]

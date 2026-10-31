@@ -102,7 +102,8 @@ from probatrix.benchmarks import latbench  # noqa: E402
 from probatrix.benchmarks import trees  # noqa: E402
 from probatrix.core import config
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
-from probatrix.benchmarks.studylib import lint, schema, seal  # noqa: E402
+from probatrix.benchmarks.studylib import lint  # noqa: E402
+from probatrix.core import schema, seal
 
 BENCH_DIR = config.project().bench_dir
 
@@ -821,7 +822,7 @@ def main():
     # the run list of an instance: check the role and the target now, not after hours of capture
     if args.out and (Path(args.out) / "instance.json").is_file() and not args.build_only:
         from probatrix.benchmarks.studylib import instance as instmod
-        from probatrix.benchmarks.studylib.design import Design
+        from probatrix.core.design import Design
         if args.only and args.role is None:
             fail("a run of some points (--only) into an instance needs --role (adjustment or excluded with "
                  "--reason, or evidence)")
@@ -958,7 +959,7 @@ def main():
     print(f"results in {run_dir}  ({digest})")
     if (out / "instance.json").is_file():
         from probatrix.benchmarks.studylib import instance
-        from probatrix.benchmarks.studylib.design import Design
+        from probatrix.core.design import Design
         try:
             rid = instance.add(Design(), out, run_dir, role=args.role, reason=args.reason, campaign=args.campaign)
         except instance.InstanceError as e:

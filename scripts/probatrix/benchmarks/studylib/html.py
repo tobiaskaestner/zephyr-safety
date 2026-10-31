@@ -21,7 +21,7 @@ import html
 import json
 from pathlib import Path
 
-from . import layout
+from probatrix.core import layout
 
 CSS = """
 :root { --bg:#fff; --fg:#1d1d1f; --muted:#666; --line:#ddd; --ok:#1a7f37; --bad:#c62828; --open:#8a6d00; --card:#f6f7f9; }

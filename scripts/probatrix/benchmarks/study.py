@@ -143,9 +143,10 @@ if __name__ == "__main__":
 from probatrix.benchmarks import trees  # noqa: E402
 
 from probatrix.core import config
-from probatrix.benchmarks.studylib import build, html, instance, layout, seal  # noqa: E402
+from probatrix.benchmarks.studylib import build, html, instance  # noqa: E402
+from probatrix.core import layout, seal
 from probatrix.benchmarks.studylib import campaign, lint, scaffold  # noqa: E402
-from probatrix.benchmarks.studylib.design import Design, DesignError  # noqa: E402
+from probatrix.core.design import Design, DesignError  # noqa: E402
 
 # ------------------------------------------------------------ design
 def cmd_lint(args):

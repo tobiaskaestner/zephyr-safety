@@ -14,11 +14,8 @@ from pathlib import Path
 
 import yaml
 
-
-from probatrix.core import config
-
-from . import layout, schema
-from .seal import file_sha256
+from probatrix.core import config, layout, schema
+from probatrix.core.seal import file_sha256
 
 
 class DesignError(Exception):

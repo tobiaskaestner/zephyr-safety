@@ -23,8 +23,10 @@ import yaml
 
 from probatrix.core import config
 
-from . import images, kindhooks, seal
-from .design import repo_rel
+from . import images, kindhooks
+
+from probatrix.core import seal
+from probatrix.core.design import repo_rel
 
 POINT_FILES = (".config", "zephyr.dts", "build.log")
 
