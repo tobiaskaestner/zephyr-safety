@@ -14,7 +14,8 @@ The importer and the runner write the record of a run as the file `subject.json`
 the seal (the adapter tlc.py reads it; it never runs git). The record also holds the pin of the TLC jar of that
 revision, which the evidence rule needs.
 
-    subject_tree(rev, paths, repo)   {path: object id} of the subject paths at rev
+    excluded(path, patterns)         True if a file path is left out by one of the subject_exclude patterns
+    subject_tree(rev, paths, repo)   {path: object id} of the subject paths at rev (exclude=: see tree)
     tool_tree(rev, paths, repo)      the same for the tool paths
     digest(tree)                     one sha256 over a tree (for a short comparison; a missing path counts as "-")
     record(rev, experiment, repo)    the dict of subject.json
@@ -22,6 +23,7 @@ revision, which the evidence rule needs.
     pin(repo, rev, experiment, utc)  make that ref point to rev (keeps the commit alive)
 """
 
+import fnmatch
 import hashlib
 import subprocess
 from pathlib import Path
@@ -48,15 +50,39 @@ def _repo(repo):
     return config.project().repo if repo is None else Path(repo)
 
 
-def tree(rev, paths, repo=None, missing_ok=False):
+def excluded(path, patterns):
+    """True if the file path is left out: it equals a pattern, lies below a pattern (a folder), or matches a
+    pattern as a glob (fnmatch; `*` also matches `/`)."""
+    return any(path == q or path.startswith(q.rstrip("/") + "/") or fnmatch.fnmatchcase(path, q) for q in patterns)
+
+
+def _filtered_id(repo, rev, p, patterns):
+    """The id of a subject path without the excluded files: "x-" + sha256 over the lines "<mode> <blob id> <file>"
+    of the files below p that no pattern excludes. A path without an excluded file has the plain git id."""
+    lines = _git(repo, "ls-tree", "-r", "-z", rev, "--", p).split("\0")
+    keep = []
+    for ln in lines:
+        meta, _, name = ln.partition("\t")
+        if name and not excluded(name, patterns):
+            mode, _, oid = meta.split()
+            keep.append(f"{mode} {oid} {name}\n")
+    return "x-" + hashlib.sha256("".join(sorted(keep)).encode()).hexdigest()
+
+
+def tree(rev, paths, repo=None, missing_ok=False, exclude=()):
     """{path: object id} for each path at rev (a tree id for a folder, a blob id for a file). A path that does
     not exist at rev is an error, or with missing_ok the object id None (the importer: an old run, made before the
-    path existed, has a tree that differs from every current tree)."""
+    path existed, has a tree that differs from every current tree).
+    exclude: patterns (subject_exclude) for files that do not count. A path with at least one such file at rev gets
+    the id "x-<sha256>" over the other files (see _filtered_id); a path without such a file keeps the git id."""
     repo = _repo(repo)
     out = {}
     for p in paths:
         try:
             out[p] = _git(repo, "rev-parse", "--verify", "--quiet", f"{rev}:{p}").strip()
+            if exclude and any(excluded(n, exclude) for n in
+                               _git(repo, "ls-tree", "-r", "--name-only", rev, "--", p).splitlines()):
+                out[p] = _filtered_id(repo, rev, p, exclude)
         except SubjectError:
             if not missing_ok:
                 raise SubjectError(f"{p} does not exist at the revision {rev}") from None
@@ -84,14 +110,15 @@ def record(rev, experiment, repo=None, missing_ok=False):
     missing_ok: a path that does not exist at rev gets the object id None (see tree)."""
     repo = _repo(repo)
     full = _git(repo, "rev-parse", "--verify", f"{rev}^{{commit}}").strip()
-    subj = subject_tree(full, experiment["subject"], repo, missing_ok)
+    exclude = list(experiment.get("subject_exclude", []))
+    subj = subject_tree(full, experiment["subject"], repo, missing_ok, exclude)
     tools = tool_tree(full, experiment["tools"], repo, missing_ok)
     try:
         pin = blob(full, JAR_PIN, repo).split()[0]
     except (SubjectError, IndexError):
         pin = None
     return {"revision": full, "subject": subj, "tools": tools, "subject_tree": digest(subj),
-            "tool_tree": digest(tools), "jar_pin": pin}
+            "tool_tree": digest(tools), "jar_pin": pin, "subject_exclude": exclude}
 
 
 def ref(experiment, utc):

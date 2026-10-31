@@ -35,6 +35,12 @@ properties:
       A run counts for the experiment only if their git trees are the trees of the run.
     $ref: "common.schema.yaml#/$defs/paths"
     minItems: 1
+  subject_exclude:
+    description: >
+      files inside a subject path that do not change the result (for example the list files of other
+      experiments in the same folder). Repo paths or globs. They are left out of the subject tree, and
+      subject.json lists them. The list file of the experiment must not match.
+    $ref: "common.schema.yaml#/$defs/paths"
   tools:
     description: the paths of the tools that make the result (the runner, the pin of the jar, the selftest)
     $ref: "common.schema.yaml#/$defs/paths"

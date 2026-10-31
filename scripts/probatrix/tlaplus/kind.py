@@ -144,6 +144,12 @@ class TlaplusKind(kinds.BaseKind):
         if not any(exp["list"] == p or exp["list"].startswith(p.rstrip("/") + "/") for p in exp["subject"]):
             out.append(("error", f, f"the list {exp['list']} is not inside a path of subject (a change of the list "
                                     "must change the subject tree)"))
+        from probatrix.tlaplus import subject
+        for x in exp.get("subject_exclude", []):
+            if not any(x == p or x.startswith(p.rstrip("/") + "/") for p in exp["subject"]):
+                out.append(("error", f, f"subject_exclude: {x} is not inside a path of subject"))
+        if subject.excluded(exp["list"], exp.get("subject_exclude", [])):
+            out.append(("error", f, f"subject_exclude: the list {exp['list']} of the experiment must stay in the subject"))
         for key in ("subject", "tools"):
             for p in exp[key]:
                 if not (repo / p).exists():

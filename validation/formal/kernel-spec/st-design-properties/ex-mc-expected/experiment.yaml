@@ -6,6 +6,8 @@
 # subject: the files that the result depends on. The models read the library (lib), the objects and
 #   the trace modules (the -DTLA-Library path of run_tlc.sh). The list is in mc/. A run counts for
 #   this experiment only if these four trees are the trees of the run.
+# subject_exclude: the list files of the other checks in mc/ (sensitivity.txt, kconfig.txt). No run of
+#   this experiment reads them. A change there must not turn the evidence runs into historical ones.
 # tools: the runner, the pin of the jar and the selftest of TLC.
 
 name: mc-expected
@@ -16,6 +18,9 @@ subject:
   - spec/tla/mc
   - spec/tla/objects
   - spec/tla/trace
+subject_exclude:
+  - spec/tla/mc/sensitivity.txt
+  - spec/tla/mc/kconfig.txt
 tools:
   - spec/tla/tools/run_tlc.sh
   - spec/tla/tools/tla2tools.sha256

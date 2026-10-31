@@ -99,3 +99,53 @@ def test_a_missing_path_is_an_error_or_with_missing_ok_the_id_none(repo):
     assert subject.digest(t) != subject.digest({"spec/tla/lib": t["spec/tla/lib"]})
     exp = {"subject": paths, "tools": EXP["tools"]}
     assert subject.record("HEAD", exp, repo, missing_ok=True)["subject"]["spec/tla/objects"] is None
+
+
+# ---- subject_exclude (the case of commit a07cd0c: a comment in another list file of the same folder)
+
+EXCL = ["spec/tla/mc/sensitivity.txt"]
+
+
+def _with_other_list(repo):
+    (repo / "spec/tla/mc/sensitivity.txt").write_text("# one\n")
+    git(repo, "add", "-A")
+    git(repo, "commit", "-qm", "list")
+
+
+def test_a_change_only_in_an_excluded_file_keeps_the_tree(repo):
+    _with_other_list(repo)
+    before = subject.subject_tree("HEAD", EXP["subject"], repo, exclude=EXCL)
+    plain = subject.subject_tree("HEAD", EXP["subject"], repo)
+    assert before["spec/tla/mc"].startswith("x-") and before["spec/tla/lib"] == plain["spec/tla/lib"]
+    (repo / "spec/tla/mc/sensitivity.txt").write_text("# two, a comment only\n")
+    git(repo, "commit", "-qam", "comment")
+    after = subject.subject_tree("HEAD", EXP["subject"], repo, exclude=EXCL)
+    assert after == before and subject.digest(after) == subject.digest(before)
+    assert subject.subject_tree("HEAD", EXP["subject"], repo) != plain
+
+
+def test_a_change_in_another_file_of_the_folder_changes_the_tree(repo):
+    _with_other_list(repo)
+    before = subject.subject_tree("HEAD", EXP["subject"], repo, exclude=EXCL)
+    (repo / "spec/tla/mc/M.cfg").write_text("changed")
+    git(repo, "commit", "-qam", "cfg")
+    after = subject.subject_tree("HEAD", EXP["subject"], repo, exclude=EXCL)
+    assert after["spec/tla/mc"] != before["spec/tla/mc"] and after["spec/tla/lib"] == before["spec/tla/lib"]
+
+
+def test_a_path_without_an_excluded_file_keeps_the_git_id(repo):
+    assert subject.subject_tree("HEAD", EXP["subject"], repo, exclude=EXCL) == subject.subject_tree(
+        "HEAD", EXP["subject"], repo)
+
+
+def test_exclude_takes_globs_and_folders():
+    assert subject.excluded("spec/tla/mc/sensitivity.txt", ["spec/tla/mc/sens*.txt"])
+    assert subject.excluded("spec/tla/mc/x/y.txt", ["spec/tla/mc/x"])
+    assert not subject.excluded("spec/tla/mc/xy.txt", ["spec/tla/mc/x"])
+    assert not subject.excluded("spec/tla/mc/expected.txt", EXCL)
+
+
+def test_the_record_states_what_was_excluded(repo):
+    _with_other_list(repo)
+    assert subject.record("HEAD", {**EXP, "subject_exclude": EXCL}, repo)["subject_exclude"] == EXCL
+    assert subject.record("HEAD", EXP, repo)["subject_exclude"] == []
