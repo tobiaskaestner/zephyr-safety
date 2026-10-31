@@ -64,7 +64,7 @@ class LatbenchKind(kinds.BaseKind):
     format_prefix = "latbench"             # latbench-study/2, latbench-run/2, ...
     ref_prefix = "refs/latbench"           # refs/latbench/run/..., refs/latbench/campaign/...
     dirt_paths = ("tests/benchmarks",)
-    tool = "scripts/probatrix/benchmarks/study.py"
+    tool = "scripts/probatrix/study.py"
     instance_axis = BoardAxis()
 
     def __init__(self, repo=None):
@@ -122,6 +122,23 @@ class LatbenchKind(kinds.BaseKind):
     def extra_forms(self):
         from probatrix.benchmarks import checks_hist
         return checks_hist.FORMS
+
+    def commands(self):
+        """The CLI commands of the benchmarks (benchmarks/cli.py): {name: function(subparsers)}."""
+        from probatrix.benchmarks import cli
+        return dict(cli.COMMANDS)
+
+    @property
+    def cli_doc(self):
+        """The text of --help (the module text of benchmarks/cli.py)."""
+        from probatrix.benchmarks import cli
+        return cli.__doc__
+
+    @property
+    def cli_errors(self):
+        """The exceptions of the commands that end with "error: <text>"."""
+        from probatrix.benchmarks import cli
+        return cli.ERRORS
 
     @staticmethod
     def is_point_agg(metric, stat):

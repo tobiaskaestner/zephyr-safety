@@ -806,7 +806,7 @@ def test_a_check_with_a_todo_text_is_a_draft(tmp_path, monkeypatch):
 
 
 def test_missing_runs_and_the_summary(tmp_path, monkeypatch):
-    from probatrix.benchmarks import study
+    from probatrix.benchmarks import cli as study
     design = make_design(tmp_path)
     res = tmp_path / "results"
     monkeypatch.setattr(build, "Design", lambda: design)

@@ -142,7 +142,7 @@ class Kind(Protocol):
 
     # 9. build (core/build.py calls these; the kind owns the files of its format) ----------
     tool: str
-    """Required. The text of made_by.tool in the aggregates ("scripts/probatrix/benchmarks/study.py")."""
+    """Required. The text of made_by.tool in the aggregates ("scripts/probatrix/study.py")."""
 
     def experiment_json(self, tree, folder: Any, experiment: str, runs: list) -> dict:
         """Optional (a generic file: format, runs with digests and file hashes, no rows). The data of ex-<experiment>/experiment.json of an instance folder. tree is the core Tree
@@ -161,8 +161,9 @@ class Kind(Protocol):
 
     # 8. commands -------------------------------------------------------------------
     def commands(self) -> dict:
-        """Optional ({}). {command name: function} of CLI subcommands that only this kind has.
-        R5a: still {}; study.py keeps its own for now."""
+        """Optional ({}). {command name: function} of CLI subcommands that this kind has. The function takes
+        the subparsers object of the parser and adds the subparser of the command (see core/cli.py).
+        A command name that two kinds give is an error."""
 
 
 class BaseKind:
