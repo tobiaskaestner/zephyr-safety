@@ -162,3 +162,21 @@ def test_requirements_fall_back_per_file(tmp_path):
     (new / "requirements.txt").write_text("a>=1\n")
     (old / "requirements.lock").write_text("a==1.2\n")
     assert lab.requirements(tmp_path, "requirements.lock") == [("a", "==1.2")]
+
+
+@pytest.mark.parametrize("launcher", ["study.py", "benchmarks/study.py"])
+@pytest.mark.parametrize("layout", [0, 2])
+def test_the_launchers_re_exec_before_they_need_pyyaml(tmp_path, launcher, layout):
+    """The Python that starts a launcher in a lab space can lack PyYAML: the re-exec comes first."""
+    import subprocess
+    (tmp_path / "noyaml").mkdir()
+    (tmp_path / "noyaml" / "yaml.py").write_text("raise ImportError('no yaml')\n")
+    repo = make_repo(tmp_path, layout)
+    (repo / lab.LAUNCHERS[layout]).write_text("import sys\nprint('ran', sys.argv[1:])\n")
+    folder = make_lab(tmp_path, repo)
+    scripts = Path(lab.__file__).resolve().parents[3]
+    env = {k: v for k, v in os.environ.items() if k not in ("ZEPHYR_BASE", lab.REEXEC_ENV)}
+    env["PYTHONPATH"] = str(tmp_path / "noyaml")
+    r = subprocess.run([sys.executable, str(scripts / "probatrix" / launcher), "lab", "status"], cwd=folder,
+                       env=env, capture_output=True, text=True)
+    assert r.returncode == 0 and r.stdout.strip() == "ran ['lab', 'status']", r.stderr

@@ -38,9 +38,9 @@ def parser():
 
 
 def main(argv=None):
-    from probatrix.core import cli
     argv = sys.argv[1:] if argv is None else argv
     reexec_in_lab_repo(argv)
+    from probatrix.core import cli
     cli.main(argv)
 
 
