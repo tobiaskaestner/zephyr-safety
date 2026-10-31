@@ -5,12 +5,11 @@
 Glossary of the formal specification
 ####################################
 
-The words of the method, one meaning each. The source is the architecture
-of the method (draft 3, workspace notes
-``claude/kernel-unit/tla/architecture/spec-architecture.md``) and the
-decisions on the method review of 2026-10-30
-(``claude/kernel-unit/tla/architecture/review-decisions.md``, D1 to D14).
-A word that a decision changed names the decision.
+The words of the method, one meaning each. The source is the methodology
+(draft 3) and the decisions on the method review of 2026-10-30 and
+2026-10-31. Both are chapters of the Zephyr Kernel Formal Design
+Specification (``doc/specification/formal-design``), which includes this
+glossary. A word that a decision changed names the decision.
 
 Components and modules
 **********************
@@ -119,7 +118,7 @@ Property part
 Role
    What a definition does: parameter, query, helper, step action,
    sub-action, environment action, behavior invariant, requirement
-   property, and others (architecture section 6). The tag ``@kind`` gives
+   property, and others (methodology, section 6). The tag ``@kind`` gives
    the TLA+ form, not the role.
 
 Requirement, reading, expresses
