@@ -381,14 +381,15 @@ CallsHoldLock ==
 (* use a view without obs.                                                 *)
 
 \* Reading: the count of an initialized semaphore is never above its
-\* limit. The init sets the limit (5-4) and rejects an initial count above
-\* it (5-18), and a give at the limit leaves the count unchanged (5-19).
+\* limit. This follows from the init check (5-18: it rejects an initial
+\* count above the limit) and the give at the limit (5-19: the count stays).
+\* The init that sets the limit is InitSetsFields (5-4).
 \* Only with runtime checks: without them, the init accepts any count, and
 \* a give above the limit increments the count (comparison !=, finding 1
 \* of the sem findings).
 \* @kind invariant
 \* @kconfig CONFIG_RUNTIME_ERROR_CHECKS
-\* @source ZEP-SRS-5-4
+\* @source ZEP-SRS-5-18
 \* @source ZEP-SRS-5-19
 CountLeLimit == RuntimeChecks => \A o \in Objs : r[o].init => r[o].count <= r[o].limit
 
@@ -405,6 +406,7 @@ NoWaitWhileAvailable == \A o \in Objs : r[o].count > 0 => S!WQ!W(o) = {}
 \* the count (5-16). Each token is in the count or held by exactly one
 \* woken thread that has not returned yet.
 \* @kind invariant
+\* @source ZEP-SRS-5-7
 \* @source ZEP-SRS-5-13
 \* @source ZEP-SRS-5-14
 TokenConservation == \A o \in Objs : tokens[o] = r[o].count + Inflight(o)
@@ -451,6 +453,34 @@ TakeResult ==
                     (obs'.ret = EBUSY /\ r'[o].count = 0 /\ pendedOn' = pendedOn)
              /\ (r[o].count = 0 /\ obs'.timeout # "NO_WAIT" /\ a \in Threads) =>
                     pendedOn'[a] = o]_vars
+
+\* Reading: after an init that returns 0, the count of the semaphore is the
+\* initial count, args[1] (5-5), the limit is the limit argument, args[2]
+\* (5-4), and no thread waits on it (5-5). An init of a semaphore with
+\* waiters has undefined behavior (finding P6-u, the model stops with
+\* panic = "undefined"), so the reading covers the init without waiters.
+\* @kind action-property
+\* @source ZEP-SRS-5-4
+\* @source ZEP-SRS-5-5
+InitSetsFields ==
+    [][(obs'.op = "init" /\ obs'.ret = OK /\ ~S!HasWaiters(obs'.obj)) =>
+         LET o == obs'.obj IN
+         /\ r'[o].count = obs'.args[1]
+         /\ r'[o].limit = obs'.args[2]
+         /\ ~\E t \in Threads : pendedOn'[t] = o]_vars
+
+\* Reading: with runtime checks, an init with the limit 0 or with an initial
+\* count above the limit returns -EINVAL (5-18). It changes neither the
+\* fields of the semaphore nor its wait queue.
+\* @kind action-property
+\* @source ZEP-SRS-5-18
+InitRejectsInvalid ==
+    [][(obs'.op = "init" /\ RuntimeChecks
+        /\ (obs'.args[2] = 0 \/ obs'.args[1] > obs'.args[2])) =>
+         LET o == obs'.obj IN
+         /\ obs'.ret = EINVAL
+         /\ r'[o] = r[o]
+         /\ pendedOn' = pendedOn]_vars
 
 \* Reading: a reset sets the count to 0 (5-16), and each thread that waited
 \* returns the error of a wait timeout, -EAGAIN (5-17, 5-10). No thread

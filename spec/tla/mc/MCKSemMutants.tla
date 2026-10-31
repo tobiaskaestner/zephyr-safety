@@ -17,6 +17,12 @@
 (* - reset_wakes_one: k_sem_reset() with "if" in place of "while": one     *)
 (*   waiter is woken (mutant reset_if_not_while of the proof of concept).  *)
 (*   Expected: ResetWakesAll fails.                                        *)
+(* - init_count_zero: k_sem_init() ignores the initial count: the count    *)
+(*   becomes 0. Expected: InitSetsFields fails.                             *)
+(* - init_limit_ignored: k_sem_init() ignores the limit argument: the      *)
+(*   limit becomes UMax. Expected: InitSetsFields fails.                   *)
+(* - init_limit_zero: k_sem_init() accepts the limit 0 (the CHECKIF()      *)
+(*   tests only count > limit). Expected: InitRejectsInvalid fails.        *)
 (***************************************************************************)
 EXTENDS MCKSem
 
@@ -109,6 +115,28 @@ MutReset(o, a) ==
          ELSE K!Reset(o, a)
 
 -----------------------------------------------------------------------------
+(* init_count_zero, init_limit_ignored, init_limit_zero *)
+
+\* init_limit_zero: the check lacks the test of the limit 0.
+MutValid(args) == ~(MCRuntimeChecks /\ args[1] > args[2])
+
+\* init_count_zero: the count is 0, not args[1]. init_limit_ignored: the limit is
+\* UMax, not args[2].
+MutNew(args) == IF MCMutant = "init_count_zero"
+                  THEN [init |-> TRUE, count |-> 0, limit |-> args[2]]
+                  ELSE [init |-> TRUE, count |-> args[1], limit |-> MCUMax]
+
+\* K!SemInit with the mutated operators. The ghost tokens follow the fields, so
+\* that TokenConservation stays true and only the init property fails.
+MutInitStep(o, a, args) ==
+    LET valid(x) == IF MCMutant = "init_limit_zero" THEN MutValid(x) ELSE K!SemValid(x)
+        new(x)   == IF MCMutant \in {"init_count_zero", "init_limit_ignored"} THEN MutNew(x) ELSE K!SemNew(x)
+    IN  /\ ~r[o].init \/ MCReInit
+        /\ K!W!InitOp(o, a, args, valid, new, K!EINVAL, K!SemCount)
+        /\ tokens' = IF valid(args) THEN [tokens EXCEPT ![o] = @ - r[o].count + new(args).count]
+                     ELSE tokens
+
+-----------------------------------------------------------------------------
 
 MInit == K!Init /\ split = [t \in MCThreads |-> <<>>]
 
@@ -116,7 +144,9 @@ MInit == K!Init /\ split = [t \in MCThreads |-> <<>>]
 Unsplit(A) == A /\ NotSplit(obs'.actor) /\ UNCHANGED split
 
 MNext ==
-    \/ Unsplit(K!InitNext)
+    \/ Unsplit(IF MCMutant \in {"init_count_zero", "init_limit_ignored", "init_limit_zero"}
+                 THEN \E o \in MCSems, a \in MCThreads, args \in MCInitArgs : MutInitStep(o, a, args)
+                 ELSE K!InitNext)
     \/ Unsplit(IF MCMutant = "give_counts"
                  THEN \E o \in MCSems, a \in K!Actors : MutGive(o, a)
                  ELSE K!GiveNext)

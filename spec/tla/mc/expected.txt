@@ -142,3 +142,6 @@ MCKSem live_prio       fail:Live_WaiterServedIfGives
 MCKSemMutants give_counts     fail:Inv_TokenConservation
 MCKSemMutants pend_split      fail:Inv_NoWaitWhileAvailable
 MCKSemMutants reset_wakes_one fail:K!ResetWakesAll
+MCKSemMutants init_count_zero fail:K!InitSetsFields
+MCKSemMutants init_limit_ignored fail:K!InitSetsFields
+MCKSemMutants init_limit_zero fail:K!InitRejectsInvalid

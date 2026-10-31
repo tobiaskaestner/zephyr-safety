@@ -77,6 +77,8 @@ Prop_GiveHandsOverOrCounts == K!GiveHandsOverOrCounts
 Prop_GiveWakesHighest      == K!GiveWakesHighest
 Prop_TakeResult            == K!TakeResult
 Prop_ResetWakesAll         == K!ResetWakesAll
+Prop_InitSetsFields         == K!InitSetsFields
+Prop_InitRejectsInvalid    == K!InitRejectsInvalid
 Prop_WaitResult            == K!WaitResult
 \* @expected violation (configuration poll, design observation 4)
 Prop_PollSignalMeansAvailable == K!PollSignalMeansAvailable

@@ -94,8 +94,8 @@ def test_run_tlc_rejects_the_keys_of_apalache_and_so_does_the_tlc_parser():
 
 
 def test_the_real_counts():
-    """The counts that the notes name: 67 lines in mc/expected.txt."""
-    assert len(lists.read(TLA / "mc" / "expected.txt", lists.TLC_KEYS)) == 67
+    """The counts that the notes name: 70 lines in mc/expected.txt."""
+    assert len(lists.read(TLA / "mc" / "expected.txt", lists.TLC_KEYS)) == 70
     assert len(lists.read(TLA / "trace" / "expected.txt", {})) == 152
 
 
