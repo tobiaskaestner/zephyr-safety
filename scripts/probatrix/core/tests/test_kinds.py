@@ -99,3 +99,39 @@ def test_dirt_paths_are_those_of_one_kind(empty, tmp_path):
         git("checkout", "--", ".")
         (tmp_path / "core" / "f").write_text("2")
         assert design.repo_rev(kind=a)[1] is True and design.repo_rev(kind=b)[1] is True   # the Project's path
+
+
+def test_the_default_project_has_a_root_for_each_kind(tmp_path):
+    p = config.Project.at(tmp_path)
+    assert [(r.path.relative_to(tmp_path).as_posix(), r.kind) for r in p.roots] == [
+        ("validation/empirical/latencies", None), ("validation/formal/kernel-spec", "tlaplus")]
+    assert p.design_root == tmp_path / "validation" / "empirical" / "latencies"      # the first root stays the default
+    assert p.root_of(tmp_path / "validation" / "formal" / "kernel-spec" / "st-x").kind == "tlaplus"
+    assert len(config.Project.at(tmp_path, design_root=tmp_path / "d").roots) == 1   # an explicit design root: one root
+
+
+def test_the_base_kind_hooks_for_lint(tmp_path):
+    from probatrix.core.design import Experiment
+    import yaml
+
+    class K(kinds.BaseKind):
+        name = "k"
+        def points(self, experiment):
+            if "bad" in experiment:
+                raise SystemExit("error: bad list")
+            return [{"id": "p"}]
+
+    k = K()
+    assert k.stat_needed("verdict") is True
+    folder = tmp_path / "ex-a"
+    folder.mkdir()
+    (folder / "experiment.yaml").write_text(yaml.safe_dump({"name": "a"}))
+    e = SimpleNamespace(folder=folder, name="a", data={"name": "a"})
+    pts, probs = k.lint_experiment(e)
+    assert pts == [{"id": "p"}] and probs == [("error", folder / "experiment.md", "each experiment has a description experiment.md")]
+    (folder / "experiment.md").write_text("x")
+    assert k.lint_experiment(e) == ([{"id": "p"}], [])
+    e2 = SimpleNamespace(folder=tmp_path / "ex-b", name="a", data={"name": "a", "bad": 1})
+    pts, probs = k.lint_experiment(e2)
+    assert pts is None and [p[0] for p in probs] == ["error", "error", "error"]
+    assert probs[0][2] == "the folder must be ex-a" and probs[2][2] == "bad list"

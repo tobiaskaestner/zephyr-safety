@@ -13,8 +13,9 @@ a kind that does not inherit BaseKind must have all hooks.
 Required (BaseKind has no default): name, schema_prefix, schema_folder, format_prefix, ref_prefix,
 tool, points, run_json, app_json, value, known.
 Optional (BaseKind default): dirt_paths (()), format_id, ref (from the prefixes), width (1), seen (True),
-extra_forms ({}), is_point_agg (False), generated_checks ([]), instance_axis (None), experiment_json (a
-generic file without data rows), plot (None), central_result (NoValue), pending ({}), commands ({}).
+extra_forms ({}), is_point_agg (False), stat_needed (True), generated_checks ([]), lint_experiment (folder
+name, experiment.md, points), instance_axis (None), experiment_json (a generic file without data rows),
+plot (None), central_result (NoValue), pending ({}), commands ({}).
 
     register(kind)            make a kind known (by kind.name)
     get(name)                 the kind with this name (KindError if there is none)
@@ -124,10 +125,20 @@ class Kind(Protocol):
         """Optional (False). Whether max(x) / min(x) as stat means the largest / smallest value over the
         selected points (benchmarks: yes, except for M4 metrics). A kind that has the aggregate form max(x) / min(x) returns checks.AGG.match(stat) here."""
 
+    def stat_needed(self, metric: str | None) -> bool:
+        """Optional (True). Whether a check of the core forms on this metric must name a stat (the design lint
+        says "no stat" if it does not). A kind whose metrics are plain values (a formal kind: verdict,
+        states) returns False."""
+
     # 6. generated checks -----------------------------------------------------------
     def generated_checks(self, experiment: dict) -> list:
         """Optional ([]). Checks that come from a file, as a list of check dicts (same keys as a check in
         hypotheses.yaml). [] for the benchmarks."""
+
+    def lint_experiment(self, e) -> tuple:
+        """Optional (the folder name, experiment.md and the points). The design lint of one experiment
+        (core.design.Experiment e). Returns (points or None, problems): the points of the experiment (None if
+        its file has an error) and a list of (severity, path, text) with severity "error" or "warning"."""
 
     # 7. instance axis --------------------------------------------------------------
     instance_axis: Any
@@ -192,8 +203,26 @@ class BaseKind:
     def is_point_agg(self, metric, stat):
         return False
 
+    def stat_needed(self, metric):
+        return True
+
     def generated_checks(self, experiment):
         return []
+
+    def lint_experiment(self, e):
+        """The generic lint of an experiment: folder name, experiment.md, and the points (a points() error is a problem)."""
+        from probatrix.core import layout
+        f, md = e.folder / "experiment.yaml", e.folder / "experiment.md"
+        out = []
+        if e.folder.name != layout.EXPERIMENT_PREFIX + e.name:
+            out.append(("error", f, f"the folder must be {layout.EXPERIMENT_PREFIX}{e.name}"))
+        if not md.is_file():
+            out.append(("error", md, "each experiment has a description experiment.md"))
+        try:
+            return self.points(e.data), out
+        except SystemExit as x:
+            out.append(("error", f, str(x).removeprefix("error: ")))
+            return None, out
 
     def experiment_json(self, tree, folder, experiment, runs):
         """The generic experiment.json: the runs with the digests and the hashes of their derived files."""

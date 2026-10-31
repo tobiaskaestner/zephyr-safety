@@ -122,3 +122,15 @@ def test_the_defaults_of_the_base_kind(trees, fake):
     build.build(trees, log=lambda *a: None)
     sj = json.loads((trees / "study.json").read_text())
     assert sj["central_results"] == []
+
+
+def test_a_rerun_import_gets_the_generated_checks_too(trees, fake, tmp_path):
+    """A study that runs an experiment again (mode rerun) checks its own runs against the list. A reuse import does not."""
+    design = tmp_path / "design"
+    write(design / "study.yaml", {"name": "top", "question": "q", "experiments": ["mc"], "substudies": ["again", "reads"]})
+    write(design / "st-again" / "study.yaml", {"name": "again", "imports": [{"study": "", "experiment": "mc", "mode": "rerun"}]})
+    write(design / "st-reads" / "study.yaml", {"name": "reads", "imports": [{"study": "", "experiment": "mc", "mode": "reuse"}]})
+    tree = build.Tree(trees, log=lambda *a: None)
+    assert [h["id"] for h in tree.generated_hypotheses(tree.design.studies["again"])] == ["mc-generated"]
+    assert tree.generated_hypotheses(tree.design.studies["reads"]) == []
+    assert [h["id"] for h in tree.generated_hypotheses(tree.design.top)] == ["mc-generated"]

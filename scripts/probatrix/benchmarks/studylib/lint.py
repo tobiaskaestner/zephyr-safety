@@ -21,7 +21,7 @@ import yaml
 from probatrix.benchmarks import kind as benchkind
 from probatrix.benchmarks import trees
 
-from probatrix.core import config
+from probatrix.core import config, kinds
 
 from probatrix.core import checks
 from . import kindhooks
@@ -65,24 +65,32 @@ def lint_todo(root, out):
             out.append(Problem(WARNING, f, f"{n} TODO texts of a template"))
 
 
-def lint_schemas(root, out):
-    """Each design file against its schema (scripts/probatrix/benchmarks/schemas/): all violations."""
-    files = [(kind, f) for kind in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{kind}.yaml"))]
-    if Path(root).resolve() == Path(config.project().design_root).resolve():
+def kind_of_root(root):
+    """The Kind of a design root: the kind of the Root of the Project that holds it, else the default kind."""
+    r = config.project().root_of(root)
+    return kinds.get(r.kind if r is not None and r.kind else config.project().default_kind)
+
+
+def lint_schemas(root, out, kind=None):
+    """Each design file against its schema (the schemas of the kind of the root): all violations."""
+    prefix = kind.schema_prefix if kind is not None else None
+    files = [(name, f) for name in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{name}.yaml"))]
+    own = kind is None or kind is benchkind.KIND      # boards.yaml and the tree manifests are latbench files
+    if own and Path(root).resolve() == Path(config.project().design_root).resolve():
         files.append(("boards", benchkind.KIND.boards_file))
-    if Path(root).resolve() == Path(config.project().design_root).resolve():
+    if own and Path(root).resolve() == Path(config.project().design_root).resolve():
         for f in sorted(benchkind.KIND.trees_dir.glob("*.yml")):
             try:
                 trees.read_manifest(f)
             except (trees.TreeError, yaml.YAMLError, KeyError, TypeError) as e:
                 out.append(Problem(ERROR, f, f"tree manifest: {e}"))
-    for kind, f in files:
+    for name, f in files:
         try:
             data = yaml.safe_load(f.read_text())
         except yaml.YAMLError as e:
             out.append(Problem(ERROR, f, f"not YAML: {e}"))
             continue
-        for p in schema.problems(kind, data):
+        for p in schema.problems(name, data, prefix):
             out.append(Problem(ERROR, f, f"schema: {p}"))
 
 
@@ -210,7 +218,8 @@ def lint_grouping(f, cr, point_lists, out):
                                          f"values of it; add it to group_by"))
 
 
-def lint_study(d, path, st, points, out):
+def lint_study(d, path, st, points, out, kind=None):
+    kind = kind if kind is not None else benchkind.KIND
     f = st.folder / "hypotheses.yaml"
     if not (st.folder / "study.md").is_file():
         out.append(Problem(WARNING, st.folder / "study.md", "a study has a description study.md"))
@@ -224,7 +233,7 @@ def lint_study(d, path, st, points, out):
             out.append(Problem(WARNING, f, f"{h.get('id')} has no checks: it stays open"))
         for c in h.get("checks") or []:
             what = f"{h.get('id')} {c.get('id')}"
-            for p in checks.problems(c, benchkind.KIND):
+            for p in checks.problems(c, kind):
                 out.append(Problem(ERROR, f, f"{what}: {p}"))
             exp = c.get("experiment")
             if c.get("manual") and exp is None:
@@ -255,24 +264,29 @@ def lint_study(d, path, st, points, out):
 
 
 def lint(root=None, only=None):
-    """All problems of the design tree (root: default validation/empirical/latencies).
+    """All problems of the design tree (root: default validation/empirical/latencies; the kind of the
+    root decides the schemas and the lint of its experiments).
 
     only: a folder; return only the problems of the files below it.
     """
     root = Path(root or config.project().design_root)
+    kind = kind_of_root(root)
     out = []
-    lint_schemas(root, out)
+    lint_schemas(root, out, kind)
     lint_folders(root, out)
     lint_todo(root, out)
     try:
-        d = Design(root)
+        d = Design(root, kind=kind)
     except (DesignError, OSError, yaml.YAMLError, KeyError, TypeError) as e:
         out.append(Problem(ERROR, root, f"the design does not load: {e}"))
         d = None
     if d is not None:
-        points = {name: lint_experiment(e, out) for name, e in d.experiments.items()}
+        points = {}
+        for name, e in d.experiments.items():
+            points[name], found = kind.lint_experiment(e)
+            out.extend(Problem(*x) for x in found)
         for path, st in d.studies.items():
-            lint_study(d, path, st, points, out)
+            lint_study(d, path, st, points, out, kind)
     if only is not None:
         only = Path(only).resolve()
         out = [p for p in out if p.path.resolve().is_relative_to(only) or only.is_relative_to(p.path.resolve())]

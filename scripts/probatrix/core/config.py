@@ -11,11 +11,13 @@ prefixes of file formats and git refs, its own dirt paths) is in the Kind object
 kind (kinds.py; benchmarks/kind.py), not here.
 
 Design roots: a repo can have more than one (validation/empirical/latencies,
-validation/formal/...). The Project holds a tuple of Root(path, kind). A root is the folder
+validation/formal/kernel-spec). The Project holds a tuple of Root(path, kind). A root is the folder
 of one top study; its kind (a name, or None for the default kind of the Project) is what a
 design below it has when no design file names a kind. So the kind is found from the design
 file first, then its parents, then the root, then Project.default_kind (kinds.kind_of).
-design_root is the first root: the one that the tools use when the user gives no other.
+design_root is the first root: the one that the tools use when the user gives no other. The default Project
+has two roots: the latency design (kind latbench by default, the first root) and the design of the kernel
+spec (kind tlaplus). A Project made with an explicit design_root has that one root only.
 
 The default Project is made from the place of this package: the repo is the folder above
 scripts/. An installed copy (a wheel) has no repo around it: it reads the variable PROBATRIX_REPO (a clone ignores it, with a warning). To use another one, call set_project(Project.at(repo)) or use(project) (a context
@@ -72,7 +74,10 @@ class Project:
         """The Project of a safety repo with the usual layout. Any field can be given instead
         (design_root: the path of the one root)."""
         repo = Path(repo)
-        values = dict(repo=repo, roots=(Root(design_root or repo / "validation" / "empirical" / "latencies"),))
+        roots = (Root(design_root or repo / "validation" / "empirical" / "latencies"),)
+        if design_root is None:
+            roots += (Root(repo / "validation" / "formal" / "kernel-spec", "tlaplus"),)
+        values = dict(repo=repo, roots=roots)
         values.update(override)
         return cls(**values)
 

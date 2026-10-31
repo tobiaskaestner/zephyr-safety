@@ -22,6 +22,7 @@ def make_folder(tmp_path, prefix):
 @pytest.fixture
 def clean(monkeypatch):
     monkeypatch.setattr(schema, "_FOLDERS", {})
+    monkeypatch.setattr(schema, "_NOT_DEFAULT", set())
     schema.validator.cache_clear()
     yield
     schema.validator.cache_clear()
@@ -49,3 +50,15 @@ def test_a_prefix_cannot_change_its_folder(tmp_path, clean):
     schema.register("tst", tmp_path)                                  # the same folder again: fine
     with pytest.raises(ValueError):
         schema.register("tst", tmp_path / "other")
+
+
+def test_the_default_prefix_is_the_first_one_that_is_not_marked_otherwise(tmp_path, clean):
+    """A kind that registers with default=False never becomes the default, whatever the import order."""
+    folder = tmp_path / "t"
+    folder.mkdir()
+    schema.register("tst", make_folder(folder, "tst"), default=False)
+    assert schema.prefixes() == ["tst"]
+    assert schema.problems("thing", {"name": "x"}) == []              # the only prefix is the default
+    schema.register("latbench", BENCH)
+    assert schema.prefixes() == ["tst", "latbench"]
+    assert schema.problems("study", {"name": "top"}) == []            # latbench is the default

@@ -147,3 +147,29 @@ def test_schema_errors_name_the_key(tmp_path):
     assert "schema: hypotheses.0.checks.0: unknown key 'expct' (did you mean 'expect'?)" in err
     with pytest.raises(DesignError, match="unknown key"):
         Design(root)
+
+
+def test_design_lint_takes_the_roots_of_the_project(tmp_path):
+    """No folder: each root that exists. A folder: the root that holds it (the first root if no root does)."""
+    from probatrix.benchmarks import cli
+    from probatrix.core import config
+    a, b = tmp_path / "a", tmp_path / "b"
+    a.mkdir()
+    project = config.project().with_(roots=(config.Root(a), config.Root(b, "tlaplus"), config.Root(tmp_path / "gone")))
+    b.mkdir()
+    with config.use(project):
+        assert cli.lint_roots(None) == [a, b]                   # "gone" does not exist: skipped
+        assert cli.lint_roots(b / "st-x") == [b]
+        assert cli.lint_roots(tmp_path / "elsewhere") == [a]
+
+
+def test_lint_finds_the_kind_of_a_root(tmp_path):
+    """The kind of a root: the kind of its Root, else the default kind."""
+    from probatrix.core import config
+    make_design(tmp_path)
+    root = tmp_path / "design"
+    with config.use(config.project().with_(design_root=root)):
+        assert lint.kind_of_root(root).name == "latbench"
+    other = config.project().with_(roots=(config.Root(root, "latbench"),))
+    with config.use(other):
+        assert [p for p in lint.lint(root) if p.severity == lint.ERROR] == []

@@ -103,6 +103,16 @@ class LatbenchKind(kinds.BaseKind):
         from probatrix.benchmarks.studylib import stats
         return stats.function_seen(rep, metric)
 
+    def stat_needed(self, metric):
+        """A META metric ("meta.<key>") has no stat; all others have one."""
+        return not (metric or "").startswith("meta.")
+
+    def lint_experiment(self, e):
+        from probatrix.benchmarks.studylib import lint
+        out = []
+        pts = lint.lint_experiment(e, out)
+        return pts, [(p.severity, p.path, p.text) for p in out]
+
     def experiment_json(self, tree, folder, experiment, runs):
         from probatrix.benchmarks.studylib import experimentjson
         return experimentjson.experiment_json(tree, folder, experiment, runs)

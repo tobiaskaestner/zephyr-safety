@@ -102,7 +102,7 @@ def problems(check, kind=None):
             form = None
         extra = forms_of(kind_for(kind))
         if check.get("stat") is None and form is not None and (form not in extra or extra[form].needs_stat) \
-                and not all((m or "").startswith("meta.") for m in as_list(check.get("metric"))):
+                and any(kind_for(kind).stat_needed(m) for m in as_list(check.get("metric"))):
             out.append("no stat")
     for m in as_list(check.get("metric")):
         if not kind_for(kind).known(m, check.get("stat")):

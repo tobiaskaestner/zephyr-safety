@@ -102,11 +102,14 @@ class Tree:
         return self.kind.pending(self.root, self.design)
 
     def generated_hypotheses(self, study):
-        """One hypothesis for each experiment of the study whose kind generates checks (kind.generated_checks,
-        e.g. the expected verdict of each line of a list file). Its id is "<experiment>-generated"; a check
+        """One hypothesis for each experiment of the study (or rerun import) whose kind generates checks
+        (kind.generated_checks, e.g. the expected verdict of each line of a list file). Its id is "<experiment>-generated"; a check
         without an experiment reads the experiment it comes from."""
         out = []
-        for exp in study.experiments:
+        # the own experiments, and the experiments that the study runs again (mode rerun: its own runs, so the
+        # checks of the list apply to them; the data of a reuse import is checked in the owner study)
+        reruns = [i["experiment"] for i in study.imports if i.get("mode") == "rerun"]
+        for exp in [*study.experiments, *(r for r in reruns if r not in study.experiments)]:
             chks = self.kind.generated_checks(self.design.experiment(exp).data)
             if chks:
                 out.append({"id": f"{exp}-generated", "type": "generated",

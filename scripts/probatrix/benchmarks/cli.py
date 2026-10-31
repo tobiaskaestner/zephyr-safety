@@ -116,8 +116,17 @@ AXIS = benchkind.KIND.instance_axis      # the instance axis (the board) of the 
 
 
 # ------------------------------------------------------------ design
+def lint_roots(folder):
+    """The design roots to lint: the root that holds the folder, else (no folder) each root that exists."""
+    project = config.project()
+    if folder:
+        root = project.root_of(folder)
+        return [root.path if root is not None else project.design_root]
+    return [r.path for r in project.roots if r.path.is_dir()]
+
+
 def cmd_lint(args):
-    problems = lint.lint(only=args.folder)
+    problems = [p for root in lint_roots(args.folder) for p in lint.lint(root=root, only=args.folder)]
     for p in problems:
         print(p)
     errors = sum(p.severity == lint.ERROR for p in problems)

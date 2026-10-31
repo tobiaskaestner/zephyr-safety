@@ -3,14 +3,16 @@
 
 """The schemas of the hand-written YAML files.
 
-    register(prefix, folder)       make the schema folder of a kind known (its $id prefix)
+    register(prefix, folder, default=True)   make the schema folder of a kind known (its $id prefix)
     problems(kind, data)           all violations, as "<key path>: <text>"
     check(kind, data, file)        raise SchemaError at the first violation
 
 A kind of study brings a folder of <name>.schema.yaml files. The $id of each file is
 "<prefix>/<name>.schema.yaml" (for the benchmarks: latbench/study.schema.yaml). "kind" in the
 calls below is the name of a file ("experiment", "study", "hypotheses", "boards"); the prefix is
-the one that was registered first, or the one given with prefix=. A schema gives the
+the first one registered that is not marked default=False, or the one given with prefix=. A kind that is
+not the main kind of the tools registers with default=False, so the order of the imports cannot change what
+the calls without a prefix read. A schema gives the
 keys and their types (an unknown key is an error, with the nearest known
 key as a hint); the meaning of a check, a point or a central result is
 checked by checks.py, run.py and lint.py. The copies of experiment.yaml in
@@ -28,14 +30,17 @@ import yaml
 from probatrix.core.errors import SchemaError  # noqa: F401  (schema.SchemaError)
 
 _FOLDERS = {}          # $id prefix -> schema folder
+_NOT_DEFAULT = set()   # the prefixes that registered with default=False
 
 
-def register(prefix, folder):
-    """Make the schema folder of a kind known. The first prefix registered is the default one."""
+def register(prefix, folder, default=True):
+    """Make the schema folder of a kind known. The first prefix registered with default=True is the default one
+    (the first prefix of all if no prefix is a default)."""
     folder = Path(folder)
     if _FOLDERS.get(prefix, folder) != folder:
         raise ValueError(f"the schema prefix {prefix!r} is registered for {_FOLDERS[prefix]}")
     _FOLDERS[prefix] = folder
+    (_NOT_DEFAULT.discard if default else _NOT_DEFAULT.add)(prefix)
     validator.cache_clear()
 
 
@@ -50,7 +55,7 @@ def validator(kind, prefix=None):
 
     if not _FOLDERS:
         raise SchemaError("no schema folder is registered (a kind registers its folder when it is imported)")
-    prefix = prefix or next(iter(_FOLDERS))
+    prefix = prefix or next((p for p in _FOLDERS if p not in _NOT_DEFAULT), next(iter(_FOLDERS)))
     resources = []
     for folder in _FOLDERS.values():
         for f in sorted(folder.glob("*.schema.yaml")):
