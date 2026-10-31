@@ -11,10 +11,10 @@ import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 
-from probatrix.benchmarks import trees  # noqa: E402
 from probatrix.benchmarks.studylib import exchange, instance  # noqa: E402
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.core import config  # noqa: E402
 from .test_studylib import make_design, make_run  # noqa: E402
 
 
@@ -26,7 +26,7 @@ def make_lab(tmp_path, name, repo):
 def two_labs(tmp_path, monkeypatch):
     design = make_design(tmp_path)
     root = tmp_path / "design"
-    monkeypatch.setattr(trees, "STUDIES_DIR", root)
+    monkeypatch.setattr(config, "_current", config.project().with_(design_root=root))
     monkeypatch.setattr(exchange, "Design", lambda: Design(root))
     repo = tmp_path / "safety"
     (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)

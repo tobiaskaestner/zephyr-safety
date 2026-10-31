@@ -56,6 +56,8 @@ from pathlib import Path
 
 from probatrix.benchmarks import trees
 
+from probatrix.core import config
+
 from . import instance, jsonout, layout, seal
 from .design import Design, repo_rel
 from .seal import file_sha256
@@ -130,7 +132,7 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
     runs = [x for x in runs_to_export(lab, root_top, campaigns, all_runs) if x[0].resolve().is_relative_to(root)]
     if not runs:
         raise ExchangeError("no runs to export (runs of this lab space; --all for all runs, --campaign ID)")
-    rev, dirty = trees.repo_state(trees.REPO_DIR)
+    rev, dirty = trees.repo_state(config.project().repo)
     index = {"format": FORMAT, "lab": lab.describe(), "host": platform.node(),
              "created": datetime.datetime.now(datetime.timezone.utc).isoformat(),
              "design_repo": {"rev": rev, "dirty": bool(dirty)}, "experiments": {}, "instances": {}, "runs": [],
@@ -176,7 +178,7 @@ def export(lab, out_file, folder=None, campaigns=None, all_runs=False, log=print
                 if rev_c:
                     revs.add(rev_c)
         bundle = out_file.with_name(out_file.name + ".bundle.part")
-        index["bundle"] = make_bundle(trees.REPO_DIR, sorted(revs), bundle)
+        index["bundle"] = make_bundle(config.project().repo, sorted(revs), bundle)
         if index["bundle"]["revs"]:
             tar.add(bundle, arcname="repo.bundle")
         bundle.unlink(missing_ok=True)
@@ -216,7 +218,7 @@ def fetch_bundle(lab, bundle, other_id, log=print):
     r = subprocess.run(["git", "bundle", "verify", "-q", str(bundle)], cwd=repo, capture_output=True, text=True)
     if r.returncode != 0:
         raise ExchangeError(f"the bundle of the export does not verify: {r.stderr.strip()}")
-    trees.git("fetch", "-q", str(bundle), f"+{BUNDLE_NS}/*:refs/latbench/import/{other_id}/*", cwd=repo)
+    trees.git("fetch", "-q", str(bundle), f"+{BUNDLE_NS}/*:{config.project().ref('import', other_id)}/*", cwd=repo)
     revs = [ln.split()[0] for ln in trees.git("bundle", "list-heads", str(bundle), cwd=repo).splitlines() if ln]
     log(f"{len(revs)} commits of the runs in refs/latbench/import/{other_id}/ of {repo}")
     return revs

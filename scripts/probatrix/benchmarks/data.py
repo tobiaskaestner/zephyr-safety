@@ -31,8 +31,8 @@ from pathlib import Path
 import yaml
 
 from probatrix.benchmarks import tails as tailmod  # noqa: E402
-from probatrix.benchmarks import trees  # noqa: E402
 from probatrix.benchmarks.studylib import layout, stats  # noqa: E402
+from probatrix.core import config  # noqa: E402
 
 
 # The columns of Instance.tails.
@@ -66,7 +66,7 @@ class Instance:
         self.root = layout.find_root(self.folder)
         self.study = _load(self.folder / "study.json")
         self.instance = _load(self.folder / "instance.json")
-        self.design_folder = trees.REPO_DIR / self.study["design"]["folder"]
+        self.design_folder = config.project().repo / self.study["design"]["folder"]
         h = self.design_folder / "hypotheses.yaml"
         self.design_hypotheses = {x["id"]: x for x in yaml.safe_load(h.read_text())["hypotheses"]} if h.is_file() else {}
         self._app_data = {}
@@ -129,7 +129,7 @@ class Instance:
 
     def axis_values(self, experiment):
         """{axis: {label: value}}: the "value:" of each axis label in the design of the experiment."""
-        f = trees.REPO_DIR / self.experiment_json(experiment)["design"]["file"]
+        f = config.project().repo / self.experiment_json(experiment)["design"]["file"]
         if not f.is_file():
             return {}
         axes = (yaml.safe_load(f.read_text()) or {}).get("axes") or {}

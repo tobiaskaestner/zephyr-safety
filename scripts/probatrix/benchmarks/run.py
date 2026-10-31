@@ -100,10 +100,11 @@ import yaml  # noqa: E402
 from probatrix.benchmarks import hwmap  # noqa: E402
 from probatrix.benchmarks import latbench  # noqa: E402
 from probatrix.benchmarks import trees  # noqa: E402
+from probatrix.core import config
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 from probatrix.benchmarks.studylib import lint, schema, seal  # noqa: E402
 
-BENCH_DIR = trees.BENCH_DIR
+BENCH_DIR = config.project().bench_dir
 
 
 def fail(msg):
@@ -746,7 +747,7 @@ def main():
     p.add_argument("--trees-root")
     p.add_argument("--hardware-map",
                    help="hardware map of the host (default: [hardware] map of the lab space, else "
-                        f"{hwmap.DEFAULT.relative_to(trees.REPO_DIR)})")
+                        f"{hwmap.DEFAULT.relative_to(config.project().repo)})")
     p.add_argument("--probe", help="probe id: select the entry of the hardware map; with --port, no map is necessary")
     p.add_argument("--port", help="serial port of the console (default: serial of the entry in the hardware map)")
     p.add_argument("--only", nargs="*", help="run only these point ids")
@@ -886,7 +887,7 @@ def main():
     builder.run_id = f"{exp['name']}/{run_dir.name}"
     # The commit of the run stays reachable (a rebuild exports it), also after a rebase: a local
     # ref, never pushed (a campaign adds refs/latbench/campaign/<id>).
-    run_ref = f"refs/latbench/run/{exp['name']}/{run_dir.name}"
+    run_ref = config.project().ref("run", exp["name"], run_dir.name)
     trees.git("update-ref", run_ref, repo_rev, cwd=repo_root)
     probe = subprocess.run(
         ["udevadm", "info", "--query=property", port], capture_output=True, text=True

@@ -25,6 +25,8 @@ import yaml
 
 from probatrix.benchmarks import trees
 
+from probatrix.core import config
+
 from . import layout
 
 HEADER = "# Copyright (c) {year} inovex GmbH\n# SPDX-License-Identifier: Apache-2.0\n"
@@ -46,7 +48,7 @@ def check_name(name):
 
 
 def app_metric(app):
-    if not (trees.BENCH_DIR / app).is_dir():
+    if not (config.project().bench_dir / app).is_dir():
         raise ScaffoldError(f"app {app!r} is not a folder of tests/benchmarks")
     return APP_METRIC.get(app, "irq")
 

@@ -20,7 +20,8 @@ from pathlib import Path
 
 import yaml
 
-from probatrix.benchmarks import trees
+
+from probatrix.core import config
 
 from . import images, kindhooks, seal
 from .design import repo_rel
@@ -127,7 +128,7 @@ def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
                      f"{repo_rel(experiment_file)}, which expands to the same point ids)")
     exp_yaml = m.get("experiment_yaml", "")
     return {
-        "format": "latbench-run/2", "made_by": made_by,
+        "format": config.project().format_id("run", 2), "made_by": made_by,
         "run": {"id": run_id, "digest": digest, "experiment": m["experiment"],
                 "app": yaml.safe_load(exp_yaml).get("app") if exp_yaml else None,
                 "experiment_file": m.get("experiment_file"),
@@ -141,9 +142,9 @@ def run_json(run_dir, run_id, digest, made_by, experiment_file=None):
 
 
 def extractor(app):
-    path = trees.BENCH_DIR / app / "scripts" / "extract.py"
+    path = config.project().bench_dir / app / "scripts" / "extract.py"
     if not path.is_file():
-        raise FileNotFoundError(f"app {app} has no extractor {path.relative_to(trees.REPO_DIR)}")
+        raise FileNotFoundError(f"app {app} has no extractor {path.relative_to(config.project().repo)}")
     return path
 
 
@@ -152,8 +153,8 @@ def app_json(run_dir, app, run_id, digest, made_by):
     path = extractor(app)
     r = subprocess.run([sys.executable, str(path), str(run_dir)], capture_output=True, text=True)
     if r.returncode != 0:
-        raise RuntimeError(f"{path.relative_to(trees.REPO_DIR)} {run_dir}: {r.stderr.strip()[-2000:]}")
+        raise RuntimeError(f"{path.relative_to(config.project().repo)} {run_dir}: {r.stderr.strip()[-2000:]}")
     data = json.loads(r.stdout)
-    extractor_ref = {"file": str(path.relative_to(trees.REPO_DIR))}
+    extractor_ref = {"file": str(path.relative_to(config.project().repo))}
     return {"format": f"latbench-app-{app}/1", "made_by": {**made_by, "extractor": extractor_ref["file"]},
             "run": {"id": run_id, "digest": digest}, **data}

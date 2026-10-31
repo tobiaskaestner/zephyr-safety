@@ -141,6 +141,8 @@ if __name__ == "__main__":
     reexec_in_lab_repo(sys.argv[1:])
 
 from probatrix.benchmarks import trees  # noqa: E402
+
+from probatrix.core import config
 from probatrix.benchmarks.studylib import build, html, instance, layout, seal  # noqa: E402
 from probatrix.benchmarks.studylib import campaign, lint, scaffold  # noqa: E402
 from probatrix.benchmarks.studylib.design import Design, DesignError  # noqa: E402
@@ -267,7 +269,7 @@ def cmd_campaign_prepare(args):
     bad = 0
     for e in items:
         print(f"=== {e['experiment']}", flush=True)
-        rc = campaign.run_subprocess([sys.executable, campaign.run_py(), trees.REPO_DIR / e["design"], "--build-only"],
+        rc = campaign.run_subprocess([sys.executable, campaign.run_py(), config.project().repo / e["design"], "--build-only"],
                                      log, cwd=lab.folder)
         print(f"    {'ok' if rc == 0 else f'FAILED (rc {rc}, see {log})'}", flush=True)
         bad += rc != 0

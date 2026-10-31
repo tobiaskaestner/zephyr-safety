@@ -15,7 +15,11 @@ tree (validation/empirical/latencies, results/<top>).
 import re
 from pathlib import Path
 
-from probatrix.benchmarks.trees import EXPERIMENT_PREFIX, STUDY_PREFIX  # noqa: F401
+from probatrix.core import config
+
+# Aliases of the default Project, kept for one more step.
+EXPERIMENT_PREFIX = config.project().experiment_prefix
+STUDY_PREFIX = config.project().study_prefix
 
 UTC_RE = re.compile(r"^\d{8}T\d{6}Z$")
 

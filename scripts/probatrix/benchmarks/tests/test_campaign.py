@@ -16,6 +16,7 @@ from probatrix.benchmarks import trees  # noqa: E402
 from probatrix.benchmarks.studylib import campaign, jsonout  # noqa: E402
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 from probatrix.benchmarks.studylib.design import Design  # noqa: E402
+from probatrix.core import config  # noqa: E402
 from .test_studylib import make_design  # noqa: E402
 
 
@@ -32,7 +33,7 @@ def setup(tmp_path, monkeypatch):
     d = yaml.safe_load((sub / "study.yaml").read_text())
     d["experiments"].append("exp2")
     (sub / "study.yaml").write_text(yaml.safe_dump(d))
-    monkeypatch.setattr(trees, "STUDIES_DIR", root)
+    monkeypatch.setattr(config, "_current", config.project().with_(design_root=root))
     repo = tmp_path / "safety"
     (repo / "scripts" / "probatrix" / "benchmarks").mkdir(parents=True)
     (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").write_text("")

@@ -20,6 +20,8 @@ import yaml
 
 from probatrix.benchmarks import trees
 
+from probatrix.core import config
+
 from . import checks, kindhooks, layout, schema
 from .design import Design, DesignError
 
@@ -36,7 +38,7 @@ class Problem:
         return f"{self.severity}: {self.where()}: {self.text}"
 
     def where(self):
-        return self.path.relative_to(trees.REPO_DIR) if self.path.is_relative_to(trees.REPO_DIR) else self.path
+        return self.path.relative_to(config.project().repo) if self.path.is_relative_to(config.project().repo) else self.path
 
 
 def expand(exp):
@@ -62,10 +64,10 @@ def lint_todo(root, out):
 def lint_schemas(root, out):
     """Each design file against its schema (scripts/probatrix/benchmarks/schemas/): all violations."""
     files = [(kind, f) for kind in ("experiment", "study", "hypotheses") for f in sorted(Path(root).rglob(f"{kind}.yaml"))]
-    if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
-        files.append(("boards", trees.BOARDS_FILE))
-    if Path(root).resolve() == Path(trees.STUDIES_DIR).resolve():
-        for f in sorted(trees.TREES_DIR.glob("*.yml")):
+    if Path(root).resolve() == Path(config.project().design_root).resolve():
+        files.append(("boards", config.project().boards_file))
+    if Path(root).resolve() == Path(config.project().design_root).resolve():
+        for f in sorted(config.project().trees_dir.glob("*.yml")):
             try:
                 trees.read_manifest(f)
             except (trees.TreeError, yaml.YAMLError, KeyError, TypeError) as e:
@@ -106,7 +108,7 @@ def lint_experiment(e, out):
     md = e.folder / "experiment.md"
     if not md.is_file():
         out.append(Problem(ERROR, md, "each experiment has a description experiment.md"))
-    if not (trees.BENCH_DIR / str(exp.get("app"))).is_dir():
+    if not (config.project().bench_dir / str(exp.get("app"))).is_dir():
         out.append(Problem(ERROR, f, f"app {exp.get('app')!r} is not a folder of tests/benchmarks"))
     prefix = str(exp.get("app")).split("_")[0] + "-"
     if not e.name.startswith(prefix):
@@ -144,7 +146,7 @@ def lint_code_place(f, exp, pts, out):
     if board not in boards["boards"]:
         out.append(Problem(ERROR, f, f"board {board!r} is not in boards.yaml"))
         return
-    port = trees.BENCH_DIR / "common" / "boards" / boards["boards"][board]["port"]
+    port = config.project().bench_dir / "common" / "boards" / boards["boards"][board]["port"]
     for pt in pts:
         k = pt["kconfig"]
         places = [s for s in PLACES if is_y(k, s)]
@@ -253,7 +255,7 @@ def lint(root=None, only=None):
 
     only: a folder; return only the problems of the files below it.
     """
-    root = Path(root or trees.STUDIES_DIR)
+    root = Path(root or config.project().design_root)
     out = []
     lint_schemas(root, out)
     lint_folders(root, out)

@@ -47,6 +47,8 @@ import yaml
 
 from probatrix.benchmarks import trees
 
+from probatrix.core import config
+
 from . import instance, jsonout, layout, seal
 from . import lab as labmod
 from .design import Design, repo_rel
@@ -68,11 +70,11 @@ def utc_id(t=None):
 
 
 def study_py():
-    return trees.REPO_DIR / "scripts" / "probatrix" / "benchmarks" / "study.py"
+    return config.project().repo / "scripts" / "probatrix" / "benchmarks" / "study.py"
 
 
 def run_py():
-    return trees.REPO_DIR / "scripts" / "probatrix" / "benchmarks" / "run.py"
+    return config.project().repo / "scripts" / "probatrix" / "benchmarks" / "run.py"
 
 
 # ------------------------------------------------------------ plan
@@ -83,8 +85,8 @@ def resolve(lab, folder, design):
     if folder.name.startswith(layout.EXPERIMENT_PREFIX):
         exp = folder.name[len(layout.EXPERIMENT_PREFIX):]
         folder = folder.parent
-    if folder.is_relative_to(trees.STUDIES_DIR):
-        rel = folder.relative_to(trees.STUDIES_DIR)
+    if folder.is_relative_to(config.project().design_root):
+        rel = folder.relative_to(config.project().design_root)
         path = "/".join(p[len(layout.STUDY_PREFIX):] for p in rel.parts)
         design.study(path)
         return path, exp, None
@@ -92,7 +94,7 @@ def resolve(lab, folder, design):
     if folder.is_relative_to(root) and (folder / "instance.json").is_file():
         ipath = layout.instance_path_of(folder, root)
         return layout.strip_board(ipath), exp, instance.board_of(folder)
-    raise CampaignError(f"{folder} is not a study or experiment folder of the design {trees.STUDIES_DIR}, "
+    raise CampaignError(f"{folder} is not a study or experiment folder of the design {config.project().design_root}, "
                         f"and not an instance folder of {root}")
 
 
@@ -221,15 +223,15 @@ def new_record(lab, folder, board, items, argv, role="evidence", reason=None, hw
     while (lab.campaigns / f"{cid}.json").exists():
         time.sleep(1)
         cid = utc_id()
-    rev, dirty = trees.repo_state(trees.REPO_DIR)
+    rev, dirty = trees.repo_state(config.project().repo)
     if dirty:
-        raise CampaignError(f"the design repo {trees.REPO_DIR} is dirty, commit first:\n{dirty}")
+        raise CampaignError(f"the design repo {config.project().repo} is dirty, commit first:\n{dirty}")
     rec = Record(lab, cid)
     rec.data = {"format": FORMAT, "id": cid, "lab": lab.describe(), "host": platform.node(),
                 "command": argv, "cwd": os.getcwd(), "folder": str(Path(folder).resolve()), "board": board,
-                "repo": {"path": str(trees.REPO_DIR), "rev": rev}, "ref": f"refs/latbench/campaign/{cid}",
+                "repo": {"path": str(config.project().repo), "rev": rev}, "ref": config.project().ref("campaign", cid),
                 "python": {"executable": sys.executable, "prefix": sys.prefix,
-                           "version": platform.python_version(), "packages": labmod.packages(trees.REPO_DIR)},
+                           "version": platform.python_version(), "packages": labmod.packages(config.project().repo)},
                 "role": role, **({"reason": reason} if reason else {}),
                 **({"hwcheck_each": True} if hwcheck_each else {}),
                 "status": PLANNED, "created": utc_now().isoformat(), "experiments": items}
@@ -472,11 +474,11 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, 
         log(f"  {status:4} {what}{': ' + text if text else ''}")
 
     todo = [e for e in items if e["state"] in (PLANNED, FAILED, RUNNING)]
-    rev, dirty = trees.repo_state(trees.REPO_DIR)
-    add("fail" if dirty else "ok", "design repo", f"{trees.REPO_DIR} at {rev[:12]}" + (" is dirty" if dirty else ""))
+    rev, dirty = trees.repo_state(config.project().repo)
+    add("fail" if dirty else "ok", "design repo", f"{config.project().repo} at {rev[:12]}" + (" is dirty" if dirty else ""))
     problems = lintmod.lint()
     mine = list({str(p): p for e in todo
-                 for p in lintmod.lint_for_experiment(trees.REPO_DIR / e["design"], problems)}.values())
+                 for p in lintmod.lint_for_experiment(config.project().repo / e["design"], problems)}.values())
     errors = [p for p in mine if p.severity == lintmod.ERROR]
     if errors:
         add("fail", "lint", f"{len(errors)} errors, first: {errors[0]}")
@@ -489,7 +491,7 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, 
         add("ok", "zephyr sdk", str(trees.check_toolchain(cfg)))
     except trees.TreeError as e:
         add("fail", "zephyr sdk", str(e))
-    need_trees = sorted({t for e in todo for t in yaml.safe_load((trees.REPO_DIR / e["design"]).read_text())["trees"]})
+    need_trees = sorted({t for e in todo for t in yaml.safe_load((config.project().repo / e["design"]).read_text())["trees"]})
     for t in need_trees:
         try:
             trees.check_tree(cfg, t)
@@ -500,7 +502,7 @@ def preflight(lab, items, design, hwcheck=True, warn_as_error=False, log=print, 
     secs, size, unknown = 0.0, 0, []
     for e in todo:
         try:
-            n, c = run.cache_state(trees.REPO_DIR / e["design"], lab)
+            n, c = run.cache_state(config.project().repo / e["design"], lab)
             total, cached = total + n, cached + c
         except (SystemExit, Exception) as x:
             add("fail", f"images of {e['experiment']}", f"{type(x).__name__}: {x}")
@@ -601,7 +603,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     lab = rec.lab
     design = design or Design()
     d = rec.data
-    rev, dirty = trees.repo_state(trees.REPO_DIR)
+    rev, dirty = trees.repo_state(config.project().repo)
     if rev != d["repo"]["rev"] or dirty:
         raise CampaignError(f"the design repo is at {rev[:12]}{' (dirty)' if dirty else ''}, the campaign "
                             f"{rec.id} at {d['repo']['rev'][:12]}: check out its commit (ref {d['ref']})")
@@ -631,7 +633,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
     old = signal.signal(signal.SIGTERM, on_term)
     old_hup = signal.signal(signal.SIGHUP, on_term)      # the ssh connection of a campaign without --detach
     try:
-        trees.git("update-ref", d["ref"], d["repo"]["rev"], cwd=trees.REPO_DIR)
+        trees.git("update-ref", d["ref"], d["repo"]["rev"], cwd=config.project().repo)
         log(f"campaign {rec.id}: pre-flight check")
         res = preflight(lab, d["experiments"], design, hwcheck=hwcheck, warn_as_error=warn_as_error, log=log,
                         locked=True)
@@ -647,7 +649,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
         for e in d["experiments"]:
             if e["state"] in (DONE, SKIPPED):
                 continue
-            now, dirty = trees.repo_state(trees.REPO_DIR)
+            now, dirty = trees.repo_state(config.project().repo)
             if now != d["repo"]["rev"] or dirty:
                 rec.set(stopped=f"the design repo changed before {e['experiment']} ({now[:12]}"
                                 f"{', dirty' if dirty else ''})")
@@ -668,7 +670,7 @@ def run_campaign(rec, design=None, hwcheck=True, warn_as_error=False, log=print)
                     log(f"    {e['state']}: {why}")
                     continue
             # run.py adds the run to the run list of the instance, with the role and the campaign
-            cmd = [sys.executable, run_py(), trees.REPO_DIR / e["design"], "--out", folder,
+            cmd = [sys.executable, run_py(), config.project().repo / e["design"], "--out", folder,
                    "--campaign", rec.id, "--role", d.get("role", "evidence"),
                    *(["--reason", d["reason"]] if d.get("reason") else [])]
             if warn_as_error:

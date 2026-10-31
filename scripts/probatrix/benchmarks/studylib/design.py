@@ -14,7 +14,8 @@ from pathlib import Path
 
 import yaml
 
-from probatrix.benchmarks import trees
+
+from probatrix.core import config
 
 from . import layout, schema
 from .seal import file_sha256
@@ -36,14 +37,17 @@ def load(kind, path):
 def repo_rel(path):
     """A path relative to the safety repo, if it is in the repo."""
     path = Path(path)
-    return str(path.relative_to(trees.REPO_DIR)) if path.is_relative_to(trees.REPO_DIR) else str(path)
+    repo = config.project().repo
+    return str(path.relative_to(repo)) if path.is_relative_to(repo) else str(path)
 
 
-def repo_rev(repo=trees.REPO_DIR):
+def repo_rev(repo=None):
     """(rev, dirty) of the safety repo that holds the design and the tools."""
+    project = config.project()
+    repo = project.repo if repo is None else repo
     rev = subprocess.run(["git", "rev-parse", "HEAD"], cwd=repo, capture_output=True, text=True).stdout.strip()
-    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", "validation", "scripts/probatrix",
-                                 "tests/benchmarks"], cwd=repo, capture_output=True, text=True).stdout.strip())
+    dirty = bool(subprocess.run(["git", "status", "--porcelain", "--", *project.dirt_paths],
+                                cwd=repo, capture_output=True, text=True).stdout.strip())
     return rev, dirty
 
 
@@ -94,8 +98,8 @@ class Experiment:
 class Design:
     """All studies and experiments of the design tree."""
 
-    def __init__(self, root=trees.STUDIES_DIR):
-        self.root = Path(root)
+    def __init__(self, root=None):
+        self.root = Path(config.project().design_root if root is None else root)
         self.studies = {}
         self.experiments = {}
         self._load("", self.root)

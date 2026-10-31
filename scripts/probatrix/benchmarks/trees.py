@@ -35,20 +35,24 @@ from pathlib import Path
 import yaml
 
 from probatrix.benchmarks.studylib import lab as labmod
+from probatrix.core import config
 
 # The safety repo, the folder of the benchmark apps and the folder of the
 # latency studies. Each experiment is a folder ex-<name>/ with
 # experiment.yaml and experiment.md, in the folder of the study that owns
 # it. Each sub-study is a folder st-<name>/ with study.yaml. The prefixes
 # are only in the folder names: names and references have none.
-REPO_DIR = Path(__file__).resolve().parents[3]
-BENCH_DIR = REPO_DIR / "tests" / "benchmarks"
-STUDIES_DIR = REPO_DIR / "validation" / "empirical" / "latencies"
-EXPERIMENT_FILE = "experiment.yaml"
-EXPERIMENT_PREFIX = "ex-"
-STUDY_PREFIX = "st-"
-TREES_DIR = REPO_DIR / "validation" / "trees"
-BOARDS_FILE = BENCH_DIR / "boards.yaml"
+# The values come from the Project (probatrix.core.config). These names are aliases of the
+# default Project, kept for one more step; the code reads project() instead.
+_DEFAULT = config.Project.default()
+REPO_DIR = _DEFAULT.repo
+BENCH_DIR = _DEFAULT.bench_dir
+STUDIES_DIR = _DEFAULT.design_root
+EXPERIMENT_FILE = _DEFAULT.experiment_file
+EXPERIMENT_PREFIX = _DEFAULT.experiment_prefix
+STUDY_PREFIX = _DEFAULT.study_prefix
+TREES_DIR = _DEFAULT.trees_dir
+BOARDS_FILE = _DEFAULT.boards_file
 
 
 class TreeError(Exception):
@@ -57,17 +61,19 @@ class TreeError(Exception):
 
 def experiment_files():
     """All experiment files of the studies, sorted by path."""
-    return sorted(STUDIES_DIR.rglob(EXPERIMENT_FILE))
+    p = config.project()
+    return sorted(p.design_root.rglob(p.experiment_file))
 
 
 def study_dir(path):
     """The folder of a study from its path of names, e.g. "load-scaling/t2t-under-load"."""
-    return STUDIES_DIR.joinpath(*(STUDY_PREFIX + n for n in path.split("/") if n))
+    p = config.project()
+    return p.design_root.joinpath(*(p.study_prefix + n for n in path.split("/") if n))
 
 
 def experiment_file(name):
     """The experiment file of the experiment name. The names are unique over all studies."""
-    found = [p for p in experiment_files() if p.parent.name == EXPERIMENT_PREFIX + name]
+    found = [p for p in experiment_files() if p.parent.name == config.project().experiment_prefix + name]
     if len(found) != 1:
         raise TreeError(f"experiment '{name}': {len(found)} files {[str(p) for p in found]}")
     return found[0]
@@ -81,7 +87,7 @@ def git(*args, cwd=None, check=True):
 
 
 def manifest_file(tree):
-    return TREES_DIR / f"{tree}.yml"
+    return config.project().trees_dir / f"{tree}.yml"
 
 
 def read_manifest(path):
@@ -102,7 +108,7 @@ def read_manifest(path):
     if not user.get("zephyr_sdk"):
         raise TreeError(f"{path}: no self.userdata.zephyr_sdk")
     return {"description": user.get("description", ""), "zephyr_sdk": str(user["zephyr_sdk"]),
-            "manifest": str(Path(path).relative_to(REPO_DIR)) if Path(path).is_relative_to(REPO_DIR) else str(path),
+            "manifest": str(Path(path).relative_to(config.project().repo)) if Path(path).is_relative_to(config.project().repo) else str(path),
             "repos": repos}
 
 
@@ -114,10 +120,10 @@ def load(trees_root=None, lab=None, find_lab=True):
     the [toolchain] of the lab space, else ~/zephyr-sdk-<version>. All trees
     must have the same SDK version (a lab space has one SDK).
     """
-    trees_ = {f.stem: read_manifest(f) for f in sorted(TREES_DIR.glob("*.yml"), key=lambda f: f.stem)}
+    trees_ = {f.stem: read_manifest(f) for f in sorted(config.project().trees_dir.glob("*.yml"), key=lambda f: f.stem)}
     versions = sorted({t["zephyr_sdk"] for t in trees_.values()})
     if len(versions) > 1:
-        raise TreeError(f"the trees of {TREES_DIR} need the SDK versions {versions}; a lab space has one SDK")
+        raise TreeError(f"the trees of {config.project().trees_dir} need the SDK versions {versions}; a lab space has one SDK")
     cfg = {"toolchain": {"zephyr_sdk": {"version": versions[0] if versions else None}}, "trees": trees_}
     if lab is None and find_lab:
         lab = labmod.find()
@@ -136,7 +142,7 @@ def load(trees_root=None, lab=None, find_lab=True):
 def load_boards():
     from probatrix.benchmarks.studylib import schema
     try:
-        return schema.check("boards", yaml.safe_load(BOARDS_FILE.read_text()), BOARDS_FILE)
+        return schema.check("boards", yaml.safe_load(config.project().boards_file.read_text()), config.project().boards_file)
     except schema.SchemaError as e:
         raise TreeError(str(e)) from None
 
@@ -144,7 +150,7 @@ def load_boards():
 def board_repos(boards, board):
     """Return the repos of a tree that a build for board needs: zephyr and the board modules."""
     if board not in boards["boards"]:
-        raise TreeError(f"unknown board '{board}', see {BOARDS_FILE}")
+        raise TreeError(f"unknown board '{board}', see {config.project().boards_file}")
     return ["zephyr", *boards["boards"][board]["modules"]]
 
 
@@ -152,7 +158,7 @@ def check_tree_has(cfg, tree, repos):
     """Raise TreeError if the tree does not pin all of repos."""
     missing = [r for r in repos if r not in cfg["trees"][tree]["repos"]]
     if missing:
-        raise TreeError(f"tree '{tree}' does not pin {missing}; pin them in a new tree in {TREES_DIR}")
+        raise TreeError(f"tree '{tree}' does not pin {missing}; pin them in a new tree in {config.project().trees_dir}")
 
 
 def repo_dir(cfg, tree, repo):
@@ -223,7 +229,7 @@ def check_tree(cfg, tree, repos=None):
         tdir = cfg["root"] / tree
         if not (tdir / ".west").is_dir():
             raise NotSetUp(f"{tree}: {tdir} is not a west workspace yet, run 'study.py trees setup {tree}'")
-        why = copy_differs(tdir / "manifest" / "west.yml", REPO_DIR / spec_t["manifest"])
+        why = copy_differs(tdir / "manifest" / "west.yml", config.project().repo / spec_t["manifest"])
         if why:
             raise TreeError(f"{tree}: {why}")
         extra = west_config_problems(tdir)
@@ -302,7 +308,7 @@ def west_topdir(tdir):
 
 
 def west_version():
-    r = west(["--version"], REPO_DIR, check=False)
+    r = west(["--version"], config.project().repo, check=False)
     return (r.stdout or r.stderr).strip().split()[-1] if r.returncode == 0 else None
 
 
@@ -314,7 +320,7 @@ def setup_tree(cfg, tree, log=print):
     tdir = cfg["root"] / tree
     mdir = tdir / "manifest"
     mdir.mkdir(parents=True, exist_ok=True)
-    src = REPO_DIR / spec["manifest"]
+    src = config.project().repo / spec["manifest"]
     copy = mdir / "west.yml"
     why = copy_differs(copy, src)
     if why:

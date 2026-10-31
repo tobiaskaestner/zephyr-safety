@@ -27,7 +27,8 @@ import subprocess
 import sys
 from pathlib import Path
 
-from probatrix.benchmarks import trees
+
+from probatrix.core import config
 
 from . import central, checks, instance, jsonout, layout, runfiles, seal, stats
 from .design import Design, repo_rel, repo_rev
@@ -355,7 +356,7 @@ class Tree:
                                                if p.get("verdict") != "same"]})
         ishas = jsonout.dumps(data)
         import hashlib
-        sj = {"format": "latbench-study/2", "made_by": self.made_by,
+        sj = {"format": config.project().format_id("study", 2), "made_by": self.made_by,
               "instance": data["instance"],
               "design": {"folder": repo_rel(study.folder),
                          "safety_rev": self.made_by["safety_rev"], "files": study.files()},
@@ -401,7 +402,7 @@ class Tree:
             return None
         why = (res.stderr.strip().splitlines() or ["?"])[-1][:300]
         out.mkdir(parents=True, exist_ok=True)
-        err.write_text(f"{script.relative_to(trees.REPO_DIR)}: {why}\n")
+        err.write_text(f"{script.relative_to(config.project().repo)}: {why}\n")
         return why
 
     def experiment_json(self, folder, exp, runs):
@@ -442,7 +443,7 @@ class Tree:
                 codes.setdefault((p["tree"], p["point"]), set()).add(p.get("code_sha256"))
         differ = sorted(f"{t}/{pt}" for (t, pt), c in codes.items() if len(c) > 1)
         efile = self.design.experiments.get(exp)
-        out = {"format": "latbench-experiment/2", "made_by": self.made_by, "experiment": exp,
+        out = {"format": config.project().format_id("experiment", 2), "made_by": self.made_by, "experiment": exp,
                "design": efile.file_ref() if efile else None,
                "runs": out_runs, "unit": "cycles", "core_hz": sorted(c for c in core if c)[0] if any(core) else None,
                "columns": ["run", "role", "tree", "point", "rep", *[f"axis.{a}" for a in axes_all], "metric", *STATS,
@@ -477,7 +478,7 @@ def has_todo(x):
 
 
 def plot_script(app):
-    return trees.BENCH_DIR / app / "scripts" / "plot.py"
+    return config.project().bench_dir / app / "scripts" / "plot.py"
 
 
 def hypothesis_entry(h, out_checks):

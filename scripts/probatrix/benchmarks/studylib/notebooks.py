@@ -34,7 +34,8 @@ import os
 import re
 from pathlib import Path
 
-from probatrix.benchmarks import trees
+
+from probatrix.core import config
 import yaml
 
 from . import layout
@@ -62,7 +63,7 @@ def inputs_digest(nb, study_json, repo=None, extra=()):
     for f in (nb, study_json, *extra):
         h.update(hashlib.sha256(Path(f).read_bytes() if Path(f).is_file() else b"").digest())
     for rel in HELPERS:
-        f = Path(repo or trees.REPO_DIR) / rel
+        f = Path(repo or config.project().repo) / rel
         h.update(hashlib.sha256(f.read_bytes() if f.is_file() else b"").digest())
     return h.hexdigest()
 
@@ -82,7 +83,7 @@ def _report_of(folder):
     sj = folder / "study.json"
     if not sj.is_file():
         return None
-    nbs = notebooks_of(trees.REPO_DIR / json.loads(sj.read_text())["design"]["folder"])
+    nbs = notebooks_of(config.project().repo / json.loads(sj.read_text())["design"]["folder"])
     return nbs[0].stem if nbs else None
 
 
@@ -109,7 +110,7 @@ def study_cells(inst, root):
     of each experiment of the study, and the reports of the studies that own the imported experiments.
     Also returns the files that the text comes from (they are inputs of the notebook)."""
     sj = json.loads((inst / "study.json").read_text())
-    design = trees.REPO_DIR / sj["design"]["folder"]
+    design = config.project().repo / sj["design"]["folder"]
     files, head, tail = [], [], []
     nav = []
     parent = inst.parent
@@ -222,7 +223,7 @@ def run(folder, force=False, log=print, executor=execute):
         sj = inst / "study.json"
         if not sj.is_file() or not inst.resolve().is_relative_to(below):
             continue
-        design = trees.REPO_DIR / json.loads(sj.read_text())["design"]["folder"]
+        design = config.project().repo / json.loads(sj.read_text())["design"]["folder"]
         nbs = notebooks_of(design)
         if not nbs:
             continue
@@ -239,16 +240,16 @@ def run(folder, force=False, log=print, executor=execute):
                 out.append((inst, name, "the same inputs"))
                 continue
             try:
-                html = executor(nb, inst, trees.REPO_DIR)
+                html = executor(nb, inst, config.project().repo)
                 html, ipynb = html if isinstance(html, tuple) else (html, None)
             except NotebookError as e:
-                index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(trees.REPO_DIR)),
+                index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(config.project().repo)),
                                             "error": str(e)}
                 out.append((inst, name, f"FAILED: {e}"))
                 log(f"{layout.instance_path_of(inst, root) or '(top)'}: {name}: FAILED: {e}")
                 continue
             (odir / f"{name}.html").write_text(html)
-            index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(trees.REPO_DIR)),
+            index["notebooks"][name] = {"inputs": digest, "notebook": str(nb.relative_to(config.project().repo)),
                                         "html": f"{name}.html"}
             if ipynb is not None:
                 # the executed notebook beside its HTML: JupyterLab opens it in the results tree, and it

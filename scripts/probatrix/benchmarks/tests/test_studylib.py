@@ -14,6 +14,7 @@ SCRIPTS = Path(__file__).resolve().parent.parent
 from probatrix.benchmarks.studylib import build, central, checks, instance, jsonout, layout, seal, stats  # noqa: E402
 from probatrix.benchmarks.studylib.design import Design  # noqa: E402
 from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
+from probatrix.core import config  # noqa: E402
 
 
 # ------------------------------------------------------------------ helpers
@@ -558,7 +559,7 @@ def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     rid = instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}),
                        copy=True)
     build.build(res / "top", log=lambda *a: None)
-    monkeypatch.setattr(data.trees, "REPO_DIR", Path("/"))
+    monkeypatch.setattr(config, "_current", config.project().with_(repo=Path("/")))
     d = data.load_instance(inst)
     assert list(d.hypotheses()["id"]) == ["H1"]
     assert len(d.checks()) == 2
@@ -863,7 +864,7 @@ def test_the_executed_copy_has_the_study_text(tmp_path, monkeypatch):
     inst = res / "top" / "st-sub@nucleo_g474re"
     instance.add(design, inst, make_run(tmp_path / "flat" / "exp1", {"a": (100, 200), "b": (150, 300)}), copy=True)
     build.build(res / "top", log=lambda *a: None)
-    monkeypatch.setattr(notebooks.trees, "REPO_DIR", tmp_path)
+    monkeypatch.setattr(config, "_current", config.project().with_(repo=tmp_path))
     for folder, d in ((inst, "design/st-sub"), (res / "top", "design")):
         sj = json.loads((folder / "study.json").read_text())
         sj["design"]["folder"] = d
@@ -884,7 +885,7 @@ def test_notebooks_run_once_for_the_same_inputs(tmp_path, monkeypatch):
     nb.write_text('{"cells": [], "metadata": {}, "nbformat": 4, "nbformat_minor": 5}\n')
     res = tmp_path / "results"
     monkeypatch.setattr(build, "Design", lambda: design)
-    monkeypatch.setattr(notebooks.trees, "REPO_DIR", tmp_path)
+    monkeypatch.setattr(config, "_current", config.project().with_(repo=tmp_path))
     instance.new(design, res, "top", "sub", "nucleo_g474re")
     build.build(res / "top", log=lambda *a: None)
     inst = res / "top" / "st-sub@nucleo_g474re"
