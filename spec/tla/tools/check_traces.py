@@ -136,7 +136,8 @@ INVARIANTS = ["Inv_TypeOK", "Inv_ReqIsWait", "Inv_PendingIsQueued",
               "Inv_NoWaitWhileAvailable", "Inv_CountLeLimit", "Inv_TokenConservation"]
 PROPERTIES = ["RefinesKSem", "Prop_CallsHoldLock", "Prop_GiveHandsOverOrCounts",
               "Prop_GiveWakesHighest", "Prop_TakeResult", "Prop_ResetWakesAll",
-              "Prop_WaitResult"]
+              "Prop_InitSetsFields", "Prop_InitRejectsInvalid",
+              "Prop_WaitResult", "Prop_TimeoutReturnsEagain"]
 
 
 def write_cfg(trace: Path, events, cfg: Path):
