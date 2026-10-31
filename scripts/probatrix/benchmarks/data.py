@@ -1,7 +1,9 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Load a built study instance for a notebook (needs pandas).
+"""Load a built study instance for a notebook (needs pandas): the latency tables.
+
+Instance adds to probatrix.core.data.Instance (hypotheses, checks, central, experiment_json).
 
     from probatrix.benchmarks import data
     inst = data.load_instance("/wrk/z/lab-benchmarks/results/kernel-latency/st-.../st-...@nucleo_g474re")
@@ -25,15 +27,14 @@ An experiment of another instance (an import) or a reference run is found
 in the results tree by its name and run id.
 """
 
-import json
-from pathlib import Path
-
 import yaml
 
 from probatrix.benchmarks import tails as tailmod  # noqa: E402
 from probatrix.benchmarks.studylib import stats  # noqa: E402
-from probatrix.core import layout
 from probatrix.core import config  # noqa: E402
+from probatrix.core import data as coredata
+from probatrix.core import layout
+from probatrix.core.data import load_json as _load
 
 
 # The columns of Instance.tails.
@@ -42,10 +43,6 @@ TAIL_COLUMNS = ["run", "tree", "point", "metric", "seq", "lat", "aux", "phase", 
 
 # The columns of Instance.sites.
 SITE_COLUMNS = ["tree", "point", "kind", "exc", "ctx", "function", "place", "via", "n", "min", "max", "max_net"]
-
-
-def _load(path):
-    return json.loads(Path(path).read_text())
 
 
 def ccdf(h):
@@ -61,45 +58,10 @@ def ccdf(h):
     return xs, ys
 
 
-class Instance:
+class Instance(coredata.Instance):
     def __init__(self, folder):
-        self.folder = Path(folder).resolve()
-        self.root = layout.find_root(self.folder)
-        self.study = _load(self.folder / "study.json")
-        self.instance = _load(self.folder / "instance.json")
-        self.design_folder = config.project().repo / self.study["design"]["folder"]
-        h = self.design_folder / "hypotheses.yaml"
-        self.design_hypotheses = {x["id"]: x for x in yaml.safe_load(h.read_text())["hypotheses"]} if h.is_file() else {}
+        super().__init__(folder)
         self._app_data = {}
-
-    # ------------------------------------------------------------ tables
-    def hypotheses(self):
-        import pandas as pd
-        return pd.DataFrame([{"id": h["id"], "type": h["type"], "claim": h["statement"], "verdict": h["verdict"],
-                              "provisional": bool(h.get("provisional")),
-                              "checks confirmed": h["checks_confirmed"]} for h in self.study["hypotheses"]])
-
-    def checks(self):
-        import pandas as pd
-        rows = []
-        for h in self.study["hypotheses"]:
-            design = {c["id"]: c for c in self.design_hypotheses.get(h["id"], {}).get("checks", [])}
-            for c in h["checks"]:
-                rows.append({"check": f"{h['id']} {c['id']}", "verdict": c["verdict"], "by": c.get("by"),
-                             "measured": c.get("measured"), "limit": c.get("limit"),
-                             "provisional": c.get("provisional"),
-                             "basis": " ".join(design.get(c["id"], {}).get("basis", "").split())})
-        return pd.DataFrame(rows)
-
-    def central(self):
-        import pandas as pd
-        rows = []
-        for c in self.study["central_results"]:
-            if c.get("not_evaluated"):
-                rows.append({"id": c["id"], "result": f"(not evaluated: {c['not_evaluated']})", "by": c.get("by")})
-            for t in c.get("texts", []):
-                rows.append({"id": c["id"], "result": t, "by": c.get("by")})
-        return pd.DataFrame(rows)
 
     def rows(self, experiment):
         import pandas as pd
@@ -136,25 +98,6 @@ class Instance:
         axes = (yaml.safe_load(f.read_text()) or {}).get("axes") or {}
         return {a: {k: v["value"] for k, v in (labels or {}).items() if isinstance(v, dict) and "value" in v}
                 for a, labels in axes.items()}
-
-    # ------------------------------------------------------------ data
-    def experiment_json(self, experiment):
-        return _load(self.experiment_folder(experiment) / "experiment.json")
-
-    def experiment_folder(self, experiment):
-        """The folder of an experiment of this instance, or of the instance that owns it."""
-        own = self.folder / f"{layout.EXPERIMENT_PREFIX}{experiment}"
-        if (own / "experiment.json").is_file():
-            return own
-        for f in layout.instance_folders(self.root):
-            p = f / f"{layout.EXPERIMENT_PREFIX}{experiment}" / "experiment.json"
-            if p.is_file() and _load(f / "instance.json").get("board", None) in (None, self.board):
-                return p.parent
-        raise FileNotFoundError(f"no built experiment {experiment} in {self.root}")
-
-    @property
-    def board(self):
-        return self.study.get("board")
 
     def app_data(self, run_id):
         """The app data of a run of the results tree, by run id <experiment>/<UTC> (read once, then kept)."""
