@@ -141,9 +141,9 @@ the end. The rule (D30):
   ``PendSV``. The fine module writes them with its own variables as the subscript, never through
   ``INSTANCE ... WITH``.
 - TLC checks the safety part ``Refines`` of the refinement check through the mapping.
-- The liveness part ``RefinesFair`` rests on a written argument: weak fairness on the last fine
-  step of each split gives the weak fairness of the coarse step, if the fine steps of one split
-  run to the end. The liveness configuration of the fine module checks this premise.
+- The liveness part ``RefinesFair`` rests on a written argument. If the fine steps of one split run to
+  the end, weak fairness on the last fine step of each split gives the weak fairness of the
+  coarse step. The liveness configuration of the fine module checks this premise.
 
 The world assumptions and assumptions of use behind the rule, on one CPU (Cortex-M with BASEPRI).
 Each one has a tag ``@assumption`` in ``Platform``:

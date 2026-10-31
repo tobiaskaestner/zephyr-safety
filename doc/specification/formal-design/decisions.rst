@@ -447,10 +447,10 @@ Effects:
 - The tool note (``spec/tla/tools/TOOLS.rst``) states the rule. The old text said that no
   configuration uses ``VIEW``.
 - Planned: a script that checks the three conditions on each ``.cfg`` file with ``VIEW``, and the
-  rule of D10 on each ``.cfg`` file with ``VIEW``, ``SYMMETRY`` or ``CONSTRAINT``. Two known-answer
-  models in ``selftest/``: one in which an action property fails on a step that only the view
-  hides, and one in which TLC does not see the violation of a state invariant that reads the
-  hidden variable.
+  rule of D10 on each ``.cfg`` file with ``VIEW``, ``SYMMETRY`` or ``CONSTRAINT``. Also planned:
+  two known-answer models in ``selftest/``. In the first, an action property fails on a step that
+  only the view hides. In the second, TLC does not see the violation of a state invariant that
+  reads the hidden variable.
 
 D23. The evidence scope of the trace checks (review 2, section 3.4)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -551,9 +551,9 @@ The rule:
   ``PendSV``. The fine module writes them with its own variables as the subscript, never through
   ``INSTANCE ... WITH``.
 - TLC checks the safety part ``Refines`` through the refinement mapping.
-- The liveness part ``RefinesFair`` rests on a written argument: weak fairness on the last fine
-  step of each split gives the weak fairness of the coarse step, if the fine steps of one split run
-  to the end. The liveness configuration of the fine module checks this premise.
+- The liveness part ``RefinesFair`` rests on a written argument. If the fine steps of one split run to
+  the end, weak fairness on the last fine step of each split gives the weak fairness of the
+  coarse step. The liveness configuration of the fine module checks this premise.
 
 The assumptions on one CPU (Cortex-M with BASEPRI, D3), each with a tag ``@assumption`` in
 ``Platform``:
