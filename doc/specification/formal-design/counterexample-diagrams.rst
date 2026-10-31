@@ -2,9 +2,14 @@ Counterexample diagrams
 #######################
 
 Each figure in this chapter shows one counterexample of TLC as a timing
-diagram. Each counterexample is a finding of the chapter
+diagram. Each counterexample is a candidate finding of the chapter
 :doc:`formal-model`. The configuration of each figure is a line of
 ``spec/tla/mc/expected.txt`` with an expected violation.
+
+Each finding of this chapter has the class "open": the triage of decision
+D6 has not decided it yet. Thus this chapter states no verdict on a
+requirement. It names the requirement that the violated property
+expresses.
 
 How to read a figure:
 
@@ -14,8 +19,8 @@ How to read a figure:
   cache ``ready_q.cache`` and the interrupt mask (BASEPRI).
 - The lanes below show the ISRs and the threads, from high to low priority.
   A box gives the kernel function or the state of the thread in that step.
-- The label at the top right names the violated property and its
-  requirement.
+- The label at the top right names the violated property and the
+  requirement that the property expresses.
 
 Source of the figures
 *********************
@@ -53,7 +58,8 @@ P7-a: a priority change of the current thread acts as a yield
 t1, t2 and t3 have the same priority, and t1 became ready first. t1 sets
 its own priority to the same value. ``z_thread_prio_set()`` puts t1 at the
 tail, ``update_cache(1)`` takes the head t2, and the reschedule switches at
-once. :need:`ZEP-SRS-2-13` is violated.
+once. The property expresses :need:`ZEP-SRS-2-13`. Candidate finding
+P7-a, class open.
 
 P7-b: a priority change of another thread preempts a cooperative thread
 ***********************************************************************
@@ -71,8 +77,9 @@ Up to the end of step 2 the kernel is correct: t3 has the higher priority,
 but the cooperative t2 keeps the CPU (``update_cache(0)``). Then t2 sets the
 priority of t1 to the same value. The run queue order does not change. Only
 ``preempt_ok = 1`` makes t3 the cache, and t2 loses the CPU.
-:need:`ZEP-SRS-2-14` is violated. The trace does not name the waker in
-step 2. The diagram shows an ISR.
+The property expresses :need:`ZEP-SRS-2-14`. Candidate finding P7-b, class
+open. The trace does not name the waker in step 2. The diagram shows an
+ISR.
 
 P7-c: an abort of another thread preempts a cooperative thread
 **************************************************************
@@ -88,8 +95,9 @@ P7-c: an abort of another thread preempts a cooperative thread
 
 t2 is cooperative and keeps the CPU after the wake of t3 (step 2, correct).
 In step 3 an ISR aborts t1: ``halt_thread()`` calls ``update_cache(1)``, the
-cache becomes t3, and the exit of the same ISR switches to t3.
-:need:`ZEP-SRS-2-14` is violated.
+cache becomes t3, and the exit of the same ISR switches to t3. The
+property expresses :need:`ZEP-SRS-2-14`. Candidate finding P7-c, class
+open.
 
 P2-w: an unlock after a wake under an outer interrupt lock does not preempt
 ***************************************************************************
@@ -106,7 +114,8 @@ P2-w: an unlock after a wake under an outer interrupt lock does not preempt
 t1 holds an outer ``irq_lock()`` and wakes t3 (higher priority).
 ``z_reschedule()`` does not switch: the key is the raised BASEPRI.
 ``irq_unlock()`` only writes BASEPRI. t1 keeps the CPU while the cache is
-t3. :need:`ZEP-SRS-2-9` is violated at the unlock (reading L1).
+t3. The property fails at the unlock. It expresses :need:`ZEP-SRS-2-9`
+(reading L1). Candidate finding P2-w, class open.
 
 SW-1: an ISR before PendSV gives the CPU back to a cooperative waiter
 *********************************************************************
@@ -124,8 +133,8 @@ t2 waits on o1 after t3. ``arch_swap()`` sets PendSV pending and unlocks.
 Before PendSV runs, the ISR wakes all waiters: ``update_cache(0)`` keeps the
 cache at ``_current`` t2, because t2 is ready and cooperative again. PendSV
 then gives the CPU back to t2 while t3 (higher priority) is ready.
-:need:`ZEP-SRS-2-12` and :need:`ZEP-SRS-2-14` are violated (candidate
-finding).
+The property expresses :need:`ZEP-SRS-2-12` and :need:`ZEP-SRS-2-14`.
+Candidate finding SW-1, class open.
 
 F14: an abort makes a joiner ready and does not reschedule
 **********************************************************
@@ -140,8 +149,9 @@ F14: an abort makes a joiner ready and does not reschedule
 
 t3 joins t2. t1 aborts t2: ``unpend_all()`` makes t3 ready with 0, and
 ``update_cache(1)`` makes it the cache. The abort of another thread does
-not reschedule, so t1 keeps the CPU while t3 has a higher priority.
-:need:`ZEP-SRS-2-9` is violated in the last state.
+not reschedule, so t1 keeps the CPU while t3 has a higher priority. The
+property fails in the last state. It expresses :need:`ZEP-SRS-2-9`.
+Candidate finding F14, class open.
 
 P6-u: an init of an object with a waiter
 ****************************************
@@ -157,4 +167,5 @@ P6-u: an init of an object with a waiter
 t1 waits on o1. t2 calls ``k_sem_init(o1)``: ``z_waitq_init()`` empties the
 wait queue without a look at the waiters. t1 keeps ``pended_on``, and no
 wake of o1 finds it. The model stops with ``panic = "undefined"``. The
-property has no ``@source``: it is a condition of use.
+property has no ``@source``: it is the detector of an assumption of use.
+Candidate finding P6-u, class open.
