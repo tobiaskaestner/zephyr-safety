@@ -17,6 +17,8 @@ The document has these parts:
   their relations and the evidence.
 - The decisions of the user on the review of the method. The methodology
   does not apply them yet.
+- The glossary: the words of the method, one meaning each. Its source is
+  ``spec/tla/GLOSSARY.rst``.
 - The formal design model: the modules of the TLA+ library and one need for
   each model property.
 
@@ -26,6 +28,7 @@ The document has these parts:
 
    methodology/index
    decisions
+   glossary
    formal-model
 
 .. toctree::
