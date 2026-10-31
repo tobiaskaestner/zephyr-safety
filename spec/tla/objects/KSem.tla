@@ -429,12 +429,16 @@ GiveHandsOverOrCounts ==
                                  ELSE r[o].count]_vars
 
 \* Reading: the thread that a give wakes has the highest priority of the
-\* waiting threads. The requirement says nothing on equal priorities.
+\* waiting threads, and of these it has waited longest (5-14). The stamp is
+\* the order of arrival: the woken thread has the smallest stamp of the
+\* waiters with its priority. The state before the step has the wait queue.
 \* @kind action-property
 \* @source ZEP-SRS-5-14
 GiveWakesHighest ==
     [][(obs'.op = "give" /\ obs'.woken # {}) =>
-         \A t \in obs'.woken, u \in S!WQ!W(obs'.obj) : prio[u] <= prio[t]]_vars
+         \A t \in obs'.woken, u \in S!WQ!W(obs'.obj) :
+             /\ prio[u] <= prio[t]
+             /\ (prio[u] = prio[t] => stamp[t] <= stamp[u])]_vars
 
 \* Reading: a take with the count above 0 returns 0 and decrements the
 \* count (5-7). A take with the count 0 and K_NO_WAIT returns -EBUSY and
@@ -496,9 +500,24 @@ ResetWakesAll ==
          /\ \A t \in obs'.woken : tstate'[t] = "ready" /\ swapRet'[t] = EAGAIN
          /\ ~\E t \in Threads : pendedOn'[t] = o]_vars
 
+\* Reading: a thread that leaves the wait queue of a semaphore through the
+\* timeout step of the scheduler (ThreadTimeout: the first entry of the
+\* timeout queue expires) gets -EAGAIN as its return value (5-10). The
+\* take returns it when the thread resumes: ResumeOp returns swapRet
+\* without a change (WaitResult). The check reads the step: an "env" step
+\* that removes the head of the timeout queue, where this thread waited and
+\* does not die (an abort also removes it, but the thread is dead).
+\* @kind action-property
+\* @source ZEP-SRS-5-10
+TimeoutReturnsEagain ==
+    [][(obs'.op = "env" /\ tq # <<>> /\ tq' = Tail(tq)
+        /\ pendedOn[Head(tq)] \in Objs /\ tstate'[Head(tq)] # "dead") =>
+         swapRet'[Head(tq)] = EAGAIN]_vars
+
 \* Reading: a take that waited returns 0 (a give handed the semaphore
-\* over) or -EAGAIN (the timeout expired, 5-10, or a reset aborted the
-\* wait, 5-17). No other value.
+\* over) or -EAGAIN (the timeout expired or a reset aborted the wait). No
+\* other value. The check that the timeout gives -EAGAIN is
+\* TimeoutReturnsEagain (5-10), and ResetWakesAll checks the reset (5-17).
 \* @kind action-property
 \* @source ZEP-SRS-5-10
 WaitResult == [][obs'.op = "resume" => obs'.ret \in {OK, EAGAIN}]_vars

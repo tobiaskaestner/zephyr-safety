@@ -23,6 +23,12 @@
 (*   limit becomes UMax. Expected: InitSetsFields fails.                   *)
 (* - init_limit_zero: k_sem_init() accepts the limit 0 (the CHECKIF()      *)
 (*   tests only count > limit). Expected: InitRejectsInvalid fails.        *)
+(* - timeout_ok: the timeout of a wait gives the thread the value 0 in     *)
+(*   place of -EAGAIN. The ghost tokens count the thread as a holder of a  *)
+(*   token, so that TokenConservation stays true. Expected:                *)
+(*   TimeoutReturnsEagain fails.                                           *)
+(* - give_wakes_last: a give wakes the waiter that arrived last of the     *)
+(*   waiters with the highest priority. Expected: GiveWakesHighest fails.  *)
 (***************************************************************************)
 EXTENDS MCKSem
 
@@ -137,6 +143,57 @@ MutInitStep(o, a, args) ==
                      ELSE tokens
 
 -----------------------------------------------------------------------------
+(* timeout_ok *)
+
+\* An env step that expires the timeout of a waiting thread (ThreadTimeout).
+IsTimeoutStep ==
+    /\ tq # <<>>
+    /\ tq' = Tail(tq)
+    /\ pendedOn[Head(tq)] \in MCSems
+    /\ tstate'[Head(tq)] # "dead"
+
+\* ThreadTimeout with the return value 0. The thread holds a token, as after
+\* a hand-over.
+MutTimeout(c) ==
+    /\ panic = "none"
+    /\ K!S!PF!ClockCanFire(c)
+    /\ tq # <<>>
+    /\ pendedOn[Head(tq)] \in MCSems
+    /\ LET t == K!S!TO!First IN
+       /\ K!S!TO!Expire
+       /\ K!S!WakeLocked({t}, K!S!Const({t}, K!OK), [u \in {t} |-> swapData[u]])
+       /\ K!S!Select(c)
+       /\ tokens' = [tokens EXCEPT ![req[t]] = @ + 1]
+    /\ obs' = [K!W!NoObs EXCEPT !.op = "env"]
+    /\ UNCHANGED <<r, req>>
+
+-----------------------------------------------------------------------------
+(* give_wakes_last *)
+
+\* The waiter with the highest priority that arrived last.
+LastBest(o) ==
+    CHOOSE t \in K!S!WQ!W(o) :
+        /\ \A u \in K!S!WQ!W(o) : prio[u] <= prio[t]
+        /\ \A u \in K!S!WQ!W(o) : prio[u] = prio[t] => stamp[u] <= stamp[t]
+
+MutGiveLast(o, a) ==
+    /\ r[o].init
+    /\ panic = "none"
+    /\ K!S!CanCall(a)
+    /\ IF K!S!HasWaiters(o)
+         THEN LET t  == LastBest(o)
+                  c0 == r[o].count
+              IN
+              /\ K!S!WakeSet({t}, K!S!Const({t}, K!OK), K!S!Const({t}, NoD))
+              /\ K!S!Release(a, "resched")
+              /\ obs' = K!W!Obs(a, "give", o, "none",
+                              <<K!W!LockCall(o, c0), K!W!WakeCall(o, K!OK, TRUE, c0, t),
+                                K!W!ReleaseCall("resched", o, c0)>>, K!NoRet, {t})
+              /\ tokens' = [tokens EXCEPT ![o] = @ + 1]
+              /\ UNCHANGED <<r, req>>
+         ELSE K!Give(o, a)
+
+-----------------------------------------------------------------------------
 
 MInit == K!Init /\ split = [t \in MCThreads |-> <<>>]
 
@@ -149,13 +206,17 @@ MNext ==
                  ELSE K!InitNext)
     \/ Unsplit(IF MCMutant = "give_counts"
                  THEN \E o \in MCSems, a \in K!Actors : MutGive(o, a)
+                 ELSE IF MCMutant = "give_wakes_last"
+                 THEN \E o \in MCSems, a \in K!Actors : MutGiveLast(o, a)
                  ELSE K!GiveNext)
     \/ Unsplit(K!TakeNext)
     \/ Unsplit(IF MCMutant = "reset_wakes_one"
                  THEN \E o \in MCSems, a \in K!Actors : MutReset(o, a)
                  ELSE K!ResetNext)
     \/ Unsplit(K!ReturnNext)
-    \/ K!Env /\ UNCHANGED split
+    \/ IF MCMutant = "timeout_ok"
+         THEN ((K!Env /\ ~IsTimeoutStep) \/ MutTimeout(c1)) /\ UNCHANGED split
+         ELSE K!Env /\ UNCHANGED split
     \/ K!Halted /\ UNCHANGED split
     \/ /\ MCMutant = "pend_split"
        /\ \/ \E o \in MCSems, a \in MCThreads, to \in {"FOREVER", "TICKS"} : TakeDecide(o, a, to)

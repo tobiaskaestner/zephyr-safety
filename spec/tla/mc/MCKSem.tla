@@ -80,6 +80,7 @@ Prop_ResetWakesAll         == K!ResetWakesAll
 Prop_InitSetsFields         == K!InitSetsFields
 Prop_InitRejectsInvalid    == K!InitRejectsInvalid
 Prop_WaitResult            == K!WaitResult
+Prop_TimeoutReturnsEagain  == K!TimeoutReturnsEagain
 \* @expected violation (configuration poll, design observation 4)
 Prop_PollSignalMeansAvailable == K!PollSignalMeansAvailable
 

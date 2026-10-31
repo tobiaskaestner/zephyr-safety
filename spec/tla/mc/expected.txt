@@ -145,3 +145,5 @@ MCKSemMutants reset_wakes_one fail:K!ResetWakesAll
 MCKSemMutants init_count_zero fail:K!InitSetsFields
 MCKSemMutants init_limit_ignored fail:K!InitSetsFields
 MCKSemMutants init_limit_zero fail:K!InitRejectsInvalid
+MCKSemMutants timeout_ok      fail:K!TimeoutReturnsEagain
+MCKSemMutants give_wakes_last fail:K!GiveWakesHighest
