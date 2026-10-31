@@ -96,9 +96,11 @@ model values, definition overrides (``<-``) in the ``.cfg`` files, and
 (``mc/sensitivity.txt``) also uses a value for a definition in the ``.cfg``
 file (``Threads = {t1, t2, t3, t4}``, which makes a new model value) and
 ``SYMMETRY`` (the configurations ``*_sym``, safety properties only). The
-selftest model ``SelfSym`` checks both. The models do not use
-``CONSTRAINT``, ``ACTION_CONSTRAINT``, ``VIEW``, strong fairness,
-simulation or ``-continue``.
+selftest model ``SelfSym`` checks both. Ten configurations of ``KSem``
+use ``VIEW`` (``ViewNoObs`` or ``MViewNoObs``, the state without
+``obs``), eight of them with action properties (see `The VIEW rule`_).
+The models do not use ``CONSTRAINT``, ``ACTION_CONSTRAINT``, strong
+fairness, simulation or ``-continue``.
 
 Known defects and limits
 ========================
@@ -142,8 +144,44 @@ Known defects and limits
        or an ``ACTION_CONSTRAINT`` cuts, and ``SYMMETRY`` or ``VIEW`` are
        not sound for liveness.
      - A false lasso, or a missed lasso.
-     - No configuration uses these features. Rule: a configuration with
-       ``PROPERTIES`` has no constraint, no symmetry and no view.
+     - No configuration with a liveness property uses these features.
+       Rule (decision D10): a configuration with a liveness property has
+       no constraint, no symmetry and no view. The configurations with
+       ``SYMMETRY`` (``*_sym``) and with ``VIEW`` check invariants and
+       action properties only.
+   * - Under ``VIEW``, TLC examines the successors of the first state of
+       each view class only, and it checks a state invariant only on a
+       new state.
+     - A violation that only a hidden variable shows can be missed.
+     - The configurations with ``VIEW`` obey `The VIEW rule`_, with one
+       known gap (condition 2).
+
+The VIEW rule
+=============
+
+Decision D22 of the formal design document. A configuration with
+``VIEW`` gives a sound result only if all three conditions are true:
+
+1. No action reads the unprimed value of a variable that the view hides.
+2. No state invariant reads a variable that the view hides.
+3. The configuration has no liveness property.
+
+The state of the ten configurations with ``VIEW`` (2026-10-31):
+
+- Condition 1 is true. The unprimed ``obs`` occurs only in ``vars``,
+  ``Init`` and ``TypeOK`` of ``KSem``, in the probes of ``MCKSem`` (which
+  run without a view) and in the trace module.
+- Condition 2 is false: ``KSem!TypeOK`` reads ``obs``. The clause is a
+  type check, so the risk is low. The spec change is still to do.
+- Condition 3 is true. The liveness configurations ``live`` and
+  ``live_prio`` have no view.
+
+Planned: a script that checks the three conditions on each ``.cfg`` file
+with ``VIEW``, and the liveness rule of decision D10 on each ``.cfg`` file
+with ``VIEW``, ``SYMMETRY`` or ``CONSTRAINT``. Two known-answer models in
+``selftest/`` show the limit: one in which an action property fails on a
+step that only the view hides, and one in which TLC does not see the
+violation of a state invariant that reads the hidden variable.
 
 Regression tests of the tool
 ============================
@@ -278,13 +316,22 @@ Identity
    * - Archive
      - ``/wrk/z/tla-archive/apalache/sha256-<hash>/`` in the workspace.
        Read-only, with ``ARCHIVE.txt`` and ``apalache-0.62.4.tgz.sha256``.
-       Not on the lab host yet.
+       On the lab host: ``archive/apalache/sha256-<hash>/apalache-0.62.4``
+       in the lab directory, with the hash of the tarball checked.
 
 Environment
 ===========
 
-Local host only (2026-10-30): OpenJDK 25.0.4.1 of Fedora, aarch64. Apalache
-needs Java 17 or later. The lab host has no Apalache runs yet.
+Local host (2026-10-30): OpenJDK 25.0.4.1 of Fedora, aarch64. Apalache
+needs Java 17 or later.
+
+Lab host: one run of all lines, ``apalache-runs/20261031-d590599``
+(2026-10-31). Its commit ``d590599`` is on the branch
+``tkaestner/apalache-forms``. Its ``spec/tla`` differs from ``c20993e``
+only in the prose of ``GLOSSARY.rst`` and ``TOOLS.rst``. Result: 41 of 41
+lines as expected, also the two inductive groups of the wake actions
+(about 31 minutes each). The lab host has no GNU time, so the summary
+shows no peak memory. The run is research, not evidence (see `Status`_).
 
 Use
 ===
@@ -384,8 +431,9 @@ specs, like ``selftest/`` for TLC).
 Status
 ======
 
-No Apalache result is evidence today. Before the first evidence run: the
-archive on the lab host, a selftest and a survey of the known defects.
+No Apalache result is evidence today. Before the first evidence run: a
+selftest and a survey of the known defects. The archive on the lab host
+exists.
 The decisions on ``WaitQueue!Head``, ``WalkStop`` and ``Waitable!Flush``
 are made and applied (D15, D16 of 2026-10-31).
 
