@@ -28,9 +28,17 @@
 #
 # The order is the run order: the symmetry validation first, then the
 # lines by their estimated time, cheap first (one worker, from the base
-# counts). The whole list takes about 47 hours with one worker. The last
-# line alone takes about 16 hours. A line without heap= runs with the
-# default heap of the runner (2g on the lab host).
+# counts). A line without heap= runs with the default heap of the runner
+# (2g on the lab host).
+#
+# Measured times (lab host, 2026-10-30, commit 7ac0a35 of the branch
+# tkaestner/tla-scope, one worker for each TLC process, up to 6 processes
+# at a time, so each time is longer than the time of the line alone):
+# the 59 lines that gave a verdict took about 50 hours of process time in
+# total, and the job took about 20 hours. The longest line,
+# small_pendsv_sens_t4, took 16.4 hours. join_sens_t4 gave no verdict in
+# 19.5 hours (decision D20 removes it). p7_rules_sens_t4_sym did not run.
+# Its estimate is 9M to 18M states and 5 to 10 hours.
 
 # Symmetry validation. Each line must give the result of its base, with a
 # count between the count of the base divided by the order of the
@@ -101,6 +109,6 @@ MCScheduler small_sens_t4                pass heap=4g
 MCScheduler p7_rules_coop_sens_t4o1_sym  pass heap=3g
 MCScheduler p7_rules_sens_t4o1_sym       pass heap=3g
 MCScheduler small_pendsv_sens_t4         pass heap=4g
-# The longest line (about 16 hours). Run it as its own job, after the
-# other lines.
+# The largest line (estimate 5 to 10 hours, not run yet). Run it as its
+# own job, after the other lines (decision D20).
 MCScheduler p7_rules_sens_t4_sym         pass heap=6g
