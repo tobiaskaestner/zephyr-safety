@@ -18,16 +18,18 @@ file first, then its parents, then the root, then Project.default_kind (kinds.ki
 design_root is the first root: the one that the tools use when the user gives no other.
 
 The default Project is made from the place of this package: the repo is the folder above
-scripts/. To use another one, call set_project(Project.at(repo)) or use(project) (a context
+scripts/ (or the folder that the variable PROBATRIX_REPO names). To use another one, call set_project(Project.at(repo)) or use(project) (a context
 manager, for tests). Code that needs a folder asks project(); it does not keep a copy.
 """
 
 import contextlib
+import os
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-# parents: core, probatrix, scripts, then the repo
-_REPO = Path(__file__).resolve().parents[3]
+# parents: core, probatrix, scripts, then the repo. An installed copy of the package (a wheel) has no repo
+# around it: the variable PROBATRIX_REPO names the repo then.
+_REPO = Path(os.environ.get("PROBATRIX_REPO") or Path(__file__).resolve().parents[3])
 
 
 @dataclass(frozen=True)

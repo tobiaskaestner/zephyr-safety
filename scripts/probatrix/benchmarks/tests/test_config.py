@@ -95,3 +95,16 @@ def test_the_old_constants_are_aliases_of_the_default_project():
     assert (trees.TREES_DIR, trees.BOARDS_FILE) == (benchkind.KIND.trees_dir, benchkind.KIND.boards_file)
     assert (trees.EXPERIMENT_PREFIX, trees.STUDY_PREFIX) == (p.experiment_prefix, p.study_prefix)
     assert (layout.EXPERIMENT_PREFIX, layout.STUDY_PREFIX) == (p.experiment_prefix, p.study_prefix)
+
+
+def test_the_repo_variable_sets_the_default_project(tmp_path):
+    """An installed copy of the package has no repo around it: PROBATRIX_REPO names it."""
+    import os
+    import subprocess
+    import sys
+    env = {k: v for k, v in os.environ.items() if k != "ZEPHYR_BASE"}
+    env["PROBATRIX_REPO"] = str(tmp_path)
+    env["PYTHONPATH"] = str(HERE.parents[3])
+    r = subprocess.run([sys.executable, "-c", "from probatrix.core import config; print(config.project().repo)"],
+                       env=env, capture_output=True, text=True)
+    assert r.stdout.strip() == str(tmp_path), r.stderr

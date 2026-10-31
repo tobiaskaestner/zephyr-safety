@@ -1,0 +1,54 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The package metadata of probatrix. The package is not published yet. The folder of this file is
+# the package itself (flat layout): package-dir maps the name probatrix to ".".
+# The tests are part of the wheel (with their fixtures), so that they can run against an installed
+# copy. Build without a download: python -m pip wheel --no-deps --no-build-isolation <this folder>
+
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "probatrix"
+version = "0.1.0"
+description = "Studies of safety evidence: designs, runs, instances and verdicts"
+readme = "README.rst"
+requires-python = ">=3.10"
+license = { text = "Apache-2.0" }
+dependencies = [
+    "PyYAML>=6.0",
+    "jsonschema>=4.18",
+    "packaging>=23",
+]
+
+[project.optional-dependencies]
+benchmarks = [
+    "pyserial>=3.5",
+    "matplotlib>=3.8",
+    "west>=1.4",
+]
+notebooks = [
+    "pandas>=2.0",
+    "plotly>=5.0",
+]
+
+[project.scripts]
+probatrix = "probatrix.core.cli:main"
+
+[tool.setuptools]
+package-dir = { probatrix = "." }
+packages = [
+    "probatrix",
+    "probatrix.core",
+    "probatrix.core.tests",
+    "probatrix.benchmarks",
+    "probatrix.benchmarks.studylib",
+    "probatrix.benchmarks.tests",
+]
+
+[tool.setuptools.package-data]
+"probatrix.benchmarks" = ["schemas/*.schema.yaml", "requirements*.txt", "requirements*.lock"]
+"probatrix.core.tests" = ["fixtures/*/*"]
+"probatrix.benchmarks.tests" = ["fixtures/*"]
