@@ -1,0 +1,22 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The model checks of the kernel spec. One point for each line of the list.
+#
+# subject: the files that the result depends on. The models read the library (lib), the objects and
+#   the trace modules (the -DTLA-Library path of run_tlc.sh). The list is in mc/. A run counts for
+#   this experiment only if these four trees are the trees of the run.
+# tools: the runner, the pin of the jar and the selftest of TLC.
+
+name: mc-expected
+tool: tlc
+list: spec/tla/mc/expected.txt
+subject:
+  - spec/tla/lib
+  - spec/tla/mc
+  - spec/tla/objects
+  - spec/tla/trace
+tools:
+  - spec/tla/tools/run_tlc.sh
+  - spec/tla/tools/tla2tools.sha256
+  - spec/tla/selftest

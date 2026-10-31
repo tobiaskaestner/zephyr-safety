@@ -1,0 +1,19 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Study design (top level) of the formal kernel spec. The folders below with a study.yaml are its
+# sub-studies. Each experiment file is in the folder of the (sub-)study that owns it; other studies
+# refer to it by its name, which is unique.
+#
+# Only the first slice exists. The other sub-studies of the plan (tool qualification, small scope,
+# inductive invariants, code conformance, mutation) get their folders when a run exists for them
+# (claude/kernel-unit/studies/study-framework-design.md, 4.2).
+
+name: kernel-spec
+kind: tlaplus
+question: >
+  Is the kernel spec consistent, and does the code conform?
+
+substudies:
+  - design-properties
+  - reproducibility

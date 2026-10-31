@@ -1,0 +1,27 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study design-properties. The result of each line of the list is a check that
+# the kind generates (hypothesis mc-expected-generated). The hypotheses below are about the run.
+#
+# Keys: see validation/empirical/latencies/st-measurement-validity/st-reproducibility/hypotheses.yaml.
+# The value `evidence` (true or false) is set by the adapter of the tool: tlc.py, evidence_reasons.
+
+hypotheses:
+  - id: H1
+    type: method
+    statement: >
+      The run of the list is an evidence run: the code is a commit, TLC has one worker, the
+      jar is the pinned jar and the selftest of TLC passed.
+    basis: >
+      A run with more than one worker in one TLC process can miss states (tlaplus issue
+      #1445). The rules are in spec/tla/tools/TOOLS.rst ("The one-worker rule").
+    wrong_if: >
+      The results of the run are not evidence. They show the state of the models, but a
+      reader must not cite them as proof.
+    checks:
+      - id: a
+        experiment: mc-expected
+        metric: evidence
+        expect: {equals: true}
+        basis: the evidence rule of the adapter (tlc.py)

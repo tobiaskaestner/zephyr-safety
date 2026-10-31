@@ -1,0 +1,32 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# Hypotheses of the study reproducibility.
+#
+# The check `same-as-first` is manual for now. It needs the check form same_as (the value equals
+# the value of a reference run). The plan is in claude/kernel-unit/studies/study-framework-design.md
+# (4.3, step F5). Until then a person gives the verdict.
+
+hypotheses:
+  - id: H1
+    type: method
+    statement: >
+      A second run of the list on the same subject gives the same verdict, the same number of
+      distinct states and the same depth for each line, and it is an evidence run too.
+    basis: >
+      TLC with one worker and a fixed fingerprint function (-fp 0) is deterministic. The
+      selftest model SelfRepro checks this for one model.
+    wrong_if: >
+      A result of the evidence cannot be repeated. Then the numbers in the record of the spec
+      do not describe the models.
+    checks:
+      - id: evidence
+        experiment: mc-expected
+        metric: evidence
+        expect: {equals: true}
+        basis: the evidence rule of the adapter (tlc.py)
+      - id: same-as-first
+        manual: true
+        statement: >
+          For each line, verdict, states and depth of the second run are equal to those of
+          the run in design-properties.

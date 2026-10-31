@@ -1,0 +1,11 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+name: design-properties
+kind: tlaplus
+question: >
+  Does each model of the kernel spec give its expected result: no error where the list says pass,
+  the named violation where it says fail, and the recorded number of distinct states and depth?
+
+experiments:
+  - mc-expected
