@@ -527,6 +527,13 @@ def test_reference_digest_and_manual_verdict_are_checked(tmp_path, monkeypatch):
         build.build(res / "top", log=lambda *a: None)
 
 
+def test_data_module_keeps_trees_for_the_notebooks():
+    """kconfig-factors/report.ipynb reads data.trees.REPO_DIR."""
+    pytest.importorskip("pandas")
+    from probatrix.benchmarks import data
+    assert data.trees.REPO_DIR == config.project().repo
+
+
 def test_data_module_reads_a_built_instance(tmp_path, monkeypatch):
     pytest.importorskip("pandas")
     from probatrix.benchmarks import data

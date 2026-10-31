@@ -30,6 +30,7 @@ in the results tree by its name and run id.
 import yaml
 
 from probatrix.benchmarks import tails as tailmod  # noqa: E402
+from probatrix.benchmarks import trees  # noqa: F401  (kconfig-factors/report.ipynb reads data.trees.REPO_DIR)
 from probatrix.benchmarks.studylib import stats  # noqa: E402
 from probatrix.core import config  # noqa: E402
 from probatrix.core import data as coredata
