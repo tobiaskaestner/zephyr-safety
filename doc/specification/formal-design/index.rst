@@ -21,6 +21,8 @@ The document has these parts:
   ``spec/tla/GLOSSARY.rst``.
 - The formal design model: the modules of the TLA+ library and one need for
   each model property.
+- The counterexample diagrams: the findings of the model as timing
+  diagrams.
 
 .. toctree::
    :maxdepth: 2
@@ -30,6 +32,7 @@ The document has these parts:
    decisions
    glossary
    formal-model
+   counterexample-diagrams
 
 .. toctree::
    :caption: Cross-reference test
