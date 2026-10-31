@@ -6,8 +6,8 @@
 This object holds what only the benchmarks need: the folder of the benchmark apps, the tree
 manifests, the boards file, the prefixes of file formats and git refs, the tests/benchmarks
 dirt path, the board axis of an instance and the metric provider (histograms, M4, META,
-witness tables, clock drift). The provider code is still in studylib/stats.py and the check
-forms in studylib/checks.py; R5b moves them. Importing this module registers the kind with
+witness tables, clock drift). The provider code is in studylib/stats.py, the check forms of this
+kind in checks_hist.py, the experiment.json and the plots in studylib/experimentjson.py. Importing this module registers the kind with
 probatrix.core.kinds and its schema folder with probatrix.core.schema.
 """
 
