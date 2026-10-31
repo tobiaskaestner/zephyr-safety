@@ -6,6 +6,7 @@
 # that owns it; other studies refer to it by its name, which is unique.
 
 name: kernel-latency
+kind: latbench
 question: >
   How long does the Zephyr kernel delay the response to an interrupt on a
   Cortex-M MCU (IRQ entry, ISR to thread, thread to thread), which kernel

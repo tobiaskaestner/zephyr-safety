@@ -12,6 +12,7 @@
 # experiments from this study.
 
 name: kconfig-factors
+kind: latbench
 question: >
   Which Kconfig options of the WP3 ranking change the three latencies,
   against a baseline of the same run, and by how much?

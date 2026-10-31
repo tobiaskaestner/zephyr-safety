@@ -9,6 +9,7 @@
 # parent study kconfig-factors. ../wp3-variants.md gives the variants.
 
 name: scheduler
+kind: latbench
 question: >
   How do SCHED_SCALABLE and SCHED_MULTIQ change the IRQ entry, the ISR
   to thread wake and the thread to thread latency, with no load and with

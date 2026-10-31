@@ -11,6 +11,7 @@
 # This study has no experiment of its own.
 
 name: reproducibility
+kind: latbench
 question: >
   Does the same image give the same histograms on another host, does a
   rebuild from the sources of the run (its snapshot or its commit) give the same image, and does a new

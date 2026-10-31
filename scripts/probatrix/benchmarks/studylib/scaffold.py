@@ -202,6 +202,7 @@ def new_study(parent_folder, name):
 # experiments with 'study.py design scaffold experiment'.
 
 name: {name}
+kind: latbench
 question: >
   TODO: the question of the study, in one or two sentences.
 

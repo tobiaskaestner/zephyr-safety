@@ -5,6 +5,7 @@
 # experiment is there; hypotheses.yaml has the claims and their checks.
 
 name: tail-witnesses
+kind: latbench
 question: >
   Do the witness tables (LATBENCH_TAIL) name the cause of the tail
   samples, at a small cost and without a change of the latency path that

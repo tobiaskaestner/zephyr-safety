@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: t2t-under-load
+kind: latbench
 question: >
   How does the thread to thread wake (t2t) of sem, mutex and msgq grow
   with periodic load timers and sleeper threads? Does its p50 follow the

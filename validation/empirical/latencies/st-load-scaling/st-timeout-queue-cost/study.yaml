@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: timeout-queue-cost
+kind: latbench
 question: >
   Which load makes the ISR to thread wake slower: threads that wait
   without a timeout, busy threads, sleeper threads, periodic timers or

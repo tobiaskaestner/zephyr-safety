@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: clock-drift
+kind: latbench
 question: >
   Why does the kernel cycle counter lose cycles against the stimulus
   timer (same clock), and does the loss change the latency data?

@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: thread-to-thread
+kind: latbench
 question: >
   How long does it take from a wake call in one thread to the first
   instruction of the woken thread, for each kernel object, with the

@@ -162,7 +162,7 @@ hypotheses:
       expire: the SysTick ISR processes the expiries one after the other.
       Thus the load seed, which sets these ticks, sets the tail.
     basis: >
-      Model of the load timers (scripts/benchmarks/loadmodel.py): the
+      Model of the load timers (scripts/probatrix/benchmarks/loadmodel.py): the
       ticks with k expiries for each load seed.
     wrong_if: The tail does not come from the ticks with many expiries, or not from them only.
     checks:

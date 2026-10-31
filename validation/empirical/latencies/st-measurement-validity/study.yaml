@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: measurement-validity
+kind: latbench
 question: >
   Do the benchmark apps measure the latency of the kernel, and not an
   effect of the measurement method, the code layout or the host?

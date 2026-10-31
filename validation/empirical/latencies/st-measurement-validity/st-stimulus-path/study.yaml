@@ -5,6 +5,7 @@
 # is there; hypotheses.yaml has the claims and their checks.
 
 name: stimulus-path
+kind: latbench
 question: >
   How many cycles of a measured latency come from the hardware path of
   the stimulus (compare match, pin, wire, input synchronizer, EXTI), and

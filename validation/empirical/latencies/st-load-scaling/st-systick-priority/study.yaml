@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: systick-priority
+kind: latbench
 question: >
   How much of the irq tail under timer load comes from the SysTick ISR
   at the same priority as the device IRQ? Does a lower SysTick priority

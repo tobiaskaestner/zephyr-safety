@@ -18,6 +18,10 @@ their types.
      - Meaning
    * - ``name``
      - The name of the study. The folder is ``st-<name>`` (not for the top study).
+   * - ``kind``
+     - The name of the kind of the study. All studies of the latency benchmarks
+       have ``kind: latbench``. A sub-study inherits it (see
+       :doc:`../../explanation/probatrix`).
    * - ``question``
      - The verification question.
    * - ``board``

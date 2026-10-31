@@ -96,3 +96,14 @@ def test_bin_forms_reject_a_bool_and_a_text():
                 checks.evaluate(c, s)
         finally:
             del k.value                                     # back to the class method
+
+
+def test_every_study_of_the_repo_names_its_kind():
+    """The 25 study.yaml of the latency designs have kind: latbench (kind_of reads it)."""
+    import yaml
+    files = sorted(config.project().design_root.rglob("study.yaml"))
+    assert len(files) == 25
+    for f in files:
+        data = yaml.safe_load(f.read_text())
+        assert data.get("kind") == "latbench", f
+        assert kinds.kind_of(data) is benchkind.KIND

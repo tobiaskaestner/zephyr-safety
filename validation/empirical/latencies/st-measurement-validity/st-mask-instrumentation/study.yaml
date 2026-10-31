@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: mask-instrumentation
+kind: latbench
 question: >
   Do the interrupt mask hooks of the tree ws-up-irqoff (M4) measure the
   mask time of each call site, and do they leave the image unchanged

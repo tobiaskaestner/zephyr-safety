@@ -9,6 +9,7 @@
 # parent study kconfig-factors. ../wp3-variants.md gives the variants.
 
 name: stack-guard
+kind: latbench
 question: >
   How much does the MPU stack guard add to the IRQ entry, the ISR to
   thread wake and the thread to thread latency?

@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: code-placement
+kind: latbench
 question: >
   How much does the address of the code (and of the data) change the
   latency, and which placement gives numbers that a comparison between

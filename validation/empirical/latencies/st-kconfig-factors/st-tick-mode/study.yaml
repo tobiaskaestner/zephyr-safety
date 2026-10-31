@@ -9,6 +9,7 @@
 # parent study kconfig-factors. ../wp3-variants.md gives the variants.
 
 name: tick-mode
+kind: latbench
 question: >
   How do the tickless kernel and the tick rate change the three
   latencies? Does the SysTick reprogram of the slice reset make the two

@@ -2,6 +2,7 @@
 # SPDX-License-Identifier: Apache-2.0
 
 name: default-latencies
+kind: latbench
 question: >
   What are the three latencies with the board and kernel defaults and
   an idle CPU: IRQ entry (M1), ISR to thread (M2), thread to thread (M3)?

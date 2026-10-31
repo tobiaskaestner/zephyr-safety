@@ -5,6 +5,7 @@
 # sub-studies own the experiments and the hypotheses.
 
 name: load-scaling
+kind: latbench
 question: >
   How do the latencies grow with the number of threads and kernel timers,
   and which kernel data structure (ready queue, timeout queue backend)

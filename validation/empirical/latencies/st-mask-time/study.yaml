@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: mask-time
+kind: latbench
 question: >
   Which call sites of the kernel mask the interrupts, for how long, and
   how does the longest mask section grow with the load?

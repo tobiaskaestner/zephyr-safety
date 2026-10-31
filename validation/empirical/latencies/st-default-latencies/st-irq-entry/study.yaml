@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: irq-entry
+kind: latbench
 question: >
   How long is the IRQ entry latency (edge to the first instruction of the
   ISR) for each interrupt path (stock, wrapped, direct, zero latency), and

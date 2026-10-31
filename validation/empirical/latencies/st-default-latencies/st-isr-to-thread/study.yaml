@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: isr-to-thread
+kind: latbench
 question: >
   How long does it take from the ISR to the first instruction of the
   thread that the ISR wakes, for each kernel object, and which setting

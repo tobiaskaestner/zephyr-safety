@@ -77,11 +77,12 @@ with ``config.use(project)``.
 The kind key
 ------------
 
-The kind of a study will come from the key ``kind:`` in its
-``study.yaml``. A sub-study and an experiment inherit it from the study
-above. A study without the key uses the default kind of the Project, which
-is ``latbench``. The key is not in the design files yet. A later commit
-adds it. Until then, every study is a ``latbench`` study.
+The key ``kind:`` in a ``study.yaml`` names the kind of the study. All
+studies of the latency benchmarks have ``kind: latbench``. A sub-study and
+an experiment inherit the kind from the study above. An experiment can
+name its own kind with the same key. The nearest design file that names a
+kind wins. Then the kind of the design root applies. A design without any
+key uses the default kind of the Project, which is ``latbench``.
 
 The launchers
 -------------

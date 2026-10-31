@@ -9,6 +9,7 @@
 # parent study kconfig-factors. ../wp3-variants.md gives the variants.
 
 name: code-generation
+kind: latbench
 question: >
   How much do SPEED_OPTIMIZATIONS, ASSERT (with and without
   SPIN_VALIDATE) and FPU_SHARING change the IRQ entry, the ISR to thread

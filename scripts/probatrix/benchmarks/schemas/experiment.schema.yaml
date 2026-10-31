@@ -12,6 +12,9 @@ additionalProperties: false
 required: [name, app, trees]
 properties:
   name: {$ref: "common.schema.yaml#/$defs/name"}
+  kind:
+    description: the name of the kind of study (core/kinds.py); the nearest design file that names one wins
+    type: string
   renamed_from:
     description: the earlier names of the experiment (runs and refs with these names stay valid)
     oneOf:

@@ -9,6 +9,7 @@
 #   report.ipynb                      the report template (no outputs)
 
 name: stimulus-sampling
+kind: latbench
 question: >
   Does the random stimulus sample the latency distribution evenly over
   the kernel tick, and how many samples, stimulus seeds and load seeds

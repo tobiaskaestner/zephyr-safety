@@ -5,6 +5,7 @@
 # experiment is there; hypotheses.yaml has the claims and their checks.
 
 name: irq-scenarios
+kind: latbench
 question: >
   How long are the IRQ latencies of the scenarios of the upstream
   interrupt benchmark that the study did not have (irq_unlock() to the

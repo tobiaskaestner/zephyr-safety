@@ -11,6 +11,9 @@ additionalProperties: false
 required: [name]
 properties:
   name: {$ref: "common.schema.yaml#/$defs/name"}
+  kind:
+    description: the name of the kind of study (core/kinds.py); the nearest design file that names one wins
+    type: string
   question: {type: string}
   board: {type: [string, "null"]}
   experiments:
