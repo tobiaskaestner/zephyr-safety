@@ -90,8 +90,13 @@ from pathlib import Path
 # A launcher: the folder scripts/ holds the package probatrix.
 sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 if __name__ == "__main__":
-    # in a lab space: the Python of the lab space (before PyYAML and the other packages)
-    from probatrix.benchmarks.studylib import lab as _lab  # noqa: E402
+    # in a lab space: the Python of the lab space (before PyYAML and the other packages). lab.py is
+    # loaded from its file: the package imports PyYAML.
+    import importlib.util
+    _spec = importlib.util.spec_from_file_location(
+        "_probatrix_lab", Path(__file__).resolve().parent / "studylib" / "lab.py")
+    _lab = importlib.util.module_from_spec(_spec)
+    _spec.loader.exec_module(_lab)
     _lab.restart_with_lab_python(Path(__file__).resolve(), sys.argv[1:])
 
 import yaml  # noqa: E402

@@ -180,3 +180,22 @@ def test_the_launchers_re_exec_before_they_need_pyyaml(tmp_path, launcher, layou
     r = subprocess.run([sys.executable, str(scripts / "probatrix" / launcher), "lab", "status"], cwd=folder,
                        env=env, capture_output=True, text=True)
     assert r.returncode == 0 and r.stdout.strip() == "ran ['lab', 'status']", r.stderr
+
+
+@pytest.mark.parametrize("layout", [0, 2])
+def test_run_py_restarts_before_it_needs_pyyaml(tmp_path, layout):
+    """run.py in a lab space with a Python that lacks PyYAML reaches the restart (os.execv), no import error."""
+    import subprocess
+    (tmp_path / "noyaml").mkdir()
+    (tmp_path / "noyaml" / "yaml.py").write_text("raise ImportError('no yaml')\n")
+    venv = tmp_path / "venv"
+    (venv / "bin").mkdir(parents=True)
+    fake = venv / "bin" / "python"
+    fake.write_text("#!/bin/sh\necho restarted \"$@\"\n")
+    fake.chmod(0o755)
+    folder = make_lab(tmp_path, make_repo(tmp_path, layout), venv=venv)
+    run_py = Path(lab.__file__).resolve().parents[1] / "run.py"
+    env = {k: v for k, v in os.environ.items() if k not in ("ZEPHYR_BASE", "LATBENCH_PYTHON_RESTART")}
+    env["PYTHONPATH"] = str(tmp_path / "noyaml")
+    r = subprocess.run([sys.executable, str(run_py), "--help"], cwd=folder, env=env, capture_output=True, text=True)
+    assert r.returncode == 0 and r.stdout.strip() == f"restarted {run_py} --help", r.stderr

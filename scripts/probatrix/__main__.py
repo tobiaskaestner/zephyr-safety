@@ -1,7 +1,10 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""python -m probatrix: the same command line as study.py (the lab re-exec is the same)."""
+"""python -m probatrix: the same command line as study.py (the lab re-exec is the same).
+
+The Python that starts this module needs PyYAML: it imports the package before the lab re-exec.
+The launcher study.py has no such need."""
 
 import sys
 from pathlib import Path
