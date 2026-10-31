@@ -257,7 +257,7 @@ them).
 The outer interrupt lock is a state of the CPU, not of the thread. This is
 correct only if no thread switches while it holds the lock, which the API
 documentation of ``irq_lock()`` forbids. The action property
-``Scheduler!NoSwitchWhileLocked`` states this condition of use, and the
+``Scheduler!NoSwitchWhileLocked`` states this assumption of use, and the
 mutants ``pend_locked`` and ``pend_locked_pendsv`` violate it.
 
 ``pendedOn`` is one function over all threads and all objects of all types.
@@ -516,9 +516,11 @@ Marking the grain:
   or ``lib/Scheduler_SmpLocks.tla``). Its header comment states the grain
   and the reason. A fine module is a separate module, because a refinement
   check needs two specs.
-- The tag ``@grain fine`` marks an action whose step is finer than the
-  grain of its module, for example the two-step form of the expiry in
-  ``Timeout``. An action with the grain of its module has no tag.
+- The header of each module states its grain with the tag ``@grain``
+  (``@grain coarse`` or ``@grain fine``, decision D24). An action has the
+  tag only where its grain differs from the grain of its module, for
+  example the two-step form of the expiry in ``Timeout``. Today no module
+  has the tag.
 - Each fine module has a refinement model ``mc/MC<Object>Refinement.tla``.
   It defines the refinement mapping and the properties ``Refines`` (the
   coarse-grain spec) and ``RefinesFair`` (the coarse-grain spec with its
@@ -737,7 +739,7 @@ properties are ``PreemptibleRunsHighest`` (ZEP-SRS-2-9, 2-12),
 Round A of ``Platform`` (2026-10-29) added ``UnlockPreempts`` (2-9, finding
 P2-w, configurations ``p2_window*``), ``BlockedLosesCpu`` (2-12, 2-14,
 candidate finding SW-1, configuration ``gap_coop_pendsv``) and the
-condition of use ``NoSwitchWhileLocked``. The configurations with the
+assumption of use ``NoSwitchWhileLocked``. The configurations with the
 suffix ``_pendsv`` check the variant ``arch_swap()``.
 
 Conventions
@@ -873,8 +875,8 @@ option has one of five kinds, and each kind has its place in the specs:
      - ``CONFIG_USE_SWITCH`` (``Platform!UseSwitch``), the timeout
        backend, ``CPUS``
    * - 3. A condition that a safe system must meet.
-     - ``ASSUME`` for a structural limit. The premise of a property for a
-       condition of use, with a configuration that shows the failure. It
+     - ``ASSUME`` for a structural limit. The premise of a property for an
+       assumption of use, with a configuration that shows the failure. It
        goes into the safety manual.
      - the heap size of the timeouts (``minheap_full``)
    * - 4. An initial value that the API can change at run time.
@@ -1015,8 +1017,9 @@ limits each run to 3 GB (``APALACHE_MEM``).
 Apalache checks
 ===============
 
-Research only, not evidence (``tools/TOOLS.rst``). The state of
-2026-10-30:
+Research only, not evidence (``tools/TOOLS.rst``). This is the state of
+2026-10-31. The lab run ``apalache-runs/20261031-d590599`` gives 41 of 41
+lines as expected.
 
 - **Type check** (2026-10-31). ``Platform``, ``Timeout``, ``WaitQueue``,
   ``Scheduler`` and ``KSem`` pass, since the decisions D15 (``NoThread``
