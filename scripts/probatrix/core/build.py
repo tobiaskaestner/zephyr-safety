@@ -71,9 +71,17 @@ class Writer:
 
 
 class Tree:
-    def __init__(self, root, design=None, writer=None, log=print, pending=None, kind=None):
+    def __init__(self, root, design=None, writer=None, log=print, pending=None, kind=None, design_root=None):
+        """design_root: the folder of the design (a root of the Project). Without it, the results tree
+        names it (design_root_of)."""
         self.root = Path(root).resolve()
-        self.design = design or (Design(kind=kind) if kind else Design())
+        if design is None:
+            wanted = design_root or design_root_of(self.root)
+            if wanted == config.project().design_root:
+                design = Design(kind=kind) if kind else Design()           # the first root: as before
+            else:
+                design = Design(wanted, kind=kind)
+        self.design = design
         self.kind = kind or kinds.kind_of(self.design.top, config.project().root_of(self.design.root))
         self.axis = self.kind.instance_axis
         self.writer = writer or Writer()
@@ -541,9 +549,25 @@ class Context:
         return None
 
 
-def build(root, dry=False, log=print, pending=None):
+def design_root_of(results_root):
+    """The design root of a results tree: the root of the Project that the field design.folder of the top
+    instance.json names (a path below the repo). If the file has no such field, or the Project has no such
+    root, the first root of the Project (the latency design)."""
+    project = config.project()
+    try:
+        folder = load_json(Path(results_root) / "instance.json")["design"]["folder"]
+    except (OSError, ValueError, KeyError, TypeError):
+        return project.design_root
+    wanted = (project.repo / folder).resolve()
+    for r in project.roots:
+        if r.path.resolve() == wanted:
+            return r.path
+    return project.design_root
+
+
+def build(root, dry=False, log=print, pending=None, design_root=None):
     writer = Writer(dry=dry)
-    t = Tree(root, writer=writer, log=log, pending=pending)
+    t = Tree(root, writer=writer, log=log, pending=pending, design_root=design_root)
     t.build()
     return t, writer
 

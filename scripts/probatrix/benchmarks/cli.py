@@ -391,7 +391,7 @@ def results_lock(root):
 def cmd_build(args):
     root = layout.find_root(args.root)
     with results_lock(root):
-        t, w = build.build(root)
+        t, w = build.build(root, design_root=args.design)
     print(f"built {len(t.results)} instances, {len(t.loaded)} runs; {w.written} files written")
     if t.made_by.get("dirty"):
         print("WARNING: the safety repo has changes that are not committed: the aggregates are not reproducible")
@@ -401,7 +401,7 @@ def cmd_build(args):
 def cmd_check(args):
     root = layout.find_root(args.root)
     with results_lock(root):
-        t, w = build.build(root, dry=True)
+        t, w = build.build(root, dry=True, design_root=args.design)
     if w.differ:
         print(f"FAIL: {len(w.differ)} files differ from a new build:")
         for p in w.differ[:50]:
@@ -751,9 +751,11 @@ def add_analysis(sub):
         dest="analysis_cmd", required=True)
     s = ana.add_parser("build", help="write run.json, the app data, experiment.json and study.json")
     s.add_argument("root")
+    s.add_argument("--design", help="the design folder (default: the one that the top instance.json names)")
     s.set_defaults(func=cmd_build)
     s = ana.add_parser("check", help="check all seals, build again and compare")
     s.add_argument("root")
+    s.add_argument("--design", help="the design folder (default: the one that the top instance.json names)")
     s.set_defaults(func=cmd_check)
     s = ana.add_parser("show", help="the verdicts: one line for each instance at and below ROOT")
     s.add_argument("root")
