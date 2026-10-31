@@ -97,14 +97,42 @@ def test_the_old_constants_are_aliases_of_the_default_project():
     assert (layout.EXPERIMENT_PREFIX, layout.STUDY_PREFIX) == (p.experiment_prefix, p.study_prefix)
 
 
-def test_the_repo_variable_sets_the_default_project(tmp_path):
-    """An installed copy of the package has no repo around it: PROBATRIX_REPO names it."""
+def _repo_in_process(package_root, var=None):
+    """(stdout, stderr) of a process that prints the repo of the default Project of the package at package_root."""
     import os
     import subprocess
     import sys
-    env = {k: v for k, v in os.environ.items() if k != "ZEPHYR_BASE"}
-    env["PROBATRIX_REPO"] = str(tmp_path)
-    env["PYTHONPATH"] = str(HERE.parents[3])
+    env = {k: v for k, v in os.environ.items() if k not in ("ZEPHYR_BASE", "PROBATRIX_REPO")}
+    env["PYTHONPATH"] = str(package_root)
+    if var is not None:
+        env["PROBATRIX_REPO"] = str(var)
     r = subprocess.run([sys.executable, "-c", "from probatrix.core import config; print(config.project().repo)"],
                        env=env, capture_output=True, text=True)
-    assert r.stdout.strip() == str(tmp_path), r.stderr
+    return r.stdout.strip(), r.stderr
+
+
+def test_a_clone_is_its_own_repo_without_the_variable():
+    out, err = _repo_in_process(HERE.parents[3])
+    assert out == str(HERE.parents[4]) and err == ""
+
+
+def test_a_clone_ignores_a_different_variable_with_one_warning(tmp_path):
+    out, err = _repo_in_process(HERE.parents[3], tmp_path)
+    assert out == str(HERE.parents[4])
+    assert err.count("warning: PROBATRIX_REPO") == 1 and str(tmp_path) in err
+
+
+def test_a_clone_takes_the_same_variable_without_a_warning():
+    out, err = _repo_in_process(HERE.parents[3], HERE.parents[4])
+    assert out == str(HERE.parents[4]) and err == ""
+
+
+def test_an_installed_copy_takes_the_variable(tmp_path):
+    """A wheel-like layout: the package in site/, no scripts/probatrix/study.py above it."""
+    import shutil
+    site = tmp_path / "site"
+    shutil.copytree(HERE.parents[2], site / "probatrix", ignore=shutil.ignore_patterns("__pycache__", "benchmarks"))
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    assert _repo_in_process(site, repo) == (str(repo), "")
+    assert _repo_in_process(site)[0] == str(tmp_path)  # no variable: the folder above, as before

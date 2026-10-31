@@ -18,18 +18,31 @@ file first, then its parents, then the root, then Project.default_kind (kinds.ki
 design_root is the first root: the one that the tools use when the user gives no other.
 
 The default Project is made from the place of this package: the repo is the folder above
-scripts/ (or the folder that the variable PROBATRIX_REPO names). To use another one, call set_project(Project.at(repo)) or use(project) (a context
+scripts/. An installed copy (a wheel) has no repo around it: it reads the variable PROBATRIX_REPO (a clone ignores it, with a warning). To use another one, call set_project(Project.at(repo)) or use(project) (a context
 manager, for tests). Code that needs a folder asks project(); it does not keep a copy.
 """
 
 import contextlib
 import os
+import sys
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
-# parents: core, probatrix, scripts, then the repo. An installed copy of the package (a wheel) has no repo
-# around it: the variable PROBATRIX_REPO names the repo then.
-_REPO = Path(os.environ.get("PROBATRIX_REPO") or Path(__file__).resolve().parents[3])
+def find_repo(here, env=None):
+    """The repo of the default Project. here: the file of this module (parents: core, probatrix, scripts, repo).
+    A clone (the folder above scripts/ has scripts/probatrix/study.py) is always its own repo. The variable
+    PROBATRIX_REPO (env) is for an installed copy (a wheel), which has no repo around it: it counts only
+    when the folder above is not a clone. If both exist and differ, the clone wins and one warning goes to stderr."""
+    clone = Path(here).resolve().parents[3]
+    named = env.get("PROBATRIX_REPO") if env is not None else None
+    if (clone / "scripts" / "probatrix" / "study.py").is_file():
+        if named and Path(named).resolve() != clone:
+            print(f"warning: PROBATRIX_REPO={named} is ignored: this clone ({clone}) is its own repo", file=sys.stderr)
+        return clone
+    return Path(named) if named else clone
+
+
+_REPO = find_repo(__file__, os.environ)
 
 
 @dataclass(frozen=True)
