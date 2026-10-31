@@ -53,6 +53,8 @@ PriosTwo   == {0, -1}
 ArgsDefault == {<<0, 2>>, <<2, 2>>, <<3, 2>>, <<0, 0>>}
 ArgsSmall   == {<<0, 1>>, <<1, 1>>}
 ArgsChecks  == {<<0, 1>>, <<2, 1>>, <<0, 0>>}
+\* Valid arguments only: the limit is at least 1 and the count is not above it.
+ArgsValid   == {<<0, 2>>, <<2, 2>>}
 
 -----------------------------------------------------------------------------
 (* Properties of the library modules *)
@@ -66,6 +68,12 @@ Inv_CurIsReady           == K!S!CurIsReady
 Inv_RunRuleHolds         == K!S!RunRuleHolds
 Inv_CountLeLimit         == K!CountLeLimit
 Inv_NoWaitWhileAvailable == K!NoWaitWhileAvailable
+\* The count is never above the limit, with or without runtime checks. Not a
+\* requirement property: CountLeLimit has the premise RuntimeChecks. This is the
+\* evidence for the condition of use of sem finding 1: with
+\* CONFIG_NO_RUNTIME_CHECKS, k_sem_init() gets only a limit above 0 and an
+\* initial count not above the limit (configuration nochecks_valid).
+Inv_CountLeLimitAlways   == \A o \in MCSems : r[o].init => r[o].count <= r[o].limit
 Inv_TokenConservation    == K!TokenConservation
 \* @expected violation (configuration isr_waits)
 Inv_NoPanic              == K!NoPanic

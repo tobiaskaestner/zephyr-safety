@@ -122,6 +122,7 @@ MCKSem default         pass        states=261836 depth=23
 MCKSem poll            pass        states=4242 depth=16
 MCKSem two_sems        pass        states=9976 depth=16
 MCKSem nochecks        pass        states=4820 depth=18
+MCKSem nochecks_valid pass
 MCKSem live            pass        states=1747 depth=13
 MCKSem reach           probes
 MCKSem reach_poll      probes

@@ -49,12 +49,12 @@ def test_the_first_slice_has_the_two_studies():
         {"study": "design-properties", "experiment": "mc-expected", "mode": "rerun"}]
 
 
-def test_the_experiment_reads_the_72_lines_of_the_list():
+def test_the_experiment_reads_the_73_lines_of_the_list():
     e = Design(ROOT).experiment("mc-expected")
     pts = K.points(e.data)
-    assert len(pts) == 72 and pts[0]["id"] == "WaitQueueTest:default"
+    assert len(pts) == 73 and pts[0]["id"] == "WaitQueueTest:default"
     got = K.generated_checks(e.data)
-    assert sum(c["metric"] == "verdict" for c in got) == 72
+    assert sum(c["metric"] == "verdict" for c in got) == 73
     assert {c["metric"] for c in got} == {"verdict", "states", "depth"}
     for p in [*e.data["subject"], *e.data["tools"]]:
         assert (REPO / p).exists()
