@@ -393,9 +393,10 @@ CallsHoldLock ==
 \* @source ZEP-SRS-5-19
 CountLeLimit == RuntimeChecks => \A o \in Objs : r[o].init => r[o].count <= r[o].limit
 
-\* Reading: a thread waits on a semaphore only while its count is 0 ("while
-\* the count is zero, the thread shall be blocked"; with the count above
-\* 0, the thread acquires it at once, 5-7).
+\* Reading: a thread waits on a semaphore only while its count is 0 (5-8:
+\* "while the count is zero ... block the thread"; with the count above 0,
+\* the thread acquires it at once, 5-7). The wait ends by a hand-over of a
+\* give, by the timeout or by a reset; each one is a step of the model.
 \* @kind invariant
 \* @source ZEP-SRS-5-8
 NoWaitWhileAvailable == \A o \in Objs : r[o].count > 0 => S!WQ!W(o) = {}
@@ -413,7 +414,9 @@ TokenConservation == \A o \in Objs : tokens[o] = r[o].count + Inflight(o)
 
 \* Reading: a give wakes a waiting thread if one waits, and then the count
 \* does not change (the woken thread acquires the semaphore, 5-14). Else
-\* the give increments the count (5-13), but not above the limit (5-19).
+\* the give increments the count, but not above the limit: 5-13 asks for
+\* the increment only without a waiter and below the maximum, and 5-19
+\* asks for no change at the maximum.
 \* @kind action-property
 \* @source ZEP-SRS-5-13
 \* @source ZEP-SRS-5-14
@@ -441,9 +444,12 @@ GiveWakesHighest ==
              /\ (prio[u] = prio[t] => stamp[t] <= stamp[u])]_vars
 
 \* Reading: a take with the count above 0 returns 0 and decrements the
-\* count (5-7). A take with the count 0 and K_NO_WAIT returns -EBUSY and
-\* does not wait (5-11). A take of a thread with the count 0 and a timeout
-\* waits (5-8).
+\* count (5-7). A take of a thread or an ISR with the count 0 and K_NO_WAIT
+\* returns -EBUSY without a wait (5-11): the count and the wait queues do
+\* not change. A take of a thread with the count 0 and a timeout other than
+\* K_NO_WAIT waits (5-8). The end of the wait is the hand-over of a give,
+\* the timeout or a reset (WaitResult, TimeoutReturnsEagain, ResetWakesAll,
+\* WaiterServedIfGives).
 \* @kind action-property
 \* @source ZEP-SRS-5-7
 \* @source ZEP-SRS-5-8
@@ -533,8 +539,11 @@ PollSignalMeansAvailable ==
     [][\A k \in DOMAIN obs'.calls :
          obs'.calls[k].fn = W!PollFn => obs'.calls[k].res > 0]_vars
 
-\* Detector of the condition of use IsrWaits: no panic. An ISR may take a
-\* semaphore only without a wait (5-20).
+\* Detector of the condition of use IsrWaits ("an ISR does not wait"): no
+\* panic. This is not the evidence of 5-20 itself. 5-20 asks that a thread
+\* or ISR can give and that an ISR can take with K_NO_WAIT. The evidence
+\* is that the ISR actors have the steps Give and Take with K_NO_WAIT (the
+\* interface of the model). NoPanic detects an ISR that waits.
 \* @kind invariant
 \* @source ZEP-SRS-5-20
 NoPanic == S!NoPanic
@@ -550,11 +559,13 @@ NoUndefined == S!NoUndefined
 \* A give on o in the step.
 GiveOn(o) == \E a \in Actors : Give(o, a)
 
-\* Reading of 5-8 ("blocked until the semaphore is released"): if gives on
-\* o occur again and again, each waiting thread stops its wait. Holds for
-\* equal priorities. TLC finds a violation for different priorities: a
-\* waiter with a low priority starves (the gives go to the waiter with the
-\* highest priority, 5-14).
+\* Reading of 5-8 (the wait ends by a hand-over, the timeout or a reset): if
+\* gives on o occur again and again, each waiting thread stops its wait.
+\* Holds for equal priorities. TLC finds a violation for different
+\* priorities: a waiter with a low priority starves. This is the intended
+\* order of 5-14 (the gives go to the waiter with the highest priority),
+\* not a violation of 5-8, which has the hand-over as only one of the
+\* three ends.
 \* @kind liveness
 \* @source ZEP-SRS-5-8
 WaiterServedIfGives ==
