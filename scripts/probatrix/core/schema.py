@@ -1,12 +1,16 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""The schemas of the hand-written YAML files (scripts/probatrix/benchmarks/schemas/).
+"""The schemas of the hand-written YAML files.
 
-    problems(kind, data)    all violations, as "<key path>: <text>"
-    check(kind, data, file) raise SchemaError at the first violation
+    register(prefix, folder)       make the schema folder of a kind known (its $id prefix)
+    problems(kind, data)           all violations, as "<key path>: <text>"
+    check(kind, data, file)        raise SchemaError at the first violation
 
-kind is "experiment", "study", "hypotheses" or "boards". A schema gives the
+A kind of study brings a folder of <name>.schema.yaml files. The $id of each file is
+"<prefix>/<name>.schema.yaml" (for the benchmarks: latbench/study.schema.yaml). "kind" in the
+calls below is the name of a file ("experiment", "study", "hypotheses", "boards"); the prefix is
+the one that was registered first, or the one given with prefix=. A schema gives the
 keys and their types (an unknown key is an error, with the nearest known
 key as a hint); the meaning of a check, a point or a central result is
 checked by checks.py, run.py and lint.py. The copies of experiment.yaml in
@@ -21,25 +25,39 @@ from pathlib import Path
 
 import yaml
 
-SCHEMA_DIR = Path(__file__).resolve().parent.parent / "benchmarks" / "schemas"   # until the registry of the next commit
-KINDS = ("experiment", "study", "hypotheses", "boards")
+from probatrix.core.errors import SchemaError  # noqa: F401  (schema.SchemaError)
+
+_FOLDERS = {}          # $id prefix -> schema folder
 
 
-class SchemaError(ValueError):
-    pass
+def register(prefix, folder):
+    """Make the schema folder of a kind known. The first prefix registered is the default one."""
+    folder = Path(folder)
+    if _FOLDERS.get(prefix, folder) != folder:
+        raise ValueError(f"the schema prefix {prefix!r} is registered for {_FOLDERS[prefix]}")
+    _FOLDERS[prefix] = folder
+    validator.cache_clear()
+
+
+def prefixes():
+    return list(_FOLDERS)
 
 
 @functools.cache
-def validator(kind):
+def validator(kind, prefix=None):
     import jsonschema
     from referencing import Registry, Resource
 
+    if not _FOLDERS:
+        raise SchemaError("no schema folder is registered (a kind registers its folder when it is imported)")
+    prefix = prefix or next(iter(_FOLDERS))
     resources = []
-    for f in sorted(SCHEMA_DIR.glob("*.schema.yaml")):
-        s = yaml.safe_load(f.read_text())
-        resources.append((s["$id"], Resource.from_contents(s)))
+    for folder in _FOLDERS.values():
+        for f in sorted(folder.glob("*.schema.yaml")):
+            s = yaml.safe_load(f.read_text())
+            resources.append((s["$id"], Resource.from_contents(s)))
     registry = Registry().with_resources(resources)
-    schema = dict(registry.contents(f"latbench/{kind}.schema.yaml"))
+    schema = dict(registry.contents(f"{prefix}/{kind}.schema.yaml"))
     cls = jsonschema.validators.validator_for(schema)
     return cls(schema, registry=registry)
 
@@ -78,14 +96,14 @@ def text(err):
     return err.message
 
 
-def problems(kind, data):
-    v = validator(kind)
+def problems(kind, data, prefix=None):
+    v = validator(kind, prefix)
     errs = sorted(v.iter_errors(plain(data)), key=lambda e: [str(p) for p in e.absolute_path])
     return [f"{where(e)}: {text(e)}" for e in errs]
 
 
-def check(kind, data, file):
-    p = problems(kind, data)
+def check(kind, data, file, prefix=None):
+    p = problems(kind, data, prefix)
     if p:
         more = f" (and {len(p) - 1} more; 'study.py design lint' lists all)" if len(p) > 1 else ""
         raise SchemaError(f"{file}: {p[0]}{more}")

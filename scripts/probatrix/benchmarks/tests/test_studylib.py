@@ -1,7 +1,9 @@
 # Copyright (c) 2026 inovex GmbH
 # SPDX-License-Identifier: Apache-2.0
 
-"""Unit tests of studylib: seals, values, check forms, central results and a build (no board)."""
+"""Unit tests of studylib: values, check forms, central results and a build (no board).
+
+The seal, the layout, the JSON output and the design loader are tested in core/tests."""
 
 import json
 from pathlib import Path
@@ -11,9 +13,10 @@ import yaml
 
 SCRIPTS = Path(__file__).resolve().parent.parent
 
+from probatrix.benchmarks.studylib import boardaxis  # noqa: E402
 from probatrix.benchmarks.studylib import build, central, checks, instance, stats  # noqa: E402
 
-from probatrix.core import jsonout, layout, seal
+from probatrix.core import seal  # noqa: E402
 from probatrix.core.design import Design  # noqa: E402
 from probatrix.benchmarks.studylib.stats import NoValue  # noqa: E402
 from probatrix.core import config  # noqa: E402
@@ -51,41 +54,11 @@ class Src:
         return self.runs[ref]
 
 
-# ------------------------------------------------------------------ seal and layout
-def test_seal_write_verify_and_tamper(tmp_path):
-    run = tmp_path / "ex-a" / "20260101T000000Z"
-    (run / "t" / "p").mkdir(parents=True)
-    (run / "manifest.json").write_text("{}")
-    (run / "t" / "p" / "rep1.log").write_text("LAT BEGIN\n")
-    d = seal.write(run)
-    assert d.startswith("sha256:") and seal.verify(run) == d
-    assert seal.write(run) == d  # the same seal again
-    (run / "t" / "p" / "rep1.log").write_text("changed\n")
-    with pytest.raises(seal.SealError):
-        seal.verify(run)
-    with pytest.raises(seal.SealError):
-        seal.write(run)
-
-
-def test_layout_names_and_folders(tmp_path):
-    assert str(layout.study_folder("load-scaling@x/t2t")) == "st-load-scaling@x/st-t2t"
-    assert str(layout.run_folder("e/20260101T000000Z")) == "ex-e/20260101T000000Z"
-    assert layout.strip_board("a@b/c") == "a/c"
-    root = tmp_path / "top"
-    (root / "st-a@b" / "st-c").mkdir(parents=True)
-    for f in (root, root / "st-a@b", root / "st-a@b" / "st-c"):
-        (f / "instance.json").write_text("{}")
-    assert layout.instance_path_of(root / "st-a@b" / "st-c", root) == "a@b/c"
-    assert layout.find_root(root / "st-a@b" / "st-c") == root.resolve()
-    assert layout.run_id_of(root / "ex-e" / "20260101T000000Z") == "e/20260101T000000Z"
-
-
-def test_jsonout_is_deterministic(tmp_path):
-    obj = {"b": [1, 2], "a": {"rows": [[1, "x"], [2, "y"]]}, "c": [{"d": 1}]}
-    s1 = jsonout.write(tmp_path / "x.json", obj)
-    s2 = jsonout.write(tmp_path / "y.json", json.loads((tmp_path / "x.json").read_text()))
-    assert s1 == s2
-    assert json.loads((tmp_path / "x.json").read_text()) == obj
+# ------------------------------------------------------------------ board axis
+def test_board_axis_of_an_instance_path():
+    assert boardaxis.strip_board("a@b/c") == "a/c"
+    assert boardaxis.board_suffix("a/b@x/c") == "x"
+    assert boardaxis.board_suffix("a/c") == ""
 
 
 # ------------------------------------------------------------------ values

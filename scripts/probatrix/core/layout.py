@@ -48,19 +48,6 @@ def run_folder(run_id):
     return Path(EXPERIMENT_PREFIX + exp) / utc
 
 
-def strip_board(instance_path):
-    """The study path of an instance path."""
-    return "/".join(n.split("@")[0] for n in instance_path.split("/") if n)
-
-
-def board_suffix(instance_path):
-    """The board name in the path ('' if no level of the path fixes a board)."""
-    for n in instance_path.split("/"):
-        if "@" in n:
-            return n.split("@", 1)[1]
-    return ""
-
-
 def instance_path_of(folder, root):
     """The instance path of an instance folder below the results root."""
     rel = Path(folder).relative_to(root)

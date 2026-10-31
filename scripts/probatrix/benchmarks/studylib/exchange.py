@@ -58,7 +58,7 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import instance
+from . import boardaxis, instance
 
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import Design, repo_rel
@@ -99,7 +99,7 @@ def instance_rel(ipath):
 
 def study_path(ipath):
     """The study path of an instance path with the top name ("kernel-latency/a@b/c" gives "a/c")."""
-    return layout.strip_board(ipath.split("/", 1)[1]) if "/" in ipath else ""
+    return boardaxis.strip_board(ipath.split("/", 1)[1]) if "/" in ipath else ""
 
 
 def runs_to_export(lab, root, campaigns=None, all_runs=False):
@@ -351,7 +351,7 @@ def import_(lab, in_file, log=print, dry=False):
                 level = next((i for i, n in enumerate(names) if "@" in n), None)
                 if level is None:
                     raise ExchangeError(f"{item['instance']}: no level of the instance path fixes the board")
-                instance.new(design, lab.results, design.top.name, layout.strip_board("/".join(names[:level + 1])),
+                instance.new(design, lab.results, design.top.name, boardaxis.strip_board("/".join(names[:level + 1])),
                              item["board"])
                 if not (folder / "instance.json").is_file():
                     raise ExchangeError(f"the instance {item['instance']} was not made here")

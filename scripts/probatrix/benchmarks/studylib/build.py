@@ -30,7 +30,7 @@ from pathlib import Path
 
 from probatrix.core import config
 
-from . import central, checks, instance, runfiles, stats
+from . import boardaxis, central, checks, instance, runfiles, stats
 
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import Design, repo_rel, repo_rev
@@ -129,13 +129,13 @@ class Tree:
 
     # ------------------------------------------------------------ lookups
     def study(self, folder):
-        return self.design.study(layout.strip_board(self.ipath[folder]))
+        return self.design.study(boardaxis.strip_board(self.ipath[folder]))
 
     def board(self, folder):
         return instance.board_of(folder)
 
     def find_instance(self, study_path, board):
-        hits = [f for f in self.folders if layout.strip_board(self.ipath[f]) == study_path
+        hits = [f for f in self.folders if boardaxis.strip_board(self.ipath[f]) == study_path
                 and (board is None or self.board(f) == board)]
         if len(hits) != 1:
             raise NoValue(f"instance of study {study_path} for board {board}: {len(hits)} found")
@@ -573,7 +573,7 @@ class Context:
         """The central result cr_id of the instance of the sub-study name below this instance; NoValue
         if this results tree has no such instance (often: no run of it on this board yet)."""
         for c in self.tree.folders:
-            if c.parent == self.folder and layout.strip_board(self.tree.ipath[c]).rsplit("/", 1)[-1] == name:
+            if c.parent == self.folder and boardaxis.strip_board(self.tree.ipath[c]).rsplit("/", 1)[-1] == name:
                 sj = self.tree.results.get(c)
                 if sj:
                     r = next((r for r in sj["central_results"] if r["id"] == cr_id), None)

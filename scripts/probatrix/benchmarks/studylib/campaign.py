@@ -49,7 +49,7 @@ from probatrix.benchmarks import trees
 
 from probatrix.core import config
 
-from . import instance
+from . import boardaxis, instance
 
 from probatrix.core import jsonout, layout, seal
 from . import lab as labmod
@@ -95,7 +95,7 @@ def resolve(lab, folder, design):
     root = lab.results / design.top.name
     if folder.is_relative_to(root) and (folder / "instance.json").is_file():
         ipath = layout.instance_path_of(folder, root)
-        return layout.strip_board(ipath), exp, instance.board_of(folder)
+        return boardaxis.strip_board(ipath), exp, instance.board_of(folder)
     raise CampaignError(f"{folder} is not a study or experiment folder of the design {config.project().design_root}, "
                         f"and not an instance folder of {root}")
 
@@ -152,7 +152,7 @@ def find_instance(lab, design, study_path, board):
     if not root.is_dir():
         return None
     for f in layout.instance_folders(root):
-        if layout.strip_board(layout.instance_path_of(f, root)) == study_path and instance.board_of(f) == board:
+        if boardaxis.strip_board(layout.instance_path_of(f, root)) == study_path and instance.board_of(f) == board:
             return f
     return None
 

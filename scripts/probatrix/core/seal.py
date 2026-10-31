@@ -13,8 +13,7 @@ import hashlib
 from pathlib import Path
 
 
-class SealError(Exception):
-    pass
+from probatrix.core.errors import SealError  # noqa: F401  (seal.SealError)
 
 
 def file_sha256(path):

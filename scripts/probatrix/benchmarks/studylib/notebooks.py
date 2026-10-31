@@ -35,6 +35,7 @@ import re
 from pathlib import Path
 
 
+from . import boardaxis
 from probatrix.core import config
 import yaml
 
@@ -148,7 +149,7 @@ def study_cells(inst, root):
     imports = (yaml.safe_load(sy.read_text()) or {}).get("imports") or [] if sy.is_file() else []
     if imports:
         board = sj.get("board")
-        owners = {layout.strip_board(layout.instance_path_of(f, root)): f for f in layout.instance_folders(root)
+        owners = {boardaxis.strip_board(layout.instance_path_of(f, root)): f for f in layout.instance_folders(root)
                   if f != root and json.loads((f / "instance.json").read_text()).get("board") in (None, board)}
         lines = []
         for imp in imports:

@@ -25,7 +25,7 @@ versions, commands) and <tree>/<point>/ with rep<N>.log, the .config, the
 devicetree, the images <app>-<tree>-<point>.elf/.hex and build.log.
 summary.txt has the percentiles, one column per axis. At the end, run.py
 writes the seal <UTC time>.sha256 beside the run folder (see
-studylib/seal.py). If <out> is the folder of a study instance (it has
+core/seal.py). If <out> is the folder of a study instance (it has
 instance.json), the run goes to <out>/ex-<experiment>/<UTC time>/ and
 run.py adds it to the run list (--role, --reason; --campaign names the
 campaign in the entry). A run that stops before its seal (an error, Ctrl-C,

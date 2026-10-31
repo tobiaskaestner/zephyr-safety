@@ -28,6 +28,7 @@ from pathlib import Path
 
 from probatrix.benchmarks import trees
 
+from . import boardaxis
 from probatrix.core import jsonout, layout, seal
 from probatrix.core.design import repo_rel, repo_rev
 
@@ -187,7 +188,7 @@ def check_target(design, folder, experiment, board):
     folder = Path(folder).resolve()
     exp = design.canonical(experiment)
     root = layout.find_root(folder)
-    study = design.study(layout.strip_board(layout.instance_path_of(folder, root)))
+    study = design.study(boardaxis.strip_board(layout.instance_path_of(folder, root)))
     rerun = {i["experiment"] for i in study.imports if i.get("mode") == "rerun"}
     if exp not in study.experiments and exp not in rerun:
         raise InstanceError(f"study {study.path}: {exp} is not one of its experiments, and it does not re-run it")
@@ -215,7 +216,7 @@ def add(design, folder, run_dir, role="evidence", reason=None, copy=False, campa
     exp = design.canonical(manifest["experiment"])      # an earlier name of a renamed experiment
     data = load(folder)
     root = layout.find_root(folder)
-    study = design.study(layout.strip_board(layout.instance_path_of(folder, root)))
+    study = design.study(boardaxis.strip_board(layout.instance_path_of(folder, root)))
     rerun = {i["experiment"] for i in study.imports if i.get("mode") == "rerun"}
     if exp not in study.experiments and exp not in rerun:
         raise InstanceError(f"study {study.path}: {exp} is not one of its experiments, and it does not re-run it")

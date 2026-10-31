@@ -108,6 +108,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[2]))
 # The lab space and the restart come first: studylib.lab needs no package outside the standard
 # library, so a study.py that the system Python starts can restart with the Python of the lab
 # space before it imports PyYAML and the other packages.
+from probatrix.benchmarks.studylib import boardaxis  # noqa: E402
 from probatrix.benchmarks.studylib import lab as labmod  # noqa: E402
 
 REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
@@ -545,7 +546,7 @@ def explain(results, design, only=None):
     """For each central result: its definition, the rows of the build and the sentence of each row."""
     for folder, sj in sorted(results.items(), key=lambda x: str(x[0])):
         try:
-            study = design.study(layout.strip_board(sj["instance"].split("/", 1)[1]) if "/" in sj["instance"] else "")
+            study = design.study(boardaxis.strip_board(sj["instance"].split("/", 1)[1]) if "/" in sj["instance"] else "")
         except DesignError:
             continue
         defs = {c["id"]: c for c in study.central_results}

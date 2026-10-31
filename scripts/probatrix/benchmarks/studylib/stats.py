@@ -37,16 +37,7 @@ import math
 import re
 
 
-class NoValue(Exception):
-    """The data do not give the value (the metric is absent, a form has no tool)."""
-
-
-class MissingRun(NoValue):
-    """No evidence run of an experiment in an instance: the run is to be made (analysis missing)."""
-
-    def __init__(self, experiment, where):
-        super().__init__(f"no evidence run of {experiment} in {where}")
-        self.experiment, self.where = experiment, where
+from probatrix.core.errors import MissingRun, NoValue  # noqa: F401  (the errors live in core)
 
 
 HIST_STATS = {"n", "min", "max", "mean", "invalid"}

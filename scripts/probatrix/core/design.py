@@ -18,8 +18,7 @@ from probatrix.core import config, layout, schema
 from probatrix.core.seal import file_sha256
 
 
-class DesignError(Exception):
-    pass
+from probatrix.core.errors import DesignError  # noqa: F401  (design.DesignError)
 
 
 def load(kind, path):
