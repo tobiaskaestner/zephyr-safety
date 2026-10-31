@@ -43,6 +43,14 @@ from pathlib import Path
 CONFIG = Path(".lab") / "config"
 # In a results root outside the lab folder: a file with the path of the lab folder.
 RESULTS_MARK = ".lab-space"
+# The launcher of a design repo, newest layout first. A lab space can hold an old clone, so the
+# tools look for each of them in this order: the layout of the package probatrix, the layout
+# before the top launcher, the layout of 98b1afe and before. This is the one place of the list.
+LAUNCHERS = ("scripts/probatrix/study.py", "scripts/probatrix/benchmarks/study.py", "scripts/benchmarks/study.py")
+# The folders of requirements*.txt and requirements.lock in a design repo, newest layout first.
+REQUIREMENTS_DIRS = ("scripts/probatrix/benchmarks", "scripts/benchmarks")
+# The variable that stops a second re-exec (the study.py of 98b1afe uses the same name).
+REEXEC_ENV = "LATBENCH_STUDY_REEXEC"
 
 
 class LabError(Exception):
@@ -176,14 +184,59 @@ def restart_with_lab_python(script, argv, env_var="LATBENCH_PYTHON_RESTART"):
     os.execv(str(lab.python), [str(lab.python), str(script), *argv])
 
 
+def launcher_of(repo):
+    """The first launcher of LAUNCHERS that the design repo has (a Path), or None."""
+    for rel in LAUNCHERS:
+        f = Path(repo) / rel
+        if f.is_file():
+            return f
+    return None
+
+
+def launchers_text(repo):
+    """The three launcher paths of repo, for an error text."""
+    a, b, c = (Path(repo) / rel for rel in LAUNCHERS)
+    return f"{a}, {b} or {c}"
+
+
+def reexec_in_lab_repo(argv, script):
+    """Run the launcher of the design repo of the lab space with the Python of the lab space (its
+    venv, [python] of .lab/config), if this is another launcher or another Python. script is the
+    launcher that calls this function. Only the standard library is needed here."""
+    if os.environ.get(REEXEC_ENV) or (argv[:2] == ["lab", "init"]):
+        return
+    lab = find()
+    if lab is None:
+        return
+    target = launcher_of(lab.repo)
+    python = lab.python
+    # a venv Python is a link to the base Python: compare the environments, not the files
+    same_python = python is None or (lab.venv is not None and Path(sys.prefix).resolve() == lab.venv.resolve())
+    if target is not None and target.resolve() == Path(script).resolve() and same_python:
+        return
+    if target is None:
+        sys.exit(f"error: the lab space {lab.folder} has the design repo {lab.repo}, which has none of "
+                 f"{launchers_text(lab.repo)}")
+    if python is not None and not python.exists():
+        sys.exit(f"error: the lab space {lab.folder} has the Python environment {lab.venv}, which has no {python}")
+    exe = str(python) if python is not None else sys.executable
+    os.environ[REEXEC_ENV] = str(Path(script).resolve())
+    os.execv(exe, [exe, str(target), *argv])
+
+
 def in_venv():
     return sys.prefix != getattr(sys, "base_prefix", sys.prefix)
 
 
 def requirements(repo, name="requirements.txt"):
-    """[(name, specifier text)] of scripts/probatrix/benchmarks/<name> of a repo (no comments)."""
+    """[(name, specifier text)] of <name> in the first folder of REQUIREMENTS_DIRS of a repo that has it
+    (no comments)."""
     import re
-    f = Path(repo) / "scripts" / "probatrix" / "benchmarks" / name
+    f = Path(repo) / REQUIREMENTS_DIRS[0] / name
+    for d in REQUIREMENTS_DIRS:
+        if (Path(repo) / d / name).is_file():
+            f = Path(repo) / d / name
+            break
     out = []
     for ln in f.read_text().splitlines() if f.is_file() else []:
         ln = ln.split("#", 1)[0].strip()
@@ -236,8 +289,8 @@ def init(folder, repo, name=None, trees_root=None, trees_source=None, sdk=None, 
     if (folder / CONFIG).exists():
         raise LabError(f"{folder} is a lab space already ({folder / CONFIG})")
     repo = Path(repo).expanduser().resolve()
-    if not (repo / "scripts" / "probatrix" / "benchmarks" / "study.py").is_file():
-        raise LabError(f"{repo} is not a safety repo (no scripts/probatrix/benchmarks/study.py)")
+    if launcher_of(repo) is None:
+        raise LabError(f"{repo} is not a safety repo (no {', '.join(LAUNCHERS[:-1])} or {LAUNCHERS[-1]})")
     name = name or folder.name
     cfg = configparser.ConfigParser()
 
