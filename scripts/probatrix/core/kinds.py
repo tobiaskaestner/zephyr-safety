@@ -37,7 +37,7 @@ from probatrix.core import config
 from probatrix.core.errors import NoValue
 
 # name of a kind -> the module that registers it (loaded on the first get() of an unknown name)
-PLUGINS = {"latbench": "probatrix.benchmarks.kind"}
+PLUGINS = {"latbench": "probatrix.benchmarks.kind", "tlaplus": "probatrix.tlaplus.kind"}
 
 
 class KindError(Exception):

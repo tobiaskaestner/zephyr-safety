@@ -1,0 +1,55 @@
+# Copyright (c) 2026 inovex GmbH
+# SPDX-License-Identifier: Apache-2.0
+
+# The keys and types of experiment.yaml of the kind tlaplus (JSON Schema 2020-12, in YAML).
+# One experiment is one list file: each line of the list is a point. The rules between the keys
+# (a list inside a subject path, simulate for tlc-simulate) are in tlaplus/kind.py (the design lint).
+$schema: https://json-schema.org/draft/2020-12/schema
+$id: tlaplus/experiment.schema.yaml
+title: experiment.yaml
+type: object
+additionalProperties: false
+required: [name, tool, list, subject, tools]
+properties:
+  name: {$ref: "common.schema.yaml#/$defs/name"}
+  kind:
+    description: the name of the kind of study (core/kinds.py); the nearest design file that names one wins
+    type: string
+  renamed_from:
+    description: the earlier names of the experiment (runs and refs with these names stay valid)
+    oneOf:
+      - {$ref: "common.schema.yaml#/$defs/name"}
+      - {type: array, items: {$ref: "common.schema.yaml#/$defs/name"}, minItems: 1}
+  tool:
+    description: >
+      tlc: TLC model checking. tlc-simulate: TLC in simulation mode (-simulate).
+      apalache and traces: reserved, no adapter yet.
+    enum: [tlc, tlc-simulate, apalache, traces]
+  list:
+    description: the list file, a path below the root of the repository; one line is one point
+    type: string
+    minLength: 1
+  subject:
+    description: >
+      the paths (files or folders) whose content the results depend on: the models and the list.
+      A run counts for the experiment only if their git trees are the trees of the run.
+    $ref: "common.schema.yaml#/$defs/paths"
+    minItems: 1
+  tools:
+    description: the paths of the tools that make the result (the runner, the pin of the jar, the selftest)
+    $ref: "common.schema.yaml#/$defs/paths"
+    minItems: 1
+  simulate:
+    description: >
+      tlc-simulate only: the defaults of the point parameters. A line of the list can give
+      depth=, traces= or seed= instead.
+    type: object
+    additionalProperties: false
+    required: [depth, traces, seed]
+    properties:
+      depth: {type: integer, minimum: 1}
+      traces: {type: integer, minimum: 1}
+      seed: {type: integer}
+  acceptance:
+    type: array
+    items: {$ref: "common.schema.yaml#/$defs/check"}
