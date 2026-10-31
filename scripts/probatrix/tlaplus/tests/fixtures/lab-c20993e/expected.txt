@@ -1,0 +1,144 @@
+# Expected result of each model. One line for each run:
+#
+#   <module> <config> <expected>
+#
+# <module>   a module in mc/ (without .tla)
+# <config>   the configuration mc/<module>_<config>.cfg
+# <expected> pass          TLC finds no error, and the model has at least
+#                          one state (a model without an initial state
+#                          gives the result no-states)
+#            fail:<Name>   TLC finds a violation of the property <Name>
+#                          (for an alias Prop_X == WQ!X, TLC names WQ!X)
+#            probes        TLC finds a violation of each invariant of the
+#                          configuration (one run for each probe)
+#            fail:Assert   an example test (<Module>Test) fails. Not an
+#                          expected result: the line of a test is pass.
+#
+# After the expected result, a line can have fields <key>=<value>
+# (tools/run_tlc.sh gives the full list):
+#
+# states=<n>  the distinct states, and depth=<n> the depth of the state
+#             graph, of a run with one worker and -fp 0. Each pass line
+#             has them. A different value fails the line: the state space
+#             changed. Record the new value in the commit of the change,
+#             with the reason.
+# heap=<size> the Java heap of the line (default: TLC_HEAP).
+#
+# tools/run_tlc.sh runs each line and compares the result. A difference
+# fails the run. The recorded counts of 2026-10-30 come from the lab run
+# 20261030-010342-adbf86df2 (one worker in each TLC process). They are
+# equal to the counts of round B.
+
+WaitQueueTest default pass           states=1 depth=1
+TimeoutTest   default pass           states=1 depth=1
+PlatformTest  default pass           states=1 depth=1
+SchedulerTest default pass           states=1 depth=1
+KSemTest      default pass           states=1 depth=1
+MCWaitQueue default pass             states=2133 depth=4
+MCWaitQueue reach   probes
+MCTimeout   dlist         pass       states=57 depth=5
+MCTimeout   minheap       pass       states=51 depth=5
+MCTimeout   minheap_full  fail:Inv_NoPanic
+MCTimeout   reach_dlist   probes
+MCTimeout   reach_minheap probes
+MCScheduler default        pass      states=556266 depth=20
+MCScheduler coop           pass      states=553614 depth=20
+MCScheduler smp            pass      states=270747 depth=17
+MCScheduler smp_rule       fail:Inv_RunRuleHolds
+MCScheduler isr_pend       fail:Inv_NoPanic
+MCScheduler missed_resched fail:Inv_RunRuleHolds
+MCScheduler wake_no_cancel fail:Inv_ArmedArePending
+MCScheduler reach          probes
+MCScheduler reach_smp      probes
+# The normative properties of lib/Scheduler.tla (method: README.rst,
+# "Behavior part and property part"). p7_rules and p7_rules_coop: ZEP-SRS-2-9 and 2-12 hold.
+# The expected failures are design findings of the pilot P7 (register:
+# claude/kernel-unit/tla/findings.md of the workspace notes).
+MCScheduler p7_rules       pass      states=556266 depth=20
+MCScheduler p7_rules_coop  pass      states=553614 depth=20
+# P7-a: k_thread_priority_set() of the current thread to the same priority
+# gives the CPU to a peer that became ready later (ZEP-SRS-2-13).
+MCScheduler p7_tie         fail:Sched!TieGoesToLongestReady
+# P7-b: k_thread_priority_set() of another ready thread gives the CPU of a
+# cooperative thread to a ready thread with a higher priority (ZEP-SRS-2-14).
+MCScheduler p7_coop        fail:Sched!CoopKeepsCpu
+# P7-c: k_thread_abort() calls update_cache(1): an abort gives the CPU of a
+# cooperative thread to a ready thread with a higher priority (ZEP-SRS-2-14),
+# and an abort by a thread leaves the cache different from the current
+# thread until the next reschedule point (RunRuleHolds).
+MCScheduler p7_abort       fail:Sched!CoopKeepsCpu
+MCScheduler coop_rule      fail:Inv_RunRuleHolds
+# Candidate P7-w (the waiter form of P7-a, 2026-10-31): k_thread_priority_set()
+# of a waiter to the priority that it has puts it behind the waiters of the
+# same priority (WaitQueue!KeepsArrivalOrder).
+MCScheduler arrival_same   fail:Sched!WQ!KeepsArrivalOrder
+# Platform (round A, 2026-10-29): the variant arch_swap() with PendSV
+# (CONFIG_USE_SWITCH=n). The configurations above without a suffix have
+# CONFIG_USE_SWITCH=y. The findings P7-a, P7-b and P7-c occur with both
+# variants.
+MCScheduler p7_tie_pendsv    fail:Sched!TieGoesToLongestReady
+MCScheduler p7_coop_pendsv   fail:Sched!CoopKeepsCpu
+MCScheduler p7_abort_pendsv  fail:Sched!CoopKeepsCpu
+MCScheduler coop_rule_pendsv fail:Inv_RunRuleHolds
+# small and small_pendsv: one object, no priority change; small_pendsv
+# also without the abort (see the comment of its .cfg file).
+MCScheduler small            pass    states=75841 depth=23
+MCScheduler small_pendsv     pass    states=109930 depth=35
+MCScheduler reach_pendsv     probes
+# Candidate finding SW-1: with arch_swap() an ISR in the gap before PendSV
+# wakes a cooperative waiter, and PendSV gives the CPU back to it while a
+# thread with a higher priority is ready (ZEP-SRS-2-12, 2-14). gap_coop is
+# the control with CONFIG_USE_SWITCH=y.
+MCScheduler gap_coop_pendsv  fail:Sched!BlockedLosesCpu
+MCScheduler gap_coop         pass    states=44268 depth=22
+# P2-w: an outer irq_lock() defers the reschedule of z_reschedule(), and
+# irq_unlock() is not a reschedule point (ZEP-SRS-2-9). Both variants.
+MCScheduler p2_window        fail:Sched!UnlockPreempts
+MCScheduler p2_window_pendsv fail:Sched!UnlockPreempts
+MCScheduler p2_rule          fail:Inv_RunRuleHolds
+MCScheduler p2_lock          pass    states=75650 depth=24
+MCScheduler p2_lock_pendsv   pass    states=151582 depth=35
+MCScheduler reach_lock       probes
+# Mutants: a thread waits under an outer interrupt lock.
+MCScheduler pend_locked        fail:Sched!NoSwitchWhileLocked
+MCScheduler pend_locked_pendsv fail:Inv_P_PendingIsUnlocked
+# Round B (2026-10-29): proposals P1, P3-P6 of the review of the reference
+# fake, and the join queue. small_b and reach_b: the swap data in both
+# directions (P1), z_unpend_all() (P4), the walk with a stop (P5).
+MCScheduler small_b          pass    states=324148 depth=24
+MCScheduler reach_b          probes
+MCScheduler join             pass    states=26085 depth=11
+MCScheduler reach_join       probes
+# F14: k_thread_abort() of another thread makes a joiner with a higher
+# priority ready, and halt_thread() does not reschedule (ZEP-SRS-2-9).
+MCScheduler f14_join         fail:Inv_PreemptibleRunsHighest
+MCScheduler f14_join_pendsv  fail:Inv_PreemptibleRunsHighest
+# P6-u: z_waitq_init() of an object with waiters (fault model).
+MCScheduler p6_init          fail:Inv_NoUndefined
+# KSem (roadmap step 2, the k_sem slice, 2026-10-30): objects/KSem.tla on
+# lib/Waitable.tla and the scheduler contract, with Scheduler!EnvNext as
+# its environment. One CPU, CONFIG_USE_SWITCH=y, DLIST, no outer lock.
+MCKSem default         pass        states=261836 depth=23
+MCKSem poll            pass        states=4242 depth=16
+MCKSem two_sems        pass        states=9976 depth=16
+MCKSem nochecks        pass        states=4820 depth=18
+MCKSem live            pass        states=1747 depth=13
+MCKSem reach           probes
+MCKSem reach_poll      probes
+# Design observation 4 of the sem findings: k_sem_reset() signals
+# K_POLL_STATE_SEM_AVAILABLE with the count 0.
+MCKSem poll_signal     fail:K!PollSignalMeansAvailable
+# Finding 1 of the sem findings: without runtime checks, a give above the
+# limit increments the count (the comparison is !=).
+MCKSem nochecks_tokens fail:Inv_TokenConservation
+# The conditions of use, broken: an ISR waits (ZEP-SRS-5-20), an init of a
+# semaphore with waiters (finding P6-u).
+MCKSem isr_waits       fail:Inv_NoPanic
+MCKSem reinit          fail:Inv_NoUndefined
+# Starvation: a waiter with a lower priority is never served (ZEP-SRS-5-14
+# gives each give to the waiter with the highest priority).
+MCKSem live_prio       fail:Live_WaiterServedIfGives
+# The model mutants of KSem (mc/MCKSemMutants.tla).
+MCKSemMutants give_counts     fail:Inv_TokenConservation
+MCKSemMutants pend_split      fail:Inv_NoWaitWhileAvailable
+MCKSemMutants reset_wakes_one fail:K!ResetWakesAll

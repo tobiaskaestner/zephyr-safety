@@ -1,0 +1,14 @@
+module	config	expected	result	verdict	violated	distinct	depth	trace	lasso	collision_calculated	collision_actual	seconds	workers	heap
+SelfSafety	inv	fail:Inv	fail:Inv	as expected	Inv	7	4	4	-	-	-	0.3	1	512m
+SelfSafety	action	fail:Rises	fail:Rises	as expected	Rises	8	4	5	-	-	-	0.3	1	512m
+SelfLasso	wf	fail:ReachesThree	fail:ReachesThree	as expected	ReachesThree	3	3	3	1	-	-	0.3	1	512m
+SelfFair	wf	pass	pass	as expected	-	4	4	-	-	0.0	-	0.3	1	512m
+SelfFair	nowf	fail:ReachesThree	fail:ReachesThree	as expected	ReachesThree	4	4	4	stutter	-	-	0.3	1	512m
+SelfChain	default	pass	pass	as expected	-	12	6	-	-	9.1E-18	-	0.3	1	512m
+SelfChoose	one	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.3	1	512m
+SelfChoose	assume	fail:Assume	fail:Assume	as expected	-	?	?	-	-	-	-	0.3	1	512m
+SelfNoInit	default	no-states	no-states	as expected	-	0	0	-	-	0.0	-	0.3	1	512m
+SelfRepro	default	pass	pass	as expected	-	4096	11	-	-	5.4E-12	-	0.7	1	512m
+SelfSym	nosym	pass	pass	as expected	-	6	2	-	-	4.9E-18	-	0.3	1	512m
+SelfSym	sym	pass	pass	as expected	-	2	2	-	-	7.6E-19	-	0.3	1	512m
+SelfSym	symfail	fail:YIsZero	fail:YIsZero	as expected	YIsZero	2	2	2	-	-	-	0.3	1	512m

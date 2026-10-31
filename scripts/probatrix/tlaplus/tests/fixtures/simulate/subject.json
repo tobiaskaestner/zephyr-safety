@@ -1,0 +1,17 @@
+{
+  "revision": "c20993ed8e7a61e1da23f3f9316802608a461445",
+  "subject": {
+    "spec/tla/lib": "6a92f1e88a6f2eae436c0685b2e4552c86026597",
+    "spec/tla/mc": "aad35e24e78ebf8a2a92fc4ddfe22b2ac94e33f9",
+    "spec/tla/objects": "56ffbb636c2aa47be14796d849329d8005870ffa",
+    "spec/tla/trace": "d399ee6fcacc86c8342a0dd4f462f2c5c192c854"
+  },
+  "tools": {
+    "spec/tla/tools/run_tlc.sh": "36e4b4748e2437fa0e8617936d582c1f1e4d3f19",
+    "spec/tla/tools/tla2tools.sha256": "6f82c0aeb78c3630c4290de59c2a28dde5607856",
+    "spec/tla/selftest": "58a28369a58f933ee3901502d3cfe8f88ab85dbb"
+  },
+  "subject_tree": "sha256:7ce929392f6583353ea9ccb61cd49449cac83857e33d482d1cde5f7f19f30941",
+  "tool_tree": "sha256:13f355a4959ca2deaa8e645abe4030bedc668fe1be9c0a3e5fdb06fc715829c1",
+  "jar_pin": "5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2"
+}

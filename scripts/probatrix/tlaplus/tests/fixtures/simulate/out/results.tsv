@@ -1,0 +1,4 @@
+module	config	expected	result	verdict	violated	distinct	depth	trace	lasso	collision_calculated	collision_actual	seconds	workers	heap
+MCKSem	default	pass	pass	as expected	-	?	?	-	-	-	-	3.1	1	2g
+MCKSem	live	fail:Inv_NoPanic	fail:Inv_NoPanic	as expected	Inv_NoPanic	?	?	5	-	-	-	0.8	1	2g
+MCKSem	poll	pass	fail:Inv_TokenConservation	UNEXPECTED (fail:Inv_TokenConservation)	Inv_TokenConservation	?	?	7	-	-	-	1.2	1	2g

@@ -1,0 +1,7 @@
+This run folder is synthetic. It is not the output of a real TLC run.
+
+There is no TLC simulation run in the repo yet. The files follow the format of run_tlc_remote.py
+(job.json, meta.env, results.tsv) with two extensions that the runner does not write yet: "tool" and
+"simulate" in job.json. The text of the logs follows the messages of TLC in simulation mode as the
+author knows them ("The number of states generated: N", "Simulation finished."). Check them against a
+real log when the runner supports -simulate.

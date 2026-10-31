@@ -1,0 +1,54 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/wrk/z/lab-tla/home -Djava.io.tmpdir=/wrk/z/lab-tla/runs/20261031-023823-c20993ed8/tmp -XX:ParallelGCThreads=2
+TLC2 Version 2026.10.20.183001 (rev: d2e1472)
+Running breadth-first search Model-Checking with fp 0 and seed -4217016710302507526 with 1 worker on 12 cores with 1820MB heap and 64MB offheap memory [pid: 3158015] (Linux 7.3.0-4-cachyos amd64, Eclipse Adoptium 25.0.5 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /wrk/z/lab-tla/safety/spec/tla/mc/KSemTest.tla
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/KSemTest_default/tlc-17619492121044425184/Integers.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/KSemTest_default/tlc-17619492121044425184/Sequences.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/KSemTest_default/tlc-17619492121044425184/TLC.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/TLC.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/KSemTest_default/tlc-17619492121044425184/Naturals.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /wrk/z/lab-tla/safety/spec/tla/objects/KSem.tla
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/KSemTest_default/tlc-17619492121044425184/FiniteSets.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Waitable.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Apalache.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Scheduler.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Platform.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/WaitQueue.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Timeout.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module TLC
+Semantic processing of module Apalache
+Semantic processing of module Platform
+Semantic processing of module WaitQueue
+Semantic processing of module Timeout
+Semantic processing of module Scheduler
+Semantic processing of module Waitable
+Semantic processing of module KSem
+Semantic processing of module KSemTest
+Linting of module Apalache
+Linting of module Platform
+Linting of module WaitQueue
+Linting of module Timeout
+Linting of module Scheduler
+Linting of module Waitable
+Linting of module KSem
+Linting of module KSemTest
+Starting... (2026-10-31 02:54:19)
+Warning: The invariant TestInc is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+(Use the -nowarning option to disable this warning.)
+Warning: The invariant TestSettle is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant TestTakeReset is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant TestValid is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Warning: The invariant TestCalls is a constant-level formula (i.e., it contains no variables, primes, or temporal operators) and evaluates to TRUE. To assert constant-level formulas in your spec, use ASSUME ConstInv. If you optionally want to give the assumption a name, write ASSUME YourAssumption == ConstInv instead. See https://explain.tlapl.us/assumptions-and-invariants for additional details.
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-10-31 02:54:19.
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 5.4E-20
+2 states generated, 1 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 1.
+The average outdegree of the complete state graph is 0 (minimum is 0, the maximum 0 and the 95th percentile is 0).
+Finished in 00s at (2026-10-31 02:54:19)

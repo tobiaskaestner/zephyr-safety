@@ -1,0 +1,68 @@
+module	config	expected	result	verdict	violated	distinct	depth	trace	lasso	collision_calculated	collision_actual	seconds	workers	heap
+WaitQueueTest	default	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.5	1	2g
+TimeoutTest	default	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.5	1	2g
+PlatformTest	default	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.4	1	2g
+SchedulerTest	default	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.6	1	2g
+KSemTest	default	pass	pass	as expected	-	1	1	-	-	5.4E-20	-	0.8	1	2g
+MCWaitQueue	default	pass	pass	as expected	-	2133	4	-	-	2.8E-12	-	1.2	1	2g
+MCWaitQueue	reach	probes	probes	as expected	Reach_LateHigherIsFirst Reach_ThreeWaitOnOne Reach_TwoObjectsInUse	215	4	4	-	-	-	1.6	1	2g
+MCTimeout	dlist	pass	pass	as expected	-	57	5	-	-	2.0E-15	-	0.6	1	2g
+MCTimeout	minheap	pass	pass	as expected	-	51	5	-	-	1.6E-15	-	0.5	1	2g
+MCTimeout	minheap_full	fail:Inv_NoPanic	fail:Inv_NoPanic	as expected	Inv_NoPanic	20	4	4	-	-	-	0.5	1	2g
+MCTimeout	reach_dlist	probes	probes	as expected	Reach_CancelThree Reach_DlistWorstCase Reach_LastArmedFirst	45	5	5	-	-	-	1.4	1	2g
+MCTimeout	reach_minheap	probes	probes	as expected	Reach_HeapFull	5	3	3	-	-	-	0.4	1	2g
+MCScheduler	default	pass	pass	as expected	-	556266	20	-	-	8.5E-7	2.0E-8	1764.7	1	2g
+MCScheduler	coop	pass	pass	as expected	-	553614	20	-	-	8.4E-7	4.7E-9	691.0	1	2g
+MCScheduler	smp	pass	pass	as expected	-	270747	17	-	-	2.7E-7	4.5E-9	1307.4	1	2g
+MCScheduler	smp_rule	fail:Inv_RunRuleHolds	fail:Inv_RunRuleHolds	as expected	Inv_RunRuleHolds	126	2	2	-	-	-	0.9	1	2g
+MCScheduler	isr_pend	fail:Inv_NoPanic	fail:Inv_NoPanic	as expected	Inv_NoPanic	167	2	2	-	-	-	0.8	1	2g
+MCScheduler	missed_resched	fail:Inv_RunRuleHolds	fail:Inv_RunRuleHolds	as expected	Inv_RunRuleHolds	1636	3	3	-	-	-	1.9	1	2g
+MCScheduler	wake_no_cancel	fail:Inv_ArmedArePending	fail:Inv_ArmedArePending	as expected	Inv_ArmedArePending	1179	3	3	-	-	-	1.6	1	2g
+MCScheduler	reach	probes	probes	as expected	Reach_AllWait Reach_CoopKeepsCpu Reach_TimeoutRuns Reach_WakeAllTwo Reach_WokenRunsWithOk	5010	4	4	-	-	-	12.1	1	2g
+MCScheduler	reach_smp	probes	probes	as expected	Reach_TwoRun	?	?	-	-	-	-	0.8	1	2g
+MCScheduler	p7_rules	pass	pass	as expected	-	556266	20	-	-	8.5E-7	2.0E-8	740.4	1	2g
+MCScheduler	p7_rules_coop	pass	pass	as expected	-	553614	20	-	-	8.4E-7	4.7E-9	690.8	1	2g
+MCScheduler	p7_tie	fail:Sched!TieGoesToLongestReady	fail:Sched!TieGoesToLongestReady	as expected	Sched!TieGoesToLongestReady	170	2	2	-	-	-	0.9	1	2g
+MCScheduler	p7_coop	fail:Sched!CoopKeepsCpu	fail:Sched!CoopKeepsCpu	as expected	Sched!CoopKeepsCpu	5700	4	4	-	-	-	4.2	1	2g
+MCScheduler	p7_abort	fail:Sched!CoopKeepsCpu	fail:Sched!CoopKeepsCpu	as expected	Sched!CoopKeepsCpu	6152	4	4	-	-	-	3.5	1	2g
+MCScheduler	coop_rule	fail:Inv_RunRuleHolds	fail:Inv_RunRuleHolds	as expected	Inv_RunRuleHolds	10167	4	4	-	-	-	5.8	1	2g
+MCScheduler	arrival_same	fail:Sched!WQ!KeepsArrivalOrder	fail:Sched!WQ!KeepsArrivalOrder	as expected	Sched!WQ!KeepsArrivalOrder	1656	4	4	-	-	-	1.9	1	2g
+MCScheduler	p7_tie_pendsv	fail:Sched!TieGoesToLongestReady	fail:Sched!TieGoesToLongestReady	as expected	Sched!TieGoesToLongestReady	1084	3	3	-	-	-	1.2	1	2g
+MCScheduler	p7_coop_pendsv	fail:Sched!CoopKeepsCpu	fail:Sched!CoopKeepsCpu	as expected	Sched!CoopKeepsCpu	7209	5	5	-	-	-	4.0	1	2g
+MCScheduler	p7_abort_pendsv	fail:Sched!CoopKeepsCpu	fail:Sched!CoopKeepsCpu	as expected	Sched!CoopKeepsCpu	8041	5	5	-	-	-	3.8	1	2g
+MCScheduler	coop_rule_pendsv	fail:Inv_RunRuleHolds	fail:Inv_RunRuleHolds	as expected	Inv_RunRuleHolds	26392	5	5	-	-	-	11.2	1	2g
+MCScheduler	small	pass	pass	as expected	-	75841	23	-	-	7.1E-9	1.7E-10	133.7	1	2g
+MCScheduler	small_pendsv	pass	pass	as expected	-	109930	35	-	-	9.9E-9	1.1E-9	181.1	1	2g
+MCScheduler	reach_pendsv	probes	probes	as expected	Reach_IsrInGap	331	3	3	-	-	-	1.0	1	2g
+MCScheduler	gap_coop_pendsv	fail:Sched!BlockedLosesCpu	fail:Sched!BlockedLosesCpu	as expected	Sched!BlockedLosesCpu	4732	6	6	-	-	-	2.6	1	2g
+MCScheduler	gap_coop	pass	pass	as expected	-	44268	22	-	-	2.1E-9	4.0E-11	35.9	1	2g
+MCScheduler	p2_window	fail:Sched!UnlockPreempts	fail:Sched!UnlockPreempts	as expected	Sched!UnlockPreempts	4592	5	5	-	-	-	2.8	1	2g
+MCScheduler	p2_window_pendsv	fail:Sched!UnlockPreempts	fail:Sched!UnlockPreempts	as expected	Sched!UnlockPreempts	4756	6	6	-	-	-	2.6	1	2g
+MCScheduler	p2_rule	fail:Inv_RunRuleHolds	fail:Inv_RunRuleHolds	as expected	Inv_RunRuleHolds	4592	5	5	-	-	-	3.6	1	2g
+MCScheduler	p2_lock	pass	pass	as expected	-	75650	24	-	-	5.4E-9	1.7E-10	52.1	1	2g
+MCScheduler	p2_lock_pendsv	pass	pass	as expected	-	151582	35	-	-	1.8E-8	1.1E-9	85.6	1	2g
+MCScheduler	reach_lock	probes	probes	as expected	Reach_NestedLock Reach_WakeUnderLock	1827	4	4	-	-	-	3.3	1	2g
+MCScheduler	pend_locked	fail:Sched!NoSwitchWhileLocked	fail:Sched!NoSwitchWhileLocked	as expected	Sched!NoSwitchWhileLocked	504	3	3	-	-	-	1.2	1	2g
+MCScheduler	pend_locked_pendsv	fail:Inv_P_PendingIsUnlocked	fail:Inv_P_PendingIsUnlocked	as expected	Inv_P_PendingIsUnlocked	500	3	3	-	-	-	1.3	1	2g
+MCScheduler	small_b	pass	pass	as expected	-	324148	24	-	-	1.9E-7	1.6E-9	877.3	1	2g
+MCScheduler	reach_b	probes	probes	as expected	Reach_TimeoutKeepsData Reach_UnpendAllTwo Reach_WaiterDataKept	5696	5	5	-	-	-	11.9	1	2g
+MCScheduler	join	pass	pass	as expected	-	26085	11	-	-	9.6E-10	9.5E-12	65.9	1	2g
+MCScheduler	reach_join	probes	probes	as expected	Reach_JoinerWoken	663	3	3	-	-	-	1.3	1	2g
+MCScheduler	f14_join	fail:Inv_PreemptibleRunsHighest	fail:Inv_PreemptibleRunsHighest	as expected	Inv_PreemptibleRunsHighest	799	3	3	-	-	-	1.5	1	2g
+MCScheduler	f14_join_pendsv	fail:Inv_PreemptibleRunsHighest	fail:Inv_PreemptibleRunsHighest	as expected	Inv_PreemptibleRunsHighest	1911	4	4	-	-	-	2.0	1	2g
+MCScheduler	p6_init	fail:Inv_NoUndefined	fail:Inv_NoUndefined	as expected	Inv_NoUndefined	335	3	3	-	-	-	1.3	1	2g
+MCKSem	default	pass	pass	as expected	-	261836	23	-	-	6.5E-8	1.7E-9	333.0	1	2g
+MCKSem	poll	pass	pass	as expected	-	4242	16	-	-	1.4E-11	-	4.9	1	2g
+MCKSem	two_sems	pass	pass	as expected	-	9976	16	-	-	5.4E-11	-	8.6	1	2g
+MCKSem	nochecks	pass	pass	as expected	-	4820	18	-	-	8.8E-12	-	3.7	1	2g
+MCKSem	live	pass	pass	as expected	-	1747	13	-	-	1.3E-12	-	5.0	1	2g
+MCKSem	reach	probes	probes	as expected	Reach_AllThreadsWait Reach_GiveAtLimit Reach_InitRejected Reach_IsrGivesToWaiter Reach_IsrTakeBusy Reach_ResetWakesTwo Reach_ReturnEagain Reach_ReturnOk Reach_TimeoutReturns Reach_WokenPreempts	1639	5	5	-	-	-	19.7	1	2g
+MCKSem	reach_poll	probes	probes	as expected	Reach_PollResched	50	3	3	-	-	-	1.1	1	2g
+MCKSem	poll_signal	fail:K!PollSignalMeansAvailable	fail:K!PollSignalMeansAvailable	as expected	K!PollSignalMeansAvailable	35	3	3	-	-	-	0.9	1	2g
+MCKSem	nochecks_tokens	fail:Inv_TokenConservation	fail:Inv_TokenConservation	as expected	Inv_TokenConservation	79	3	3	-	-	-	1.0	1	2g
+MCKSem	isr_waits	fail:Inv_NoPanic	fail:Inv_NoPanic	as expected	Inv_NoPanic	35	3	3	-	-	-	1.0	1	2g
+MCKSem	reinit	fail:Inv_NoUndefined	fail:Inv_NoUndefined	as expected	Inv_NoUndefined	75	4	4	-	-	-	1.0	1	2g
+MCKSem	live_prio	fail:Live_WaiterServedIfGives	fail:Live_WaiterServedIfGives	as expected	Live_WaiterServedIfGives	6976	17	20	5	-	-	12.3	1	2g
+MCKSemMutants	give_counts	fail:Inv_TokenConservation	fail:Inv_TokenConservation	as expected	Inv_TokenConservation	65	4	4	-	-	-	0.9	1	2g
+MCKSemMutants	pend_split	fail:Inv_NoWaitWhileAvailable	fail:Inv_NoWaitWhileAvailable	as expected	Inv_NoWaitWhileAvailable	146	5	5	-	-	-	1.2	1	2g
+MCKSemMutants	reset_wakes_one	fail:K!ResetWakesAll	fail:K!ResetWakesAll	as expected	K!ResetWakesAll	160	5	5	-	-	-	1.0	1	2g

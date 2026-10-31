@@ -1,0 +1,58 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/wrk/z/lab-tla/home -Djava.io.tmpdir=/wrk/z/lab-tla/runs/20261031-023823-c20993ed8/tmp -XX:ParallelGCThreads=2
+TLC2 Version 2026.10.20.183001 (rev: d2e1472)
+Running breadth-first search Model-Checking with fp 0 and seed 9150475011719418974 with 1 worker on 12 cores with 1820MB heap and 64MB offheap memory [pid: 3153032] (Linux 7.3.0-4-cachyos amd64, Eclipse Adoptium 25.0.5 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /wrk/z/lab-tla/safety/spec/tla/mc/MCKSem.tla
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_default/tlc-15258450267114785986/Integers.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_default/tlc-15258450267114785986/FiniteSets.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_default/tlc-15258450267114785986/Sequences.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_default/tlc-15258450267114785986/Naturals.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /wrk/z/lab-tla/safety/spec/tla/objects/KSem.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Waitable.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Apalache.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Scheduler.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Platform.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/WaitQueue.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Timeout.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Apalache
+Semantic processing of module Platform
+Semantic processing of module WaitQueue
+Semantic processing of module Timeout
+Semantic processing of module Scheduler
+Semantic processing of module Waitable
+Semantic processing of module KSem
+Semantic processing of module MCKSem
+Linting of module Apalache
+Linting of module Platform
+Linting of module WaitQueue
+Linting of module Timeout
+Linting of module Scheduler
+Linting of module Waitable
+Linting of module KSem
+Linting of module MCKSem
+Starting... (2026-10-31 02:49:59)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Computed 8 initial states...
+Computed 16 initial states...
+Computed 32 initial states...
+Finished computing initial states: 48 distinct states generated at 2026-10-31 02:50:00.
+Progress(5) at 2026-10-31 02:50:03: 32,601 states generated (32,601 s/min), 2,764 distinct states found (2,764 ds/min), 1,478 states left on queue.
+Progress(9) at 2026-10-31 02:51:03: 747,937 states generated (715,336 s/min), 54,672 distinct states found (51,908 ds/min), 21,845 states left on queue.
+Progress(11) at 2026-10-31 02:52:03: 1,588,360 states generated (840,423 s/min), 112,115 distinct states found (57,443 ds/min), 32,970 states left on queue.
+Progress(12) at 2026-10-31 02:53:03: 2,562,558 states generated (974,198 s/min), 167,581 distinct states found (55,466 ds/min), 32,420 states left on queue.
+Progress(14) at 2026-10-31 02:54:03: 3,555,917 states generated (993,359 s/min), 212,740 distinct states found (45,159 ds/min), 21,677 states left on queue.
+Progress(17) at 2026-10-31 02:55:03: 4,363,505 states generated (807,588 s/min), 245,273 distinct states found (32,533 ds/min), 9,063 states left on queue.
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 6.5E-8
+  based on the actual fingerprints:  val = 1.7E-9
+4820430 states generated, 261836 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 23.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 16 and the 95th percentile is 4).
+Finished in 05min 32s at (2026-10-31 02:55:32)

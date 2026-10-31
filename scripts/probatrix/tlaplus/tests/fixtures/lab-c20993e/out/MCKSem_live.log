@@ -1,0 +1,53 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/wrk/z/lab-tla/home -Djava.io.tmpdir=/wrk/z/lab-tla/runs/20261031-023823-c20993ed8/tmp -XX:ParallelGCThreads=2
+TLC2 Version 2026.10.20.183001 (rev: d2e1472)
+Running breadth-first search Model-Checking with fp 0 and seed -8249702614049444873 with 1 worker on 12 cores with 1820MB heap and 64MB offheap memory [pid: 3157374] (Linux 7.3.0-4-cachyos amd64, Eclipse Adoptium 25.0.5 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /wrk/z/lab-tla/safety/spec/tla/mc/MCKSem.tla
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_live/tlc-10969097857627848414/Integers.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_live/tlc-10969097857627848414/FiniteSets.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_live/tlc-10969097857627848414/Sequences.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_live/tlc-10969097857627848414/Naturals.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /wrk/z/lab-tla/safety/spec/tla/objects/KSem.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Waitable.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Apalache.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Scheduler.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Platform.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/WaitQueue.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Timeout.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Apalache
+Semantic processing of module Platform
+Semantic processing of module WaitQueue
+Semantic processing of module Timeout
+Semantic processing of module Scheduler
+Semantic processing of module Waitable
+Semantic processing of module KSem
+Semantic processing of module MCKSem
+Linting of module Apalache
+Linting of module Platform
+Linting of module WaitQueue
+Linting of module Timeout
+Linting of module Scheduler
+Linting of module Waitable
+Linting of module KSem
+Linting of module MCKSem
+Starting... (2026-10-31 02:54:15)
+Implied-temporal checking--satisfiability problem has 4 branches.
+Computing initial states...
+Finished computing initial states: 2 distinct states generated at 2026-10-31 02:54:15.
+Checking 4 branches of temporal properties for the current state space with 5464 total distinct states at (2026-10-31 02:54:18)
+Finished checking temporal properties in 00s at 2026-10-31 02:54:19
+Progress(8) at 2026-10-31 02:54:19: 9,613 states generated (9,613 s/min), 1,366 distinct states found (1,366 ds/min), 304 states left on queue.
+Progress(13) at 2026-10-31 02:54:20: 15,748 states generated, 1,747 distinct states found, 0 states left on queue.
+Checking 4 branches of temporal properties for the complete state space with 6988 total distinct states at (2026-10-31 02:54:20)
+Finished checking temporal properties in 00s at 2026-10-31 02:54:20
+Model checking completed. No error has been found.
+  Estimates of the probability that TLC did not check all reachable states
+  because two distinct states had the same fingerprint:
+  calculated (optimistic):  val = 1.3E-12
+15748 states generated, 1747 distinct states found, 0 states left on queue.
+The depth of the complete state graph search is 13.
+The average outdegree of the complete state graph is 1 (minimum is 0, the maximum 12 and the 95th percentile is 6).
+Finished in 04s at (2026-10-31 02:54:20)

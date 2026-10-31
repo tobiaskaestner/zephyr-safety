@@ -1,0 +1,40 @@
+{
+  "run_id": "20261101-100000-synthetic",
+  "mode": "pinned",
+  "revision": "c20993ed8e7a61e1da23f3f9316802608a461445",
+  "branch": "tkaestner/tla-spec",
+  "diff_sha256": null,
+  "list": "simulate",
+  "workers": 1,
+  "jobs": 1,
+  "memory": "2g",
+  "mem_budget": "20g",
+  "gc_threads": 2,
+  "nice": 10,
+  "selftest": true,
+  "selection": [],
+  "order": [
+    "MCKSem:default",
+    "MCKSem:live",
+    "MCKSem:poll"
+  ],
+  "submitted": "2026-11-01T10:00:00+0100",
+  "tool": "tlc-simulate",
+  "simulate": {
+    "MCKSem:default": {
+      "depth": 100,
+      "traces": 500,
+      "seed": 7
+    },
+    "MCKSem:live": {
+      "depth": 20,
+      "traces": 500,
+      "seed": 7
+    },
+    "MCKSem:poll": {
+      "depth": 100,
+      "traces": 50,
+      "seed": -3
+    }
+  }
+}

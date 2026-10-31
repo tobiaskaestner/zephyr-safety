@@ -1,0 +1,147 @@
+Picked up JAVA_TOOL_OPTIONS: -Duser.home=/wrk/z/lab-tla/home -Djava.io.tmpdir=/wrk/z/lab-tla/runs/20261031-023823-c20993ed8/tmp -XX:ParallelGCThreads=2
+TLC2 Version 2026.10.20.183001 (rev: d2e1472)
+Running breadth-first search Model-Checking with fp 0 and seed -4505364770150234018 with 1 worker on 12 cores with 1820MB heap and 64MB offheap memory [pid: 3161867] (Linux 7.3.0-4-cachyos amd64, Eclipse Adoptium 25.0.5 64bit, MSBDiskFPSet, DiskStateQueue).
+Parsing file /wrk/z/lab-tla/safety/spec/tla/mc/MCKSem.tla
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_isr_waits/tlc-148397874935636277/Integers.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Integers.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_isr_waits/tlc-148397874935636277/FiniteSets.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/FiniteSets.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_isr_waits/tlc-148397874935636277/Sequences.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Sequences.tla)
+Parsing file /wrk/z/lab-tla/runs/20261031-023823-c20993ed8/out/tmp/MCKSem_isr_waits/tlc-148397874935636277/Naturals.tla (jar:file:/wrk/z/lab-tla/archive/tla2tools/sha256-5bd7b64db99ae4c6c35f290de5e809c0ee41af43f8699cf696099ffb6452b1e2/tla2tools.jar!/tla2sany/StandardModules/Naturals.tla)
+Parsing file /wrk/z/lab-tla/safety/spec/tla/objects/KSem.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Waitable.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Apalache.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Scheduler.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Platform.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/WaitQueue.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/lib/Timeout.tla
+Semantic processing of module Naturals
+Semantic processing of module Integers
+Semantic processing of module Sequences
+Semantic processing of module FiniteSets
+Semantic processing of module Apalache
+Semantic processing of module Platform
+Semantic processing of module WaitQueue
+Semantic processing of module Timeout
+Semantic processing of module Scheduler
+Semantic processing of module Waitable
+Semantic processing of module KSem
+Semantic processing of module MCKSem
+Linting of module Apalache
+Linting of module Platform
+Linting of module WaitQueue
+Linting of module Timeout
+Linting of module Scheduler
+Linting of module Waitable
+Linting of module KSem
+Linting of module MCKSem
+Starting... (2026-10-31 02:55:05)
+Computing initial states...
+Computed 2 initial states...
+Computed 4 initial states...
+Finished computing initial states: 8 distinct states generated at 2026-10-31 02:55:05.
+Error: Invariant Inv_NoPanic is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ tstate = (t1 :> "ready" @@ t2 :> "ready")
+/\ r = (s1 :> [count |-> 0, limit |-> 0, init |-> FALSE])
+/\ readySince = (t1 :> 1 @@ t2 :> 2)
+/\ rqStamp = (t1 :> 1 @@ t2 :> 2)
+/\ stamp = (t1 :> 0 @@ t2 :> 0)
+/\ tokens = (s1 :> 0)
+/\ prio = (t1 :> -1 @@ t2 :> -1)
+/\ preemptOk = FALSE
+/\ pendedOn = (t1 :> NoObj @@ t2 :> NoObj)
+/\ irqNest = (c1 :> 0)
+/\ tq = <<>>
+/\ cur = (c1 :> t1)
+/\ req = (t1 :> NoObj @@ t2 :> NoObj)
+/\ swapData = (t1 :> NoD @@ t2 :> NoD)
+/\ tqCost = [op |-> "none", n |-> 0, cost |-> 0]
+/\ obs = [ actor |-> IdleT,
+  op |-> "none",
+  woken |-> {},
+  ret |-> 1,
+  calls |-> <<>>,
+  args |-> <<>>,
+  obj |-> NoObj,
+  timeout |-> "none" ]
+/\ panic = "none"
+/\ swapRet = (t1 :> 1 @@ t2 :> 1)
+/\ pendsv = (c1 :> FALSE)
+
+State 2: <K!Next line 26, col 1 to line 32, col 50 of module MCKSem>
+/\ tstate = (t1 :> "ready" @@ t2 :> "ready")
+/\ r = (s1 :> [count |-> 0, limit |-> 2, init |-> TRUE])
+/\ readySince = (t1 :> 1 @@ t2 :> 2)
+/\ rqStamp = (t1 :> 1 @@ t2 :> 2)
+/\ stamp = (t1 :> 0 @@ t2 :> 0)
+/\ tokens = (s1 :> 0)
+/\ prio = (t1 :> -1 @@ t2 :> -1)
+/\ preemptOk = FALSE
+/\ pendedOn = (t1 :> NoObj @@ t2 :> NoObj)
+/\ irqNest = (c1 :> 0)
+/\ tq = <<>>
+/\ cur = (c1 :> t1)
+/\ req = (t1 :> NoObj @@ t2 :> NoObj)
+/\ swapData = (t1 :> NoD @@ t2 :> NoD)
+/\ tqCost = [op |-> "none", n |-> 0, cost |-> 0]
+/\ obs = [ actor |-> t1,
+  op |-> "init",
+  woken |-> {},
+  ret |-> 0,
+  calls |->
+      << [ ret |-> 0,
+           fn |-> "z_waitq_init",
+           obj |-> s1,
+           res |-> 0,
+           arg |-> 0,
+           thread |-> IdleT ] >>,
+  args |-> <<0, 2>>,
+  obj |-> s1,
+  timeout |-> "none" ]
+/\ panic = "none"
+/\ swapRet = (t1 :> 1 @@ t2 :> 1)
+/\ pendsv = (c1 :> FALSE)
+
+State 3: <K!Next line 26, col 1 to line 32, col 50 of module MCKSem>
+/\ tstate = (t1 :> "ready" @@ t2 :> "ready")
+/\ r = (s1 :> [count |-> 0, limit |-> 2, init |-> TRUE])
+/\ readySince = (t1 :> 1 @@ t2 :> 2)
+/\ rqStamp = (t1 :> 1 @@ t2 :> 2)
+/\ stamp = (t1 :> 0 @@ t2 :> 0)
+/\ tokens = (s1 :> 0)
+/\ prio = (t1 :> -1 @@ t2 :> -1)
+/\ preemptOk = FALSE
+/\ pendedOn = (t1 :> NoObj @@ t2 :> NoObj)
+/\ irqNest = (c1 :> 0)
+/\ tq = <<>>
+/\ cur = (c1 :> t1)
+/\ req = (t1 :> NoObj @@ t2 :> NoObj)
+/\ swapData = (t1 :> NoD @@ t2 :> NoD)
+/\ tqCost = [op |-> "none", n |-> 0, cost |-> 0]
+/\ obs = [ actor |-> i1,
+  op |-> "take",
+  woken |-> {},
+  ret |-> 1,
+  calls |->
+      << [ ret |-> 0,
+           fn |-> "arch_irq_lock",
+           obj |-> s1,
+           res |-> 0,
+           arg |-> 0,
+           thread |-> IdleT ],
+         [ ret |-> 0,
+           fn |-> "z_pend_curr",
+           obj |-> s1,
+           res |-> 0,
+           arg |-> -1,
+           thread |-> IdleT ] >>,
+  args |-> <<>>,
+  obj |-> s1,
+  timeout |-> "FOREVER" ]
+/\ panic = "pend_in_isr"
+/\ swapRet = (t1 :> 1 @@ t2 :> 1)
+/\ pendsv = (c1 :> FALSE)
+
+76 states generated, 35 distinct states found, 25 states left on queue.
+The depth of the complete state graph search is 3.
+Finished in 00s at (2026-10-31 02:55:05)

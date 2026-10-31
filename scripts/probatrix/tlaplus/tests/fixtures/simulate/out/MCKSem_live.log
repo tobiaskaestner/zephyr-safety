@@ -1,0 +1,20 @@
+TLC2 Version 2026.10.20.183001 (rev: d2e1472)
+Running random simulation with seed 7 with 1 worker on 12 cores with 1820MB heap and 64MB offheap memory [pid: 4242] (Linux, Eclipse Adoptium 25.0.5 64bit, DiskStateQueue).
+Parsing file /wrk/z/lab-tla/safety/spec/tla/mc/MCKSem.tla
+Parsing file /wrk/z/lab-tla/safety/spec/tla/objects/KSem.tla
+Semantic processing of module KSem
+Semantic processing of module MCKSem
+Starting... (2026-11-01 10:00:00)
+Computing initial states...
+Finished computing initial states: 1 distinct state generated at 2026-11-01 10:00:00.
+Error: Invariant Inv_NoPanic is violated.
+Error: The behavior up to this point is:
+State 1: <Initial predicate>
+/\ count = 0
+
+State 5: <Next line 12, col 5 to line 14, col 30 of module MCKSem>
+/\ count = 4
+
+The number of states generated: 1203
+Simulation finished.
+Finished in 00s at (2026-11-01 10:00:04)

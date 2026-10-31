@@ -1,0 +1,6 @@
+== selftest
+SelfSafety     inv        expected fail:Inv                 -> as expected
+== models
+MCKSem         default    expected pass                     -> as expected
+MCKSem         live       expected fail:Inv_NoPanic         -> as expected
+MCKSem         poll       expected pass                     -> UNEXPECTED (fail:Inv_TokenConservation)

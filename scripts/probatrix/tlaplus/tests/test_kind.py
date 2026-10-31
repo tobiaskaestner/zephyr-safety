@@ -44,7 +44,8 @@ def test_the_kind_is_registered_by_name():
     assert (K.schema_prefix, K.format_prefix, K.ref_prefix) == ("tlaplus", "tlaplus", "refs/tlaplus")
     assert K.format_id("app-tlc", 1) == "tlaplus-app-tlc/1" and K.ref("run", "x", "y") == "refs/tlaplus/run/x/y"
     assert K.instance_axis is None and "tlaplus" in schema.prefixes()
-    assert schema.prefixes()[0] == "latbench"                    # the default prefix stays the first kind
+    kinds.get("latbench")
+    assert schema.validator("study").schema["$id"] == "latbench/study.schema.yaml"      # the default prefix stays latbench
     assert K.dirt_paths == ("spec/tla",)
 
 

@@ -53,6 +53,6 @@ packages = [
 [tool.setuptools.package-data]
 "probatrix.benchmarks" = ["schemas/*.schema.yaml", "requirements*.txt", "requirements*.lock"]
 "probatrix.tlaplus" = ["schemas/*.schema.yaml"]
-"probatrix.tlaplus.tests" = ["fixtures/*/*"]
+"probatrix.tlaplus.tests" = ["fixtures/*/*", "fixtures/*/*/*"]
 "probatrix.core.tests" = ["fixtures/*/*"]
 "probatrix.benchmarks.tests" = ["fixtures/*"]

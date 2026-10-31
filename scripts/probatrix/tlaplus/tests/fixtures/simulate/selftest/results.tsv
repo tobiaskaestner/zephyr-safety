@@ -1,0 +1,2 @@
+module	config	expected	result	verdict	violated	distinct	depth	trace	lasso	collision_calculated	collision_actual	seconds	workers	heap
+SelfSafety	inv	fail:Inv	fail:Inv	as expected	Inv	7	4	4	-	-	-	0.3	1	512m
